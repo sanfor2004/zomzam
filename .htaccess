@@ -1,0 +1,52 @@
+# ============================================================================
+# zomo.gg - Direct Routing Configuration (No index.php middleware)
+# ============================================================================
+
+RewriteEngine On
+RewriteBase /
+
+# Block direct access to sensitive directories
+RewriteCond %{THE_REQUEST} \s/+(?:models|api_handler|logs|DDragon|Layout|cron|docs)/ [NC]
+RewriteRule ^(?:models|api_handler|logs|DDragon|Layout|cron|docs)/ - [F,NC,L]
+
+# Block access to README and other sensitive files
+RewriteRule ^README\.md$ - [F,NC,L]
+RewriteRule ^composer\.(json|lock)$ - [F,NC,L]
+RewriteRule ^package\.json$ - [F,NC,L]
+RewriteRule ^\.git - [F,NC,L]
+RewriteRule ^config\.php$ - [F,NC,L]
+
+# Prevent access to backup files
+<FilesMatch "\.(bak|backup|old|tmp|temp|log|env|conf|config|ini|git|gitignore)$">
+    Require all denied
+</FilesMatch>
+
+# Allow direct access to public assets
+RewriteCond %{REQUEST_URI} ^/public/
+RewriteRule ^ - [L]
+
+# API endpoints
+RewriteRule ^api/(.*)$ api_handler/$1 [QSA,NC,L]
+
+# ============================================================================
+# Direct Page Routes
+# ============================================================================
+
+# Homepage
+RewriteRule ^$ Views/Landing/main.php [QSA,L]
+RewriteRule ^home$ Views/Landing/main.php [QSA,L]
+
+# Error pages
+RewriteRule ^403$ Views/Errors/403.php [QSA,L]
+RewriteRule ^404$ Views/Errors/404.php [QSA,L]
+RewriteRule ^500$ Views/Errors/500.php [QSA,L]
+
+# Error handling
+ErrorDocument 403 /403
+ErrorDocument 404 /404
+ErrorDocument 500 /500
+
+# Catch all other requests → 404
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ /404 [R=302,L]
