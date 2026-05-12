@@ -1,184 +1,179 @@
 <?php
+/**
+ * Zomzam Database Setup & Sync Engine
+ * Dragon-Tier Automated Schema Synchronizer
+ */
 
-require_once __DIR__ . './config.php';
+require_once __DIR__ . '/config.php';
 
-// Prevent accidental execution without the switch
-if (php_sapi_name() !== 'cli' && ($_GET['run'] ?? '') !== 'yes') {
-    die("<h1>Database Setup / Sync</h1><p>Run this script by appending <code>?run=yes</code> to the URL.</p>");
+$schema = [
+    'users' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'username' => 'VARCHAR(50) NOT NULL UNIQUE',
+        'email' => 'VARCHAR(255) NOT NULL UNIQUE',
+        'first_name' => 'VARCHAR(100) NULL',
+        'last_name' => 'VARCHAR(100) NULL',
+        'password' => 'VARCHAR(255) NOT NULL',
+        'role' => "ENUM('user', 'admin', 'moderator') NOT NULL DEFAULT 'user'",
+        'avatar' => 'VARCHAR(500) NULL',
+        'bio' => 'TEXT NULL',
+        'is_active' => 'TINYINT(1) NOT NULL DEFAULT 1',
+        'is_verified' => 'TINYINT(1) NOT NULL DEFAULT 0',
+        'verification_token' => 'VARCHAR(255) NULL',
+        'reset_token' => 'VARCHAR(255) NULL',
+        'reset_token_expires' => 'DATETIME NULL',
+        'primary_currency' => "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
+        'secondary_currency' => "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'USD'",
+        'last_login_at' => 'DATETIME NULL',
+        'last_login_ip' => 'VARCHAR(45) NULL',
+        'login_attempts' => 'INT UNSIGNED NOT NULL DEFAULT 0',
+        'locked_until' => 'DATETIME NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        'updated_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    ],
+    'time_horizons' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'type' => "ENUM('week', 'month', 'year') NOT NULL",
+        'content' => 'TEXT NOT NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
+    ],
+    'time_tasks' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'horizon_id' => 'INT UNSIGNED NULL',
+        'title' => 'VARCHAR(255) NOT NULL',
+        'priority' => "ENUM('urgent', 'medium', 'maybe', 'free') NOT NULL DEFAULT 'medium'",
+        'duration_block' => 'INT UNSIGNED NOT NULL',
+        'actual_duration' => 'INT UNSIGNED NULL',
+        'status' => "ENUM('pending', 'in_progress', 'completed') NOT NULL DEFAULT 'pending'",
+        'completed_at' => 'DATETIME NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
+    ],
+    'time_ideas' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'linked_task_id' => 'INT UNSIGNED NULL',
+        'linked_horizon_id' => 'INT UNSIGNED NULL',
+        'content' => 'TEXT NOT NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
+    ],
+    'money_accounts' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'name' => 'VARCHAR(100) NOT NULL',
+        'type' => "ENUM('bank', 'cash', 'paypal', 'wallet', 'other') NOT NULL DEFAULT 'bank'",
+        'currency' => "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
+        'balance' => 'DECIMAL(15, 2) NOT NULL DEFAULT 0.00',
+        'last_four' => 'VARCHAR(4) NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        'updated_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    ],
+    'money_categories' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'name' => 'VARCHAR(100) NOT NULL',
+        'type' => "ENUM('need', 'want', 'saving', 'debt', 'income') NOT NULL DEFAULT 'need'",
+        'budget_percent' => 'DECIMAL(5, 2) NULL',
+        'icon' => 'VARCHAR(50) NULL',
+        'color' => 'VARCHAR(20) NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
+    ],
+    'money_transactions' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'account_id' => 'INT UNSIGNED NOT NULL',
+        'category_id' => 'INT UNSIGNED NULL',
+        'type' => "ENUM('income', 'expense', 'transfer', 'lend') NOT NULL",
+        'amount' => 'DECIMAL(15, 2) NOT NULL',
+        'currency' => "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
+        'description' => 'VARCHAR(255) NULL',
+        'transaction_date' => 'DATE NOT NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
+    ],
+    'money_lend' => [
+        'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id' => 'INT UNSIGNED NOT NULL',
+        'person_name' => 'VARCHAR(100) NOT NULL',
+        'type' => "ENUM('owe_me', 'i_owe') NOT NULL",
+        'amount' => 'DECIMAL(15, 2) NOT NULL',
+        'currency' => "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
+        'status' => "ENUM('pending', 'partial', 'settled') NOT NULL DEFAULT 'pending'",
+        'due_date' => 'DATE NULL',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        'updated_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    ]
+];
+
+function syncDatabase($pdo, $schema) {
+    echo "Starting database synchronization...\n";
+    
+    foreach ($schema as $tableName => $columns) {
+        // Check if table exists
+        $stmt = $pdo->query("SHOW TABLES LIKE '$tableName'");
+        if ($stmt->rowCount() === 0) {
+            echo "Creating table: $tableName\n";
+            $colDefs = [];
+            foreach ($columns as $name => $def) {
+                $colDefs[] = "`$name` $def";
+            }
+            $pdo->exec("CREATE TABLE `$tableName` (" . implode(', ', $colDefs) . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        } else {
+            // Check for missing or changed columns
+            $existingCols = $pdo->query("DESCRIBE `$tableName`")->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($columns as $name => $def) {
+                if (!in_array($name, $existingCols)) {
+                    echo "Adding column `$name` to table `$tableName`\n";
+                    $pdo->exec("ALTER TABLE `$tableName` ADD COLUMN `$name` $def");
+                }
+            }
+        }
+    }
+    
+    echo "Synchronization complete.\n";
+}
+
+function seedData($pdo) {
+    echo "Seeding initial data...\n";
+    
+    // Seed default money categories
+    $categories = [
+        ['Needs', 'need', 60.00, 'shield'],
+        ['Wants', 'want', 20.00, 'heart'],
+        ['Savings', 'saving', 20.00, 'piggy-bank'],
+        ['Insurance', 'need', null, 'umbrella'],
+        ['Food & Groceries', 'need', null, 'shopping-cart'],
+        ['Internet', 'need', null, 'wifi'],
+        ['Electricity & Gas', 'need', null, 'zap'],
+        ['Cat food', 'need', null, 'cat'],
+        ['Salary', 'income', null, 'dollar-sign'],
+        ['Extra Bonus', 'income', null, 'plus-circle']
+    ];
+
+    $stmt = $pdo->prepare("INSERT IGNORE INTO money_categories (user_id, name, type, budget_percent, icon) VALUES (1, ?, ?, ?, ?)");
+    foreach ($categories as $cat) {
+        $stmt->execute($cat);
+    }
+
+    // Seed default money accounts
+    $accounts = [
+        ['Banque Misr VISA USD Debit', 'bank', 'USD', 0.00, '4193'],
+        ['Egypt Post VISA EGP Debit', 'bank', 'EGP', 0.00, '1154'],
+        ['PayPal', 'paypal', 'USD', 0.00, NULL]
+    ];
+
+    $stmt = $pdo->prepare("INSERT IGNORE INTO money_accounts (user_id, name, type, currency, balance, last_four) VALUES (1, ?, ?, ?, ?, ?)");
+    foreach ($accounts as $acc) {
+        $stmt->execute($acc);
+    }
+
+    echo "Seeding complete.\n";
 }
 
 try {
     $pdo = getConnection();
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
-    echo "Starting Database Sync...\n\n";
-
-    // Disable foreign key checks temporarily
-    $pdo->exec("SET NAMES utf8mb4;");
-    $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-
-    // The desired schema converted to a structured PHP array
-    $dbSetup = [
-        'drops' => [],
-        'tables' => [
-            'users' => [
-                'columns' => [
-                    'id' => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
-                    'username' => 'VARCHAR(50) NOT NULL UNIQUE',
-                    'email' => 'VARCHAR(255) NOT NULL UNIQUE',
-                    'password' => 'VARCHAR(255) NOT NULL',
-                    'role' => "ENUM('user','admin') NOT NULL DEFAULT 'user'",
-                    'avatar' => 'VARCHAR(500) DEFAULT NULL',
-                    'bio' => 'VARCHAR(500) DEFAULT NULL',
-                    'last_active_at' => 'DATETIME DEFAULT NULL',
-                    'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                    'updated_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                ],
-                'keys' => [
-                    'INDEX `idx_email` (`email`)',
-                    'INDEX `idx_username` (`username`)'
-                ],
-                'options' => 'ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
-            ]
-        ],
-        'seeds' => []
-    ];
-
-    // 0. Drop obsolete tables
-    $existingTablesStmt = $pdo->query("SHOW TABLES");
-    $dbTables = [];
-    while ($row = $existingTablesStmt->fetch(PDO::FETCH_NUM)) {
-        $dbTables[] = $row[0];
-    }
-    foreach ($dbTables as $dbTableName) {
-        if (!isset($dbSetup['tables'][$dbTableName])) {
-            echo "[DROP] Obsolete table `$dbTableName`. Dropping...\n";
-            try {
-                $pdo->exec("DROP TABLE `$dbTableName`");
-                echo "       [OK] Dropped table `$dbTableName`.\n";
-            } catch (PDOException $e) {
-                echo "       [ERROR] Failed to drop `$dbTableName`: " . $e->getMessage() . "\n";
-            }
-        }
-    }
-
-    // 1. Parse and Sync Tables
-    foreach ($dbSetup['tables'] as $tableName => $tableData) {
-        // Check if table exists
-        $stmt = $pdo->query("SHOW TABLES LIKE '$tableName'");
-        if ($stmt->rowCount() == 0) {
-            // Build CREATE TABLE query
-            $colDefs = [];
-            foreach ($tableData['columns'] as $colName => $colDef) {
-                $colDefs[] = "`$colName` $colDef";
-            }
-            $allDefs = array_merge($colDefs, $tableData['keys']);
-            $createQuery = "CREATE TABLE IF NOT EXISTS `$tableName` (\n  " . implode(",\n  ", $allDefs) . "\n) " . $tableData['options'] . ";";
-
-            $pdo->exec($createQuery);
-            echo "[CREATE] Created table `$tableName`\n";
-            continue;
-        }
-
-        // Table exists, perform checking
-        echo "[SYNC] Checking `$tableName` for missing or changed columns...\n";
-        $colsStmt = $pdo->query("SHOW COLUMNS FROM `$tableName`");
-        $existingCols = [];
-        while ($row = $colsStmt->fetch(PDO::FETCH_ASSOC)) {
-            $existingCols[] = $row['Field'];
-        }
-
-        foreach ($tableData['columns'] as $colName => $colDef) {
-            if (!in_array($colName, $existingCols)) {
-                echo "   -> Missing column `$colName`. Adding...\n";
-                $alterQuery = "ALTER TABLE `$tableName` ADD COLUMN `$colName` $colDef";
-                try {
-                    $pdo->exec($alterQuery);
-                    echo "      [OK] Added `$colName`.\n";
-                } catch (PDOException $e) {
-                    if (strpos($e->getMessage(), '2006') !== false || strpos($e->getMessage(), '2013') !== false) {
-                        try {
-                            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-                            $pdo = new PDO($dsn, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-                            $pdo->exec("SET NAMES utf8mb4;");
-                            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-                            $pdo->exec($alterQuery);
-                            echo "      [OK] Added `$colName` (after reconnect).\n";
-                        } catch (PDOException $e2) {
-                            echo "      [ERROR] Failed to add `$colName`: " . $e2->getMessage() . "\n";
-                        }
-                    } else {
-                        echo "      [ERROR] Failed to add `$colName`: " . $e->getMessage() . "\n";
-                    }
-                }
-            } else {
-                // Automatically modify column to match defined setup if anything changed (Types, Nullability, ENUMs)
-                $cleanDef = preg_replace('/\bPRIMARY\s+KEY\b/i', '', $colDef);
-                $cleanDef = preg_replace('/\bUNIQUE\b/i', '', $cleanDef);
-                $modifyQuery = "ALTER TABLE `$tableName` MODIFY COLUMN `$colName` $cleanDef";
-
-                try {
-                    $pdo->exec($modifyQuery);
-                } catch (PDOException $e) {
-                    if (strpos($e->getMessage(), '2006') !== false || strpos($e->getMessage(), '2013') !== false) {
-                        try {
-                            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-                            $pdo = new PDO($dsn, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-                            $pdo->exec("SET NAMES utf8mb4;");
-                            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-                            $pdo->exec($modifyQuery);
-                        } catch (PDOException $e2) {
-                            // Ignore safe modification errors
-                        }
-                    }
-                    // Ignore safe modification errors
-                }
-            }
-        }
-
-        // Drop obsolete columns
-        foreach ($existingCols as $existingCol) {
-            if (!isset($tableData['columns'][$existingCol])) {
-                echo "   -> Obsolete column `$existingCol`. Dropping...\n";
-                $dropColQuery = "ALTER TABLE `$tableName` DROP COLUMN `$existingCol`";
-                try {
-                    $pdo->exec($dropColQuery);
-                    echo "      [OK] Dropped `$existingCol`.\n";
-                } catch (PDOException $e) {
-                    if (strpos($e->getMessage(), '2006') !== false || strpos($e->getMessage(), '2013') !== false) {
-                        try {
-                            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
-                            $pdo = new PDO($dsn, DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
-                            $pdo->exec("SET NAMES utf8mb4;");
-                            $pdo->exec("SET FOREIGN_KEY_CHECKS = 0;");
-                            $pdo->exec($dropColQuery);
-                            echo "      [OK] Dropped `$existingCol` (after reconnect).\n";
-                        } catch (PDOException $e2) {
-                            echo "      [ERROR] Failed to drop `$existingCol`: " . $e2->getMessage() . "\n";
-                        }
-                    } else {
-                        echo "      [ERROR] Failed to drop `$existingCol`: " . $e->getMessage() . "\n";
-                    }
-                }
-            }
-        }
-    }
-
-    // 3. Extract and run standalone Inserts (Seed data)
-    foreach ($dbSetup['seeds'] as $insert) {
-        try {
-            $pdo->exec($insert);
-            echo "\n[INSERT] Executed seed data insertion block.\n";
-        } catch (PDOException $e) {
-            echo "\n[ERROR] Seed data insertion failed: " . $e->getMessage() . "\n";
-        }
-    }
-
-    // Re-enable foreign key checks
-    $pdo->exec("SET FOREIGN_KEY_CHECKS = 1;");
-
-    echo "\nDatabase Sync Complete!";
-
-} catch (PDOException $e) {
-    die("\n[FATAL] Database Error: " . $e->getMessage());
+    syncDatabase($pdo, $schema);
+    seedData($pdo);
+} catch (Exception $e) {
+    echo "Error: " . $e->getMessage() . "\n";
 }

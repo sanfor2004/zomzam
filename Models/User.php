@@ -110,9 +110,9 @@ class User extends Base
       return ['success' => false, 'message' => 'Invalid credentials'];
     }
 
-    // Update last active timestamp
+    // Update last login timestamp
     $updateStmt = $this->pdo->prepare(
-      "UPDATE {$this->table} SET last_active_at = NOW() WHERE id = ?"
+      "UPDATE {$this->table} SET last_login_at = NOW() WHERE id = ?"
     );
     $updateStmt->execute([$user['id']]);
 
@@ -137,7 +137,7 @@ class User extends Base
     $this->ensureConnection();
 
     $stmt = $this->pdo->prepare(
-      "SELECT id, username, email, role, avatar, bio, last_active_at, created_at 
+      "SELECT id, username, first_name, last_name, email, role, avatar, bio, last_login_at, created_at 
        FROM {$this->table} WHERE id = ? LIMIT 1"
     );
     $stmt->execute([$userId]);
@@ -155,7 +155,7 @@ class User extends Base
     $this->ensureConnection();
 
     $stmt = $this->pdo->prepare(
-      "SELECT id, username, email, role, avatar, bio, last_active_at, created_at 
+      "SELECT id, username, first_name, last_name, email, role, avatar, bio, last_login_at, created_at 
        FROM {$this->table} WHERE username = ? LIMIT 1"
     );
     $stmt->execute([$username]);
@@ -173,7 +173,7 @@ class User extends Base
     $this->ensureConnection();
 
     $stmt = $this->pdo->prepare(
-      "SELECT id, username, email, role, avatar, bio, last_active_at, created_at 
+      "SELECT id, username, first_name, last_name, email, role, avatar, bio, last_login_at, created_at 
        FROM {$this->table} WHERE email = ? LIMIT 1"
     );
     $stmt->execute([$email]);
@@ -191,7 +191,7 @@ class User extends Base
   {
     $this->ensureConnection();
 
-    $allowedFields = ['username', 'email', 'avatar', 'bio'];
+    $allowedFields = ['username', 'email', 'avatar', 'bio', 'first_name', 'last_name'];
     $updates = [];
     $params = [];
 

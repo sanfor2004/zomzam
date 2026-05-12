@@ -1,0 +1,19 @@
+<?php
+/**
+ * Logout Handler
+ * 
+ * Simple logout functionality
+ */
+
+// Start session
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
+
+// Destroy session
+session_unset();
+session_destroy();
+
+// Redirect to home
+header('Location: /');
+exit;

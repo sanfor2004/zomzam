@@ -14,7 +14,9 @@ header('Content-Type: application/json');
 require_once __DIR__ . '/../config.php';
 
 // Start session for authentication
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 
 // Only allow POST and GET requests
 $method = $_SERVER['REQUEST_METHOD'];
@@ -91,6 +93,7 @@ function handleRegister()
     $_SESSION['username'] = $result['user']['username'];
     $_SESSION['email'] = $result['user']['email'];
     $_SESSION['role'] = 'user';
+    $_SESSION['user_avatar'] = '';
     $_SESSION['logged_in'] = true;
 
     logMessage("New user registered: $username (ID: {$result['user']['id']})", 'auth.log');
@@ -119,6 +122,7 @@ function handleLogin()
   
   $identifier = trim($input['identifier'] ?? $input['username'] ?? $input['email'] ?? '');
   $password = $input['password'] ?? '';
+  $remember = filter_var($input['remember'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
   // Authenticate user
   $result = $userModel->login($identifier, $password);
@@ -129,12 +133,40 @@ function handleLogin()
     $_SESSION['username'] = $result['user']['username'];
     $_SESSION['email'] = $result['user']['email'];
     $_SESSION['role'] = $result['user']['role'];
+    $_SESSION['user_avatar'] = $result['user']['avatar'] ?? '';
     $_SESSION['logged_in'] = true;
+
+    // Handle "Remember Me" functionality
+    if ($remember) {
+      // Extend session cookie lifetime to 30 days
+      $cookieLifetime = 30 * 24 * 60 * 60; // 30 days in seconds
+      
+      // Update session cookie parameters
+      $params = session_get_cookie_params();
+      setcookie(
+        session_name(),
+        session_id(),
+        time() + $cookieLifetime,
+        $params['path'],
+        $params['domain'],
+        $params['secure'],
+        $params['httponly']
+      );
+      
+      // Store remember flag in session
+      $_SESSION['remember_me'] = true;
+      $_SESSION['remember_expire'] = time() + $cookieLifetime;
+      
+      logMessage("User {$result['user']['username']} logged in with Remember Me (30 days)", 'auth.log');
+    } else {
+      // Standard session (expires when browser closes)
+      $_SESSION['remember_me'] = false;
+      logMessage("User logged in: {$result['user']['username']} (ID: {$result['user']['id']})", 'auth.log');
+    }
 
     // Regenerate session ID for security
     session_regenerate_id(true);
 
-    logMessage("User logged in: {$result['user']['username']} (ID: {$result['user']['id']})", 'auth.log');
     http_response_code(200);
   } else {
     http_response_code(401);
@@ -158,13 +190,13 @@ function handleLogout()
   // Destroy all session data
   $_SESSION = [];
   
-  // Destroy the session cookie
+  // Destroy the session cookie (including remember me cookies)
   if (ini_get('session.use_cookies')) {
     $params = session_get_cookie_params();
     setcookie(
       session_name(),
       '',
-      time() - 42000,
+      time() - 86400, // Set to past time to delete
       $params['path'],
       $params['domain'],
       $params['secure'],

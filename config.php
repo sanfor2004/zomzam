@@ -3,8 +3,8 @@
 /**
  * Config File and Models Handler
  **/
-require_once __DIR__ . './models/Base.php';
-require_once __DIR__ . './models/User.php';
+require_once __DIR__ . '/Models/Base.php';
+require_once __DIR__ . '/Models/User.php';
 
 // Set default timezone
 date_default_timezone_set('Africa/Cairo');
@@ -31,15 +31,17 @@ if ($isDev) {
 // DATABASE CONFIGURATION
 // ============================================================================
 if ($isDev) {
-    // Development Database
-    define('DB_HOST', '127.0.0.1');
-    define('DB_NAME', 'zomzam_test');
+    // Development Database (Local MySQL)
+    define('DB_HOST', 'localhost');
+    define('DB_PORT', '3306');
+    define('DB_NAME', 'zomzam_db');
     define('DB_USER', 'root');
     define('DB_PASS', '');
     define('DB_CHARSET', 'utf8mb4');
 } else {
     // Production Database
     define('DB_HOST', '92.113.22.154');
+    define('DB_PORT', '3306');
     define('DB_NAME', 'u415550448_LeagueData');
     define('DB_USER', 'u415550448_user');
     define('DB_PASS', 'v>H2uh=!QL8');
@@ -124,19 +126,25 @@ function getConnection()
 
     if ($pdo === null) {
         try {
-            $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
+            $dsn = 'mysql:host=' . DB_HOST . ';port=' . (defined('DB_PORT') ? DB_PORT : '3306') . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
-                PDO::ATTR_PERSISTENT => false, // Disable persistent for better connection management
-                PDO::ATTR_TIMEOUT => 30, // Connection timeout
-                PDO::MYSQL_ATTR_INIT_COMMAND => "SET SESSION wait_timeout=600, interactive_timeout=600", // 10 minutes
+                PDO::ATTR_PERSISTENT => false,
+                PDO::ATTR_TIMEOUT => 10,
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci',
+                PDO::MYSQL_ATTR_LOCAL_INFILE => true,
             ];
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+            
+            // Set session variables for stability
+            $pdo->exec('SET SESSION sql_mode="NO_ENGINE_SUBSTITUTION"');
+            $pdo->exec('SET SESSION wait_timeout=28800');
+            $pdo->exec('SET SESSION interactive_timeout=28800');
         } catch (PDOException $e) {
             if (DEBUG_LOG_ENABLED) {
-                die('Database connection failed: ' . $e->getMessage());
+                die('<div style="background:#fee;padding:20px;border:2px solid #c00;border-radius:8px;margin:20px;"><h2 style="color:#c00;">Database Connection Failed</h2><p><strong>Error:</strong> ' . $e->getMessage() . '</p><p><strong>Host:</strong> ' . DB_HOST . '</p><p><strong>Database:</strong> ' . DB_NAME . '</p><p><strong>Tip:</strong> Make sure MySQL is running and the database exists.</p></div>');
             } else {
                 die('Database connection failed. Please try again later.');
             }
