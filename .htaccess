@@ -36,6 +36,9 @@ RewriteRule ^ - [L]
 # API Routes - /api/{service}
 # ============================================================================
 
+# API Stream Waiter endpoint (SSE)
+RewriteRule ^api/stream/?$ Api_handler/stream_waiter.php [L,QSA]
+
 # API Authentication endpoints
 RewriteRule ^api/auth/?$ Api_handler/auth.php [L,QSA]
 RewriteRule ^api/auth/forgot-password/?$ Api_handler/profile.php [L,QSA]
@@ -66,7 +69,7 @@ RewriteRule ^sign/?$ Views/Auth/main.php [L]
 RewriteRule ^forgot-password/?$ Views/Auth/forgot-password.php [L]
 
 # Dashboard route - Authenticated users
-RewriteRule ^dashboard/?$ Views/Dashboard/home.php [L]
+RewriteRule ^dashboard/?$ Views/App/home.php [L]
 
 # Time Management Module
 RewriteRule ^time/?$ /time/execution [R=302,L]
@@ -75,7 +78,7 @@ RewriteRule ^time/tasks/?$     Views/Time/tasks.php [L]
 RewriteRule ^time/planning/?$  Views/Time/planning.php [L]
 RewriteRule ^time/tracker/?$   Views/Time/tracker.php [L]
 RewriteRule ^time/ideas/?$     Views/Time/ideas.php [L]
-RewriteRule ^time/api/?$       Views/Time/api.php [L]
+RewriteRule ^time/api/?$       Api_handler/time_api.php [L]
 # Money Management Module
 RewriteRule ^money/?$ /money/dashboard [R=302,L]
 RewriteRule ^money/dashboard/?$ Views/Money/dashboard.php [L]
@@ -86,8 +89,11 @@ RewriteRule ^money/accounts/?$  Views/Money/accounts.php [L]
 RewriteRule ^money/api/?$       Views/Money/api.php [L]
 
 # Profile routes - Authenticated users
-RewriteRule ^profile/?$ Views/Dashboard/profile.php [L]
-RewriteRule ^change-password/?$ Views/Dashboard/change-password.php [L]
+RewriteRule ^me/?$ Views/App/me.php [L]
+RewriteRule ^change-password/?$ Views/App/change-password.php [L]
+
+# Public Profile Route
+RewriteRule ^u/([a-zA-Z0-9_-]+)/?$ Views/Public/user.php?username=$1 [L,QSA]
 
 # Logout route (redirect to API)
 RewriteRule ^logout/?$ Api_handler/logout.php [L]

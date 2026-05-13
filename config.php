@@ -6,8 +6,8 @@
 require_once __DIR__ . '/Models/Base.php';
 require_once __DIR__ . '/Models/User.php';
 
-// Set default timezone
-date_default_timezone_set('Africa/Cairo');
+// Set default timezone to Greenwich Mean Time (UTC)
+date_default_timezone_set('UTC');
 
 define('ENVIRONMENT', 'development'); // development | production
 
@@ -133,13 +133,14 @@ function getConnection()
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::ATTR_PERSISTENT => false,
                 PDO::ATTR_TIMEOUT => 10,
-                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci',
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci, time_zone = "+00:00"',
                 PDO::MYSQL_ATTR_LOCAL_INFILE => true,
             ];
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
             
             // Set session variables for stability
             $pdo->exec('SET SESSION sql_mode="NO_ENGINE_SUBSTITUTION"');
+            $pdo->exec('SET SESSION time_zone="+00:00"');
             $pdo->exec('SET SESSION wait_timeout=28800');
             $pdo->exec('SET SESSION interactive_timeout=28800');
         } catch (PDOException $e) {
@@ -164,6 +165,7 @@ function getConnectionI()
     
     // Set connection timeout settings
     $mysqli->options(MYSQLI_OPT_CONNECT_TIMEOUT, 30);
+    $mysqli->query("SET SESSION time_zone='+00:00'");
     $mysqli->query("SET SESSION wait_timeout=600");
     $mysqli->query("SET SESSION interactive_timeout=600");
     

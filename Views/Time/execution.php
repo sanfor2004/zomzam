@@ -4,7 +4,19 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 $pageTitle       = 'Pomodoro Timer - Time Management';
 $pageDescription = 'Focus on your current task with the Pomodoro technique.';
-$additionalJS    = ['/Assets/Js/time_app.js?v=' . filemtime($_SERVER['DOCUMENT_ROOT'] . '/Assets/Js/time_app.js')];
+$timeJsDir = '/Assets/Js/Time/';
+$additionalJS = [
+    $timeJsDir . 'state.js',
+    $timeJsDir . 'api.js',
+    $timeJsDir . 'utils.js',
+    $timeJsDir . 'render.js',
+    $timeJsDir . 'pomodoro.js',
+    $timeJsDir . 'tasks.js',
+    $timeJsDir . 'horizons.js',
+    $timeJsDir . 'ideas.js',
+    $timeJsDir . 'init.js'
+];
+
 
 ob_start();
 ?>
@@ -51,7 +63,7 @@ ob_start();
         <button id="btn-reset" title="Reset" class="w-11 h-11 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>
         </button>
-        <button id="btn-play-pause" class="w-16 h-16 rounded-full bg-primary-500 text-white shadow-lg hover:bg-primary-600 hover:shadow-xl transition-all flex items-center justify-center hover:scale-105 active:scale-95">
+        <button id="btn-play-pause" class="w-16 h-16 rounded-full bg-primary-500 text-white shadow-lg shadow-primary-200 dark:shadow-none hover:bg-primary-600 hover:shadow-xl transition-all flex items-center justify-center hover:scale-105 active:scale-95">
           <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24"><polygon points="5,3 19,12 5,21"/></svg>
         </button>
         <button id="btn-skip" title="Skip task" class="w-11 h-11 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
@@ -68,11 +80,11 @@ ob_start();
       <div class="flex items-center gap-1.5">
         <label class="text-xs text-slate-400">Focus</label>
         <div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 overflow-hidden">
-          <button id="pom-work-down" class="px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-r border-slate-200 dark:border-slate-700">
+          <button id="pom-work-down" class="pom-adjust-btn px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-r border-slate-200 dark:border-slate-700">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
           </button>
           <input id="pom-work-input" type="text" value="25" class="w-10 text-center py-1 text-sm font-medium bg-transparent text-slate-800 dark:text-white focus:outline-none" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <button id="pom-work-up" class="px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l border-slate-200 dark:border-slate-700">
+          <button id="pom-work-up" class="pom-adjust-btn px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l border-slate-200 dark:border-slate-700">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
           </button>
         </div>
@@ -82,11 +94,11 @@ ob_start();
       <div class="flex items-center gap-1.5">
         <label class="text-xs text-slate-400">Break</label>
         <div class="flex items-center border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 overflow-hidden">
-          <button id="pom-break-down" class="px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-r border-slate-200 dark:border-slate-700">
+          <button id="pom-break-down" class="pom-adjust-btn px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-r border-slate-200 dark:border-slate-700">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
           </button>
           <input id="pom-break-input" type="text" value="5" class="w-10 text-center py-1 text-sm font-medium bg-transparent text-slate-800 dark:text-white focus:outline-none" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-          <button id="pom-break-up" class="px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l border-slate-200 dark:border-slate-700">
+          <button id="pom-break-up" class="pom-adjust-btn px-2 py-1 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors border-l border-slate-200 dark:border-slate-700">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
           </button>
         </div>
@@ -105,7 +117,7 @@ ob_start();
     </div>
 
     <!-- Current -->
-    <div class="bg-gradient-to-br from-primary-50 via-white to-amber-50 dark:from-primary-900/20 dark:via-[#1a1d24] dark:to-amber-900/10 rounded-3xl p-6 border border-primary-100 dark:border-primary-800/30 shadow-apple flex-1">
+    <div class="bg-gradient-to-br from-primary-50 via-white to-amber-50 dark:from-primary-900/20 dark:via-[#111318] dark:to-amber-900/5 rounded-3xl p-6 border border-primary-100 dark:border-primary-800/30 shadow-apple flex-1 transition-colors duration-300">
       <div class="flex items-center gap-2 mb-3">
         <span id="task-current-badge" class="bg-primary-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">NOW FOCUS</span>
         <span id="task-current-dur" class="text-xs text-slate-400 ml-auto font-medium"></span>

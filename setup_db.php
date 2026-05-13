@@ -5,6 +5,7 @@
  */
 
 require_once __DIR__ . '/config.php';
+date_default_timezone_set('UTC'); // Ensure UTC for script execution
 
 $schema = [
     'users' => [
@@ -26,6 +27,7 @@ $schema = [
         'secondary_currency' => "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'USD'",
         'last_login_at' => 'DATETIME NULL',
         'last_login_ip' => 'VARCHAR(45) NULL',
+        'last_active_at' => 'DATETIME NULL',
         'login_attempts' => 'INT UNSIGNED NOT NULL DEFAULT 0',
         'locked_until' => 'DATETIME NULL',
         'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
@@ -46,7 +48,7 @@ $schema = [
         'priority' => "ENUM('urgent', 'medium', 'maybe', 'free') NOT NULL DEFAULT 'medium'",
         'duration_block' => 'INT UNSIGNED NOT NULL',
         'actual_duration' => 'INT UNSIGNED NULL',
-        'status' => "ENUM('pending', 'in_progress', 'completed') NOT NULL DEFAULT 'pending'",
+        'status' => "ENUM('pending', 'in_progress', 'completed', 'deleted') NOT NULL DEFAULT 'pending'",
         'completed_at' => 'DATETIME NULL',
         'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
     ],
@@ -102,6 +104,12 @@ $schema = [
         'due_date' => 'DATE NULL',
         'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
         'updated_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    ],
+    'user_online_status' => [
+        'user_id' => 'INT UNSIGNED PRIMARY KEY',
+        'last_seen' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        'stream_queue' => 'JSON NULL',
+        'is_idle' => 'TINYINT(1) NOT NULL DEFAULT 0'
     ]
 ];
 

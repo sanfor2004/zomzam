@@ -201,7 +201,7 @@ $pageDescription = 'Access your Zomzam account';
       <form id="signUpForm" class="hidden space-y-5 transition-all duration-300">
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"><zlang key="auth_fullname">Full Name</zlang></label>
-          <input type="text" name="username" required minlength="3" placeholder="John Doe" class="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none">
+          <input type="text" name="username" required minlength="3" placeholder="Unique_Username" class="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none">
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"><zlang key="auth_email">Email Address</zlang></label>

@@ -73,6 +73,11 @@ try {
             $stmt->execute([$userId]);
             $transactions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+            // Fetch lending summary
+            $stmt = $pdo->prepare("SELECT type, SUM(amount) as total FROM money_lend WHERE user_id = ? AND status != 'settled' GROUP BY type");
+            $stmt->execute([$userId]);
+            $lendStats = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
             echo json_encode([
                 'success' => true,
                 'user_settings' => $userSettings,
@@ -81,7 +86,8 @@ try {
                 'transactions' => $transactions,
                 'stats' => [
                     'income' => $totalIncome,
-                    'expenses' => $expenseStats
+                    'expenses' => $expenseStats,
+                    'lend' => $lendStats
                 ]
             ]);
             break;
@@ -93,6 +99,28 @@ try {
             $stmt = $pdo->prepare("UPDATE users SET primary_currency = ?, secondary_currency = ? WHERE id = ?");
             $stmt->execute([$primary, $secondary, $userId]);
             
+            echo json_encode(['success' => true]);
+            break;
+
+        case 'delete_transaction':
+            $id = (int)$body['id'];
+            $pdo->beginTransaction();
+            
+            // Get transaction details first to adjust balance
+            $stmt = $pdo->prepare("SELECT account_id, amount, type FROM money_transactions WHERE id = ? AND user_id = ?");
+            $stmt->execute([$id, $userId]);
+            $t = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($t) {
+                $balanceChange = ($t['type'] === 'income') ? -$t['amount'] : $t['amount'];
+                $stmt = $pdo->prepare("UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?");
+                $stmt->execute([$balanceChange, $t['account_id'], $userId]);
+                
+                $stmt = $pdo->prepare("DELETE FROM money_transactions WHERE id = ? AND user_id = ?");
+                $stmt->execute([$id, $userId]);
+            }
+            
+            $pdo->commit();
             echo json_encode(['success' => true]);
             break;
 

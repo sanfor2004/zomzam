@@ -20,6 +20,14 @@
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // Theme initialization - Default to dark mode
+    if (localStorage.getItem('theme') === 'light') {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+      if (!localStorage.getItem('theme')) localStorage.setItem('theme', 'dark');
+    }
+
     tailwind.config = {
       darkMode: 'class', // We can toggle this later
       theme: {
@@ -133,6 +141,13 @@
               </div>
             </div>
           </div>
+          
+          <!-- Theme Toggle -->
+          <button onclick="toggleTheme()" class="flex items-center justify-center w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all bg-white dark:bg-slate-900 shadow-sm">
+            <svg class="w-4 h-4 dark:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            <svg class="w-4 h-4 hidden dark:block text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+          </button>
+
           <a href="/sign" class="text-sm font-semibold text-slate-900 dark:text-white hover:text-primary-500 dark:hover:text-primary-400 transition-colors"><zlang key="nav_signin">Sign In</zlang></a>
           <a href="/sign#signup" class="text-sm font-semibold text-white bg-slate-900 dark:bg-white dark:text-slate-900 px-5 py-2.5 rounded-full hover:bg-slate-800 dark:hover:bg-slate-100 transition-all shadow-apple hover:shadow-lg transform hover:-translate-y-0.5"><zlang key="nav_get_started">Get Started</zlang></a>
         </div>
@@ -176,8 +191,16 @@
     </div>
   </footer>
 
+  <!-- Zenith Stream Waiter Engine (SSE) -->
+  <script src="/Assets/Js/stream_waiter.js?v=<?php echo filemtime(BASE_PATH . '/Assets/Js/stream_waiter.js'); ?>"></script>
   <!-- Translator Integration -->
   <script src="/Assets/Js/translator.js?v=<?php echo filemtime($_SERVER['DOCUMENT_ROOT'] . '/Assets/Js/translator.js'); ?>" zlangu="en"></script>
 
+  <script>
+    function toggleTheme() {
+      const isDark = document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+    }
+  </script>
 </body>
 </html>

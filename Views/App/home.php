@@ -11,8 +11,8 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-$pageTitle = 'Dashboard - zomzam.com';
-$pageDescription = 'Welcome to your dashboard';
+$pageTitle = 'App - zomzam.com';
+$pageDescription = 'Welcome to your App';
 
 ob_start();
 ?>
@@ -45,7 +45,7 @@ ob_start();
         </div>
         <h3 class="font-semibold text-lg text-slate-900 dark:text-white"><?php echo htmlspecialchars($_SESSION['username'] ?? 'User'); ?></h3>
         <p class="text-sm text-slate-500 dark:text-slate-400 mb-6"><?php echo htmlspecialchars($_SESSION['email'] ?? ''); ?></p>
-        <a href="/profile" class="w-full py-2.5 px-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white font-medium rounded-xl transition-colors border border-slate-200 dark:border-slate-700">
+        <a href="/me" class="w-full py-2.5 px-4 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-900 dark:text-white font-medium rounded-xl transition-colors border border-slate-200 dark:border-slate-700">
           View Profile
         </a>
       </div>
@@ -76,7 +76,7 @@ ob_start();
     <div class="bg-white dark:bg-surface-dark rounded-3xl p-6 shadow-apple border border-slate-100 dark:border-slate-800">
       <h3 class="font-semibold text-lg text-slate-900 dark:text-white mb-5">Quick Actions</h3>
       <div class="space-y-3">
-        <a href="/profile" class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
+        <a href="/me" class="group flex items-center gap-4 p-3 rounded-2xl hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border border-transparent hover:border-slate-100 dark:hover:border-slate-700">
           <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center group-hover:scale-105 transition-transform">
             <svg class="w-5 h-5 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>

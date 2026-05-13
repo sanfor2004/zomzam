@@ -95,6 +95,7 @@ const MoneyApp = (function() {
   function renderDashboard() {
     renderBalanceCards();
     renderBudgetProgress();
+    renderLendSummary();
     renderRecentTransactions();
   }
 
@@ -190,6 +191,16 @@ const MoneyApp = (function() {
     if (remEl) remEl.textContent = formatCurrency(displayRemaining, displayCurrency);
   }
 
+  function renderLendSummary() {
+    const oweMeEl = document.getElementById('lend-owe-me');
+    const iOweEl = document.getElementById('lend-i-owe');
+    if (!oweMeEl || !iOweEl) return;
+
+    const lend = state.stats.lend || {};
+    oweMeEl.textContent = formatCurrency(convert(lend.owe_me || 0, 'EGP', state.display_currency), state.display_currency);
+    iOweEl.textContent = formatCurrency(convert(lend.i_owe || 0, 'EGP', state.display_currency), state.display_currency);
+  }
+
   function renderRecentTransactions() {
     const dashboardContainer = document.getElementById('recent-transactions');
     const incomeContainer = document.getElementById('income-list');
@@ -211,10 +222,11 @@ const MoneyApp = (function() {
               <p class="text-sm font-bold text-slate-900 dark:text-white truncate">${t.description || t.category_name || 'Transaction'}</p>
               <p class="text-[10px] text-slate-400 uppercase tracking-widest">${t.account_name} • ${new Date(t.transaction_date).toLocaleDateString()}</p>
             </div>
-            <div class="text-right">
+            <div class="text-right flex flex-col items-end gap-1">
               <p class="text-sm font-black ${t.type === 'income' ? 'text-emerald-500' : 'text-slate-900 dark:text-white'}">
                 ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount, t.currency)}
               </p>
+              <button onclick="MoneyApp.deleteTransaction(${t.id})" class="opacity-0 group-hover:opacity-100 text-[10px] font-bold text-rose-500 hover:text-rose-600 transition-all">Delete</button>
             </div>
           </div>
         `).join('');
@@ -226,8 +238,15 @@ const MoneyApp = (function() {
   }
 
   function getCategoryIcon(name) {
-    // Simple placeholder icons
-    return `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`;
+    const icons = {
+        'shield': '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+        'heart': '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78v0z"/></svg>',
+        'piggy-bank': '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-4c1-.5 1.7-1 2-2h2v-4h-2c0-1 .5-1.5 1-2V5z"/></svg>',
+        'shopping-cart': '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>',
+        'zap': '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>',
+        'dollar-sign': '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>'
+    };
+    return icons[name] || '<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>';
   }
 
   function initEventListeners() {
@@ -291,7 +310,6 @@ const MoneyApp = (function() {
       const newPrimary = switcher.value;
       state.display_currency = newPrimary;
       state.user_settings.primary_currency = newPrimary;
-      state.user_settings.secondary_currency = newPrimary === 'EGP' ? 'USD' : 'EGP';
       
       await api('update_settings', {
         primary_currency: state.user_settings.primary_currency,
@@ -299,9 +317,39 @@ const MoneyApp = (function() {
       });
       renderDashboard();
     },
+    saveGlobalSettings: async () => {
+      const primary = document.getElementById('settings-primary-currency').value;
+      const secondary = document.getElementById('settings-secondary-currency').value;
+      
+      state.user_settings.primary_currency = primary;
+      state.user_settings.secondary_currency = secondary;
+      state.display_currency = primary;
+      
+      const res = await api('update_settings', {
+        primary_currency: primary,
+        secondary_currency: secondary
+      });
+      
+      if (res.success) {
+        closeModal('modal-settings');
+        // Update switcher if exists
+        const switcher = document.getElementById('currency-switcher');
+        if (switcher) switcher.value = primary;
+        renderDashboard();
+      }
+    },
     toggleRemainingCurrency: () => {
       state.show_secondary = !state.show_secondary;
       renderBudgetProgress();
+    },
+    deleteTransaction: async (id) => {
+      if (!confirm('Are you sure you want to delete this transaction? This will also revert the account balance.')) return;
+      const res = await api('delete_transaction', { id });
+      if (res.success) {
+        await loadInitialData();
+        renderDashboard();
+      }
+      return res;
     },
     addTransaction: async (data) => {
       const res = await api('add_transaction', data);

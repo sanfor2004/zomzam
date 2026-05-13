@@ -2,7 +2,7 @@
 /**
  * Time Management - API Endpoint
  */
-require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../config.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
     http_response_code(401); echo json_encode(['success' => false]); exit;
@@ -20,7 +20,7 @@ try {
     switch ($action) {
 
         case 'load':
-            $tasks = $pdo->prepare("SELECT * FROM time_tasks WHERE user_id = ? ORDER BY FIELD(priority,'urgent','medium','maybe','free'), created_at ASC");
+            $tasks = $pdo->prepare("SELECT * FROM time_tasks WHERE user_id = ? AND status != 'deleted' ORDER BY FIELD(priority,'urgent','medium','maybe','free'), created_at ASC");
             $tasks->execute([$userId]);
 
             $horizons = $pdo->prepare("SELECT * FROM time_horizons WHERE user_id = ? ORDER BY created_at ASC");
@@ -37,6 +37,22 @@ try {
             foreach ($horizonRows as $h) { $grouped[$h['type']][] = $h; }
 
             echo json_encode(['success' => true, 'tasks' => $taskRows, 'horizons' => $grouped, 'ideas' => $ideaRows]);
+            break;
+
+        case 'update_task':
+            $id       = (int)($body['id'] ?? 0);
+            $title    = trim($body['title'] ?? '');
+            $priority = in_array($body['priority'] ?? '', ['urgent','medium','maybe','free']) ? $body['priority'] : 'medium';
+            $duration = max(5, (int)($body['duration_block'] ?? 25));
+            $horizonId = !empty($body['horizon_id']) ? (int)$body['horizon_id'] : null;
+            if (!$title) { echo json_encode(['success' => false, 'error' => 'Empty title']); break; }
+
+            $stmt = $pdo->prepare("UPDATE time_tasks SET title = ?, priority = ?, duration_block = ?, horizon_id = ? WHERE id = ? AND user_id = ?");
+            $stmt->execute([$title, $priority, $duration, $horizonId, $id, $userId]);
+            
+            $row = $pdo->prepare("SELECT * FROM time_tasks WHERE id = ?");
+            $row->execute([$id]);
+            echo json_encode(['success' => true, 'task' => $row->fetch(PDO::FETCH_ASSOC)]);
             break;
 
         case 'add_task':
@@ -70,7 +86,7 @@ try {
 
         case 'delete_task':
             $id = (int)($body['id'] ?? 0);
-            $pdo->prepare("DELETE FROM time_tasks WHERE id = ? AND user_id = ?")->execute([$id, $userId]);
+            $pdo->prepare("UPDATE time_tasks SET status='deleted' WHERE id = ? AND user_id = ?")->execute([$id, $userId]);
             echo json_encode(['success' => true]);
             break;
 
@@ -100,6 +116,16 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+        case 'move_horizon':
+            $id   = (int)($body['id'] ?? 0);
+            $type = in_array($body['type'] ?? '', ['week','month','year']) ? $body['type'] : null;
+            if (!$id || !$type) { echo json_encode(['success' => false]); break; }
+
+            $pdo->prepare("UPDATE time_horizons SET type = ? WHERE id = ? AND user_id = ?")->execute([$type, $id, $userId]);
+            echo json_encode(['success' => true]);
+            break;
+
+
         case 'add_idea':
             $content   = trim($body['content'] ?? '');
             $taskId    = !empty($body['linked_task_id'])    ? (int)$body['linked_task_id']    : null;
@@ -124,10 +150,14 @@ try {
         case 'update_idea':
             $id = (int)($body['id'] ?? 0);
             $content = trim($body['content'] ?? '');
+            $taskId    = !empty($body['linked_task_id'])    ? (int)$body['linked_task_id']    : null;
+            $horizonId = !empty($body['linked_horizon_id']) ? (int)$body['linked_horizon_id'] : null;
             if (!$content) { echo json_encode(['success' => false]); break; }
-            $pdo->prepare("UPDATE time_ideas SET content = ? WHERE id = ? AND user_id = ?")->execute([$content, $id, $userId]);
+            $pdo->prepare("UPDATE time_ideas SET content = ?, linked_task_id = ?, linked_horizon_id = ? WHERE id = ? AND user_id = ?")
+                ->execute([$content, $taskId, $horizonId, $id, $userId]);
             echo json_encode(['success' => true]);
             break;
+
 
         default:
             echo json_encode(['success' => false, 'error' => 'Unknown action']);

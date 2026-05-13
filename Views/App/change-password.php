@@ -97,7 +97,7 @@ ob_start();
             >
               Update Password
             </button>
-            <a href="/profile" class="px-8 py-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium rounded-xl border border-slate-200 dark:border-slate-700 transition-all text-center">
+            <a href="/me" class="px-8 py-3 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-medium rounded-xl border border-slate-200 dark:border-slate-700 transition-all text-center">
               Cancel
             </a>
           </div>
@@ -235,7 +235,7 @@ document.getElementById('changePasswordForm').addEventListener('submit', async f
       document.getElementById('passwordStrength').classList.add('hidden');
       
       // Redirect after success
-      setTimeout(() => window.location.href = '/profile', 2000);
+      setTimeout(() => window.location.href = '/me', 2000);
     } else {
       showMessage(result.message, false);
     }

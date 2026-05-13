@@ -4,7 +4,19 @@ if (session_status() === PHP_SESSION_NONE) session_start();
 
 $pageTitle       = 'Dream Planning - Time Management';
 $pageDescription = 'Set and track your weekly, monthly, and yearly goals.';
-$additionalJS    = ['/Assets/Js/time_app.js?v=' . filemtime($_SERVER['DOCUMENT_ROOT'] . '/Assets/Js/time_app.js')];
+$timeJsDir = '/Assets/Js/Time/';
+$additionalJS = [
+    $timeJsDir . 'state.js',
+    $timeJsDir . 'api.js',
+    $timeJsDir . 'utils.js',
+    $timeJsDir . 'render.js',
+    $timeJsDir . 'pomodoro.js',
+    $timeJsDir . 'tasks.js',
+    $timeJsDir . 'horizons.js',
+    $timeJsDir . 'ideas.js',
+    $timeJsDir . 'init.js'
+];
+
 
 ob_start();
 ?>

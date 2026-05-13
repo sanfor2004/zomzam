@@ -78,7 +78,7 @@ function handleRegister()
   // Get input data
   $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
   
-  $username = trim($input['username'] ?? '');
+  $username = str_replace(' ', '_', trim($input['username'] ?? ''));
   $email = trim($input['email'] ?? '');
   $password = $input['password'] ?? '';
 

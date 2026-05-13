@@ -29,6 +29,9 @@ ob_start();
       </div>
     </div>
     <div class="flex items-center gap-3">
+      <button onclick="openModal('modal-settings')" class="p-2.5 bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-primary-500 rounded-2xl transition-all border border-slate-200 dark:border-slate-700 active:scale-95" title="Settings">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      </button>
       <button onclick="openModal('modal-income')" class="flex items-center gap-2 px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all shadow-lg shadow-emerald-500/20 active:scale-95">
         <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
         Income
@@ -80,6 +83,22 @@ ob_start();
         <svg class="w-8 h-8 mb-4 opacity-50" fill="currentColor" viewBox="0 0 24 24"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM11 15H13V17H11V15ZM11 7H13V13H11V7Z"/></svg>
         <h3 class="text-lg font-bold mb-1">Financial Tip</h3>
         <p class="text-sm text-primary-50 opacity-90">Avoid lifestyle creep. When your income increases, keep your "Needs" at 60% of your old income for a while.</p>
+      </div>
+
+      <!-- Lending Summary -->
+      <div class="bg-white dark:bg-[#1a1d24] rounded-3xl p-6 border border-slate-100 dark:border-slate-800 shadow-apple">
+        <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Debts & Loans</h3>
+        <div id="lend-summary" class="space-y-4">
+           <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-slate-600 dark:text-slate-400">Owe Me</span>
+              <span id="lend-owe-me" class="text-sm font-black text-emerald-500">EGP 0</span>
+           </div>
+           <div class="flex items-center justify-between">
+              <span class="text-sm font-bold text-slate-600 dark:text-slate-400">I Owe</span>
+              <span id="lend-i-owe" class="text-sm font-black text-rose-500">EGP 0</span>
+           </div>
+           <a href="/money/lend" class="block w-full text-center py-2 mt-2 bg-slate-50 dark:bg-slate-800 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-primary-500 transition-colors">Manage All</a>
+        </div>
       </div>
     </div>
 
@@ -194,6 +213,44 @@ ob_start();
         </div>
 
         <button id="btn-save-expense" class="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black rounded-2xl shadow-lg transition-all active:scale-95">Save Expense</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="modal-settings" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+  <div class="bg-white dark:bg-[#1a1d24] w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+    <div class="p-8">
+      <div class="flex items-center justify-between mb-8">
+        <h3 class="text-xl font-black text-slate-900 dark:text-white">Settings</h3>
+        <button onclick="closeModal('modal-settings')" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors">
+          <svg class="w-6 h-6 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      
+      <div class="space-y-6">
+        <div>
+          <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Primary Currency</label>
+          <select id="settings-primary-currency" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none">
+             <option value="EGP">EGP (Egyptian Pound)</option>
+             <option value="USD">USD (US Dollar)</option>
+             <option value="EUR">EUR (Euro)</option>
+             <option value="GBP">GBP (British Pound)</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 block">Secondary Currency</label>
+          <select id="settings-secondary-currency" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-800 rounded-xl text-sm focus:outline-none">
+             <option value="EGP">EGP (Egyptian Pound)</option>
+             <option value="USD" selected>USD (US Dollar)</option>
+             <option value="EUR">EUR (Euro)</option>
+             <option value="GBP">GBP (British Pound)</option>
+          </select>
+          <p class="text-[10px] text-slate-400 mt-2">Used for quick conversion and alternate displays.</p>
+        </div>
+        
+        <button onclick="MoneyApp.saveGlobalSettings()" class="w-full py-4 bg-primary-500 hover:bg-primary-600 text-white font-black rounded-2xl shadow-lg shadow-primary-500/20 transition-all active:scale-95">Save Changes</button>
       </div>
     </div>
   </div>

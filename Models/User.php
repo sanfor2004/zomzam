@@ -318,4 +318,114 @@ class User extends Base
     $result = $stmt->fetch();
     return $result['total'] ?? 0;
   }
+
+  /**
+   * Update user online status
+   * 
+   * @param int $userId - User ID
+   * @return bool - Success status
+   */
+  public function updateOnlineStatus($userId, $isIdle = 0)
+  {
+    $this->ensureConnection();
+    try {
+      // Update user_online_status table
+      // Atomic UPSERT - preserve stream_queue if updating last_seen and handle idle state
+      $stmt = $this->pdo->prepare("INSERT INTO user_online_status (user_id, last_seen, is_idle) 
+                            VALUES (?, NOW(), ?) 
+                            ON DUPLICATE KEY UPDATE last_seen = NOW(), is_idle = ?");
+      $stmt->execute([$userId, $isIdle, $isIdle]);
+
+      // Update last_active_at in main table for redundant tracking
+      $stmt = $this->pdo->prepare("UPDATE users SET last_active_at = NOW() WHERE id = ?");
+      $stmt->execute([$userId]);
+      return true;
+    } catch (PDOException $e) {
+      return false;
+    }
+  }
+
+  /**
+   * Push an order to the user's stream queue for SSE delivery
+   * 
+   * @param int $userId - Target user ID
+   * @param string $orderName - Name of the function to execute on client
+   * @param array $params - Parameters for the function
+   */
+  public function pushStreamOrder($userId, $orderName, $params = [])
+  {
+    $this->ensureConnection();
+    try {
+      // Get existing queue
+      $stmt = $this->pdo->prepare("SELECT stream_queue FROM user_online_status WHERE user_id = ?");
+      $stmt->execute([$userId]);
+      $queueRaw = $stmt->fetchColumn();
+
+      $queue = $queueRaw ? json_decode($queueRaw, true) : [];
+      if (!is_array($queue))
+        $queue = [];
+
+      $queue[] = [
+        'order_name' => $orderName,
+        'params' => $params
+      ];
+
+      $stmt = $this->pdo->prepare("INSERT INTO user_online_status (user_id, stream_queue, last_seen) 
+                                   VALUES (?, ?, NOW()) 
+                                   ON DUPLICATE KEY UPDATE stream_queue = ?, last_seen = NOW()");
+      $json = json_encode($queue);
+      $stmt->execute([$userId, $json, $json]);
+      return true;
+    } catch (PDOException $e) {
+      return false;
+    }
+  }
+
+  /**
+   * Get user online status
+   * 
+   * @param int $userId - User ID
+   * @return array - Status information
+   */
+  public function getOnlineStatus($userId)
+  {
+    $this->ensureConnection();
+    try {
+      $stmt = $this->pdo->prepare("SELECT last_seen, is_idle FROM user_online_status WHERE user_id = ?");
+      $stmt->execute([$userId]);
+      $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+      if (!$row) {
+        return ['is_online' => false, 'last_seen' => null, 'is_idle' => false, 'label' => 'OFFLINE'];
+      }
+
+      $lastSeenRaw = $row['last_seen'];
+      $isIdle = (bool)$row['is_idle'];
+
+      $diff = time() - strtotime($lastSeenRaw);
+      $isOnline = $diff < 7; // Use 7s for SSE buffer
+
+      $label = "ONLINE";
+      if (!$isOnline) {
+        if ($diff < 60)
+          $label = $diff . "S AGO";
+        elseif ($diff < 3600)
+          $label = floor($diff / 60) . "M AGO";
+        elseif ($diff < 86400)
+          $label = floor($diff / 3600) . "H AGO";
+        else
+          $label = floor($diff / 86400) . "D AGO";
+      }
+
+      return [
+        'is_online' => $isOnline,
+        'is_idle' => $isIdle && $isOnline, // Only show idle if actually online
+        'last_seen' => $lastSeenRaw,
+        'label' => $label,
+        'diff' => $diff
+      ];
+    } catch (PDOException $e) {
+      return ['is_online' => false, 'last_seen' => null, 'label' => 'UNKNOWN'];
+    }
+  }
 }

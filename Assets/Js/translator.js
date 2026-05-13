@@ -45,11 +45,12 @@ const ZLANG_CONFIG = {
         "auth_email": "Email Address",
         "auth_password": "Password",
         "auth_forgot": "Forgot password?",
-        "auth_fullname": "Full Name",
+        "auth_fullname": "Username",
         "auth_pass_rule": "Must be at least 8 characters long.",
         "auth_terms": "By signing up, you agree to our Terms of Service and Privacy Policy.",
         "nav_time": "Time Management",
-        "nav_money": "Money Management"
+        "nav_money": "Money Management",
+        "nav_community": "Community"
     },
     "ar": {
         "company_name": "zomzam",
@@ -80,11 +81,12 @@ const ZLANG_CONFIG = {
         "auth_email": "البريد الإلكتروني",
         "auth_password": "كلمة المرور",
         "auth_forgot": "هل نسيت كلمة المرور؟",
-        "auth_fullname": "الاسم الكامل",
+        "auth_fullname": "اسم المستخدم",
         "auth_pass_rule": "يجب أن تتكون من 8 أحرف على الأقل.",
         "auth_terms": "بالتسجيل، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بنا.",
         "nav_time": "إدارة الوقت",
-        "nav_money": "إدارة المال"
+        "nav_money": "إدارة المال",
+        "nav_community": "المجتمع"
     },
     "es": {
         "company_name": "zomzam",
@@ -115,11 +117,12 @@ const ZLANG_CONFIG = {
         "auth_email": "Correo Electrónico",
         "auth_password": "Contraseña",
         "auth_forgot": "¿Olvidaste tu contraseña?",
-        "auth_fullname": "Nombre Completo",
+        "auth_fullname": "Nombre de usuario",
         "auth_pass_rule": "Debe tener al menos 8 caracteres.",
         "auth_terms": "Al registrarte, aceptas nuestros Términos de Servicio y Política de Privacidad.",
         "nav_time": "Gestión del Tiempo",
-        "nav_money": "Gestión del Dinero"
+        "nav_money": "Gestión del Dinero",
+        "nav_community": "Comunidad"
     },
     "fr": {
         "company_name": "zomzam",

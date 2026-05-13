@@ -12,8 +12,8 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-$pageTitle = 'Dashboard - zomzam.com';
-$pageDescription = 'Your main dashboard';
+$pageTitle = 'App - zomzam.com';
+$pageDescription = 'Your main app dashboard';
 
 // Start building page content
 ob_start();
