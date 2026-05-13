@@ -14,7 +14,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 if (isset($_SESSION['user_id'])) {
   try {
     $pdo = getConnection();
-    
+
     // We don't update here anymore, let the JS heartbeat handle it for real-time accuracy
     // But we update once on page load to ensure they are immediately marked online
     $stmt = $pdo->prepare("INSERT INTO user_online_status (user_id, last_seen) 
@@ -26,16 +26,20 @@ if (isset($_SESSION['user_id'])) {
     $stmt = $pdo->prepare("SELECT last_seen FROM user_online_status WHERE user_id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $lastSeen = $stmt->fetchColumn();
-    
+
     $diff = time() - strtotime($lastSeen);
     $isOnline = $diff < 5; // 5 seconds threshold for testing
-    
+
     $offlineDuration = "a while ago";
     if ($lastSeen) {
-      if ($diff < 60) $offlineDuration = "just now";
-      elseif ($diff < 3600) $offlineDuration = floor($diff / 60) . "m ago";
-      elseif ($diff < 86400) $offlineDuration = floor($diff / 3600) . "h ago";
-      else $offlineDuration = floor($diff / 86400) . "d ago";
+      if ($diff < 60)
+        $offlineDuration = "just now";
+      elseif ($diff < 3600)
+        $offlineDuration = floor($diff / 60) . "m ago";
+      elseif ($diff < 86400)
+        $offlineDuration = floor($diff / 3600) . "h ago";
+      else
+        $offlineDuration = floor($diff / 86400) . "d ago";
     }
   } catch (Exception $e) {
     $isOnline = false;
@@ -512,10 +516,10 @@ $currentUser = [
   <!-- Main Content Area -->
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-[#111318]">
     <!-- Topbar (Desktop) -->
-    <header class="hidden md:flex glass-header h-20 items-center justify-between pr-8 flex-shrink-0 z-40">
+    <header class="hidden md:flex glass-header h-20 items-center justify-between flex-shrink-0 z-40">
       <div class="flex items-center h-full">
         <!-- Zenith Smoke Announcement Section -->
-        <div class="smoke-section h-full flex items-center px-10 min-w-[320px] mr-6">
+        <div class="smoke-section h-full flex items-center px-10 min-w-[320px]">
 
           <div class="relative z-10 flex items-center gap-5">
             <!-- Live Session Indicator -->
@@ -551,7 +555,7 @@ $currentUser = [
         </div>
       </div>
 
-      <div class="flex items-center gap-4">
+      <div class="flex items-center gap-4 pl-4 pr-4">
         <!-- Language Switcher -->
         <div class="relative group border-r border-slate-200 dark:border-slate-700 pr-4">
           <button
@@ -644,7 +648,8 @@ $currentUser = [
   <?php endif; ?>
 
   <!-- Zenith Stream Waiter Engine (SSE) -->
-  <script src="/Assets/Js/stream_waiter.js?v=<?php echo filemtime(BASE_PATH . '/Assets/Js/stream_waiter.js'); ?>"></script>
+  <script
+    src="/Assets/Js/stream_waiter.js?v=<?php echo filemtime(BASE_PATH . '/Assets/Js/stream_waiter.js'); ?>"></script>
 
   <script>
     function handleLogout() {
