@@ -50,7 +50,18 @@ const ZLANG_CONFIG = {
         "auth_terms": "By signing up, you agree to our Terms of Service and Privacy Policy.",
         "nav_time": "Time Management",
         "nav_money": "Money Management",
-        "nav_community": "Community"
+        "nav_community": "Community",
+        "btn_add_task": "Add Task",
+        "task_urgent": "Urgent",
+        "task_medium": "Medium",
+        "task_maybe": "Maybe",
+        "task_free": "Free",
+        "task_completed": "Completed",
+        "task_board": "Task Board",
+        "task_active": "Active Tasks",
+        "task_placeholder": "What needs to be done?",
+        "task_priority": "Priority",
+        "task_duration": "Time Block"
     },
     "ar": {
         "company_name": "zomzam",
@@ -86,7 +97,18 @@ const ZLANG_CONFIG = {
         "auth_terms": "بالتسجيل، فإنك توافق على شروط الخدمة وسياسة الخصوصية الخاصة بنا.",
         "nav_time": "إدارة الوقت",
         "nav_money": "إدارة المال",
-        "nav_community": "المجتمع"
+        "nav_community": "المجتمع",
+        "btn_add_task": "إضافة مهمة",
+        "task_urgent": "عاجل",
+        "task_medium": "متوسط",
+        "task_maybe": "ربما",
+        "task_free": "حر",
+        "task_completed": "المكتملة",
+        "task_board": "لوحة المهام",
+        "task_active": "المهام النشطة",
+        "task_placeholder": "ما الذي يجب القيام به؟",
+        "task_priority": "الأولوية",
+        "task_duration": "الكتلة الزمنية"
     },
     "es": {
         "company_name": "zomzam",

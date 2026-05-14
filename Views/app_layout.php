@@ -139,16 +139,61 @@ $currentUser = [
     }
 
     .glass-header {
-      background: rgba(255, 255, 255, 0.85) !important;
+      position: relative;
+      background: linear-gradient(to right, rgba(238, 87, 18, 0.12), rgba(255, 255, 255, 0.85)) !important;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      z-index: 100;
+      /* Higher priority to ensure dropdowns are always on top */
     }
 
-    .dark .glass-header {
-      background: rgba(255, 255, 255, 0.05) !important;
-      /* Keep it subtle glass in dark mode, but not solid dark */
+    html.dark .glass-header {
+      background: linear-gradient(to right, rgba(238, 87, 18, 0.12), #111318) !important;
     }
+
+    .glass-header::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+      opacity: 0.06;
+      pointer-events: none;
+      z-index: -1;
+      /* Send to back of the header context */
+      mix-blend-mode: overlay;
+    }
+
+    /* RTL Support for Topbar Gradient */
+    html[dir="rtl"] .glass-header {
+      background: linear-gradient(to right, rgba(238, 87, 18, 0.12), rgba(255, 255, 255, 0.85)) !important;
+    }
+
+    html[dir="rtl"].dark .glass-header {
+      background: linear-gradient(to left, rgba(238, 87, 18, 0.12), #111318) !important;
+    }
+
+    /* Zenith Tree Lines - Simple Edition */
+    #timeGroup > div,
+    #moneyGroup > div,
+    #communityGroup > div {
+      border-left: 1.5px solid rgba(238, 87, 18, 0.2) !important;
+      margin-left: 1.25rem !important;
+      padding-left: 0.5rem !important;
+      border-right: none !important;
+    }
+
+    html[dir="rtl"] #timeGroup > div,
+    html[dir="rtl"] #moneyGroup > div,
+    html[dir="rtl"] #communityGroup > div {
+      border-left: none !important;
+      border-right: 1.5px solid rgba(238, 87, 18, 0.2) !important;
+      margin-left: 0 !important;
+      margin-right: 1.25rem !important;
+      padding-left: 0 !important;
+      padding-right: 0.5rem !important;
+    }
+
 
     .nav-link-active {
       color: #EE5712 !important;
@@ -163,32 +208,7 @@ $currentUser = [
     /* Smoke & Noise Zenith Effect - Creative Version */
     .smoke-section {
       position: relative;
-      background: linear-gradient(to right, rgba(238, 87, 18, 0.12), transparent);
-      overflow: hidden;
-    }
-
-    .smoke-section::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-      opacity: 0.08;
-      pointer-events: none;
-      z-index: 2;
-      mix-blend-mode: overlay;
-    }
-
-    .dark .smoke-section {
-      background: linear-gradient(to right, rgba(238, 87, 18, 0.12), #1d1f23);
-    }
-
-    /* RTL Support for Announcement Section */
-    html[dir="rtl"] .smoke-section {
-      background: linear-gradient(to left, rgba(238, 87, 18, 0.12), transparent);
-    }
-
-    html[dir="rtl"] .dark .smoke-section {
-      background: linear-gradient(to left, rgba(238, 87, 18, 0.12), #1d1f23);
+      z-index: 1;
     }
   </style>
 </head>
@@ -234,7 +254,7 @@ $currentUser = [
         <div id="timeGroup" class="block pr-3 py-1">
           <div class="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
             <a href="/time/execution"
-              class="nav-link relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">
+              class="nav-link flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group">
               <svg class="w-4 h-4 flex-shrink-0 text-primary-400 group-hover:text-primary-500 transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="10" />
@@ -243,7 +263,7 @@ $currentUser = [
               Pomodoro Timer
             </a>
             <a href="/time/tasks"
-              class="nav-link relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">
+              class="nav-link flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group">
               <svg class="w-4 h-4 flex-shrink-0 text-amber-400 group-hover:text-amber-500 transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
@@ -254,7 +274,7 @@ $currentUser = [
               Task Board
             </a>
             <a href="/time/planning"
-              class="nav-link relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">
+              class="nav-link flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group">
               <svg class="w-4 h-4 flex-shrink-0 text-purple-400 group-hover:text-purple-500 transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 2L2 7l10 5 10-5-10-5z" />
@@ -264,7 +284,7 @@ $currentUser = [
               Dream Planning
             </a>
             <a href="/time/ideas"
-              class="nav-link relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">
+              class="nav-link flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group">
               <svg class="w-4 h-4 flex-shrink-0 text-emerald-400 group-hover:text-emerald-500 transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 18h6" />
@@ -275,7 +295,7 @@ $currentUser = [
               Idea Capture
             </a>
             <a href="/time/tracker"
-              class="nav-link relative flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">
+              class="nav-link flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors group">
               <svg class="w-4 h-4 flex-shrink-0 text-blue-400 group-hover:text-blue-500 transition-colors"
                 viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 3v18h18" />
@@ -302,15 +322,15 @@ $currentUser = [
         <div id="moneyGroup" class="block pr-3 py-1">
           <div class="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
             <a href="/money/dashboard"
-              class="nav-link relative block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">Overview</a>
+              class="nav-link block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">Overview</a>
             <a href="/money/expenses"
-              class="nav-link relative block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">Expenses</a>
+              class="nav-link block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">Expenses</a>
             <a href="/money/income"
-              class="nav-link relative block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">Income</a>
+              class="nav-link block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">Income</a>
             <a href="/money/accounts"
-              class="nav-link relative block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">Accounts</a>
+              class="nav-link block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">Accounts</a>
             <a href="/money/lend"
-              class="nav-link relative block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors before:absolute before:top-1/2 before:-translate-y-1/2 before:-left-4 before:w-4 before:h-px before:bg-slate-200 dark:before:bg-slate-700">Lending</a>
+              class="nav-link block px-3 py-2 text-sm font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">Lending</a>
           </div>
         </div>
       </div>
@@ -516,7 +536,7 @@ $currentUser = [
   <!-- Main Content Area -->
   <div class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50/50 dark:bg-[#111318]">
     <!-- Topbar (Desktop) -->
-    <header class="hidden md:flex glass-header h-20 items-center justify-between flex-shrink-0 z-40">
+    <header class="hidden md:flex glass-header h-20 items-center justify-between flex-shrink-0">
       <div class="flex items-center h-full">
         <!-- Zenith Smoke Announcement Section -->
         <div class="smoke-section h-full flex items-center px-10 min-w-[320px]">

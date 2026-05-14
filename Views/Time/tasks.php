@@ -27,7 +27,7 @@ ob_start();
     <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>
   </div>
   <div>
-    <h1 class="text-xl font-bold text-slate-900 dark:text-white">Task Board</h1>
+    <h1 class="text-xl font-bold text-slate-900 dark:text-white"><zlang key="task_board">Task Board</zlang></h1>
     <p class="text-xs text-slate-400">Prioritize, time-block, and link to your dreams.</p>
   </div>
 </div>
@@ -39,12 +39,12 @@ ob_start();
     <!-- Active Tasks -->
     <div class="bg-white dark:bg-[#1a1d24] rounded-3xl p-6 shadow-apple border border-slate-100 dark:border-slate-800">
       <div class="flex items-center justify-between mb-5">
-        <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Active Tasks</h2>
+        <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider"><zlang key="task_active">Active Tasks</zlang></h2>
         <div class="flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-xs text-slate-400 hidden sm:inline">Urgent</span>
-          <span class="w-2 h-2 rounded-full bg-amber-400 ml-2"></span><span class="text-xs text-slate-400 hidden sm:inline">Medium</span>
-          <span class="w-2 h-2 rounded-full bg-blue-400 ml-2"></span><span class="text-xs text-slate-400 hidden sm:inline">Maybe</span>
-          <span class="w-2 h-2 rounded-full bg-slate-300 ml-2"></span><span class="text-xs text-slate-400 hidden sm:inline">Free</span>
+          <span class="w-2 h-2 rounded-full bg-red-400"></span><span class="text-xs text-slate-400 hidden sm:inline"><zlang key="task_urgent">Urgent</zlang></span>
+          <span class="w-2 h-2 rounded-full bg-amber-400 ml-2"></span><span class="text-xs text-slate-400 hidden sm:inline"><zlang key="task_medium">Medium</zlang></span>
+          <span class="w-2 h-2 rounded-full bg-blue-400 ml-2"></span><span class="text-xs text-slate-400 hidden sm:inline"><zlang key="task_maybe">Maybe</zlang></span>
+          <span class="w-2 h-2 rounded-full bg-slate-300 ml-2"></span><span class="text-xs text-slate-400 hidden sm:inline"><zlang key="task_free">Free</zlang></span>
         </div>
       </div>
       <div id="task-list" class="space-y-1 max-h-[500px] overflow-y-auto pr-1">
@@ -62,7 +62,7 @@ ob_start();
           <div class="w-6 h-6 rounded bg-emerald-500/20 flex items-center justify-center">
             <svg class="w-3 h-3 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Completed</h2>
+          <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider"><zlang key="task_completed">Completed</zlang></h2>
         </div>
         <span id="completed-tasks-count" class="text-xs bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold px-2.5 py-1 rounded-full">0</span>
       </div>
@@ -75,9 +75,9 @@ ob_start();
   <!-- ── Add Task Form ── -->
   <div class="lg:col-span-2 flex flex-col gap-4">
     <div class="bg-white dark:bg-[#1a1d24] rounded-3xl p-6 shadow-apple border border-slate-100 dark:border-slate-800">
-      <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4">Add New Task</h2>
+      <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-4"><zlang key="btn_add_task">Add New Task</zlang></h2>
       <div class="space-y-3">
-        <input id="task-title" type="text" placeholder="What needs to be done?"
+        <input id="task-title" type="text" placeholder="What needs to be done?" data-zlang-placeholder="task_placeholder"
           class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all">
 
         <div class="grid grid-cols-2 gap-3">
@@ -166,7 +166,7 @@ ob_start();
 
         <button id="btn-add-task" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2.5 rounded-xl text-sm transition-all hover:shadow-lg active:scale-[0.98] flex items-center justify-center gap-2">
           <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Task
+          <zlang key="btn_add_task">Add Task</zlang>
         </button>
       </div>
     </div>
