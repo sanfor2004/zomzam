@@ -105,6 +105,13 @@ class GlobalTimerSync {
 
         this.updateClock(this.state.remaining);
         
+        // Hide the navigation link if we are already on the execution page
+        const link = document.getElementById('global-timer-link');
+        if (link) {
+            const isExecutionPage = window.location.pathname === '/time/execution' || window.location.pathname === '/time/execution/';
+            link.classList.toggle('hidden', isExecutionPage);
+        }
+
         // Update the pinging dot color
         const ping = document.getElementById('zz-global-timer-ping');
         const dot = document.getElementById('zz-global-timer-dot');
