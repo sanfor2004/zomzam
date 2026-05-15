@@ -5,9 +5,15 @@ window.TimeApp = window.TimeApp || {};
 
 (function(App) {
 
-  App.api = async function(action, data = {}) {
+  App.api = async function(action, data = {}, endpoint = '/time/api') {
+    // Zenith-Tier API Wrapper
+    if (window.Zenith && Zenith.Fetch) {
+        return await Zenith.Fetch(endpoint, { body: { action, ...data } });
+    }
+    
+    // Fallback
     try {
-      const res = await fetch('/time/api', {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
         body: JSON.stringify({ action, ...data })
@@ -25,6 +31,7 @@ window.TimeApp = window.TimeApp || {};
       App.state.tasks = res.tasks || [];
       App.state.horizons = res.horizons || { week: [], month: [], year: [] };
       App.state.ideas = res.ideas || [];
+      App.state.userSettings = res.settings || { timezone: 'UTC', notifications_enabled: false };
       App.renderAll();
     }
   };

@@ -29,8 +29,13 @@ window.TimeApp = window.TimeApp || {};
       const progress = state.pomodoro.remaining / total;
       const offset = circumference * (1 - progress);
       ring.setAttribute('stroke-dasharray', circumference);
-      ring.style.transition = state.pomodoro.isRunning ? 'stroke-dashoffset 1s linear' : 'stroke-dashoffset 0.3s ease';
-      ring.style.strokeDashoffset = offset;
+      
+      if (window.gsap && state.pomodoro.isRunning) {
+          gsap.to(ring, { strokeDashoffset: offset, duration: 1, ease: "linear" });
+      } else {
+          ring.style.transition = 'stroke-dashoffset 0.3s ease';
+          ring.style.strokeDashoffset = offset;
+      }
     }
     if (label) {
       label.textContent = state.pomodoro.isBreak ? 'Break Time' : 'Focus Time';
@@ -79,31 +84,74 @@ window.TimeApp = window.TimeApp || {};
       if (current) {
         if (state.lastCurrentTaskId !== current.id) {
           state.lastCurrentTaskId = current.id;
-          const input = document.getElementById('pom-work-input');
-          if (input) {
-            input.value = current.duration_block || 25;
-            input.dispatchEvent(new Event('change'));
-          }
+          // Zenith: Timer is now independent. We no longer auto-sync duration from task.
         }
+
         const hContent = App.getHorizonContent(current.horizon_id);
         const dreamHtml = hContent ? `<p class="text-[15px] text-purple-500/90 font-semibold mt-1.5 flex items-center gap-1.5"><svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg> ${App.escHtml(hContent)}</p>` : '';
         elCurrent.innerHTML = `${App.escHtml(current.title)}${dreamHtml}`;
+        
         const badgeEl = document.getElementById('task-current-badge');
         if (badgeEl) {
-          badgeEl.textContent = current.priority.toUpperCase();
-          badgeEl.className = `${App.priorityColor(current.priority)} text-xs font-bold px-2 py-0.5 rounded-full`;
+          badgeEl.textContent = state.pomodoro.isBreak ? 'BRAIN REST' : 'FOCUS MODE';
+          badgeEl.className = `${state.pomodoro.isBreak ? 'bg-emerald-500' : 'bg-primary-500'} text-white text-xs font-bold px-2.5 py-0.5 rounded-full`;
         }
+
+        // Render Segments
+        let segmentsHtml = '';
+        if (state.pomodoro.segments.length > 0) {
+            segmentsHtml = `<div class="flex items-center gap-1 mt-3">`;
+            state.pomodoro.segments.forEach((seg, idx) => {
+                const isCurrent = idx === state.pomodoro.currentSegmentIndex;
+                const isPast = idx < state.pomodoro.currentSegmentIndex;
+                const color = seg.type === 'work' ? 'bg-primary-500' : 'bg-emerald-500';
+                segmentsHtml += `<div class="h-1.5 rounded-full flex-1 ${isCurrent ? color + ' animate-pulse' : (isPast ? color + ' opacity-40' : 'bg-slate-200 dark:bg-slate-800')}"></div>`;
+            });
+            segmentsHtml += `</div>`;
+        }
+
+        const descEl = document.getElementById('task-current-desc');
+        if (descEl) descEl.innerHTML = segmentsHtml;
+
         const durEl = document.getElementById('task-current-dur');
         if (durEl) durEl.textContent = App.formatDuration(current.duration_block);
-        document.getElementById('btn-task-done')?.classList.remove('hidden');
+        
+        const doneBtn = document.getElementById('btn-task-done');
+        if (doneBtn) {
+            doneBtn.classList.remove('hidden');
+        }
+
+        const swapBtn = document.getElementById('btn-task-swap');
+        if (swapBtn) {
+            if (pending.length >= 2) {
+                swapBtn.classList.remove('hidden');
+            } else {
+                swapBtn.classList.add('hidden');
+            }
+        }
+
       } else {
         state.lastCurrentTaskId = null;
         elCurrent.innerHTML = `No tasks — <a href="/time/tasks" class="text-primary-500 underline underline-offset-2 hover:text-primary-600">add one here!</a>`;
         const durEl = document.getElementById('task-current-dur');
         if (durEl) durEl.textContent = '';
         document.getElementById('btn-task-done')?.classList.add('hidden');
+        const descEl = document.getElementById('task-current-desc');
+        if (descEl) descEl.innerHTML = '';
       }
     }
+
+    // Render Stats if just finished
+    if (state.pomodoro.lastCompletionStats) {
+        const stats = state.pomodoro.lastCompletionStats;
+        const statsEl = document.getElementById('task-previous');
+        if (statsEl) {
+            const timeStr = stats.saved > 0 ? `<span class="text-emerald-500">Saved ${stats.saved}m</span>` : (stats.passed > 0 ? `<span class="text-rose-500">Passed ${stats.passed}m</span>` : 'On time');
+            statsEl.innerHTML = `Last Task: ${timeStr} (${stats.actual}m / ${stats.planned}m)`;
+            statsEl.classList.remove('line-through', 'opacity-60');
+        }
+    }
+
     if (elNext) elNext.textContent = next ? `→ ${next.title}` : '—';
   };
 
@@ -149,6 +197,11 @@ window.TimeApp = window.TimeApp || {};
       }).join('');
       container.appendChild(section);
     });
+
+    if (window.Zenith && hasAny) {
+        Zenith.Anim.staggerReveal('#task-list > div', { y: 10, duration: 0.4 });
+    }
+
     if (!hasAny) container.innerHTML = `<div class="text-center py-8 text-slate-400"><svg class="w-12 h-12 mx-auto mb-3 opacity-30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg><p class="text-sm">No tasks yet. Add one below!</p></div>`;
 
     if (completedContainer) {
@@ -225,6 +278,11 @@ window.TimeApp = window.TimeApp || {};
           </div>
         </div>`;
     }).join('');
+
+    if (window.Zenith && state.ideas.length > 0) {
+        Zenith.Anim.staggerReveal('#ideas-list > div', { x: -10, y: 0, duration: 0.4 });
+    }
+
     const countEl = document.getElementById('ideas-count');
     if (countEl) countEl.textContent = state.ideas.length + (state.ideas.length === 1 ? ' idea' : ' ideas');
   };
@@ -302,10 +360,21 @@ window.TimeApp = window.TimeApp || {};
 
   App.showTimerNotification = function(msg, type) {
     const notif = document.getElementById('timer-notification');
-    if (!notif) return;
-    notif.textContent = msg;
-    notif.className = `fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-sm font-semibold shadow-xl transition-all ${type === 'success' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`;
-    setTimeout(() => { notif.className = 'hidden'; }, 4000);
+    if (notif) {
+      notif.textContent = msg;
+      notif.className = `fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-2xl text-sm font-semibold shadow-xl transition-all ${type === 'success' ? 'bg-emerald-500 text-white' : 'bg-amber-500 text-white'}`;
+      setTimeout(() => { notif.className = 'hidden'; }, 4000);
+    }
+
+    // Desktop Notification
+    if (state.userSettings && state.userSettings.notifications_enabled) {
+      if (Notification.permission === 'granted') {
+        new Notification('Zenith Timer', {
+          body: msg,
+          icon: '/Assets/Img/logo_mini.png'
+        });
+      }
+    }
   };
 
 })(window.TimeApp);

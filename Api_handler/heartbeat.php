@@ -31,13 +31,16 @@ try {
     // 1. Handle Heartbeat (if logged in)
     $isLoggedIn = isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true;
     $currentUserId = $_SESSION['user_id'] ?? null;
+    
+    // Parse input
+    $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+    $isIdle = isset($input['idle']) ? (int)$input['idle'] : null;
 
     if ($isLoggedIn && $currentUserId) {
-        $userModel->updateOnlineStatus($currentUserId);
+        $userModel->updateOnlineStatus($currentUserId, $isIdle ?? 0);
     }
 
     // 2. Fetch target user status (if viewing_user_id provided)
-    $input = json_decode(file_get_contents('php://input'), true);
     $viewingUserId = $input['viewing_user_id'] ?? $_GET['viewing_user_id'] ?? null;
     
     if ($viewingUserId) {

@@ -61,7 +61,9 @@ const ZLANG_CONFIG = {
         "task_active": "Active Tasks",
         "task_placeholder": "What needs to be done?",
         "task_priority": "Priority",
-        "task_duration": "Time Block"
+        "task_duration": "Time Block",
+        "nav_settings": "Global Settings",
+        "community_coming_soon": "Community Coming Soon"
     },
     "ar": {
         "company_name": "zomzam",
@@ -108,7 +110,8 @@ const ZLANG_CONFIG = {
         "task_active": "المهام النشطة",
         "task_placeholder": "ما الذي يجب القيام به؟",
         "task_priority": "الأولوية",
-        "task_duration": "الكتلة الزمنية"
+        "task_duration": "الكتلة الزمنية",
+        "nav_settings": "الإعدادات العامة"
     },
     "es": {
         "company_name": "zomzam",
@@ -144,7 +147,8 @@ const ZLANG_CONFIG = {
         "auth_terms": "Al registrarte, aceptas nuestros Términos de Servicio y Política de Privacidad.",
         "nav_time": "Gestión del Tiempo",
         "nav_money": "Gestión del Dinero",
-        "nav_community": "Comunidad"
+        "nav_community": "Comunidad",
+        "nav_settings": "Ajustes Globales"
     },
     "fr": {
         "company_name": "zomzam",
@@ -179,7 +183,8 @@ const ZLANG_CONFIG = {
         "auth_pass_rule": "Doit contenir au moins 8 caractères.",
         "auth_terms": "En vous inscrivant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.",
         "nav_time": "Gestion du Temps",
-        "nav_money": "Gestion de l'Argent"
+        "nav_money": "Gestion de l'Argent",
+        "nav_settings": "Paramètres Globaux"
     },
     "he": {
         "company_name": "zomzam",
@@ -214,7 +219,8 @@ const ZLANG_CONFIG = {
         "auth_pass_rule": "חייב להכיל לפחות 8 תווים.",
         "auth_terms": "בעת ההרשמה, אתה מסכים לתנאי השירות ולמדיניות הפרטיות שלנו.",
         "nav_time": "ניהול זמן",
-        "nav_money": "ניהול כספים"
+        "nav_money": "ניהול כספים",
+        "nav_settings": "הגדרות גלובליות"
     },
     "zh": {
         "company_name": "zomzam",
@@ -249,7 +255,8 @@ const ZLANG_CONFIG = {
         "auth_pass_rule": "密码长度至少为 8 个字符。",
         "auth_terms": "注册即表示您同意我们的服务条款和隐私政策。",
         "nav_time": "时间管理",
-        "nav_money": "财务管理"
+        "nav_money": "财务管理",
+        "nav_settings": "全局设置"
     },
     "it": {
         "company_name": "zomzam",
@@ -284,7 +291,8 @@ const ZLANG_CONFIG = {
         "auth_pass_rule": "Deve contenere almeno 8 caratteri.",
         "auth_terms": "Registrandoti, accetti i nostri Termini di Servizio e la nostra Informativa sulla Privacy.",
         "nav_time": "Gestione del Tempo",
-        "nav_money": "Gestione del Denaro"
+        "nav_money": "Gestione del Denaro",
+        "nav_settings": "Impostazioni Globali"
     }
 };
 

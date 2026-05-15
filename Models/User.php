@@ -191,7 +191,7 @@ class User extends Base
   {
     $this->ensureConnection();
 
-    $allowedFields = ['username', 'email', 'avatar', 'bio', 'first_name', 'last_name'];
+    $allowedFields = ['username', 'email', 'avatar', 'bio', 'first_name', 'last_name', 'timezone', 'notifications_enabled'];
     $updates = [];
     $params = [];
 

@@ -30,7 +30,7 @@ session_write_close();
 
 $userModel = new User();
 $lastViewedStatus = null;
-$sleepTime = $isIdle ? 12 : 2; // +10 seconds delay if idle
+$lastPingTime = time();
 
 /**
  * Send an SSE message
@@ -62,9 +62,16 @@ while (true) {
     // 1. Check if user is still connected
     if (connection_aborted()) break;
 
-    // 2. Heartbeat: Update presence
+    // 2. Heartbeat: Fetch current state from DB
+    $currentIdle = 0;
     if ($isLoggedIn && $userId) {
-        $userModel->updateOnlineStatus($userId, $isIdle ? 1 : 0);
+        $pdo = getConnection();
+        $stmt = $pdo->prepare("SELECT is_idle FROM user_online_status WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $currentIdle = (int)$stmt->fetchColumn();
+        
+        // Refresh presence timestamp
+        $userModel->updateOnlineStatus($userId, $currentIdle);
     }
 
     $orders = [];
@@ -105,17 +112,20 @@ while (true) {
         sendSSE('order', $order);
     }
 
-    // 6. Send Ping every 10 seconds to keep connection alive
-    if ($loopCount % 5 === 0) {
+    // 6. Send Ping every 20 seconds to keep connection alive (Independent of sleep)
+    if (time() - $lastPingTime >= 20) {
         sendPing();
+        $lastPingTime = time();
     }
 
-    // Dynamic sleep: 2s (Active) or 12s (Idle)
+    // Dynamic sleep: 2s (Active) or 5s (Idle)
+    // We reduced idle sleep from 12s to 5s for better responsiveness
+    $sleepTime = ($currentIdle === 1) ? 5 : 2;
     sleep($sleepTime);
     $loopCount++;
 
-    // Reconnect every 15 minutes (Active) or ~90 mins (Idle)
-    if ($loopCount > 450) {
+    // Reconnect safety break (approx 30 mins)
+    if ($loopCount > 900) {
         break;
     }
 }

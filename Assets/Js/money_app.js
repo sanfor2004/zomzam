@@ -125,8 +125,14 @@ const MoneyApp = (function() {
       </div>
     `).join('');
 
-    if (dashboardContainer) dashboardContainer.innerHTML = html;
-    if (accountsGrid) accountsGrid.innerHTML = html;
+    if (dashboardContainer) {
+        dashboardContainer.innerHTML = html;
+        if (window.gsap) gsap.from(dashboardContainer.children, { y: 20, opacity: 0, duration: 0.5, stagger: 0.1, ease: "power2.out" });
+    }
+    if (accountsGrid) {
+        accountsGrid.innerHTML = html;
+        if (window.gsap) gsap.from(accountsGrid.children, { scale: 0.95, opacity: 0, duration: 0.4, stagger: 0.05, ease: "back.out(1.7)" });
+    }
   }
 
   function getAccountIcon(type) {
@@ -214,7 +220,7 @@ const MoneyApp = (function() {
             return;
         }
         container.innerHTML = transactions.map(t => `
-          <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all group">
+          <div class="transaction-item flex items-center gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all group">
             <div class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm text-slate-500">
               ${getCategoryIcon(t.category_icon || 'circle')}
             </div>
@@ -230,6 +236,8 @@ const MoneyApp = (function() {
             </div>
           </div>
         `).join('');
+
+        if (window.gsap) gsap.from(container.querySelectorAll('.transaction-item'), { x: -10, opacity: 0, duration: 0.4, stagger: 0.05, ease: "power2.out" });
     };
 
     if (dashboardContainer) renderList(state.transactions, dashboardContainer);

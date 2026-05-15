@@ -29,6 +29,10 @@ try {
             $ideas = $pdo->prepare("SELECT * FROM time_ideas WHERE user_id = ? ORDER BY created_at DESC LIMIT 50");
             $ideas->execute([$userId]);
 
+            $user = $pdo->prepare("SELECT timezone, notifications_enabled FROM users WHERE id = ?");
+            $user->execute([$userId]);
+            $userRow = $user->fetch(PDO::FETCH_ASSOC);
+
             $taskRows     = $tasks->fetchAll(PDO::FETCH_ASSOC);
             $horizonRows  = $horizons->fetchAll(PDO::FETCH_ASSOC);
             $ideaRows     = $ideas->fetchAll(PDO::FETCH_ASSOC);
@@ -36,7 +40,16 @@ try {
             $grouped = ['week' => [], 'month' => [], 'year' => []];
             foreach ($horizonRows as $h) { $grouped[$h['type']][] = $h; }
 
-            echo json_encode(['success' => true, 'tasks' => $taskRows, 'horizons' => $grouped, 'ideas' => $ideaRows]);
+            echo json_encode([
+                'success' => true, 
+                'tasks' => $taskRows, 
+                'horizons' => $grouped, 
+                'ideas' => $ideaRows,
+                'settings' => [
+                    'timezone' => $userRow['timezone'] ?? 'UTC',
+                    'notifications_enabled' => (bool)($userRow['notifications_enabled'] ?? false)
+                ]
+            ]);
             break;
 
         case 'update_task':
@@ -158,6 +171,27 @@ try {
             echo json_encode(['success' => true]);
             break;
 
+
+        case 'update_settings':
+            $data = [];
+            if (isset($body['timezone'])) {
+                if (in_array($body['timezone'], DateTimeZone::listIdentifiers())) {
+                    $data['timezone'] = $body['timezone'];
+                }
+            }
+            if (isset($body['notifications_enabled'])) {
+                $data['notifications_enabled'] = $body['notifications_enabled'] ? 1 : 0;
+            }
+
+            if (empty($data)) {
+                echo json_encode(['success' => false, 'error' => 'No data to update']);
+                break;
+            }
+
+            $userModel = new User();
+            $result = $userModel->updateProfile($userId, $data);
+            echo json_encode($result);
+            break;
 
         default:
             echo json_encode(['success' => false, 'error' => 'Unknown action']);

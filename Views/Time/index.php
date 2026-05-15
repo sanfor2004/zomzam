@@ -220,7 +220,7 @@ ob_start();
       <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
     </div>
     <h2 class="text-lg font-bold text-slate-900 dark:text-white">Idea Capture</h2>
-    <span class="text-xs text-slate-400 ml-2">Use @task:ID or @plan:ID to tag</span>
+    <span class="text-xs text-slate-400 ml-2">Type @ to mention tasks or goals</span>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-5 gap-5">

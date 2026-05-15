@@ -31,7 +31,7 @@ ob_start();
     <p class="text-xs text-slate-400">Your brain dump zone — write freely, tag later.</p>
   </div>
   <div class="ml-auto text-xs text-slate-400 bg-white dark:bg-[#1a1d24] border border-slate-100 dark:border-slate-800 px-3 py-1.5 rounded-xl shadow-sm">
-    Tag: <code class="text-emerald-500">@task:ID</code> · <code class="text-purple-500">@plan:ID</code>
+    Tag: <code class="text-emerald-500">@mention</code>
   </div>
 </div>
 
@@ -95,14 +95,13 @@ ob_start();
     <!-- Tag Help -->
     <div class="bg-emerald-50 dark:bg-emerald-900/10 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-800/30">
       <p class="text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-2">How to tag your ideas</p>
-      <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-3">
         <div class="bg-white dark:bg-[#1a1d24] rounded-xl p-3 border border-emerald-100 dark:border-emerald-800/20">
-          <code class="text-emerald-500 text-xs font-bold">@task:1</code>
-          <p class="text-xs text-slate-500 mt-0.5">Links to Task ID 1</p>
-        </div>
-        <div class="bg-white dark:bg-[#1a1d24] rounded-xl p-3 border border-emerald-100 dark:border-emerald-800/20">
-          <code class="text-purple-500 text-xs font-bold">@plan:2</code>
-          <p class="text-xs text-slate-500 mt-0.5">Links to Plan/Goal ID 2</p>
+          <div class="flex items-center gap-2 mb-1">
+            <span class="w-6 h-6 rounded-lg bg-primary-100 dark:bg-primary-900/30 flex items-center justify-center text-primary-600 dark:text-primary-400 font-bold text-xs">@</span>
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Mention System</span>
+          </div>
+          <p class="text-xs text-slate-500">Simply type <code class="text-primary-500 fonat-bold">@</code> followed by a name to search and link tasks or dream goals instantly. This creates a smart connection between your ideas and your plans.</p>
         </div>
       </div>
     </div>

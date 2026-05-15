@@ -27,7 +27,8 @@ if (!in_array($method, ['POST', 'GET'])) {
 }
 
 // Get action parameter
-$action = $_GET['action'] ?? $_POST['action'] ?? null;
+$input = json_decode(file_get_contents('php://input'), true) ?? [];
+$action = $_GET['action'] ?? $_POST['action'] ?? $input['action'] ?? null;
 
 if (!$action) {
   http_response_code(400);
@@ -54,6 +55,10 @@ switch ($action) {
 
   case 'check':
     handleCheck();
+    break;
+  
+  case 'update_settings':
+    handleUpdateSettings();
     break;
 
   default:
@@ -246,4 +251,48 @@ function handleCheck()
       'authenticated' => false
     ]);
   }
+}
+
+/**
+ * Update user settings
+ */
+function handleUpdateSettings()
+{
+  global $userModel;
+
+  if (!isset($_SESSION['user_id'])) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+    return;
+  }
+
+  // Get input data
+  $input = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+  $data = [];
+
+  if (isset($input['timezone'])) {
+    if (in_array($input['timezone'], DateTimeZone::listIdentifiers())) {
+      $data['timezone'] = $input['timezone'];
+    }
+  }
+
+  if (isset($input['notifications_enabled'])) {
+    $data['notifications_enabled'] = $input['notifications_enabled'] ? 1 : 0;
+  }
+
+  if (empty($data)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'No settings provided']);
+    return;
+  }
+
+  $result = $userModel->updateProfile($_SESSION['user_id'], $data);
+
+  if ($result['success']) {
+    http_response_code(200);
+  } else {
+    http_response_code(400);
+  }
+
+  echo json_encode($result);
 }

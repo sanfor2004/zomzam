@@ -32,12 +32,22 @@ class StreamWaiter {
         };
 
         this.init();
-    }
-
-    init() {
+    }    init() {
         if (!window.EventSource) return;
         this.connect();
         this.setupActivityListeners();
+        
+        // Zenith-Tier Visibility Optimization
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') {
+                console.log('💤 Stream Waiter: Throttling (Tab Hidden)');
+                // We keep connection open but can ignore non-critical UI updates
+            } else {
+                console.log('✨ Stream Waiter: Resuming (Tab Visible)');
+                this.sendStatusUpdate(); // Immediate sync on return
+            }
+        });
+
         window.addEventListener('beforeunload', () => {
             this.isClosing = true;
             if (this.eventSource) this.eventSource.close();
@@ -48,6 +58,7 @@ class StreamWaiter {
         const resetTimer = () => {
             if (this.isIdle) this.setIdle(false);
             clearTimeout(this.idleTimer);
+            // Zenith Debounce: Wait 60s before going idle
             this.idleTimer = setTimeout(() => this.setIdle(true), this.idleTimeout);
         };
         ['mousemove', 'keydown', 'scroll', 'click'].forEach(e => window.addEventListener(e, resetTimer));
@@ -57,23 +68,38 @@ class StreamWaiter {
         resetTimer();
     }
 
-    setIdle(idle) {
+    async setIdle(idle) {
         if (this.isIdle === idle) return;
+        
         this.isIdle = idle;
         this.updateCurrentUserUI(true);
-        this.reconnect();
+        await this.sendStatusUpdate();
     }
 
-    reconnect() {
-        if (this.eventSource) this.eventSource.close();
-        this.connect();
+    async sendStatusUpdate() {
+        try {
+            // Use Zenith.Fetch if available, else fallback to native fetch
+            const fetcher = (window.Zenith && Zenith.Fetch) ? Zenith.Fetch : fetch;
+            await fetcher('/api/heartbeat', {
+                method: 'POST',
+                body: { 
+                    idle: this.isIdle ? 1 : 0,
+                    viewing_user_id: this.viewingUserId 
+                }
+            });
+        } catch (e) {
+            console.error('❌ Stream Waiter: Status Update Failed', e);
+        }
     }
 
     connect() {
-        const url = `/api/stream?viewing_user_id=${this.viewingUserId || ''}&idle=${this.isIdle ? '1' : '0'}`;
+        const url = `/api/stream?viewing_user_id=${this.viewingUserId || ''}`;
         this.eventSource = new EventSource(url);
         this.eventSource.addEventListener('order', (event) => {
-            try { this.executeOrder(JSON.parse(event.data)); } catch (e) { }
+            try { 
+                if (document.visibilityState === 'hidden' && !JSON.parse(event.data).critical) return;
+                this.executeOrder(JSON.parse(event.data)); 
+            } catch (e) { }
         });
         this.eventSource.onerror = () => {
             if (this.isClosing) return;
@@ -81,7 +107,8 @@ class StreamWaiter {
             this.eventSource.close();
             if (this.reconnectAttempts < this.maxReconnects) {
                 this.reconnectAttempts++;
-                setTimeout(() => this.connect(), 2000 * this.reconnectAttempts);
+                const delay = Math.min(30000, 2000 * Math.pow(1.5, this.reconnectAttempts));
+                setTimeout(() => this.connect(), delay);
             }
         };
     }
@@ -94,11 +121,13 @@ class StreamWaiter {
     updateCurrentUserUI(isHealthy) {
         const indicator = document.getElementById('current-user-online-indicator');
         const label = document.getElementById('current-user-online-label');
+        const bg = document.getElementById('online-tracker-bg');
         if (!indicator) return;
 
         if (!isHealthy) {
             indicator.className = 'w-1.5 h-1.5 rounded-full bg-slate-400';
             if (label) label.textContent = 'Disconnected';
+            if (bg) bg.style.background = 'linear-gradient(to top, rgba(100, 116, 139, 0.15) 0%, transparent 100%)';
             return;
         }
 
@@ -108,12 +137,14 @@ class StreamWaiter {
                 label.textContent = 'Away';
                 label.className = 'text-[9px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider';
             }
+            if (bg) bg.style.background = 'linear-gradient(to top, rgba(251, 191, 36, 0.15) 0%, transparent 100%)';
         } else {
             indicator.className = 'w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse';
             if (label) {
                 label.textContent = 'Online Mode';
                 label.className = 'text-[9px] font-bold text-green-600 dark:text-green-400 uppercase tracking-wider';
             }
+            if (bg) bg.style.background = 'linear-gradient(to top, rgba(34, 197, 94, 0.15) 0%, transparent 100%)';
         }
     }
 

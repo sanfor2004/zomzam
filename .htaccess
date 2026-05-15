@@ -71,6 +71,10 @@ RewriteRule ^forgot-password/?$ Views/Auth/forgot-password.php [L]
 # Dashboard route - Authenticated users
 RewriteRule ^dashboard/?$ Views/App/home.php [L]
 
+# Global Account Settings
+RewriteRule ^settings/?$ Views/App/settings.php [L]
+RewriteRule ^community/?$ Views/App/community.php [L]
+
 # Time Management Module
 RewriteRule ^time/?$ /time/execution [R=302,L]
 RewriteRule ^time/execution/?$ Views/Time/execution.php [L]

@@ -27,7 +27,11 @@ window.TimeApp = window.TimeApp || {};
     
     editor.addEventListener('input', () => {
       const el = document.getElementById('idea-char-count');
-      if (el) el.textContent = editor.innerText.length + ' chars';
+      if (el) {
+        // Use textContent for accurate length without counting the hidden tags' length
+        const text = App.serializeEditor(editor);
+        el.textContent = text.length + ' chars';
+      }
     });
 
     const dropdown = document.getElementById('mention-dropdown');
@@ -341,17 +345,23 @@ window.TimeApp = window.TimeApp || {};
 
   App.serializeEditor = function(editor) {
     if (!editor) return '';
-    const pills = editor.querySelectorAll('[data-type]');
-    const originalStates = [];
+    
+    // Create a clone to work on without disturbing the user's view
+    const clone = editor.cloneNode(true);
+    const pills = clone.querySelectorAll('[data-type]');
+    
     pills.forEach(pill => {
       const type = pill.getAttribute('data-type');
       const id = pill.getAttribute('data-id');
-      originalStates.push({ pill, text: pill.innerText });
-      pill.innerText = `@${type}:${id}`;
+      pill.textContent = `@${type}:${id}`;
     });
-    let content = editor.innerText.trim();
-    originalStates.forEach(item => { item.pill.innerText = item.text; });
-    return content.replace(/\r?\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+
+    // ContentEditable innerText handles newlines better than textContent, 
+    // but can sometimes add extra trailing ones.
+    let content = clone.innerText.trim();
+    
+    // Clean up potential triple newlines or trailing junk from browser rendering
+    return content.replace(/\n{3,}/g, '\n\n');
   };
 
   App.deserializeIdeaContent = function(text) {

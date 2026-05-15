@@ -1,135 +1,121 @@
 # zomzam.com 🚀
 
-Professional life and money management platform with **Zenith-Tier architecture** and Cinematic UI/UX design.
+Professional life and money management platform engineered with **Zenith-Tier architecture** and Cinematic UI/UX design. This platform bridges the gap between productivity and financial sovereignty through a high-fidelity, cognitive-first interface.
 
-## 🎯 Features
+---
 
-✅ **Zenith-Tier Design System** - Cinematic glassmorphism, fluid motion, and OLED-optimized dark modes.
-✅ **Modular Architecture** - Highly maintainable decoupled JavaScript modules and centralized API handling.
-✅ **Multi-Language Support (i18n)** - Real-time switching between 7 languages with RTL compatibility.
-✅ **Time Management Suite** - Pomodoro timer, task stacking, and multi-horizon dream planning.
-✅ **Modern Authentication Flow** - Split-pane dynamic Sign In/Sign Up interface.
-✅ **Dragon-Tier Upload Security** - 8-layer validation protocol for all user-generated content.
-✅ **High-Fidelity Observability** - Structured logging and performance-first engineering.
+## 🎯 Zenith-Tier Features
+
+### 💎 Cinematic Visual Engineering
+*   **The Zenith Aesthetic** - Deep glassmorphism (`backdrop-filter`), multi-layered HSL shadows, and OLED-optimized dark modes.
+*   **Fluid Motion Grammar** - 60FPS transitions using specialized cubic-bezier curves (`cubic-bezier(0.4, 0, 0.2, 1)`) and staggered reveal animations.
+*   **Responsive Typography** - Sora & Montserrat for cinematic display; Inter & Outfit for crisp, professional body text.
+
+### ⏳ High-Performance Time Suite
+*   **Pomodoro Engine** - Advanced focus timer with task-stacking integration and real-time state persistence.
+*   **Multi-Horizon Planning** - Strategic "Dream" planning across Weekly, Monthly, and Yearly horizons.
+*   **Idea Vault** - Native multiline capture system with full CRUD management and cross-linking to tasks/horizons.
+*   **Task Stacking** - Prioritized task management with automatic duration blocking and status tracking.
+
+### 💰 Financial Sovereignty Engine
+*   **Multi-Account Management** - Unified tracking for Bank accounts, Cash, PayPal, and digital wallets with multi-currency support (EGP, USD, EUR, GBP).
+*   **50/30/20 Budgeting Logic** - Automated categorization into Needs, Wants, and Savings with visual budget tracking.
+*   **Transaction Ledger** - High-fidelity logging for income, expenses, transfers, and lend/owe tracking.
+
+### 👤 Identity & Social Architecture
+*   **Vanity Routing Engine** - Public social profiles via `/u/{username}` and private management via `/me`.
+*   **Community Hub** - Social discovery platform for platform users and public interaction.
+*   **Zenith Onboarding** - Split-pane dynamic authentication flow with strict username sanitization and unique identity validation.
+
+### 📡 Zenith Real-Time Sync Engine
+*   **Persistent SSE Stream** - High-fidelity Server-Sent Events (SSE) for instant UI updates without polling overhead.
+*   **State-Preserving Architecture** - Decoupled state updates (Idle/Active) via out-of-band Heartbeat API to maintain persistent connections.
+*   **Intelligent Heartbeat** - Time-based pings (20s) ensure connection stability through aggressive proxies and firewalls.
+*   **View Monitoring** - Real-time presence tracking for viewed user profiles with sub-second state synchronization.
+
+### 🛡️ Dragon-Tier Security & Infrastructure
+*   **8-Layer Upload Protocol** - Enterprise-grade profile avatar security (re-encoding, metadata stripping, cryptographic renaming).
+*   **Trust-Zero API Architecture** - 100% Parameterized PDO/MySQLi queries with session hardening and CSRF protection.
+*   **Automated Schema Sync** - Self-healing database engine (`setup_db.php`) that auto-migrates and validates schema health.
 
 ---
 
 ## 🚀 Quick Start
 
-### 1. Database Setup
-
+### 1. Database Initialization
+Execute the Dragon-Tier sync engine to build the schema and seed initial data:
 ```bash
-# Run database setup script
 php setup_db.php
 ```
-
-This creates the `zomzam_db` database and `users` table with the following test account:
 
 **Test Credentials:**
 - **Email:** `test@zomzam.com`
 - **Username:** `testuser`
 - **Password:** `test1234`
 
-### 2. PHP Extensions Required
+### 2. Environment Requirements
+Ensure your PHP environment (v8.2+) has the following modules enabled:
+- `pdo_mysql` & `mysqli`
+- `gd` (Required for secure image processing)
+- `mbstring` & `openssl`
 
-Ensure these PHP extensions are enabled in `php.ini`:
-
-```ini
-extension=pdo_mysql
-extension=mysqli
-extension=gd        # Required for secure image processing
-extension=mbstring
-extension=openssl
-```
-
-### 3. Access the Application
-
-```
-http://localhost/
-```
-
-**Login URL:** `http://localhost/`  
-**Dashboard:** `http://localhost/dashboard`  
-**Time Module:** `http://localhost/time`
-
----
-
-## 🛡️ Security Features
-
-### Dragon-Tier Upload Security (8 Layers)
-
-Our profile avatar upload system implements **enterprise-grade security**:
-
-1. **File Size Validation** - Max 2MB, prevents DOS attacks
-2. **Real Image Validation** - Verifies actual image format (not just MIME type)
-3. **File Type Whitelist** - Only JPG, PNG, GIF, WEBP allowed
-4. **Dimension Validation** - Max 5000×5000 pixels, prevents image bombs
-5. **Image Re-encoding** - Strips ALL metadata, embedded scripts, and malicious code
-6. **Cryptographic Random Filenames** - `random_bytes(16)` prevents path traversal
-7. **Upload Directory Hardening** - `.htaccess` blocks PHP execution
-8. **Old File Cleanup** - Automatic deletion prevents disk abuse
-
----
-
-## 🎨 Design System
-
-### The Zenith Aesthetic
-We don't use defaults. We build Cinematic Digital Surfaces.
-
-- **Spatial Typography:** Sora/Montserrat (Display), Inter/Outfit (Body).
-- **Dimensional Depth:** Layered shadows and backdrop-filter glassmorphism.
-- **Motion Grammar:** fluid 60FPS transitions using cubic-bezier curves.
-- **Framework:** Tailwind CSS 3.x + Radix-inspired components.
+### 3. URL Access
+- **Landing:** `http://localhost/`
+- **Dashboard:** `http://localhost/dashboard`
+- **Profile:** `http://localhost/me`
+- **Time Module:** `http://localhost/time`
 
 ---
 
 ## 📁 Project Structure
 
-```
+```bash
 zomzam.com/
-├── index.php                 # Landing/login page
-├── config.php                # Centralized configuration
-├── setup_db.php              # Migration script
-├── .htaccess                 # Zenith-Tier routing engine
-│
 ├── Api_handler/              # Decoupled API Service Layer
-│   ├── auth.php              # Auth service
-│   ├── profile.php           # User profile service
-│   └── time_api.php          # Time management service
+│   ├── auth.php              # Auth service (Login/Register/Check)
+│   ├── profile.php           # User profile & avatar management
+│   ├── time_api.php          # Time suite logic & persistence
+│   ├── stream_waiter.php     # Zenith Real-Time SSE Engine
+│   └── heartbeat.php         # Out-of-band state & heartbeat API
 │
 ├── Assets/
 │   ├── Js/
 │   │   ├── Time/             # Modular Time Application
-│   │   │   ├── state.js      # Global state management
-│   │   │   ├── api.js        # API bridge
-│   │   │   ├── render.js     # UI engine
-│   │   │   └── ...           # Feature modules
-│   │   └── translator.js     # i18n engine
+│   │   │   ├── pomodoro.js   # Focus engine
+│   │   │   ├── tasks.js      # Task management logic
+│   │   │   └── api.js        # API bridge
+│   │   ├── stream_waiter.js  # Client-side Stream Engine
+│   │   ├── heartbeat_engine.js # Global state synchronization
+│   │   ├── money_app.js      # Financial suite logic
+│   │   └── translator.js     # i18n Translation Engine (7+ languages)
 │   └── Css/
-│       └── style.css         # Global design tokens
+│       └── style.css         # Global Zenith Design Tokens
 │
-├── Models/                   # Data Access Layer
-│   ├── Base.php              # Base PDO model
-│   └── User.php              # User domain model
+├── Models/                   # Data Access Layer (DAL)
+│   ├── Base.php              # Base PDO/MySQLi abstraction
+│   └── User.php              # User domain & authentication model
 │
-└── Views/                    # UI Component Layer
-    ├── app_layout.php        # Core application wrapper
-    ├── Time/                 # Time management views
-    └── Money/                # Money management views
+├── Views/                    # UI Component Layer (Atomic Design)
+│   ├── App/                  # Private application views (Settings, Me, Community)
+│   ├── Public/               # Public profiles (/u/{username})
+│   ├── Time/                 # Time management interfaces
+│   ├── Money/                # Financial management interfaces
+│   └── app_layout.php        # Core application shell
+│
+├── config.php                # Centralized configuration & Middleware
+└── setup_db.php              # Dragon-Tier Sync & Migration Engine
 ```
 
 ---
 
-## 👨‍💻 Author
+## 👨‍💻 Engineering Standards
 
-**zomzam.com Development Team**
+- **Architecture:** Decoupled Logic, View, and Data.
+- **Streaming:** Persistent SSE + Heartbeat Synchronization.
+- **Styling:** Vanilla CSS + Tailwind Utility Tokens.
+- **Localization:** Real-time i18n with RTL support.
+- **Performance:** Lighthouse optimized (LCP < 1.2s).
 
-- Professional life and money management platform
-- Zenith-Tier architecture implementation
-- Cinematic UI/UX with Tailwind CSS
-
----
-
-**Version:** 2.0.0 (Modular Refactor)  
-**Last Updated:** May 12, 2026  
+**Version:** 2.2.0 (Sync Engine Refactor)  
+**Last Updated:** May 15, 2026  
 **Status:** Zenith-Tier 🚀

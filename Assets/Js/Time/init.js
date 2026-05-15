@@ -19,7 +19,7 @@ window.TimeApp = window.TimeApp || {};
       addTaskBtn.addEventListener('click', () => {
         const title = document.getElementById('task-title')?.value?.trim();
         const priority = document.getElementById('task-priority')?.value || 'medium';
-        const duration = parseInt(document.getElementById('task-duration')?.value) || 25;
+        const duration = parseInt(document.getElementById('task-duration')?.value) || 15;
         const horizonId = document.getElementById('task-horizon-select')?.value || null;
         if (!title) return App.shakeField('task-title');
         App.addTask({ title, priority, duration_block: duration, horizon_id: horizonId });
@@ -44,6 +44,16 @@ window.TimeApp = window.TimeApp || {};
     });
 
     document.getElementById('btn-submit-idea')?.addEventListener('click', App.submitIdea);
+    
+    // Global delegation for dynamic or rendered buttons
+    document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target.closest('#btn-task-swap')) {
+            App.swapTask();
+        } else if (target.closest('#btn-task-done')) {
+            App.handleDoneTask();
+        }
+    });
   };
 
   document.addEventListener('DOMContentLoaded', App.init);

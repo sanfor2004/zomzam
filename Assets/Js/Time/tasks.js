@@ -15,7 +15,7 @@ window.TimeApp = window.TimeApp || {};
     }
   };
 
-  App.markTaskComplete = async function(id, actualDuration = null) {
+  App.completeTask = async function(id, actualDuration = null) {
     const task = state.tasks.find(t => t.id == id);
     if (task) {
       task.status = 'completed';
