@@ -9,10 +9,16 @@
 set_time_limit(0);
 ignore_user_abort(false);
 
+// Turn off output buffering completely to prevent server buffering
+while (ob_get_level() > 0) {
+    ob_end_clean();
+}
+
 header('Content-Type: text/event-stream');
 header('Cache-Control: no-cache');
 header('Connection: keep-alive');
 header('X-Accel-Buffering: no'); 
+header('Content-Encoding: none'); 
 
 require_once __DIR__ . '/../config.php';
 
@@ -38,7 +44,9 @@ $lastPingTime = time();
 function sendSSE($name, $data) {
     echo "event: " . $name . "\n";
     echo "data: " . json_encode($data) . "\n\n";
-    while (ob_get_level() > 0) ob_end_flush();
+    if (ob_get_level() > 0) {
+        ob_flush();
+    }
     flush();
 }
 
@@ -47,7 +55,9 @@ function sendSSE($name, $data) {
  */
 function sendPing() {
     echo ": ping\n\n";
-    while (ob_get_level() > 0) ob_end_flush();
+    if (ob_get_level() > 0) {
+        ob_flush();
+    }
     flush();
 }
 

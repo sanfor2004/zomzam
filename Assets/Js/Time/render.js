@@ -268,23 +268,81 @@ window.TimeApp = window.TimeApp || {};
             <button onclick="TimeApp.editIdea(${idea.id})" class="p-1.5 rounded-lg ${isEditing ? 'text-primary-500' : 'text-slate-400'} hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-500/10 transition-all"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
             <button onclick="TimeApp.deleteIdea(${idea.id})" class="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
           </div>
-          <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pr-8 whitespace-pre-wrap">${App.formatIdeaContent(idea.content)}</p>
-          <div class="flex items-center justify-between mt-2">
+          ${App.renderIdeaBody(idea)}
+          <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-slate-50 dark:border-slate-700/30">
             <span class="text-xs text-slate-400">${App.timeAgo(idea.created_at)}</span>
-            <div class="flex items-center gap-2">
-              ${idea.linked_task_id ? (() => { const t = state.tasks.find(x => x.id == idea.linked_task_id); return `<span class="text-[10px] bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight">📌 ${t ? App.escHtml(t.title) : 'Task'}</span>`; })() : ''}
-              ${idea.linked_horizon_id ? (() => { const c = App.getHorizonContent(idea.linked_horizon_id); return `<span class="text-[10px] bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight">🎯 ${c ? App.escHtml(c) : 'Plan'}</span>`; })() : ''}
+            <div class="flex items-center gap-1.5 flex-wrap justify-end">
+              ${idea.linked_task_id ? (() => { const t = state.tasks.find(x => x.id == idea.linked_task_id); return `<span class="text-[10px] bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight">${t ? App.escHtml(t.title) : 'Task'}</span>`; })() : ''}
+              ${idea.linked_horizon_id ? (() => { const c = App.getHorizonContent(idea.linked_horizon_id); return `<span class="text-[10px] bg-purple-50 dark:bg-purple-500/10 text-purple-600 dark:text-purple-400 px-2 py-0.5 rounded-full font-bold uppercase tracking-tight">${c ? App.escHtml(c) : 'Plan'}</span>`; })() : ''}
             </div>
           </div>
         </div>`;
     }).join('');
 
-    if (window.Zenith && state.ideas.length > 0) {
-        Zenith.Anim.staggerReveal('#ideas-list > div', { x: -10, y: 0, duration: 0.4 });
+    // Zenith stagger animation on render
+    if (window.gsap) {
+      gsap.from('#ideas-list > div', {
+        opacity: 0,
+        y: 16,
+        duration: 0.45,
+        stagger: 0.07,
+        ease: 'power2.out',
+        clearProps: 'all'
+      });
     }
 
     const countEl = document.getElementById('ideas-count');
     if (countEl) countEl.textContent = state.ideas.length + (state.ideas.length === 1 ? ' idea' : ' ideas');
+  };
+
+  /**
+   * Render the idea body text with 150-char truncation and a "Read more" toggle.
+   * Tags (@mentions) are stripped for the preview but shown in full when expanded.
+   */
+  App.renderIdeaBody = function(idea) {
+    const LIMIT = 150;
+    const rawText = idea.content || '';
+
+    // Plain text preview (strip @tag references for character counting)
+    const plainText = rawText.replace(/@(task|plan):\d+/g, '@tag');
+    const needsTruncation = plainText.length > LIMIT;
+
+    if (!needsTruncation) {
+      // Short enough — render full, rich content
+      return `<p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pr-8 whitespace-pre-wrap">${App.formatIdeaContent(rawText)}</p>`;
+    }
+
+    // Build truncated preview (cut raw text at char boundary near LIMIT)
+    const truncatedRaw = rawText.substring(0, LIMIT);
+    const previewHtml  = App.formatIdeaContent(truncatedRaw);
+    const fullHtml     = App.formatIdeaContent(rawText);
+    const id           = idea.id;
+
+    return `
+      <div>
+        <p id="idea-preview-${id}" class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed pr-8 whitespace-pre-wrap">${previewHtml}<span class="text-slate-400">…</span> <button onclick="TimeApp.toggleIdeaExpand(${id})" class="inline text-xs font-bold text-emerald-500 hover:text-emerald-600 transition-colors underline underline-offset-2">Read more</button></p>
+        <p id="idea-full-${id}" class="hidden text-sm text-slate-700 dark:text-slate-300 leading-relaxed pr-8 whitespace-pre-wrap">${fullHtml} <button onclick="TimeApp.toggleIdeaExpand(${id})" class="inline text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors underline underline-offset-2">Show less</button></p>
+      </div>`;
+  };
+
+  /**
+   * Toggle between truncated preview and full text for a given idea card.
+   */
+  App.toggleIdeaExpand = function(id) {
+    const preview = document.getElementById(`idea-preview-${id}`);
+    const full    = document.getElementById(`idea-full-${id}`);
+    if (!preview || !full) return;
+
+    const isExpanding = !preview.classList.contains('hidden');
+    if (isExpanding) {
+      preview.classList.add('hidden');
+      full.classList.remove('hidden');
+      // Subtle fade-in for the expanded content
+      if (window.gsap) gsap.from(full, { opacity: 0, y: 4, duration: 0.3, ease: 'power2.out' });
+    } else {
+      full.classList.add('hidden');
+      preview.classList.remove('hidden');
+    }
   };
 
   App.formatIdeaContent = function(text) {

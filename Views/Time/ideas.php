@@ -21,6 +21,8 @@ $additionalJS = [
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
+
 <!-- Page Header -->
 <div class="flex items-center gap-3 mb-6">
   <div class="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center shadow-sm">
@@ -71,12 +73,12 @@ ob_start();
       <style>
         #idea-editor:empty:before {
           content: attr(data-placeholder);
-          color: #94a3b8; /* slate-400 */
+          color: #94a3b8;
           pointer-events: none;
           white-space: pre-wrap;
         }
         .dark #idea-editor:empty:before {
-          color: #475569; /* slate-600 */
+          color: #475569;
         }
       </style>
 
@@ -113,19 +115,65 @@ ob_start();
       <h2 class="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Idea Vault</h2>
       <span id="ideas-count" class="text-xs text-slate-400 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-full">0 ideas</span>
     </div>
-    <div id="ideas-list" class="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[560px]">
-      <div class="text-center py-12 text-slate-400">
-        <svg class="w-12 h-12 mx-auto mb-3 opacity-20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        <p class="text-sm font-medium">Your vault is empty.</p>
-        <p class="text-xs mt-1">Write your first idea!</p>
+
+    <!-- Scroll wrapper: ~2.5 cards visible, with bottom fade hint -->
+    <div id="ideas-vault-wrapper" class="relative" style="height: 340px;">
+
+      <!-- Scrollable list -->
+      <div id="ideas-list" class="overflow-y-auto space-y-2 pr-1 h-full" onscroll="zzSyncVaultFade(this)">
+        <div class="text-center py-12 text-slate-400">
+          <svg class="w-12 h-12 mx-auto mb-3 opacity-20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          <p class="text-sm font-medium">Your vault is empty.</p>
+          <p class="text-xs mt-1">Write your first idea!</p>
+        </div>
       </div>
+
+      <!-- Gradient fade overlay — disappears when user reaches the bottom -->
+      <div id="ideas-vault-fade"
+           class="pointer-events-none absolute bottom-0 left-0 right-0 h-24 transition-opacity duration-300"
+           style="background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.97));"></div>
+
+      <!-- Dark-mode fade version managed via JS -->
     </div>
+
+    <style>
+      /* hide native scrollbar inside vault — global orange one still applies */
+      #ideas-list { scrollbar-gutter: stable; }
+    </style>
+
+    <script>
+      /* Sync the bottom fade with scroll position */
+      function zzSyncVaultFade(el) {
+        const fade = document.getElementById('ideas-vault-fade');
+        if (!fade) return;
+        const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+        fade.style.opacity = atBottom ? '0' : '1';
+      }
+
+      /* Update fade gradient color when dark mode toggles */
+      function zzUpdateVaultFadeColor() {
+        const fade = document.getElementById('ideas-vault-fade');
+        if (!fade) return;
+        const isDark = document.documentElement.classList.contains('dark');
+        fade.style.background = isDark
+          ? 'linear-gradient(to bottom, transparent, rgba(26,29,36,0.97))'
+          : 'linear-gradient(to bottom, transparent, rgba(255,255,255,0.97))';
+      }
+
+      /* Initialise on load */
+      document.addEventListener('DOMContentLoaded', zzUpdateVaultFadeColor);
+
+      /* React to theme changes dispatched by core.js */
+      window.addEventListener('zenith:theme_change', zzUpdateVaultFadeColor);
+    </script>
   </div>
+
 </div>
 
 <script>
 // Placeholder logic handles empty editor
 </script>
+</div>
 
 <?php
 $content = ob_get_clean();

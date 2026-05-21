@@ -98,7 +98,7 @@ function handleRegister()
     $_SESSION['username'] = $result['user']['username'];
     $_SESSION['email'] = $result['user']['email'];
     $_SESSION['role'] = 'user';
-    $_SESSION['user_avatar'] = '';
+    $_SESSION['user_avatar'] = '/Assets/Img/default-avatar.png';
     $_SESSION['logged_in'] = true;
 
     logMessage("New user registered: $username (ID: {$result['user']['id']})", 'auth.log');
@@ -138,7 +138,7 @@ function handleLogin()
     $_SESSION['username'] = $result['user']['username'];
     $_SESSION['email'] = $result['user']['email'];
     $_SESSION['role'] = $result['user']['role'];
-    $_SESSION['user_avatar'] = $result['user']['avatar'] ?? '';
+    $_SESSION['user_avatar'] = !empty($result['user']['avatar']) ? $result['user']['avatar'] : '/Assets/Img/default-avatar.png';
     $_SESSION['logged_in'] = true;
 
     // Handle "Remember Me" functionality

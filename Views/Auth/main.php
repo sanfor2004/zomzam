@@ -184,7 +184,15 @@ $pageDescription = 'Access your Zomzam account';
             <label class="text-sm font-medium text-slate-700 dark:text-slate-300"><zlang key="auth_password">Password</zlang></label>
             <a href="/forgot-password" class="text-sm font-medium text-primary-500 hover:text-primary-600 transition-colors"><zlang key="auth_forgot">Forgot password?</zlang></a>
           </div>
-          <input type="password" name="password" required placeholder="••••••••" class="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none">
+          <div class="relative">
+            <input id="signin-password" type="password" name="password" required placeholder="••••••••" class="w-full px-5 py-3.5 pr-12 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none">
+            <button type="button" onclick="togglePasswordVisibility('signin-password', 'signin-eye')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary-500 transition-colors">
+              <svg id="signin-eye" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+          </div>
         </div>
         
         <div class="pt-2">
@@ -209,7 +217,15 @@ $pageDescription = 'Access your Zomzam account';
         </div>
         <div>
           <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2"><zlang key="auth_password">Password</zlang></label>
-          <input type="password" name="password" required minlength="8" placeholder="••••••••" class="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none">
+          <div class="relative">
+            <input id="signup-password" type="password" name="password" required minlength="8" placeholder="••••••••" class="w-full px-5 py-3.5 pr-12 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none">
+            <button type="button" onclick="togglePasswordVisibility('signup-password', 'signup-eye')" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-primary-500 transition-colors">
+              <svg id="signup-eye" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+            </button>
+          </div>
           <p class="text-xs text-slate-500 dark:text-slate-400 mt-2"><zlang key="auth_pass_rule">Must be at least 8 characters long.</zlang></p>
         </div>
         
@@ -231,6 +247,24 @@ $pageDescription = 'Access your Zomzam account';
   </div>
 
   <script>
+    // ── Password Visibility Toggle ──
+    function togglePasswordVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon  = document.getElementById(iconId);
+      if (!input || !icon) return;
+
+      const isHidden = input.type === 'password';
+      input.type = isHidden ? 'text' : 'password';
+
+      // Swap between eye-open and eye-slash icons
+      icon.innerHTML = isHidden
+        ? /* eye-slash (hidden) */ `
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />`
+        : /* eye-open (visible) */ `
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />`;
+    }
+
     // Tab Switching Logic
     function switchTab(tab) {
       const signInForm = document.getElementById('signInForm');

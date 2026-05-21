@@ -25,6 +25,7 @@ $additionalJS = [
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
 <!-- [PART: NOTIFICATION_OVERLAY] - Used for timer alerts and toasts -->
 <div id="timer-notification" class="hidden"></div>
 
@@ -237,6 +238,7 @@ ob_start();
       </a>
     </div>
   </div>
+</div>
 </div>
 
 <?php

@@ -148,7 +148,19 @@ const ZLANG_CONFIG = {
         "nav_time": "Gestión del Tiempo",
         "nav_money": "Gestión del Dinero",
         "nav_community": "Comunidad",
-        "nav_settings": "Ajustes Globales"
+        "btn_add_task": "Añadir Tarea",
+        "task_urgent": "Urgente",
+        "task_medium": "Medio",
+        "task_maybe": "Quizás",
+        "task_free": "Libre",
+        "task_completed": "Completada",
+        "task_board": "Tablero de Tareas",
+        "task_active": "Tareas Activas",
+        "task_placeholder": "¿Qué hay que hacer?",
+        "task_priority": "Prioridad",
+        "task_duration": "Bloque de Tiempo",
+        "nav_settings": "Ajustes Globales",
+        "community_coming_soon": "Comunidad próximamente"
     },
     "fr": {
         "company_name": "zomzam",
@@ -184,7 +196,20 @@ const ZLANG_CONFIG = {
         "auth_terms": "En vous inscrivant, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité.",
         "nav_time": "Gestion du Temps",
         "nav_money": "Gestion de l'Argent",
-        "nav_settings": "Paramètres Globaux"
+        "nav_community": "Communauté",
+        "btn_add_task": "Ajouter une Tâche",
+        "task_urgent": "Urgent",
+        "task_medium": "Moyen",
+        "task_maybe": "Peut-être",
+        "task_free": "Libre",
+        "task_completed": "Terminée",
+        "task_board": "Tableau des Tâches",
+        "task_active": "Tâches Actives",
+        "task_placeholder": "Que faut-il faire ?",
+        "task_priority": "Priorité",
+        "task_duration": "Bloc de Temps",
+        "nav_settings": "Paramètres Globaux",
+        "community_coming_soon": "Communauté à venir"
     },
     "he": {
         "company_name": "zomzam",
@@ -219,8 +244,20 @@ const ZLANG_CONFIG = {
         "auth_pass_rule": "חייב להכיל לפחות 8 תווים.",
         "auth_terms": "בעת ההרשמה, אתה מסכים לתנאי השירות ולמדיניות הפרטיות שלנו.",
         "nav_time": "ניהול זמן",
-        "nav_money": "ניהול כספים",
-        "nav_settings": "הגדרות גלובליות"
+        "nav_community": "קהילה",
+        "btn_add_task": "הוסף משימה",
+        "task_urgent": "דחוף",
+        "task_medium": "בינוני",
+        "task_maybe": "אולי",
+        "task_free": "חופשי",
+        "task_completed": "הושלם",
+        "task_board": "לוח משימות",
+        "task_active": "משימות פעילות",
+        "task_placeholder": "מה צריך לעשות?",
+        "task_priority": "עדיפות",
+        "task_duration": "בלוק זמן",
+        "nav_settings": "הגדרות גלובליות",
+        "community_coming_soon": "קהילה בקרוב"
     },
     "zh": {
         "company_name": "zomzam",
@@ -256,7 +293,20 @@ const ZLANG_CONFIG = {
         "auth_terms": "注册即表示您同意我们的服务条款和隐私政策。",
         "nav_time": "时间管理",
         "nav_money": "财务管理",
-        "nav_settings": "全局设置"
+        "nav_community": "社区",
+        "btn_add_task": "添加任务",
+        "task_urgent": "紧急",
+        "task_medium": "中等",
+        "task_maybe": "可能",
+        "task_free": "空闲",
+        "task_completed": "已完成",
+        "task_board": "任务板",
+        "task_active": "进行中的任务",
+        "task_placeholder": "需要做什么？",
+        "task_priority": "优先级",
+        "task_duration": "时间块",
+        "nav_settings": "全局设置",
+        "community_coming_soon": "社区即将推出"
     },
     "it": {
         "company_name": "zomzam",
@@ -292,7 +342,20 @@ const ZLANG_CONFIG = {
         "auth_terms": "Registrandoti, accetti i nostri Termini di Servizio e la nostra Informativa sulla Privacy.",
         "nav_time": "Gestione del Tempo",
         "nav_money": "Gestione del Denaro",
-        "nav_settings": "Impostazioni Globali"
+        "nav_community": "Comunità",
+        "btn_add_task": "Aggiungi Attività",
+        "task_urgent": "Urgente",
+        "task_medium": "Medio",
+        "task_maybe": "Forse",
+        "task_free": "Libero",
+        "task_completed": "Completata",
+        "task_board": "Bacheca Attività",
+        "task_active": "Attività Attive",
+        "task_placeholder": "Cosa c'è da fare?",
+        "task_priority": "Priorità",
+        "task_duration": "Blocco di Tempo",
+        "nav_settings": "Impostazioni Globali",
+        "community_coming_soon": "Comunità in arrivo"
     }
 };
 

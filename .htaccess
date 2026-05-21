@@ -28,8 +28,8 @@ RewriteRule ^(README\.md|config\.php|setup_db\.php|composer\.(json|lock)|package
     Header always set X-XSS-Protection "1; mode=block"
 </IfModule>
 
-# Allow direct access to Assets folder
-RewriteCond %{REQUEST_URI} ^/Assets/
+# Allow direct access to Assets folder and common root files
+RewriteCond %{REQUEST_URI} ^/(Assets/|favicon\.ico|robots\.txt|ads\.txt)
 RewriteRule ^ - [L]
 
 # ============================================================================
@@ -50,6 +50,9 @@ RewriteRule ^api/profile/change-password/?$ Api_handler/profile.php [L,QSA]
 
 # API User endpoints
 RewriteRule ^api/user/?$ Api_handler/user.php [L,QSA]
+
+# API Social Graph endpoints (friends + follows)
+RewriteRule ^api/social/?$ Api_handler/social.php [L,QSA]
 
 # API Logout
 RewriteRule ^api/logout/?$ Api_handler/logout.php [L,QSA]
@@ -73,7 +76,14 @@ RewriteRule ^dashboard/?$ Views/App/home.php [L]
 
 # Global Account Settings
 RewriteRule ^settings/?$ Views/App/settings.php [L]
-RewriteRule ^community/?$ Views/App/community.php [L]
+
+# Community Module (New Separated Pages)
+RewriteRule ^community/?$ Views/Community/dashboard.php [L]
+RewriteRule ^community/dashboard/?$ Views/Community/dashboard.php [L]
+RewriteRule ^community/friends/?$ Views/Community/friends.php [L]
+RewriteRule ^community/requests/?$ Views/Community/requests.php [L]
+RewriteRule ^community/following/?$ Views/Community/following.php [L]
+RewriteRule ^community/discover/?$ Views/Community/discover.php [L]
 
 # Time Management Module
 RewriteRule ^time/?$ /time/execution [R=302,L]

@@ -26,6 +26,10 @@ class StreamWaiter {
             'new_notification': (params) => {
                 this.handleNotification(params);
             },
+            'social_update': (params) => {
+                const event = new CustomEvent('zz-social-update', { detail: params });
+                window.dispatchEvent(event);
+            },
             'force_refresh': () => {
                 window.location.reload();
             }
@@ -82,10 +86,14 @@ class StreamWaiter {
             const fetcher = (window.Zenith && Zenith.Fetch) ? Zenith.Fetch : fetch;
             await fetcher('/api/heartbeat', {
                 method: 'POST',
-                body: { 
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ 
                     idle: this.isIdle ? 1 : 0,
                     viewing_user_id: this.viewingUserId 
-                }
+                })
             });
         } catch (e) {
             console.error('❌ Stream Waiter: Status Update Failed', e);
@@ -196,16 +204,19 @@ class StreamWaiter {
     }
 
     handleNotification(params) {
-        const counter = document.getElementById('notification-count');
-        if (counter && params.count > 0) {
-            counter.textContent = params.count;
-            counter.classList.remove('hidden');
-        }
+        const event = new CustomEvent('new-notification', { detail: params });
+        window.dispatchEvent(event);
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.zenithStreamWaiter = new StreamWaiter({
+            viewingUserId: document.body.dataset.viewingUserId
+        });
+    });
+} else {
     window.zenithStreamWaiter = new StreamWaiter({
         viewingUserId: document.body.dataset.viewingUserId
     });
-});
+}

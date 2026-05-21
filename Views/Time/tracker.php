@@ -33,10 +33,21 @@ $hours = floor($totalActual / 60);
 $minutes = $totalActual % 60;
 $timeString = $hours > 0 ? "{$hours}h {$minutes}m" : "{$minutes}m";
 
-$totalSaved = max(0, $totalPlanned - $totalActual);
+$totalSaved = 0;
+$totalWasted = 0;
+foreach ($completedToday as $task) {
+    $diff = (int)($task['actual_duration'] ?? $task['duration_block']) - (int)$task['duration_block'];
+    if ($diff > 0) $totalWasted += $diff;
+    else $totalSaved += abs($diff);
+}
+
 $savedHours = floor($totalSaved / 60);
 $savedMinutes = $totalSaved % 60;
 $savedString = $savedHours > 0 ? "{$savedHours}h {$savedMinutes}m" : "{$savedMinutes}m";
+
+$wastedHours = floor($totalWasted / 60);
+$wastedMinutes = $totalWasted % 60;
+$wastedString = $wastedHours > 0 ? "{$wastedHours}h {$wastedMinutes}m" : "{$wastedMinutes}m";
 
 // Helpers for UI
 function priorityStyles($prio) {
@@ -55,6 +66,8 @@ $pageDescription = 'Track your daily focus hours and completed tasks.';
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
+
 <!-- Page Header -->
 <div class="flex items-center gap-3 mb-6">
   <div class="w-9 h-9 rounded-xl bg-blue-500 flex items-center justify-center shadow-sm">
@@ -69,7 +82,7 @@ ob_start();
   </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
     <!-- Metric: Hours Focused -->
     <div class="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-3xl p-6 border border-blue-100 dark:border-blue-800/30 shadow-apple flex flex-col justify-between">
         <div class="flex items-center gap-3 mb-4">
@@ -110,7 +123,35 @@ ob_start();
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Metric: Wasted Time -->
+    <div class="bg-gradient-to-br from-rose-50 to-red-50 dark:from-rose-900/20 dark:to-red-900/20 rounded-3xl p-6 border border-rose-100 dark:border-rose-800/30 shadow-apple flex flex-col justify-between">
+        <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-sm">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            </div>
+            <div>
+                <p class="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">Wasted Time</p>
+                <p class="text-sm text-slate-500 dark:text-slate-400">Time beyond what was planned</p>
+            </div>
+        </div>
+        <div class="mt-auto flex items-end justify-between">
+            <span class="text-4xl font-black <?php echo $totalWasted > 0 ? 'text-rose-500' : 'text-slate-900 dark:text-white'; ?>">
+                <?php echo $totalWasted > 0 ? $wastedString : '0m'; ?>
+            </span>
+            <?php if ($totalWasted === 0): ?>
+            <span class="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                On Track ✓
+            </span>
+            <?php else: ?>
+            <span class="text-xs font-bold text-rose-500 bg-rose-500/10 px-2.5 py-1 rounded-xl border border-rose-500/20">
+                Over budget
+            </span>
+            <?php endif; ?>
+        </div>
+    </div>
 </div>
+
 
 <!-- Activity Feed -->
 <div class="bg-white dark:bg-[#1a1d24] rounded-3xl p-6 shadow-apple border border-slate-100 dark:border-slate-800">
@@ -160,6 +201,10 @@ ob_start();
                         <span class="text-xs font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                             Saved <?php echo $saved; ?>m
                         </span>
+                        <?php elseif ($saved < 0): ?>
+                        <span class="text-xs font-bold text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded-md border border-rose-500/20">
+                            Over <?php echo abs($saved); ?>m
+                        </span>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -171,6 +216,7 @@ ob_start();
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+</div>
 </div>
 
 <?php

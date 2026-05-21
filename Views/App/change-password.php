@@ -19,6 +19,8 @@ $pageDescription = 'Update your account password';
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
+
 <div class="max-w-4xl mx-auto space-y-6">
   <!-- Header -->
   <div class="mb-8">
@@ -248,6 +250,7 @@ document.getElementById('changePasswordForm').addEventListener('submit', async f
   }
 });
 </script>
+</div>
 
 <?php
 $content = ob_get_clean();

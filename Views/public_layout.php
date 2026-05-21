@@ -101,6 +101,35 @@
     .nav-link:hover::after {
       width: 100%;
     }
+
+    /* ── Zenith Global Scrollbar ── */
+    /* Chrome / Safari / Edge */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(203, 213, 225, 0.7);
+      border-radius: 99px;
+    }
+    html.dark ::-webkit-scrollbar-track {
+      background: rgba(51, 65, 85, 0.7);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #EE5712;
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #df3c0b;
+    }
+    /* Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #EE5712 rgba(203, 213, 225, 0.7);
+    }
+    html.dark * {
+      scrollbar-color: #EE5712 rgba(51, 65, 85, 0.7);
+    }
   </style>
 </head>
 <body class="bg-slate-50 text-slate-900 dark:bg-surface-dark dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300">

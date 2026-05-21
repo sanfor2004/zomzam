@@ -126,6 +126,7 @@ function updateProfile() {
   $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : null;
   $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : null;
   $bio = isset($_POST['bio']) ? trim($_POST['bio']) : null;
+  $tags = isset($_POST['tags']) ? $_POST['tags'] : null;
   
   // Validate input lengths
   if ($firstName !== null && strlen($firstName) > 100) {
@@ -150,6 +151,36 @@ function updateProfile() {
       'message' => 'Bio is too long (max 500 characters).'
     ]);
     return;
+  }
+
+  // Validate tags
+  if ($tags !== null) {
+    $tagsArray = json_decode($tags, true);
+    if (!is_array($tagsArray)) {
+      echo json_encode([
+        'success' => false,
+        'message' => 'Invalid tags format.'
+      ]);
+      return;
+    }
+    
+    if (count($tagsArray) > 10) {
+      echo json_encode([
+        'success' => false,
+        'message' => 'Maximum 10 tags allowed.'
+      ]);
+      return;
+    }
+    
+    foreach ($tagsArray as $tag) {
+      if (!is_string($tag) || strlen($tag) > 30) {
+        echo json_encode([
+          'success' => false,
+          'message' => 'Each tag must be a string of maximum 30 characters.'
+        ]);
+        return;
+      }
+    }
   }
   
   // Get current user data to retrieve old avatar before upload
@@ -355,6 +386,11 @@ function updateProfile() {
       $params[] = $bio;
     }
     
+    if ($tags !== null) {
+      $updates[] = 'tags = ?';
+      $params[] = $tags;
+    }
+    
     if ($avatarPath !== null) {
       $updates[] = 'avatar = ?';
       $params[] = $avatarPath;
@@ -377,7 +413,7 @@ function updateProfile() {
     $stmt->execute($params);
     
     // Get updated user data
-    $stmt = $conn->prepare("SELECT id, username, first_name, last_name, email, avatar, bio FROM users WHERE id = ?");
+    $stmt = $conn->prepare("SELECT id, username, first_name, last_name, email, avatar, bio, tags FROM users WHERE id = ?");
     $stmt->execute([$userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
     

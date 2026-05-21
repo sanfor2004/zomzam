@@ -28,6 +28,8 @@ $pageDescription = 'View and edit your profile';
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
+
 <div class="max-w-4xl mx-auto space-y-6">
   <!-- Header -->
   <div class="mb-8">
@@ -143,6 +145,44 @@ ob_start();
         ><?php echo htmlspecialchars($user['bio'] ?? ''); ?></textarea>
       </div>
 
+      <!-- Tags -->
+      <div>
+        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Tags</label>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Add tags to help people discover you (e.g., Developer, Designer, Writer)</p>
+        <div id="tags-container" class="flex flex-wrap gap-2 mb-3">
+          <?php 
+          $userTags = json_decode($user['tags'] ?? '[]', true);
+          if (!empty($userTags)) {
+            foreach ($userTags as $tag) {
+              echo '<span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium border border-primary-200 dark:border-primary-800">
+                <span>' . htmlspecialchars($tag) . '</span>
+                <button type="button" onclick="removeTag(this)" class="hover:text-primary-900 dark:hover:text-primary-100 transition-colors">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </span>';
+            }
+          }
+          ?>
+        </div>
+        <div class="flex gap-2">
+          <input 
+            type="text"
+            id="tag-input"
+            placeholder="Type a tag and press Enter"
+            class="flex-1 px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none text-sm"
+            onkeypress="handleTagInput(event)"
+          >
+          <button 
+            type="button"
+            onclick="addTagFromInput()"
+            class="px-4 py-2.5 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 font-medium rounded-xl hover:bg-primary-200 dark:hover:bg-primary-900/50 transition-all text-sm"
+          >
+            Add Tag
+          </button>
+        </div>
+        <input type="hidden" name="tags" id="tags-hidden" value='<?php echo htmlspecialchars($user['tags'] ?? '[]'); ?>'>
+      </div>
+
       <!-- Save Button -->
       <div class="flex flex-col sm:flex-row gap-4 pt-4">
         <button 
@@ -186,6 +226,91 @@ ob_start();
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 const ALLOWED_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+
+// ── Tag Management Functions ──────────────────────────────────────────────
+function getTags() {
+  try {
+    return JSON.parse(document.getElementById('tags-hidden').value || '[]');
+  } catch {
+    return [];
+  }
+}
+
+function saveTags(tags) {
+  document.getElementById('tags-hidden').value = JSON.stringify(tags);
+}
+
+function renderTags() {
+  const tags = getTags();
+  const container = document.getElementById('tags-container');
+  
+  if (tags.length === 0) {
+    container.innerHTML = '<p class="text-xs text-slate-400 italic">No tags added yet</p>';
+    return;
+  }
+  
+  container.innerHTML = tags.map(tag => `
+    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 dark:bg-primary-900/20 text-primary-700 dark:text-primary-300 rounded-full text-sm font-medium border border-primary-200 dark:border-primary-800">
+      <span>${escapeHtml(tag)}</span>
+      <button type="button" onclick="removeTag(this)" class="hover:text-primary-900 dark:hover:text-primary-100 transition-colors">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </span>
+  `).join('');
+}
+
+function addTagFromInput() {
+  const input = document.getElementById('tag-input');
+  const tag = input.value.trim();
+  
+  if (!tag) return;
+  
+  const tags = getTags();
+  
+  if (tags.length >= 10) {
+    showMessage('Maximum 10 tags allowed', false);
+    return;
+  }
+  
+  if (tag.length > 30) {
+    showMessage('Tag is too long (max 30 characters)', false);
+    return;
+  }
+  
+  if (tags.includes(tag)) {
+    showMessage('Tag already exists', false);
+    return;
+  }
+  
+  tags.push(tag);
+  saveTags(tags);
+  renderTags();
+  input.value = '';
+  input.focus();
+}
+
+function removeTag(button) {
+  const tagSpan = button.closest('span');
+  const tagText = tagSpan.querySelector('span').textContent;
+  const tags = getTags().filter(t => t !== tagText);
+  saveTags(tags);
+  renderTags();
+}
+
+function handleTagInput(event) {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    addTagFromInput();
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
 
 // Handle avatar preview with security validation
 document.getElementById('avatarInput').addEventListener('change', function(e) {
@@ -287,11 +412,15 @@ document.getElementById('profileForm').addEventListener('submit', async function
     showMessage('Bio is too long (max 500 characters).', false);
     return;
   }
+
+  // Get tags from hidden input
+  const tags = document.getElementById('tags-hidden').value;
   
   const formData = new FormData();
   formData.append('first_name', firstName);
   formData.append('last_name', lastName);
   formData.append('bio', bio);
+  formData.append('tags', tags);
   
   const csrfToken = document.querySelector('[name="csrf_token"]').value;
   formData.append('csrf_token', csrfToken);
@@ -362,6 +491,7 @@ function showMessage(message, isSuccess) {
   messageDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 </script>
+</div>
 
 <?php
 $content = ob_get_clean();

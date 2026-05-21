@@ -18,6 +18,7 @@ $schema = [
         'role' => "ENUM('user', 'admin', 'moderator') NOT NULL DEFAULT 'user'",
         'avatar' => 'VARCHAR(500) NULL',
         'bio' => 'TEXT NULL',
+        'tags' => 'JSON NULL',
         'timezone' => "VARCHAR(50) NOT NULL DEFAULT 'UTC'",
         'notifications_enabled' => "TINYINT(1) NOT NULL DEFAULT 0",
         'is_active' => 'TINYINT(1) NOT NULL DEFAULT 1',
@@ -112,6 +113,29 @@ $schema = [
         'last_seen' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
         'stream_queue' => 'JSON NULL',
         'is_idle' => 'TINYINT(1) NOT NULL DEFAULT 0'
+    ],
+    // ── Social Graph ──────────────────────────────────────────────────────────
+    // Single polymorphic table for both bidirectional friends and one-way follows.
+    // type='friend' requires acceptance; type='follow' is always status='accepted'.
+    'user_connections' => [
+        'id'           => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'requester_id' => 'INT UNSIGNED NOT NULL',
+        'addressee_id' => 'INT UNSIGNED NOT NULL',
+        'type'         => "ENUM('friend','follow') NOT NULL DEFAULT 'friend'",
+        // friend states: pending → accepted | declined | blocked
+        // follow states: accepted (instant) | blocked
+        'status'       => "ENUM('pending','accepted','declined','blocked') NOT NULL DEFAULT 'pending'",
+        'created_at'   => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+        'updated_at'   => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    ],
+    // ── Notifications ────────────────────────────────────────────────────────
+    'notifications' => [
+        'id'         => 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+        'user_id'    => 'INT UNSIGNED NOT NULL',
+        'type'       => 'VARCHAR(50) NOT NULL', // e.g., 'friend_request', 'friend_accept'
+        'data'       => 'JSON NOT NULL',      // Additional info like sender_id, sender_username, etc.
+        'is_read'    => 'TINYINT(1) NOT NULL DEFAULT 0',
+        'created_at' => 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP'
     ]
 ];
 

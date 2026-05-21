@@ -12,6 +12,8 @@ $pageDescription = 'Overview of your financial health and budget.';
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
+
 <div id="money-app" class="space-y-8">
   <!-- Header & Quick Actions -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -254,6 +256,7 @@ ob_start();
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <?php

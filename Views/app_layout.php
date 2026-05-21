@@ -54,13 +54,22 @@ if (isset($_SESSION['user_id'])) {
   $offlineDuration = "";
 }
 
+// Fetch user details including first_name and last_name
+$userModel = new User();
+$userDetails = $userModel->getUserById($_SESSION['user_id']);
+
 $currentUser = [
   'id' => $_SESSION['user_id'] ?? 0,
   'username' => $_SESSION['username'] ?? 'Guest',
   'email' => $_SESSION['email'] ?? '',
   'role' => $_SESSION['role'] ?? 'user',
-  'avatar' => $_SESSION['user_avatar'] ?? ''
+  'avatar' => !empty($_SESSION['user_avatar']) ? $_SESSION['user_avatar'] : '/Assets/Img/default-avatar.png',
+  'first_name' => $userDetails['first_name'] ?? '',
+  'last_name' => $userDetails['last_name'] ?? ''
 ];
+
+// Check if user needs to complete their profile
+$needsProfileCompletion = empty($currentUser['first_name']) || empty($currentUser['last_name']);
 ?>
 <!DOCTYPE html>
 <html id="zz-html-root" lang="en" class="scroll-smooth h-full bg-slate-50 dark:bg-[#111318]">
@@ -131,11 +140,21 @@ $currentUser = [
           },
           animation: {
             'shimmer': 'shimmer 2s infinite linear',
+            'in': 'fadeIn 0.3s ease-out',
+            'out': 'fadeOut 0.3s ease-in'
           },
           keyframes: {
             shimmer: {
               '0%': { backgroundPosition: '-200% 0' },
               '100%': { backgroundPosition: '200% 0' },
+            },
+            fadeIn: {
+              '0%': { opacity: '0', transform: 'scale(0.95)' },
+              '100%': { opacity: '1', transform: 'scale(1)' }
+            },
+            fadeOut: {
+              '0%': { opacity: '1', transform: 'scale(1)' },
+              '100%': { opacity: '0', transform: 'scale(0.95)' }
             }
           }
         }
@@ -227,10 +246,358 @@ $currentUser = [
       stroke: #EE5712 !important;
     }
 
-    /* Smoke & Noise Zenith Effect - Creative Version */
-    .smoke-section {
+    /* ── Zenith Global Scrollbar ── */
+    /* Chrome / Safari / Edge */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(203, 213, 225, 0.7);
+      border-radius: 99px;
+    }
+    html.dark ::-webkit-scrollbar-track {
+      background: rgba(51, 65, 85, 0.7);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #EE5712;
+      border-radius: 99px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #df3c0b;
+    }
+    /* Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: #EE5712 rgba(203, 213, 225, 0.7);
+    }
+    html.dark * {
+      scrollbar-color: #EE5712 rgba(51, 65, 85, 0.7);
+    }
+
+    /* ── Notification Styles ── */
+    .neon-blue-glow {
+      color: #00f2ff;
+      text-shadow: 0 0 8px rgba(0, 242, 255, 0.8);
+      filter: drop-shadow(0 0 5px rgba(0, 242, 255, 0.5));
+    }
+    .notification-item {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .notification-item:hover {
+      background-color: rgba(238, 87, 18, 0.05);
+
+    }
+    html.dark .notification-item:hover {
+      background-color: rgba(238, 87, 18, 0.1);
+    }
+    .unread-dot {
+      width: 8px;
+      height: 8px;
+      background-color: #EE5712;
+      border-radius: 9999px;
+      box-shadow: 0 0 10px #EE5712;
+    }
+
+    /* ── Social Action Undo Styles ── */
+    .hover-show {
+      display: none;
+    }
+    .zz-btn-pending:hover .hover-show {
+      display: inline-block;
+    }
+    .zz-btn-pending:hover .hover-hide {
+      display: none;
+    }
+    .zz-btn-pending {
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: pointer;
+    }
+    .zz-btn-pending:hover {
+      background: rgba(239, 68, 68, 0.1) !important;
+      color: #ef4444 !important;
+      border-color: rgba(239, 68, 68, 0.3) !important;
+    }
+
+    /* ── Unfriend Button ── */
+    .zz-btn-unfriend {
+      background: transparent;
+      color: #ef4444;
+      border-color: rgba(239, 68, 68, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .zz-btn-unfriend:hover { 
+      background: rgba(239, 68, 68, 0.1); 
+      border-color: rgba(239, 68, 68, 0.5); 
+      transform: scale(1.03); 
+    }
+
+    /* ── Zenith Confirmation Modal ── */
+    .zz-confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .zz-confirm-overlay.show {
+      opacity: 1;
+    }
+    .zz-confirm-modal {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
+      width: 90%;
+      overflow: hidden;
+      transform: scale(0.9) translateY(20px);
+      opacity: 0;
+      transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .zz-confirm-overlay.show .zz-confirm-modal {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+    html.dark .zz-confirm-modal {
+      background: #1a1d24;
+      border: 1px solid rgba(51, 65, 85, 0.6);
+    }
+    .zz-confirm-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    html.dark .zz-confirm-header {
+      border-bottom-color: rgba(51, 65, 85, 0.6);
+    }
+    .zz-confirm-body {
+      padding: 1.5rem;
+    }
+    .zz-confirm-footer {
+      padding: 1rem 1.5rem;
+      display: flex;
+      gap: 0.75rem;
+      justify-content: flex-end;
+      border-top: 1px solid rgba(226, 232, 240, 0.8);
+      background: rgba(248, 250, 252, 0.5);
+    }
+    html.dark .zz-confirm-footer {
+      border-top-color: rgba(51, 65, 85, 0.6);
+      background: rgba(15, 23, 42, 0.5);
+    }
+    .zz-confirm-btn {
+      padding: 0.625rem 1.25rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      border: none;
+      outline: none;
+    }
+    .zz-confirm-btn:focus {
+      outline: 2px solid rgba(238, 87, 18, 0.5);
+      outline-offset: 2px;
+    }
+    .zz-confirm-btn-cancel {
+      background: rgba(100, 116, 139, 0.1);
+      color: #64748b;
+    }
+    .zz-confirm-btn-cancel:hover {
+      background: rgba(100, 116, 139, 0.2);
+      transform: translateY(-1px);
+    }
+    html.dark .zz-confirm-btn-cancel {
+      background: rgba(148, 163, 184, 0.1);
+      color: #94a3b8;
+    }
+    .zz-confirm-btn-confirm {
+      background: #EE5712;
+      color: white;
+    }
+    .zz-confirm-btn-confirm:hover {
+      background: #df3c0b;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(238, 87, 18, 0.3);
+    }
+    .zz-confirm-btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    .zz-confirm-btn-danger:hover {
+      background: #dc2626;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    /* ── Community Topbar Tabs ── */
+    .zz-topbar-tab {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.375rem;
+      padding: 0.875rem;
+      border-radius: 0.875rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: #64748b;
+      cursor: pointer;
+      transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+      white-space: nowrap;
+      border: 1.5px solid transparent;
+      background: rgba(255, 255, 255, 0.5);
       position: relative;
-      z-index: 1;
+    }
+    html.dark .zz-topbar-tab {
+      color: #94a3b8;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .zz-topbar-tab:hover {
+      background: rgba(238, 87, 18, 0.1);
+      color: #EE5712;
+      transform: translateY(-1px);
+    }
+    html.dark .zz-topbar-tab:hover {
+      background: rgba(238, 87, 18, 0.15);
+    }
+    .zz-topbar-tab-active {
+      background: rgba(238, 87, 18, 0.14) !important;
+      color: #EE5712 !important;
+      border-color: rgba(238, 87, 18, 0.3);
+      font-weight: 600;
+      box-shadow: 0 2px 4px rgba(238, 87, 18, 0.12);
+    }
+    html.dark .zz-topbar-tab-active {
+      background: rgba(238, 87, 18, 0.18) !important;
+      box-shadow: 0 2px 4px rgba(238, 87, 18, 0.2);
+    }
+    .zz-topbar-tab-active:hover {
+      transform: none;
+    }
+    .zz-topbar-tab svg {
+      width: 1.125rem;
+      height: 1.125rem;
+      transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .zz-topbar-tab:hover svg {
+      transform: scale(1.1);
+    }
+    .zz-topbar-tab:active {
+      transform: scale(0.98);
+    }
+
+    /* ── Enhanced Tooltips for Icon-Only Buttons ── */
+    .zz-topbar-tab[title]:hover::after {
+      content: attr(title);
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: white;
+      padding: 0.375rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      white-space: nowrap;
+      z-index: 1000;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      animation: tooltipFadeIn 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    html.dark .zz-topbar-tab[title]:hover::after {
+      background: rgba(248, 250, 252, 0.95);
+      color: #0f172a;
+    }
+    @keyframes tooltipFadeIn {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+
+    /* ── Search Autocomplete in Topbar ── */
+    .zz-search-autocomplete {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      margin-top: 0.5rem;
+      background: white;
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      border-radius: 0.75rem;
+      box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+      max-height: 320px;
+      overflow-y: auto;
+      z-index: 110;
+    }
+    html.dark .zz-search-autocomplete {
+      background: #1a1d24;
+      border-color: rgba(51, 65, 85, 0.6);
+    }
+    .zz-search-autocomplete-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 1rem;
+      cursor: pointer;
+      transition: background-color 150ms;
+      border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+      text-decoration: none;
+      color: inherit;
+    }
+    .zz-search-autocomplete-item:last-child {
+      border-bottom: none;
+    }
+    .zz-search-autocomplete-item:hover {
+      background: rgba(238, 87, 18, 0.05);
+      text-decoration: none;
+    }
+    html.dark .zz-search-autocomplete-item {
+      border-bottom-color: rgba(51, 65, 85, 0.4);
+    }
+    html.dark .zz-search-autocomplete-item:hover {
+      background: rgba(238, 87, 18, 0.1);
+    }
+    .zz-search-autocomplete-avatar {
+      width: 2rem;
+      height: 2rem;
+      border-radius: 50%;
+      object-fit: cover;
+      background: rgba(238, 87, 18, 0.1);
+    }
+    .zz-search-autocomplete-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .zz-search-autocomplete-username {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    html.dark .zz-search-autocomplete-username {
+      color: #f1f5f9;
+    }
+    .zz-search-autocomplete-email {
+      font-size: 0.75rem;
+      color: #64748b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   </style>
 </head>
@@ -354,18 +721,6 @@ $currentUser = [
           </div>
         </div>
       </div>
-      <!-- Community Section -->
-      <a id="zz-nav-community" href="/community"
-        class="nav-link flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">
-        <svg id="zz-nav-community-svg" class="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path id="zz-nav-community-p1" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle id="zz-nav-community-c1" cx="9" cy="7" r="4"></circle>
-          <path id="zz-nav-community-p2" d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path id="zz-nav-community-p3" d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <zlang id="zz-nav-community-text" key="nav_community">Community</zlang>
-      </a>
-
       <!-- Global Settings Section -->
       <a id="zz-nav-settings" href="/settings"
         class="nav-link flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors">
@@ -556,17 +911,6 @@ $currentUser = [
         </div>
       </div>
       <div id="zz-mobile-divider-2" class="border-t border-slate-100 dark:border-slate-800 my-2 pt-2"></div>
-      
-      <a id="zz-mobile-nav-community" href="/community"
-        class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50">
-        <svg id="zz-mobile-community-svg" class="w-4 h-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path id="zz-mobile-community-p1" d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle id="zz-mobile-community-c1" cx="9" cy="7" r="4"></circle>
-          <path id="zz-mobile-community-p2" d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path id="zz-mobile-community-p3" d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-        <zlang id="zz-mobile-community-text" key="nav_community">Community</zlang>
-      </a>
 
       <a id="zz-mobile-nav-settings" href="/settings"
         class="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 rounded-lg hover:bg-slate-50">
@@ -589,10 +933,10 @@ $currentUser = [
     <!-- Topbar (Desktop) -->
     <header id="zz-desktop-topbar" class="hidden md:flex glass-header h-20 items-center justify-between flex-shrink-0">
       <div id="zz-topbar-left" class="flex items-center h-full">
-        <!-- Zenith Smoke Announcement Section -->
-        <div id="zz-topbar-smoke-sec" class="smoke-section h-full flex items-center px-10 min-w-[320px]">
+        <!-- Zenith Global Timer Section -->
+        <div id="zz-topbar-timer-sec" class="h-full flex items-center px-10">
 
-          <div id="zz-topbar-smoke-inner" class="relative z-10 flex items-center gap-5">
+          <div id="zz-topbar-timer-inner" class="relative z-10 flex items-center gap-5">
             <!-- Live Session Indicator -->
             <div id="global-timer-container"
               class="hidden flex items-center gap-3 bg-white/40 dark:bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/50 dark:border-white/10 shadow-glass">
@@ -614,19 +958,109 @@ $currentUser = [
                 </svg>
               </a>
             </div>
-
-            <!-- Announcement Text -->
-            <div id="topbar-announcement" class="flex flex-col">
-              <span id="zz-topbar-ann-label" class="text-[10px] font-bold text-primary-500 uppercase tracking-[0.2em] leading-none mb-1.5">Live
-                Session</span>
-              <p id="zz-topbar-ann-quote" class="text-xs font-semibold text-slate-400 dark:text-slate-500 italic">"Focus on what matters, ignore
-                the rest."</p>
-            </div>
           </div>
         </div>
       </div>
 
-      <div id="zz-topbar-right" class="flex items-center gap-4 pl-4 pr-4">
+      <!-- Community Tabs (always visible - centered) -->
+      <div id="zz-topbar-center" class="flex-1 flex items-center justify-center">
+        <div id="zz-topbar-community-tabs" class="flex items-center gap-3">
+          <a href="/community/dashboard" id="zz-tab-home" title="Community Home"
+            class="zz-topbar-tab">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+              <polyline points="9 22 9 12 15 12 15 22"/>
+            </svg>
+          </a>
+
+          <a href="/community/friends" id="zz-tab-friends" title="Friends"
+            class="zz-topbar-tab">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+            </svg>
+          </a>
+
+          <a href="/community/requests" id="zz-tab-requests" title="Friend Requests"
+            class="zz-topbar-tab">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="zz-inbox-badge hidden w-5 h-5 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center"></span>
+          </a>
+
+          <a href="/community/following" id="zz-tab-following" title="Following"
+            class="zz-topbar-tab">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+            </svg>
+          </a>
+
+          <a href="/community/discover" id="zz-tab-discover" title="Discover People"
+            class="zz-topbar-tab">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              <circle cx="10" cy="10" r="3"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <div id="zz-topbar-right" class="flex items-center gap-4 pr-4">
+        <!-- Community Search (always visible) -->
+        <div class="relative flex-shrink-0 w-64 border-r border-slate-200 dark:border-slate-700 pr-4">
+          <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input
+            id="zz-community-search-input"
+            type="search"
+            autocomplete="off"
+            placeholder="Search users…"
+            class="w-full pl-10 pr-4 py-1.5 text-sm border border-slate-200 dark:border-slate-700 rounded-full bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+            aria-label="Search users"
+          >
+          <div id="zz-search-autocomplete" class="zz-search-autocomplete hidden"></div>
+        </div>
+        
+        <!-- Notifications -->
+        <div id="zz-topbar-notifications" class="relative group border-r border-slate-200 dark:border-slate-700 pr-4">
+          <button id="zz-notification-btn" onclick="toggleNotifications()"
+            class="relative flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all bg-white dark:bg-slate-900 shadow-sm">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+            </svg>
+            <span id="zz-notification-badge" class="hidden absolute top-0 right-0 w-6 h-6 bg-primary-500 text-white text-[12px] font-black rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900 transform translate-x-2 -translate-y-2 shadow-md">0</span>
+          </button>
+          
+          <div id="zz-notification-dropdown" class="absolute right-0 top-full pt-2 hidden z-[110] w-80">
+            <div class="bg-white dark:bg-surface-dark rounded-2xl shadow-glass border border-slate-100 dark:border-slate-800 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+              <!-- Header -->
+              <div class="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/30">
+                <span class="text-xs font-black text-slate-900 dark:text-white uppercase tracking-widest">Notifications</span>
+                <button onclick="markAllNotificationsAsRead()" title="Mark all as read" class="p-1.5 text-slate-400 hover:text-primary-500 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </button>
+              </div>
+              <!-- List -->
+              <div id="zz-notification-list" class="max-h-96 overflow-y-auto py-1">
+                <div class="px-4 py-8 text-center">
+                  <div class="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                  </div>
+                  <p class="text-xs text-slate-500 italic">No new notifications</p>
+                </div>
+              </div>
+              <!-- Footer -->
+              <a href="/community" class="block py-2 text-[10px] font-bold text-center text-slate-400 dark:text-slate-500 uppercase tracking-widest border-t border-slate-100 dark:border-slate-800 hover:text-primary-500 transition-colors">View All Community</a>
+            </div>
+          </div>
+        </div>
+
         <!-- Language Switcher -->
         <div id="zz-topbar-lang-dropdown" class="relative group border-r border-slate-200 dark:border-slate-700 pr-4">
           <button id="zz-topbar-lang-btn"
@@ -691,20 +1125,154 @@ $currentUser = [
     </header>
 
     <!-- Page Content -->
-    <main id="zz-main-view" class="flex-1 overflow-y-auto p-4 md:p-8">
-      <div id="zz-view-container" class="max-w-6xl mx-auto h-full">
-        <?php
-        if (isset($content)) {
-          echo $content;
-        } else {
-          echo '<div id="zz-fallback-view" class="bg-white rounded-2xl shadow-apple border border-slate-100 p-8 text-center">';
-          echo '<h2 id="zz-fallback-title" class="text-2xl font-bold text-slate-900 mb-2">Dashboard</h2>';
-          echo '<p id="zz-fallback-text" class="text-slate-500">Welcome to your pristine dashboard.</p>';
-          echo '</div>';
-        }
-        ?>
-      </div>
+    <main id="zz-main-view" class="flex-1 overflow-y-auto">
+      <?php
+      if (isset($content)) {
+        echo $content;
+      } else {
+        echo '<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">';
+        echo '<div id="zz-fallback-view" class="bg-white rounded-2xl shadow-apple border border-slate-100 p-8 text-center">';
+        echo '<h2 id="zz-fallback-title" class="text-2xl font-bold text-slate-900 mb-2">Dashboard</h2>';
+        echo '<p id="zz-fallback-text" class="text-slate-500">Welcome to your pristine dashboard.</p>';
+        echo '</div>';
+        echo '</div>';
+      }
+      ?>
     </main>
+  </div>
+
+  <!-- Profile Completion Modal -->
+  <?php if ($needsProfileCompletion): ?>
+  <div id="zz-profile-complete-modal" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in">
+    <div class="bg-white dark:bg-surface-dark rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-md mx-4 overflow-hidden" style="animation: fadeIn 0.3s ease-out;">
+      <!-- Header -->
+      <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-br from-primary-50 to-white dark:from-primary-900/20 dark:to-surface-dark">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-xl bg-primary-500 flex items-center justify-center shadow-lg">
+            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white">Complete Your Profile</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Help us personalize your experience</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form id="zz-profile-complete-form" class="px-6 py-6 space-y-4">
+        <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token'] ?? ''; ?>">
+        
+        <div>
+          <label for="zz-first-name-input" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            First Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="zz-first-name-input"
+            name="first_name"
+            required
+            maxlength="100"
+            placeholder="Enter your first name"
+            class="w-full px-4 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+          >
+        </div>
+
+        <div>
+          <label for="zz-last-name-input" class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">
+            Last Name <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            id="zz-last-name-input"
+            name="last_name"
+            required
+            maxlength="100"
+            placeholder="Enter your last name"
+            class="w-full px-4 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 transition-all"
+          >
+        </div>
+
+        <div class="pt-2">
+          <button
+            type="submit"
+            id="zz-profile-complete-btn"
+            class="w-full px-4 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Continue
+          </button>
+        </div>
+
+        <p class="text-xs text-center text-slate-500 dark:text-slate-400">
+          This information helps us personalize your experience
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    // Handle profile completion form submission
+    document.getElementById('zz-profile-complete-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const btn = document.getElementById('zz-profile-complete-btn');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>';
+      
+      const formData = new FormData(e.target);
+      
+      try {
+        const response = await fetch('/api/profile/update', {
+          method: 'POST',
+          body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Close modal with animation
+          const modal = document.getElementById('zz-profile-complete-modal');
+          modal.style.animation = 'fadeOut 0.3s ease-in';
+          setTimeout(() => {
+            modal.remove();
+            // Refresh to update UI with new name
+            location.reload();
+          }, 300);
+        } else {
+          btn.disabled = false;
+          btn.textContent = originalText;
+          alert(result.message || 'Failed to update profile. Please try again.');
+        }
+      } catch (error) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+        alert('Network error. Please check your connection and try again.');
+      }
+    });
+
+    // Auto-focus first name input
+    setTimeout(() => {
+      document.getElementById('zz-first-name-input')?.focus();
+    }, 400);
+  </script>
+  <?php endif; ?>
+
+  <!-- Zenith Confirmation Modal (Global) -->
+  <div id="zz-confirm-overlay" class="zz-confirm-overlay" style="display: none;">
+    <div class="zz-confirm-modal">
+      <div class="zz-confirm-header">
+        <h3 id="zz-confirm-title" class="text-lg font-bold text-slate-900 dark:text-white"></h3>
+      </div>
+      <div class="zz-confirm-body">
+        <p id="zz-confirm-message" class="text-sm text-slate-600 dark:text-slate-400"></p>
+      </div>
+      <div class="zz-confirm-footer">
+        <button id="zz-confirm-cancel" class="zz-confirm-btn zz-confirm-btn-cancel">Cancel</button>
+        <button id="zz-confirm-confirm" class="zz-confirm-btn zz-confirm-btn-confirm">Confirm</button>
+      </div>
+    </div>
   </div>
 
   <!-- Core JavaScript -->
@@ -731,5 +1299,406 @@ $currentUser = [
   <!-- Zenith Stream Waiter Engine (SSE) -->
   <script
     src="/Assets/Js/stream_waiter.js?v=<?php echo filemtime(BASE_PATH . '/Assets/Js/stream_waiter.js'); ?>"></script>
+
+  <!-- Zenith Notifications UI Controller -->
+  <script>
+    const NotificationsUI = {
+      isOpen: false,
+      unreadCount: 0,
+      notifications: [],
+      
+      init() {
+        this.fetchNotifications();
+        
+        // Listen to SSE new-notification event
+        window.addEventListener('new-notification', (e) => {
+          this.handleIncoming(e.detail);
+        });
+
+        // Listen to SSE social updates to retract notifications in real-time
+        window.addEventListener('zz-social-update', (e) => {
+          const { action, from_user_id } = e.detail;
+          if (action === 'request_cancelled') {
+            const initialCount = this.notifications.length;
+            this.notifications = this.notifications.filter(n => {
+              if (n.type === 'friend_request' && String(n.data?.from_user_id) === String(from_user_id)) {
+                if (!n.is_read) {
+                  this.unreadCount = Math.max(0, this.unreadCount - 1);
+                }
+                return false;
+              }
+              return true;
+            });
+            if (this.notifications.length !== initialCount) {
+              this.render();
+            }
+          }
+        });
+
+        // Close dropdown on clicking outside
+        document.addEventListener('click', (e) => {
+          const dropdown = document.getElementById('zz-notification-dropdown');
+          const btn = document.getElementById('zz-notification-btn');
+          if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.add('hidden');
+            this.isOpen = false;
+          }
+        });
+      },
+
+      toggle() {
+        const dropdown = document.getElementById('zz-notification-dropdown');
+        if (!dropdown) return;
+        this.isOpen = !this.isOpen;
+        if (this.isOpen) {
+          dropdown.classList.remove('hidden');
+          this.fetchNotifications();
+        } else {
+          dropdown.classList.add('hidden');
+        }
+      },
+
+      async fetchNotifications() {
+        try {
+          const response = await fetch('/api/notifications?action=list');
+          const res = await response.json();
+          if (res.success) {
+            this.notifications = res.notifications;
+            this.unreadCount = this.notifications.filter(n => !n.is_read).length;
+            this.render();
+          }
+        } catch (e) {
+          console.error('Error fetching notifications:', e);
+        }
+      },
+
+      async markAllRead() {
+        try {
+          const response = await fetch('/api/notifications?action=read_all', { method: 'POST' });
+          const res = await response.json();
+          if (res.success) {
+            this.unreadCount = 0;
+            this.notifications.forEach(n => n.is_read = 1);
+            this.render();
+            
+            // Visual confirmation chime/glow animation on badge
+            const badge = document.getElementById('zz-notification-badge');
+            if (badge) {
+              badge.classList.add('scale-0');
+              setTimeout(() => badge.classList.add('hidden'), 200);
+            }
+          }
+        } catch (e) {
+          console.error('Error marking all as read:', e);
+        }
+      },
+
+      playPopSound() {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          
+          if (!window.zzAudioContext) {
+            window.zzAudioContext = new AudioContextClass();
+          }
+          const audioCtx = window.zzAudioContext;
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          
+          const osc = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          
+          osc.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          
+          const now = audioCtx.currentTime;
+          
+          // Ultra-premium clean C5-A5-bass pop sweep (Stripe/Apple style chime pop)
+          osc.frequency.setValueAtTime(523.25, now); // C5 start
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.04); // sweep up
+          osc.frequency.exponentialRampToValueAtTime(150, now + 0.12); // impact drop
+          
+          gainNode.gain.setValueAtTime(0, now);
+          gainNode.gain.linearRampToValueAtTime(0.25, now + 0.02); // quick attack
+          gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.18); // smooth decay
+          
+          osc.start(now);
+          osc.stop(now + 0.2);
+        } catch (e) {
+          console.warn('Audio Context sound play failed:', e);
+        }
+      },
+
+      handleIncoming(notification) {
+        this.playPopSound();
+        this.unreadCount++;
+        // Prepend to active list
+        this.notifications.unshift({
+          id: notification.id,
+          type: notification.type,
+          data: notification.data,
+          is_read: 0,
+          created_at: notification.created_at || new Date().toISOString()
+        });
+        
+        this.render();
+        
+        // Dynamic pop effect on badge
+        const badge = document.getElementById('zz-notification-badge');
+        if (badge) {
+          badge.classList.remove('hidden', 'scale-0');
+          badge.classList.add('animate-bounce');
+          setTimeout(() => badge.classList.remove('animate-bounce'), 1000);
+        }
+      },
+
+      updateBadge() {
+        const badge = document.getElementById('zz-notification-badge');
+        if (!badge) return;
+        if (this.unreadCount > 0) {
+          badge.textContent = this.unreadCount;
+          badge.classList.remove('hidden', 'scale-0');
+        } else {
+          badge.classList.add('hidden');
+        }
+      },
+
+      render() {
+        const container = document.getElementById('zz-notification-list');
+        if (!container) return;
+        
+        this.updateBadge();
+
+        if (this.notifications.length === 0) {
+          container.innerHTML = `
+            <div class="px-4 py-8 text-center">
+              <div class="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3">
+                <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+              </div>
+              <p class="text-xs text-slate-500 italic">No new notifications</p>
+            </div>`;
+          return;
+        }
+
+        container.innerHTML = this.notifications.map(n => {
+          let titleClass = 'text-slate-900 dark:text-white';
+          
+          let typeBadge = '';
+          if (n.type === 'friend_request' || n.type === 'friend_accept') {
+            typeBadge = `
+              <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-cyan-500 border border-white dark:border-slate-900 flex items-center justify-center shadow-sm neon-blue-glow">
+                <svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+              </div>`;
+          } else {
+            typeBadge = `
+              <div class="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-primary-500 border border-white dark:border-slate-900 flex items-center justify-center shadow-sm text-white">
+                <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+              </div>`;
+          }
+
+          const initialsAvatar = `
+            <div class="w-8 h-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-500 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-white text-[11px] font-black uppercase border border-slate-200 dark:border-slate-700 shadow-sm">
+              ${(n.data.from_username || 'U').charAt(0)}
+            </div>`;
+
+          const avatarContent = n.data.from_avatar 
+            ? `<img class="w-8 h-8 rounded-full object-cover shadow-sm border border-slate-100 dark:border-slate-800" src="${n.data.from_avatar}" alt="${n.data.from_username}">`
+            : initialsAvatar;
+
+          const avatar = `
+            <div class="relative w-8 h-8 flex-shrink-0">
+              ${avatarContent}
+              ${typeBadge}
+            </div>`;
+
+          const unread = !n.is_read ? '<span class="unread-dot flex-shrink-0"></span>' : '';
+
+          return `
+            <div class="notification-item flex items-start gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800/50">
+              <div class="flex-shrink-0">
+                ${avatar}
+              </div>
+              <div class="flex-grow min-w-0">
+                <p class="text-xs ${titleClass} font-semibold leading-tight">
+                  @${n.data.from_username}
+                </p>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  ${n.data.message || ''}
+                </p>
+                <span class="text-[9px] text-slate-400 dark:text-slate-500 mt-1 block">
+                  ${this.timeAgo(n.created_at)}
+                </span>
+              </div>
+              ${unread}
+            </div>`;
+        }).join('');
+      },
+
+      timeAgo(dateStr) {
+        if (!dateStr) return 'just now';
+        // Handle ISO formats or standard MySQL timestamps cleanly
+        const parsed = Date.parse(dateStr.replace(/-/g, '/'));
+        const date = isNaN(parsed) ? new Date() : new Date(parsed);
+        const seconds = Math.floor((new Date() - date) / 1000);
+        
+        let interval = seconds / 31536000;
+        if (interval > 1) return Math.floor(interval) + "y ago";
+        interval = seconds / 2592000;
+        if (interval > 1) return Math.floor(interval) + "mo ago";
+        interval = seconds / 86400;
+        if (interval > 1) return Math.floor(interval) + "d ago";
+        interval = seconds / 3600;
+        if (interval > 1) return Math.floor(interval) + "h ago";
+        interval = seconds / 60;
+        if (interval > 1) return Math.floor(interval) + "m ago";
+        return "just now";
+      }
+    };
+
+    // Global toggle helper
+    function toggleNotifications() {
+      NotificationsUI.toggle();
+    }
+
+    function markAllNotificationsAsRead() {
+      NotificationsUI.markAllRead();
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => {
+        NotificationsUI.init();
+      });
+    } else {
+      NotificationsUI.init();
+    }
+
+    // Zenith Audio Unlocking Engine (unblocks browser autoplay restrictions)
+    document.addEventListener('click', () => {
+      if (window.zzAudioContext && window.zzAudioContext.state === 'suspended') {
+        window.zzAudioContext.resume();
+      }
+    }, { once: true });
+
+    // ── Community Tab Active State ──
+    // Automatically highlight the active Community tab based on current URL
+    document.addEventListener('DOMContentLoaded', () => {
+      const currentPath = window.location.pathname;
+      const tabMap = {
+        '/community/dashboard': 'zz-tab-home',
+        '/community/friends': 'zz-tab-friends',
+        '/community/requests': 'zz-tab-requests',
+        '/community/following': 'zz-tab-following',
+        '/community/discover': 'zz-tab-discover'
+      };
+
+      // Remove all active states
+      document.querySelectorAll('.zz-topbar-tab').forEach(tab => {
+        tab.classList.remove('zz-topbar-tab-active');
+      });
+
+      // Add active state to matching tab
+      const activeTabId = tabMap[currentPath];
+      if (activeTabId) {
+        const activeTab = document.getElementById(activeTabId);
+        if (activeTab) {
+          activeTab.classList.add('zz-topbar-tab-active');
+        }
+      }
+    });
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Zenith Confirmation Modal System
+    // ═══════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Show a beautiful custom confirmation dialog
+     * @param {Object} options - Configuration object
+     * @param {string} options.title - Modal title
+     * @param {string} options.message - Modal message
+     * @param {string} [options.confirmText='Confirm'] - Confirm button text
+     * @param {string} [options.cancelText='Cancel'] - Cancel button text
+     * @param {string} [options.type='primary'] - 'primary' | 'danger'
+     * @returns {Promise<boolean>} - Resolves to true if confirmed, false if cancelled
+     */
+    window.zzConfirm = function(options) {
+      return new Promise((resolve) => {
+        const overlay = document.getElementById('zz-confirm-overlay');
+        const title = document.getElementById('zz-confirm-title');
+        const message = document.getElementById('zz-confirm-message');
+        const confirmBtn = document.getElementById('zz-confirm-confirm');
+        const cancelBtn = document.getElementById('zz-confirm-cancel');
+
+        // Set content
+        title.textContent = options.title || 'Confirm Action';
+        message.textContent = options.message || 'Are you sure?';
+        confirmBtn.textContent = options.confirmText || 'Confirm';
+        cancelBtn.textContent = options.cancelText || 'Cancel';
+
+        // Set button style based on type
+        confirmBtn.className = 'zz-confirm-btn ' + 
+          (options.type === 'danger' ? 'zz-confirm-btn-danger' : 'zz-confirm-btn-confirm');
+
+        // Show modal
+        overlay.style.display = 'flex';
+        requestAnimationFrame(() => {
+          overlay.classList.add('show');
+        });
+
+        // Focus confirm button by default
+        setTimeout(() => confirmBtn.focus(), 300);
+
+        // Close modal function
+        const closeModal = (result) => {
+          overlay.classList.remove('show');
+          setTimeout(() => {
+            overlay.style.display = 'none';
+            resolve(result);
+          }, 250);
+        };
+
+        // Event handlers
+        const handleConfirm = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          overlay.removeEventListener('click', handleOverlayClick);
+          document.removeEventListener('keydown', handleKeydown);
+          closeModal(true);
+        };
+
+        const handleCancel = () => {
+          confirmBtn.removeEventListener('click', handleConfirm);
+          cancelBtn.removeEventListener('click', handleCancel);
+          overlay.removeEventListener('click', handleOverlayClick);
+          document.removeEventListener('keydown', handleKeydown);
+          closeModal(false);
+        };
+
+        const handleOverlayClick = (e) => {
+          if (e.target === overlay) {
+            handleCancel();
+          }
+        };
+
+        const handleKeydown = (e) => {
+          if (e.key === 'Escape') {
+            handleCancel();
+          } else if (e.key === 'Enter') {
+            handleConfirm();
+          }
+        };
+
+        // Attach event listeners
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        overlay.addEventListener('click', handleOverlayClick);
+        document.addEventListener('keydown', handleKeydown);
+      });
+    };
+  </script>
 </body>
 </html>

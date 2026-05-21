@@ -137,11 +137,12 @@ class User extends Base
     $this->ensureConnection();
 
     $stmt = $this->pdo->prepare(
-      "SELECT id, username, first_name, last_name, email, role, avatar, bio, last_login_at, created_at 
+      "SELECT id, username, first_name, last_name, email, role, avatar, bio, tags, last_login_at, created_at 
        FROM {$this->table} WHERE id = ? LIMIT 1"
     );
     $stmt->execute([$userId]);
-    return $stmt->fetch();
+    $user = $stmt->fetch();
+    return $user ? $this->normalizeAvatar($user) : null;
   }
 
   /**
@@ -155,11 +156,12 @@ class User extends Base
     $this->ensureConnection();
 
     $stmt = $this->pdo->prepare(
-      "SELECT id, username, first_name, last_name, email, role, avatar, bio, last_login_at, created_at 
+      "SELECT id, username, first_name, last_name, email, role, avatar, bio, tags, last_login_at, created_at 
        FROM {$this->table} WHERE username = ? LIMIT 1"
     );
     $stmt->execute([$username]);
-    return $stmt->fetch();
+    $user = $stmt->fetch();
+    return $user ? $this->normalizeAvatar($user) : null;
   }
 
   /**
@@ -177,7 +179,8 @@ class User extends Base
        FROM {$this->table} WHERE email = ? LIMIT 1"
     );
     $stmt->execute([$email]);
-    return $stmt->fetch();
+    $user = $stmt->fetch();
+    return $user ? $this->normalizeAvatar($user) : null;
   }
 
   /**
@@ -302,7 +305,8 @@ class User extends Base
        LIMIT ? OFFSET ?"
     );
     $stmt->execute([$limit, $offset]);
-    return $stmt->fetchAll();
+    $users = $stmt->fetchAll();
+    return array_map([$this, 'normalizeAvatar'], $users);
   }
 
   /**
@@ -428,4 +432,79 @@ class User extends Base
       return ['is_online' => false, 'last_seen' => null, 'label' => 'UNKNOWN'];
     }
   }
+
+  /**
+   * Create a persistent notification and push via SSE
+   */
+  public function createNotification($userId, $type, $data)
+  {
+    $this->ensureConnection();
+    try {
+      $stmt = $this->pdo->prepare("INSERT INTO notifications (user_id, type, data) VALUES (?, ?, ?)");
+      $stmt->execute([$userId, $type, json_encode($data)]);
+      $notificationId = $this->pdo->lastInsertId();
+
+      // Push SSE order to update client UI instantly
+      $this->pushStreamOrder($userId, 'new_notification', [
+        'id' => $notificationId,
+        'type' => $type,
+        'data' => $data,
+        'created_at' => date('Y-m-d H:i:s')
+      ]);
+
+      return $notificationId;
+    } catch (PDOException $e) {
+      return false;
+    }
+  }
+
+  /**
+   * Get notifications for a user
+   */
+  public function getNotifications($userId, $limit = 20)
+  {
+    $this->ensureConnection();
+    try {
+      $stmt = $this->pdo->prepare("SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?");
+      $stmt->execute([$userId, $limit]);
+      $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+      foreach ($rows as &$row) {
+        $row['data'] = json_decode($row['data'], true);
+      }
+      return $rows;
+    } catch (PDOException $e) {
+      return [];
+    }
+  }
+
+  /**
+   * Mark all notifications as read for a user
+   */
+  public function markAllNotificationsRead($userId)
+  {
+    $this->ensureConnection();
+    try {
+      $stmt = $this->pdo->prepare("UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
+      $stmt->execute([$userId]);
+      return true;
+    } catch (PDOException $e) {
+      return false;
+    }
+  }
+
+  /**
+   * Normalize avatar field to ensure default avatar if none exists
+   * 
+   * @param array $user - User data array
+   * @return array - User data with normalized avatar
+   */
+  private function normalizeAvatar($user)
+  {
+    if (empty($user['avatar'])) {
+      $user['avatar'] = '/Assets/Img/default-avatar.png';
+    }
+    return $user;
+  }
 }
+

@@ -142,4 +142,25 @@ window.Zenith = window.Zenith || {};
         }
     };
 
+    // --- GLOBAL THEME ENGINE ---
+    /**
+     * Toggles between light and dark mode
+     * Persists choice in localStorage and updates root class
+     */
+    window.toggleTheme = function() {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        
+        // Optional: Dispatch event for components that need to react to theme changes
+        window.dispatchEvent(new CustomEvent('zenith:theme_change', { detail: { isDark } }));
+    };
+
+    /**
+     * Handles user logout by redirecting to the logout endpoint
+     */
+    window.handleLogout = function() {
+        // We use a direct redirect to the logout handler which destroys session
+        window.location.href = '/logout';
+    };
+
 })(window.Zenith);

@@ -12,6 +12,8 @@ $pageDescription = 'Track money you owe or are owed.';
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
+
 <div id="money-app" class="space-y-8">
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
@@ -52,6 +54,7 @@ ob_start();
 </div>
 
 <script src="/Assets/Js/money_app.js"></script>
+</div>
 
 <?php
 $content = ob_get_clean();

@@ -17,6 +17,7 @@ $pageDescription = 'Welcome to your App';
 ob_start();
 ?>
 
+<div id="zz-view-container" class="max-w-6xl mx-auto p-4 md:p-8">
 <div class="space-y-6">
   <!-- Welcome Banner -->
   <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 to-primary-600 p-8 sm:p-10 text-white shadow-apple border border-primary-400/20">
@@ -127,6 +128,7 @@ ob_start();
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <?php
