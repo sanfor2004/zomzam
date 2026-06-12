@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:clean": "npx kill-port 3000 && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
+    "@vis.gl/react-google-maps": "^1.8.3",
+    "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "gsap": "^3.15.0",
@@ -27,6 +30,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/google.maps": "^3.65.1",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -100,31 +100,39 @@ html[dir="rtl"].dark .glass-header {
 
 /* Scrollbar customization (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(203, 213, 225, 0.7);
-  border-radius: 99px;
-}
-html.dark ::-webkit-scrollbar-track {
-  background: rgba(51, 65, 85, 0.7);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #EE5712;
+  background: rgba(148, 163, 184, 0.3);
   border-radius: 99px;
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(71, 85, 105, 0.4);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #df3c0b;
+  background: #EE5712;
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #EE5712;
+  border: 1px solid transparent;
+  background-clip: padding-box;
 }
 
 /* Scrollbar customization (Firefox) */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #EE5712 rgba(203, 213, 225, 0.7);
+  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
 }
 html.dark * {
-  scrollbar-color: #EE5712 rgba(51, 65, 85, 0.7);
+  scrollbar-color: rgba(71, 85, 105, 0.4) transparent;
 }
 
 /* Navigation Line Styling */
@@ -315,3 +323,25 @@ html[dir="rtl"] #communityGroup > div {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
+
+/* Zomzam Dark Olive Borders & Lines Overrides */
+.border,
+.border-t,
+.border-b,
+.border-l,
+.border-r,
+[class*="border-slate-"],
+[class*="border-white"],
+[class*="border-zinc-"],
+[class*="border-gray-"],
+[class*="divide-slate-"],
+[class*="divide-white-"],
+[class*="divide-gray-"],
+hr {
+  border-color: rgba(74, 93, 62, 0.65) !important;
+}
+
+[class*="divide-"] > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(74, 93, 62, 0.65) !important;
+}
+

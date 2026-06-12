@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, ZLANG_CONFIG } from '@/context/TranslationContext';
-import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Save, CheckCircle, AlertTriangle, Loader2, Clock, Trash2, AlertOctagon } from 'lucide-react';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { DropdownItem } from '@/components/ui/DropdownItem';
+import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2, Clock, Trash2, AlertOctagon, Briefcase } from 'lucide-react';
+import { Button, Switch, Modal, Select } from '@/components/ui';
 
 const COMMON_TIMEZONES = [
   'UTC',
@@ -31,10 +30,7 @@ export default function SettingsPage() {
   const [primaryCurrency, setPrimaryCurrency] = useState('EGP');
   const [secondaryCurrency, setSecondaryCurrency] = useState('USD');
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const [timezoneOpen, setTimezoneOpen] = useState(false);
-  const [primaryCurrencyOpen, setPrimaryCurrencyOpen] = useState(false);
-  const [secondaryCurrencyOpen, setSecondaryCurrencyOpen] = useState(false);
+
 
   // Live timezone clock
   const [liveClock, setLiveClock] = useState('');
@@ -64,6 +60,23 @@ export default function SettingsPage() {
   const [passError, setPassError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
 
+  // CRM settings states
+  const [crmSettings, setCrmSettings] = useState<Record<string, string>>({
+    CLAUDE_API_KEY: "",
+    GOOGLE_MAPS_API_KEY: "",
+    GOOGLE_MAPS_MAP_ID: "",
+    claude_model: "claude-3-5-sonnet-latest",
+    claude_tone: "professional",
+    claude_temperature: "0.75",
+    claude_max_tokens: "800",
+    system_signature: "",
+  });
+  const [showClaudeKey, setShowClaudeKey] = useState(false);
+  const [showMapsKey, setShowMapsKey] = useState(false);
+  const [isSavingCrm, setIsSavingCrm] = useState(false);
+  const [crmError, setCrmError] = useState<string | null>(null);
+  const [crmSuccess, setCrmSuccess] = useState<string | null>(null);
+
   // Fetch initial user settings
   useEffect(() => {
     const fetchSettings = async () => {
@@ -84,6 +97,63 @@ export default function SettingsPage() {
     };
     fetchSettings();
   }, []);
+
+  // Fetch CRM Settings
+  useEffect(() => {
+    async function loadCrmSettings() {
+      try {
+        const response = await fetch('/api/crm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'get_crm_settings' })
+        });
+        const res = await response.json();
+        if (res.success && res.settings) {
+          setCrmSettings(prev => ({
+            ...prev,
+            ...res.settings
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load CRM settings:", err);
+      }
+    }
+    loadCrmSettings();
+  }, []);
+
+  const handleSaveCrmSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCrmError(null);
+    setCrmSuccess(null);
+    setIsSavingCrm(true);
+
+    try {
+      const res = await fetch('/api/crm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_crm_settings', settings: crmSettings }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCrmSuccess('CRM settings updated successfully!');
+        setTimeout(() => setCrmSuccess(null), 3000);
+      } else {
+        setCrmError(data.error || 'Failed to save CRM settings');
+      }
+    } catch (err) {
+      console.error(err);
+      setCrmError('An error occurred while saving CRM settings');
+    } finally {
+      setIsSavingCrm(false);
+    }
+  };
+
+  const handleCrmFieldChange = (key: string, value: string) => {
+    setCrmSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
   // Live clock that updates every second in the selected timezone
   useEffect(() => {
@@ -264,6 +334,13 @@ export default function SettingsPage() {
                 <span>{t('settings_pref')}</span>
               </a>
               <a
+                href="#crm"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
+              >
+                <Briefcase className="w-4 h-4 text-slate-400" />
+                <span>CRM & Outreach</span>
+              </a>
+              <a
                 href="#security"
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
               >
@@ -313,73 +390,24 @@ export default function SettingsPage() {
 
             <form onSubmit={handleSavePreferences} className="space-y-6">
               {/* Language Preference */}
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  {t('settings_lang')}
-                </label>
-                <DropdownMenu
-                  open={langOpen}
-                  onClose={() => setLangOpen(false)}
-                  align="left"
-                  trigger={
-                    <button
-                      type="button"
-                      onClick={() => setLangOpen((s) => !s)}
-                      className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none"
-                      aria-expanded={langOpen}
-                    >
-                      <span className="truncate">{ZLANG_CONFIG[language]?.lang_name || language}</span>
-                      <span className="text-xs text-slate-400">▼</span>
-                    </button>
-                  }
-                >
-                  {Object.keys(ZLANG_CONFIG).map((lang) => (
-                    <DropdownItem
-                      key={lang}
-                      onClick={() => {
-                        setLanguage(lang);
-                        setLangOpen(false);
-                      }}
-                    >
-                      {ZLANG_CONFIG[lang].lang_name}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
-              </div>
+              <Select
+                label={t('settings_lang')}
+                value={language}
+                onChange={(val) => setLanguage(val)}
+                options={Object.keys(ZLANG_CONFIG).map((lang) => ({
+                  value: lang,
+                  label: ZLANG_CONFIG[lang].lang_name,
+                }))}
+              />
 
               {/* Timezone Preference */}
               <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  {t('settings_timezone')}
-                </label>
-                <DropdownMenu
-                  open={timezoneOpen}
-                  onClose={() => setTimezoneOpen(false)}
-                  align="left"
-                  trigger={
-                    <button
-                      type="button"
-                      onClick={() => setTimezoneOpen((s) => !s)}
-                      className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none"
-                      aria-expanded={timezoneOpen}
-                    >
-                      <span className="truncate">{timezone}</span>
-                      <span className="text-xs text-slate-400">▼</span>
-                    </button>
-                  }
-                >
-                  {COMMON_TIMEZONES.map((tz) => (
-                    <DropdownItem
-                      key={tz}
-                      onClick={() => {
-                        setTimezone(tz);
-                        setTimezoneOpen(false);
-                      }}
-                    >
-                      {tz}
-                    </DropdownItem>
-                  ))}
-                </DropdownMenu>
+                <Select
+                  label={t('settings_timezone')}
+                  value={timezone}
+                  onChange={(val) => setTimezone(val)}
+                  options={COMMON_TIMEZONES}
+                />
                 {/* Live clock preview */}
                 {liveClock && (
                   <div className="mt-2 flex items-center gap-2 px-3.5 py-2 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl">
@@ -393,73 +421,19 @@ export default function SettingsPage() {
 
               {/* Currencies preferences */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                    {t('settings_primary_curr')}
-                  </label>
-                  <DropdownMenu
-                    open={primaryCurrencyOpen}
-                    onClose={() => setPrimaryCurrencyOpen(false)}
-                    align="left"
-                    trigger={
-                      <button
-                        type="button"
-                        onClick={() => setPrimaryCurrencyOpen((s) => !s)}
-                        className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none"
-                        aria-expanded={primaryCurrencyOpen}
-                      >
-                        <span className="truncate">{primaryCurrency}</span>
-                        <span className="text-xs text-slate-400">▼</span>
-                      </button>
-                    }
-                  >
-                    {CURRENCIES.map((c) => (
-                      <DropdownItem
-                        key={c}
-                        onClick={() => {
-                          setPrimaryCurrency(c);
-                          setPrimaryCurrencyOpen(false);
-                        }}
-                      >
-                        {c}
-                      </DropdownItem>
-                    ))}
-                  </DropdownMenu>
-                </div>
+                <Select
+                  label={t('settings_primary_curr')}
+                  value={primaryCurrency}
+                  onChange={(val) => setPrimaryCurrency(val)}
+                  options={CURRENCIES}
+                />
 
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                    {t('settings_secondary_curr')}
-                  </label>
-                  <DropdownMenu
-                    open={secondaryCurrencyOpen}
-                    onClose={() => setSecondaryCurrencyOpen(false)}
-                    align="left"
-                    trigger={
-                      <button
-                        type="button"
-                        onClick={() => setSecondaryCurrencyOpen((s) => !s)}
-                        className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none"
-                        aria-expanded={secondaryCurrencyOpen}
-                      >
-                        <span className="truncate">{secondaryCurrency}</span>
-                        <span className="text-xs text-slate-400">▼</span>
-                      </button>
-                    }
-                  >
-                    {CURRENCIES.map((c) => (
-                      <DropdownItem
-                        key={c}
-                        onClick={() => {
-                          setSecondaryCurrency(c);
-                          setSecondaryCurrencyOpen(false);
-                        }}
-                      >
-                        {c}
-                      </DropdownItem>
-                    ))}
-                  </DropdownMenu>
-                </div>
+                <Select
+                  label={t('settings_secondary_curr')}
+                  value={secondaryCurrency}
+                  onChange={(val) => setSecondaryCurrency(val)}
+                  options={CURRENCIES}
+                />
               </div>
 
               {/* Notification Preference Toggle */}
@@ -473,34 +447,220 @@ export default function SettingsPage() {
                     {t('settings_notif_desc')}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                  className={`w-11 h-6 rounded-full transition-colors relative flex items-center ${
-                    notificationsEnabled ? 'bg-primary-500' : 'bg-slate-350 dark:bg-slate-700'
-                  }`}
-                  aria-label="Toggle notifications"
-                >
-                  <span
-                    className={`w-4 h-4 bg-white rounded-full transition-transform absolute shadow-sm ${
-                      notificationsEnabled ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
+                <Switch
+                  checked={notificationsEnabled}
+                  onChange={setNotificationsEnabled}
+                  ariaLabel="Toggle notifications"
+                />
               </div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={isSavingPref}
-                className="w-full h-11 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all hover:shadow-md active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                loading={isSavingPref}
+                className="w-full h-11"
               >
-                {isSavingPref ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
                 {t('settings_save')}
-              </button>
+              </Button>
+            </form>
+          </section>
+
+          {/* CRM & Outreach Integration Settings */}
+          <section
+            id="crm"
+            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+          >
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+              <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+                <Briefcase className="w-4.5 h-4.5" />
+              </div>
+              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                CRM & Outreach Settings
+              </h2>
+            </div>
+
+            {crmSuccess && (
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{crmSuccess}</span>
+              </div>
+            )}
+
+            {crmError && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{crmError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCrmSettings} className="space-y-6">
+              {/* API Keys */}
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                  Secure API Credentials
+                </h3>
+
+                {/* Claude API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider block">
+                    Anthropic Claude API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showClaudeKey ? 'text' : 'password'}
+                      value={crmSettings.CLAUDE_API_KEY || ''}
+                      onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
+                      placeholder="sk-ant-..."
+                      className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowClaudeKey(!showClaudeKey)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors"
+                    >
+                      {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    Used to generate customized cold outreach copy via Claude API. Stored securely on your local database.
+                  </span>
+                </div>
+
+                {/* Google Maps API Key */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                    Google Maps API Key
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showMapsKey ? 'text' : 'password'}
+                      value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
+                      onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
+                      placeholder="AIzaSy..."
+                      className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowMapsKey(!showMapsKey)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors"
+                    >
+                      {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    Required for the Live Map Scanner and Place autocomplete. Ensure <strong>Maps JavaScript API</strong> and <strong>Places API (New)</strong> are enabled in Google Cloud Console.
+                  </span>
+                </div>
+
+                {/* Google Maps Map ID */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                    Google Maps Map ID
+                  </label>
+                  <input
+                    type="text"
+                    value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
+                    onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
+                    placeholder="e.g. CRM_LEADS_MAP"
+                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    Vector Map ID required for drawing administrative search boundary highlights. Defaults to <code className="bg-slate-105/85 dark:bg-white/5 px-1 py-0.5 rounded text-[#EE5712]">CRM_LEADS_MAP</code>.
+                  </span>
+                </div>
+              </div>
+
+              {/* Claude Settings */}
+              <div className="space-y-4 border-t border-slate-100 dark:border-slate-850 pt-5">
+                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                  Claude Engine Parameters
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Select
+                    label="Claude Model Variant"
+                    value={crmSettings.claude_model || 'claude-3-5-sonnet-latest'}
+                    onChange={(val) => handleCrmFieldChange('claude_model', val)}
+                    options={[
+                      { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet (Best)' },
+                      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet v2' },
+                      { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)' },
+                      { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Power)' },
+                    ]}
+                  />
+
+                  <Select
+                    label="Outreach Tone"
+                    value={crmSettings.claude_tone || 'professional'}
+                    onChange={(val) => handleCrmFieldChange('claude_tone', val)}
+                    options={[
+                      { value: 'professional', label: 'Professional & Polished' },
+                      { value: 'empathetic', label: 'Empathetic & Warm' },
+                      { value: 'direct', label: 'Direct & Concise' },
+                      { value: 'creative', label: 'Creative & Bold' },
+                      { value: 'persuasive', label: 'Persuasive & ROI-driven' },
+                    ]}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                      Max Output Tokens
+                    </label>
+                    <input
+                      type="number"
+                      min="100"
+                      max="4000"
+                      value={crmSettings.claude_max_tokens || '800'}
+                      onChange={(e) => handleCrmFieldChange('claude_max_tokens', e.target.value)}
+                      className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider">
+                      <span>Temperature (Creativity)</span>
+                      <span className="text-primary-500 font-extrabold">{crmSettings.claude_temperature || '0.75'}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="1.0"
+                      step="0.05"
+                      value={crmSettings.claude_temperature || '0.75'}
+                      onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
+                      className="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Outreach Signature */}
+              <div className="space-y-2 border-t border-slate-100 dark:border-slate-850 pt-5">
+                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                  System Signature
+                </h3>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                    Outbound Email Signature
+                  </label>
+                  <textarea
+                    value={crmSettings.system_signature || ''}
+                    onChange={(e) => handleCrmFieldChange('system_signature', e.target.value)}
+                    placeholder="e.g. Best regards,&#10;[Your Name]&#10;Zomzam Executive"
+                    rows={3}
+                    className="w-full p-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white resize-none"
+                  />
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                loading={isSavingCrm}
+                className="w-full h-11"
+              >
+                Save CRM & Outreach Settings
+              </Button>
             </form>
           </section>
 
@@ -602,18 +762,14 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={isSavingPass}
-                className="w-full h-11 bg-slate-900 hover:bg-slate-850 dark:bg-slate-800 dark:hover:bg-slate-750 disabled:bg-slate-500 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all hover:shadow-md active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                variant="secondary"
+                loading={isSavingPass}
+                className="w-full h-11"
               >
-                {isSavingPass ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Key className="w-4 h-4" />
-                )}
                 {t('settings_password_change')}
-              </button>
+              </Button>
             </form>
           </section>
 
@@ -639,90 +795,90 @@ export default function SettingsPage() {
                   Permanently delete your account and all associated data. This action cannot be undone.
                 </p>
               </div>
-              <button
-                type="button"
+              <Button
+                variant="danger"
                 onClick={() => { setShowDeleteModal(true); setDeleteError(null); setDeletePassword(''); }}
-                className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white text-xs font-bold rounded-xl transition-all active:scale-[0.98] shadow-sm shadow-red-500/20"
               >
-                <Trash2 className="w-3.5 h-3.5" />
                 Delete My Account
-              </button>
+              </Button>
             </div>
           </section>
         </div>
       </div>
 
       {/* ── Account Deletion Confirmation Modal ── */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white dark:bg-[#1A1D24] rounded-3xl p-8 shadow-xl border border-red-200 dark:border-red-900/40 animate-in">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
-                <Trash2 className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Delete Account?</h3>
-                <p className="text-xs text-slate-400">This action is permanent and irreversible.</p>
-              </div>
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => { setShowDeleteModal(false); setDeletePassword(''); setDeleteError(null); }}
+        variant="danger"
+        title={
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
+              <Trash2 className="w-5 h-5" />
             </div>
-
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-              All your data — tasks, money records, ideas, plans, and social connections — will be permanently removed.
-              Enter your current password to confirm.
-            </p>
-
-            {deleteError && (
-              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-500 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{deleteError}</span>
-              </div>
-            )}
-
-            <div className="mb-6">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                Confirm Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showDeletePass ? 'text' : 'password'}
-                  value={deletePassword}
-                  onChange={(e) => setDeletePassword(e.target.value)}
-                  placeholder="Enter your current password"
-                  className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-red-200 dark:border-red-900/40 rounded-xl text-sm focus:outline-none focus:border-red-500 transition-all text-slate-800 dark:text-white"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowDeletePass(!showDeletePass)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                >
-                  {showDeletePass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => { setShowDeleteModal(false); setDeletePassword(''); setDeleteError(null); }}
-                disabled={isDeletingAccount}
-                className="flex-1 h-11 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-sm transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleDeleteAccount}
-                disabled={isDeletingAccount || !deletePassword}
-                className="flex-1 h-11 bg-red-500 hover:bg-red-600 disabled:bg-red-400 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2"
-              >
-                {isDeletingAccount ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {isDeletingAccount ? 'Deleting…' : 'Yes, Delete Forever'}
-              </button>
+            <div>
+              <h3 className="text-lg font-black text-slate-900 dark:text-white">Delete Account?</h3>
+              <p className="text-xs text-slate-400">This action is permanent and irreversible.</p>
             </div>
           </div>
+        }
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => { setShowDeleteModal(false); setDeletePassword(''); setDeleteError(null); }}
+              disabled={isDeletingAccount}
+              className="flex-grow h-11"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={handleDeleteAccount}
+              disabled={isDeletingAccount || !deletePassword}
+              loading={isDeletingAccount}
+              className="flex-grow h-11"
+            >
+              Yes, Delete Forever
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+          All your data — tasks, money records, ideas, plans, and social connections — will be permanently removed.
+          Enter your current password to confirm.
+        </p>
+
+        {deleteError && (
+          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-500 text-xs">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+            <span>{deleteError}</span>
+          </div>
+        )}
+
+        <div className="mb-2">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+            Confirm Password
+          </label>
+          <div className="relative">
+            <input
+              type={showDeletePass ? 'text' : 'password'}
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              placeholder="Enter your current password"
+              className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-red-200 dark:border-red-900/40 rounded-xl text-sm focus:outline-none focus:border-red-500 transition-all text-slate-800 dark:text-white"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowDeletePass(!showDeletePass)}
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            >
+              {showDeletePass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 }

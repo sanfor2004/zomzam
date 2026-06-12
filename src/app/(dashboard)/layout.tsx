@@ -7,7 +7,7 @@ import { useTranslation } from '@/context/TranslationContext';
 import { useStreamWaiter, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase } from 'lucide-react';
 
 // Loaded client-side only — WebGL requires browser APIs
 const LiquidEther = dynamicImport(() => import('@/components/LiquidEther'), { ssr: false });
@@ -20,9 +20,26 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [timeGroupOpen, setTimeGroupOpen] = useState(true);
-  const [moneyGroupOpen, setMoneyGroupOpen] = useState(true);
+  const [timeGroupOpen, setTimeGroupOpen] = useState(false);
+  const [moneyGroupOpen, setMoneyGroupOpen] = useState(false);
+  const [crmGroupOpen, setCrmGroupOpen] = useState(false);
+  const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+
+  // Auto-expand the nav section corresponding to current route on load
+  useEffect(() => {
+    if (pathname) {
+      if (pathname.startsWith('/time/')) {
+        setTimeGroupOpen(true);
+      } else if (pathname.startsWith('/money/')) {
+        setMoneyGroupOpen(true);
+      } else if (pathname.startsWith('/crm')) {
+        setCrmGroupOpen(true);
+      } else if (pathname.startsWith('/community')) {
+        setCommunityGroupOpen(true);
+      }
+    }
+  }, [pathname]);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -100,10 +117,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         />
       </div>
 
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-xl border-r border-slate-200 dark:border-slate-800 h-full flex-shrink-0 transition-all duration-300 relative z-10">
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
+          Contains: Logo, Main Nav, and User Mini Profile (Status indicator)
+          ────────────────────────────────────────────────────────── */}
+      <aside className="hidden md:flex flex-col w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-[calc(100vh-20px)] rounded-3xl m-2.5 flex-shrink-0 transition-all duration-300 relative z-10">
         {/* Logo */}
-        <div className="h-20 flex items-center px-6 border-b border-slate-100 dark:border-slate-800/50">
+        <div className="h-20 flex items-center px-6 border-b border-dashed border-slate-200 dark:border-slate-800/80">
           <a href="/dashboard" className="flex items-center gap-3 group">
             <img src="/Assets/Img/logo-word-horizontal-orange.svg" alt="zomzam" className="h-8 dark:hidden" />
             <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-8 hidden dark:block" />
@@ -214,14 +234,99 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          {/* Community */}
-          <button
-            onClick={() => router.push('/community')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/community')}`}
-          >
-            <Users className="w-5 h-5 flex-shrink-0" />
-            <span>{t('nav_community') || 'Community'}</span>
-          </button>
+          {/* CRM Management Group */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setCrmGroupOpen(!crmGroupOpen)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            >
+              <span>{t('nav_crm')}</span>
+              <Briefcase className="w-4 h-4 text-slate-400" />
+            </button>
+            {crmGroupOpen && (
+              <div id="crmGroup" className="block pr-3 py-1">
+                <div className="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                  <button
+                    onClick={() => router.push('/crm')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm')}`}
+                  >
+                    CRM Dashboard
+                  </button>
+                  <button
+                    onClick={() => router.push('/crm/leads')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/leads')}`}
+                  >
+                    Lead Vault
+                  </button>
+                  <button
+                    onClick={() => router.push('/crm/pipeline')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/pipeline')}`}
+                  >
+                    Kanban Pipeline
+                  </button>
+                  <button
+                    onClick={() => router.push('/crm/contacts')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/contacts')}`}
+                  >
+                    Client Profiles
+                  </button>
+                  <button
+                    onClick={() => router.push('/crm/outreach')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/outreach')}`}
+                  >
+                    Outreach AI
+                  </button>
+                  <button
+                    onClick={() => router.push('/crm/projects')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/projects')}`}
+                  >
+                    Projects Hub
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Community Group */}
+          <div className="space-y-1">
+            <button
+              onClick={() => setCommunityGroupOpen(!communityGroupOpen)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+            >
+              <span>{t('nav_community') || 'Community'}</span>
+              <Users className="w-4 h-4 text-slate-400" />
+            </button>
+            {communityGroupOpen && (
+              <div id="communityGroup" className="block pr-3 py-1">
+                <div className="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                  <button
+                    onClick={() => router.push('/community/friends')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/friends')}`}
+                  >
+                    Friends Grid
+                  </button>
+                  <button
+                    onClick={() => router.push('/community/discover')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/discover')}`}
+                  >
+                    Discover People
+                  </button>
+                  <button
+                    onClick={() => router.push('/community/requests')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/requests')}`}
+                  >
+                    Friend Requests
+                  </button>
+                  <button
+                    onClick={() => router.push('/community/following')}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/following')}`}
+                  >
+                    Connections & Follows
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Settings */}
           <button
@@ -297,8 +402,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
       {/* Main content wrapper */}
       <div className="flex-grow flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header / Top Bar */}
-        <header className="h-[75px] bg-white dark:bg-surface-dark border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-40">
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: MOBILE HEADER / TOP BAR
+            Contains: Mobile drawer toggle, notifications Bell with dropdown
+            ────────────────────────────────────────────────────────── */}
+        <header className="h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-40">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -370,7 +478,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Main Workspace Scrollable Area */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: MAIN WORKSPACE CONTAINER
+            Viewport-locked, scrollable area where dashboard pages render
+            ────────────────────────────────────────────────────────── */}
         <main className="flex-grow overflow-y-auto relative p-6 md:p-8">
           {children}
         </main>
@@ -423,15 +534,99 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               </button>
             </div>
             <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Community</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('nav_crm')}</p>
               <button
                 onClick={() => {
-                  router.push('/community');
+                  router.push('/crm');
                   setMobileMenuOpen(false);
                 }}
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
               >
-                Community Hub
+                CRM Dashboard
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/crm/leads');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Lead Vault
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/crm/pipeline');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Kanban Pipeline
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/crm/contacts');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Client Profiles
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/crm/outreach');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Outreach AI
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/crm/projects');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Projects Hub
+              </button>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Community</p>
+              <button
+                onClick={() => {
+                  router.push('/community/friends');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Friends Grid
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/community/discover');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Discover People
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/community/requests');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Friend Requests
+              </button>
+              <button
+                onClick={() => {
+                  router.push('/community/following');
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+              >
+                Connections & Follows
               </button>
             </div>
             <button

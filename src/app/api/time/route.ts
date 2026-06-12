@@ -98,10 +98,25 @@ export async function POST(request: NextRequest) {
       case 'complete_task': {
         const id = parseInt(body.id || 0);
         const actual = body.actual_duration !== undefined ? parseInt(body.actual_duration) : null;
+        
+        const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [id, user.id]);
+        
         await execute(
           `UPDATE time_tasks SET status='completed', completed_at=CURRENT_TIMESTAMP, actual_duration=? WHERE id = ? AND user_id = ?`,
           [actual, id, user.id]
         );
+
+        if (task && task.title.includes('Production Delivery & Launch')) {
+          const parts = task.title.split(':');
+          if (parts.length > 1) {
+            const projectName = parts[0].trim();
+            await execute(
+              `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
+              [user.id, projectName]
+            );
+          }
+        }
+
         return NextResponse.json({ success: true });
       }
 
@@ -134,6 +149,21 @@ export async function POST(request: NextRequest) {
           `UPDATE time_tasks SET status = ? WHERE id = ? AND user_id = ?`,
           [status, id, user.id]
         );
+
+        if (status === 'completed') {
+          const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [id, user.id]);
+          if (task && task.title.includes('Production Delivery & Launch')) {
+            const parts = task.title.split(':');
+            if (parts.length > 1) {
+              const projectName = parts[0].trim();
+              await execute(
+                `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
+                [user.id, projectName]
+              );
+            }
+          }
+        }
+
         return NextResponse.json({ success: true });
       }
 

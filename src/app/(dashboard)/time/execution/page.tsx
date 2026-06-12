@@ -6,6 +6,7 @@ import { useTranslation } from '@/context/TranslationContext';
 import { useStreamWaiter } from '@/context/StreamWaiterContext';
 import { Clock, RotateCcw, Play, Pause, SkipForward, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { Button, Select, Modal } from '@/components/ui';
 
 interface Task {
   id: number;
@@ -559,7 +560,7 @@ export default function PomodoroPage() {
                     : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/20'
                 }`}
               >
-                {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8 ml-1.5" fill="currentColor" />}
+                {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8" fill="currentColor" />}
               </button>
 
               <button
@@ -678,34 +679,38 @@ export default function PomodoroPage() {
                   <p className="text-base text-slate-500 dark:text-slate-400 italic font-medium">
                     No active tasks in your queue.
                   </p>
-                  <button
+                  <Button
                     onClick={() => router.push('/time/tasks')}
-                    className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-xl text-xs font-bold hover:bg-primary-600 transition-colors shadow-sm"
+                    variant="primary"
+                    size="sm"
+                    className="mt-4"
                   >
                     Add Task
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
 
             {topTask && (
               <div className="mt-8 space-y-3">
-                <button
+                <Button
                   onClick={handleDoneTask}
-                  className="w-full h-12 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl shadow-md shadow-primary-500/10 hover:shadow-lg hover:shadow-primary-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-sm tracking-wider uppercase"
+                  variant="primary"
+                  className="w-full h-12 text-sm"
                 >
-                  <Check className="w-4 h-4 stroke-[3]" />
+                  <Check className="w-4 h-4 stroke-[3] mr-2" />
                   Done It
-                </button>
+                </Button>
 
-                <button
+                <Button
                   onClick={swapTask}
                   disabled={pendingTasks.length < 2}
-                  className="w-full h-11 border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/30 text-slate-500 hover:text-primary-500 hover:border-primary-500 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest disabled:opacity-40 disabled:cursor-not-allowed"
+                  variant="outline"
+                  className="w-full h-11 text-[10px] font-black"
                 >
-                  <Shuffle className="w-4 h-4" />
+                  <Shuffle className="w-4 h-4 mr-2" />
                   Switch task
-                </button>
+                </Button>
               </div>
             )}
           </div>

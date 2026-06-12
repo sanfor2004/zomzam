@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, Briefcase, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Button, Select, Modal } from '@/components/ui';
 
 export default function BankAccountsPage() {
   const router = useRouter();
@@ -95,13 +96,14 @@ export default function BankAccountsPage() {
           </div>
         </div>
 
-        <button
+        <Button
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 px-5 py-3 bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-50 text-white dark:text-slate-900 font-bold rounded-2xl transition-all shadow-md active:scale-95 text-xs uppercase tracking-wider self-start"
+          variant="secondary"
+          className="self-start text-xs font-bold"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4 stroke-[3] mr-2" />
           Add Account
-        </button>
+        </Button>
       </div>
 
       {/* Accounts Grid */}
@@ -144,100 +146,90 @@ export default function BankAccountsPage() {
       </div>
 
       {/* Add Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm animate-in">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-glass overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-150/40 dark:border-slate-850">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Add Account</h3>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Add Account"
+        className="max-w-lg"
+      >
+        <form onSubmit={handleSave} className="space-y-6">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account Name</label>
+            <input
+              type="text"
+              placeholder="e.g. Banque Misr VISA, Cash pocket"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              required
+              className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-bold"
+            />
+          </div>
 
-              <form onSubmit={handleSave} className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account Name</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Banque Misr VISA, Cash pocket"
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    required
-                    className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white font-bold"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account Type</label>
-                    <select
-                      value={typeSelect}
-                      onChange={(e) => setTypeSelect(e.target.value as any)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white font-bold"
-                    >
-                      <option value="bank">Bank / Card</option>
-                      <option value="cash">Cash / Pocket</option>
-                      <option value="paypal">PayPal</option>
-                      <option value="wallet">Digital Wallet</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Currency</label>
-                    <select
-                      value={currencySelect}
-                      onChange={(e) => setCurrencySelect(e.target.value as any)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white font-bold"
-                    >
-                      <option value="EGP">EGP (Egyptian Pound)</option>
-                      <option value="USD">USD (US Dollar)</option>
-                      <option value="EUR">EUR (Euro)</option>
-                      <option value="GBP">GBP (British Pound)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Initial Balance</label>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="0.00"
-                      value={balanceInput}
-                      onChange={(e) => setBalanceInput(e.target.value)}
-                      required
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white font-bold"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Last 4 Digits (Optional)</label>
-                    <input
-                      type="text"
-                      maxLength={4}
-                      placeholder="e.g. 4193"
-                      value={lastFourInput}
-                      onChange={(e) => setLastFourInput(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white font-mono"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full h-12 bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-50 text-white dark:text-slate-900 font-black rounded-2xl shadow-lg transition-all active:scale-95 text-xs uppercase tracking-wider"
-                >
-                  Create Account
-                </button>
-              </form>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account Type</label>
+              <Select
+                value={typeSelect}
+                onChange={(val) => setTypeSelect(val)}
+                options={[
+                  { value: 'bank', label: 'Bank / Card' },
+                  { value: 'cash', label: 'Cash / Pocket' },
+                  { value: 'paypal', label: 'PayPal' },
+                  { value: 'wallet', label: 'Digital Wallet' },
+                  { value: 'other', label: 'Other' },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Currency</label>
+              <Select
+                value={currencySelect}
+                onChange={(val) => setCurrencySelect(val)}
+                options={[
+                  { value: 'EGP', label: 'EGP (Egyptian Pound)' },
+                  { value: 'USD', label: 'USD (US Dollar)' },
+                  { value: 'EUR', label: 'EUR (Euro)' },
+                  { value: 'GBP', label: 'GBP (British Pound)' },
+                ]}
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Initial Balance</label>
+              <input
+                type="number"
+                step="any"
+                placeholder="0.00"
+                value={balanceInput}
+                onChange={(e) => setBalanceInput(e.target.value)}
+                required
+                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-bold"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Last 4 Digits (Optional)</label>
+              <input
+                type="text"
+                maxLength={4}
+                placeholder="e.g. 4193"
+                value={lastFourInput}
+                onChange={(e) => setLastFourInput(e.target.value)}
+                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-mono"
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="secondary"
+            className="w-full h-12 text-xs font-black"
+          >
+            Create Account
+          </Button>
+        </form>
+      </Modal>
 
     </div>
   );

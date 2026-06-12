@@ -146,6 +146,50 @@ const schema: Record<string, Record<string, string>> = {
     is_read: 'TINYINT(1) NOT NULL DEFAULT 0',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  crm_leads: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    name: 'VARCHAR(255) NOT NULL',
+    email: 'VARCHAR(255) NULL',
+    phone: 'VARCHAR(100) NULL',
+    website: 'TEXT NULL',
+    address: 'TEXT NULL',
+    company: 'VARCHAR(255) NULL',
+    status: "ENUM('new', 'contacted', 'qualified', 'lost') NOT NULL DEFAULT 'new'",
+    source: "VARCHAR(100) NOT NULL DEFAULT 'Google Maps Scanner'",
+    industry: 'VARCHAR(255) NULL',
+    notes: 'TEXT NULL',
+    rating: 'FLOAT NULL',
+    review_count: 'INT UNSIGNED NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+    updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  },
+  crm_scrape_jobs: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    query: 'VARCHAR(255) NOT NULL',
+    area: 'VARCHAR(255) NOT NULL',
+    status: "ENUM('pending', 'scraping', 'completed', 'failed') NOT NULL DEFAULT 'completed'",
+    leads_found: 'INT UNSIGNED NOT NULL DEFAULT 0',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  crm_settings: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    key: 'VARCHAR(255) NOT NULL',
+    value: 'TEXT NULL',
+  },
+  crm_projects: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    lead_id: 'INT UNSIGNED NOT NULL',
+    name: 'VARCHAR(255) NOT NULL',
+    status: "ENUM('planning', 'in_design', 'review', 'delivered') NOT NULL DEFAULT 'planning'",
+    amount: 'DECIMAL(15, 2) NOT NULL DEFAULT 0.00',
+    currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+    updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  },
 };
 
 async function syncDatabase() {
@@ -239,6 +283,33 @@ async function syncDatabase() {
       await connection.query(
         `INSERT INTO money_accounts (user_id, name, type, currency, balance, last_four) VALUES (1, ?, ?, ?, ?, ?)`,
         [acc[0], acc[1], acc[2], acc[3], acc[4]]
+      );
+    }
+  }
+
+  // Seed default crm settings for user_id = 1
+  const crmSettings = [
+    ['CLAUDE_API_KEY', 'sk-ant-sid-placeholder-zomzam-crm-api-key'],
+    ['claude_model', 'claude-3-5-sonnet-latest'],
+    ['claude_tone', 'professional'],
+    ['claude_temperature', '0.75'],
+    ['claude_max_tokens', '800'],
+    ['system_signature', '[Your Name]\nLead Outreach Strategist\nZomzam CRM Executive Suite'],
+    ['system_theme', 'dark'],
+    ['GOOGLE_MAPS_API_KEY', ''],
+    ['GOOGLE_MAPS_MAP_ID', 'CRM_LEADS_MAP']
+  ];
+
+  for (const [key, value] of crmSettings) {
+    const [existing] = await connection.query<any[]>(
+      `SELECT id FROM crm_settings WHERE user_id = 1 AND \`key\` = ?`,
+      [key]
+    );
+    if (existing.length === 0) {
+      console.log(`Seeding CRM setting: ${key}`);
+      await connection.query(
+        `INSERT INTO crm_settings (user_id, \`key\`, value) VALUES (1, ?, ?)`,
+        [key, value]
       );
     }
   }

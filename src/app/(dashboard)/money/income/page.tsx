@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { Button, Select, Modal } from '@/components/ui';
 
 export default function IncomePage() {
   const router = useRouter();
@@ -97,18 +98,19 @@ export default function IncomePage() {
           </div>
         </div>
 
-        <button
+        <Button
           onClick={() => {
             setAccountSelect(accounts[0] ? accounts[0].id.toString() : '');
             const filtered = categories.filter(c => c.type === 'income');
             setCategorySelect(filtered[0] ? filtered[0].id.toString() : '');
             setIsOpen(true);
           }}
-          className="flex items-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-emerald-500/10 active:scale-95 text-xs uppercase tracking-wider self-start"
+          variant="success"
+          className="self-start text-xs font-bold"
         >
-          <Plus className="w-4 h-4 stroke-[3]" />
+          <Plus className="w-4 h-4 stroke-[3] mr-2" />
           Add Income
-        </button>
+        </Button>
       </div>
 
       {/* Income List */}
@@ -130,7 +132,7 @@ export default function IncomePage() {
                     <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
                       {t.description || t.category_name || 'Income'}
                     </p>
-                    <span className="block text-[10px] text-slate-450 font-bold uppercase tracking-tight mt-0.5">
+                    <span className="block text-[10px] text-slate-455 font-bold uppercase tracking-tight mt-0.5">
                       {t.account_name} • {new Date(t.transaction_date).toLocaleDateString()}
                     </span>
                   </div>
@@ -155,94 +157,86 @@ export default function IncomePage() {
       </div>
 
       {/* Add Modal */}
-      {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm animate-in">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-glass overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-150/40 dark:border-slate-850">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Add Income</h3>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <form onSubmit={handleSave} className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">VAL</span>
-                    <input
-                      type="number"
-                      step="any"
-                      placeholder="0.00"
-                      value={amountInput}
-                      onChange={(e) => setAmountInput(e.target.value)}
-                      required
-                      className="w-full pl-14 pr-4 h-12 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-slate-850 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account</label>
-                    <select
-                      value={accountSelect}
-                      onChange={(e) => setAccountSelect(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white"
-                    >
-                      {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
-                    <select
-                      value={categorySelect}
-                      onChange={(e) => setCategorySelect(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white"
-                    >
-                      {categories.filter(c => c.type === 'income').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Date</label>
-                    <input
-                      type="date"
-                      value={dateInput}
-                      onChange={(e) => setDateInput(e.target.value)}
-                      required
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Salary, Bonus"
-                      value={descInput}
-                      onChange={(e) => setDescInput(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-855 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider"
-                >
-                  Save Income
-                </button>
-              </form>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title="Add Income"
+        className="max-w-lg"
+      >
+        <form onSubmit={handleSave} className="space-y-6">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">VAL</span>
+              <input
+                type="number"
+                step="any"
+                placeholder="0.00"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+                required
+                className="w-full pl-14 pr-4 h-12 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-slate-800 dark:text-white"
+              />
             </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account</label>
+              <Select
+                value={accountSelect}
+                onChange={(val) => setAccountSelect(val)}
+                options={accounts.map(a => ({
+                  value: a.id.toString(),
+                  label: `${a.name} (${a.currency})`,
+                }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
+              <Select
+                value={categorySelect}
+                onChange={(val) => setCategorySelect(val)}
+                options={categories.filter(c => c.type === 'income').map(c => ({
+                  value: c.id.toString(),
+                  label: c.name,
+                }))}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Date</label>
+              <input
+                type="date"
+                value={dateInput}
+                onChange={(e) => setDateInput(e.target.value)}
+                required
+                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
+              <input
+                type="text"
+                placeholder="e.g. Salary, Bonus"
+                value={descInput}
+                onChange={(e) => setDescInput(e.target.value)}
+                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+              />
+            </div>
+          </div>
+
+          <Button
+            type="submit"
+            variant="success"
+            className="w-full h-12 text-xs font-black"
+          >
+            Save Income
+          </Button>
+        </form>
+      </Modal>
 
     </div>
   );

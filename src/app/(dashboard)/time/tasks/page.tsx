@@ -4,8 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, X, AlertCircle } from 'lucide-react';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { DropdownItem } from '@/components/ui/DropdownItem';
+import { Button, Select, Modal } from '@/components/ui';
 
 interface Task {
   id: number;
@@ -43,7 +42,7 @@ export default function TaskBoardPage() {
   const [newPriority, setNewPriority] = useState<'urgent' | 'medium' | 'maybe' | 'free'>('medium');
   const [newDuration, setNewDuration] = useState(25);
   const [newHorizonId, setNewHorizonId] = useState<string>('');
-  const [priorityDropdownOpen, setPriorityDropdownOpen] = useState(false);
+
 
   // Edit Modal State
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -51,7 +50,7 @@ export default function TaskBoardPage() {
   const [editPriority, setEditPriority] = useState<'urgent' | 'medium' | 'maybe' | 'free'>('medium');
   const [editDuration, setEditDuration] = useState(25);
   const [editHorizonId, setEditHorizonId] = useState<string>('');
-  const [editPriorityDropdownOpen, setEditPriorityDropdownOpen] = useState(false);
+
 
   // Undo Buffer
   const [undoTask, setUndoTask] = useState<Task | null>(null);
@@ -294,13 +293,14 @@ export default function TaskBoardPage() {
           </div>
         </div>
 
-        <button
+        <Button
           onClick={() => router.push('/time/execution')}
-          className="flex items-center gap-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-2xl px-5 py-3 shadow-md shadow-primary-500/20 transition-all font-bold text-xs uppercase tracking-wider group self-start"
+          variant="primary"
+          className="self-start text-xs"
         >
-          <Play className="w-4 h-4 fill-currentColor" />
+          <Play className="w-4 h-4 fill-currentColor mr-2" />
           Start Focus Session
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
@@ -461,57 +461,67 @@ export default function TaskBoardPage() {
                 {/* Priority Selection */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Priority</label>
-                  <DropdownMenu
-                    open={priorityDropdownOpen}
-                    onClose={() => setPriorityDropdownOpen(false)}
-                    align="left"
-                    trigger={
-                      <button
-                        type="button"
-                        onClick={() => setPriorityDropdownOpen(!priorityDropdownOpen)}
-                        className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none focus:border-primary-500 transition-all"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className={`w-2.5 h-2.5 rounded-full ${getPriorityColor(newPriority)}`} />
-                          <span className="capitalize">{newPriority}</span>
-                        </div>
-                        <span className="text-xs text-slate-400">▼</span>
-                      </button>
-                    }
-                  >
-                    {(['urgent', 'medium', 'maybe', 'free'] as const).map((p) => (
-                      <DropdownItem
-                        key={p}
-                        onClick={() => {
-                          setNewPriority(p);
-                          setPriorityDropdownOpen(false);
-                        }}
-                        className="flex items-center gap-2.5"
-                      >
-                        <span className={`w-2.5 h-2.5 rounded-full ${getPriorityColor(p)}`} />
-                        <span className="capitalize text-slate-700 dark:text-slate-350">{p}</span>
-                      </DropdownItem>
-                    ))}
-                  </DropdownMenu>
+                  <Select
+                    value={newPriority}
+                    onChange={(val) => setNewPriority(val)}
+                    options={[
+                      {
+                        value: 'urgent',
+                        label: (
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                            <span className="capitalize text-slate-800 dark:text-white">Urgent</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        value: 'medium',
+                        label: (
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                            <span className="capitalize text-slate-800 dark:text-white">Medium</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        value: 'maybe',
+                        label: (
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                            <span className="capitalize text-slate-800 dark:text-white">Maybe</span>
+                          </div>
+                        ),
+                      },
+                      {
+                        value: 'free',
+                        label: (
+                          <div className="flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                            <span className="capitalize text-slate-800 dark:text-white">Free</span>
+                          </div>
+                        ),
+                      },
+                    ]}
+                  />
                 </div>
 
                 {/* Duration select */}
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">Time Block</label>
-                  <select
+                  <Select
                     value={newDuration}
-                    onChange={(e) => setNewDuration(parseInt(e.target.value))}
-                    className="w-full h-11 px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none focus:border-primary-500 transition-all"
-                  >
-                    <option value="15">15 min</option>
-                    <option value="25">25 min</option>
-                    <option value="30">30 min</option>
-                    <option value="45">45 min</option>
-                    <option value="60">1 hour</option>
-                    <option value="90">1.5 hours</option>
-                    <option value="120">2 hours</option>
-                    <option value="180">3 hours</option>
-                  </select>
+                    onChange={(val) => setNewDuration(Number(val))}
+                    options={[
+                      { value: 15, label: '15 min' },
+                      { value: 25, label: '25 min' },
+                      { value: 30, label: '30 min' },
+                      { value: 45, label: '45 min' },
+                      { value: 60, label: '1 hour' },
+                      { value: 90, label: '1.5 hours' },
+                      { value: 120, label: '2 hours' },
+                      { value: 180, label: '3 hours' },
+                    ]}
+                  />
                 </div>
               </div>
 
@@ -520,29 +530,28 @@ export default function TaskBoardPage() {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">
                   Link to Dream Goal <span className="text-slate-400 font-normal lowercase">(optional)</span>
                 </label>
-                <select
+                <Select
                   value={newHorizonId}
-                  onChange={(e) => setNewHorizonId(e.target.value)}
-                  className="w-full h-11 px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white focus:outline-none focus:border-primary-500 transition-all"
-                >
-                  <option value="">— No Dream Link —</option>
-                  {horizons
-                    .filter(h => h.status === 'active')
-                    .map(h => (
-                      <option key={h.id} value={h.id}>
-                        [{h.type.toUpperCase()}] {h.content.substring(0, 30)}...
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setNewHorizonId(val.toString())}
+                  options={[
+                    { value: '', label: '— No Dream Link —' },
+                    ...horizons
+                      .filter(h => h.status === 'active')
+                      .map(h => ({
+                        value: h.id.toString(),
+                        label: `[${h.type.toUpperCase()}] ${h.content.substring(0, 30)}...`,
+                      })),
+                  ]}
+                />
               </div>
 
-              <button
+              <Button
                 type="submit"
-                className="w-full h-11 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all hover:shadow-md active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full h-11 text-xs bg-amber-500 hover:bg-amber-600 focus:ring-amber-500/50"
               >
-                <Plus className="w-4 h-4 stroke-[3]" />
+                <Plus className="w-4 h-4 stroke-[3] mr-2" />
                 Add Task
-              </button>
+              </Button>
             </form>
           </div>
         </div>
@@ -550,116 +559,115 @@ export default function TaskBoardPage() {
       </div>
 
       {/* Edit Modal */}
-      {editingTask && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-glass overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100 dark:border-slate-850">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Edit Task</h3>
-                <button
-                  onClick={() => setEditingTask(null)}
-                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
+      <Modal
+        isOpen={!!editingTask}
+        onClose={() => setEditingTask(null)}
+        title="Edit Task"
+        className="max-w-lg"
+      >
+        <div className="space-y-6">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Task Title</label>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm font-bold focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+            />
+          </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Task Title</label>
-                  <input
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm font-bold focus:outline-none focus:border-primary-500 transition-all"
-                  />
-                </div>
+          <div className="grid grid-cols-2 gap-4">
+            {/* Edit Priority Dropdown */}
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Priority</label>
+              <Select
+                value={editPriority}
+                onChange={(val) => setEditPriority(val)}
+                options={[
+                  {
+                    value: 'urgent',
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+                        <span className="capitalize text-slate-800 dark:text-white">Urgent</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'medium',
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span className="capitalize text-slate-800 dark:text-white">Medium</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'maybe',
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        <span className="capitalize text-slate-800 dark:text-white">Maybe</span>
+                      </div>
+                    ),
+                  },
+                  {
+                    value: 'free',
+                    label: (
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span className="capitalize text-slate-800 dark:text-white">Free</span>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
+            </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Edit Priority Dropdown */}
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Priority</label>
-                    <DropdownMenu
-                      open={editPriorityDropdownOpen}
-                      onClose={() => setEditPriorityDropdownOpen(false)}
-                      align="left"
-                      trigger={
-                        <button
-                          type="button"
-                          onClick={() => setEditPriorityDropdownOpen(!editPriorityDropdownOpen)}
-                          className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none text-slate-800 dark:text-white"
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full ${getPriorityColor(editPriority)}`} />
-                            <span className="capitalize">{editPriority}</span>
-                          </div>
-                          <span className="text-xs text-slate-400">▼</span>
-                        </button>
-                      }
-                    >
-                      {(['urgent', 'medium', 'maybe', 'free'] as const).map((p) => (
-                        <DropdownItem
-                          key={p}
-                          onClick={() => {
-                            setEditPriority(p);
-                            setEditPriorityDropdownOpen(false);
-                          }}
-                          className="flex items-center gap-2.5"
-                        >
-                          <span className={`w-2.5 h-2.5 rounded-full ${getPriorityColor(p)}`} />
-                          <span className="capitalize text-slate-700 dark:text-slate-350">{p}</span>
-                        </DropdownItem>
-                      ))}
-                    </DropdownMenu>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Duration</label>
-                    <select
-                      value={editDuration}
-                      onChange={(e) => setEditDuration(parseInt(e.target.value))}
-                      className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none text-slate-800 dark:text-white"
-                    >
-                      <option value="15">15 min</option>
-                      <option value="25">25 min</option>
-                      <option value="30">30 min</option>
-                      <option value="45">45 min</option>
-                      <option value="60">1 hour</option>
-                      <option value="90">1.5 hours</option>
-                      <option value="120">2 hours</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Link to Dream Goal</label>
-                  <select
-                    value={editHorizonId}
-                    onChange={(e) => setEditHorizonId(e.target.value)}
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none text-slate-800 dark:text-white"
-                  >
-                    <option value="">— No Dream Link —</option>
-                    {horizons
-                      .filter(h => h.status === 'active')
-                      .map(h => (
-                        <option key={h.id} value={h.id}>
-                          [{h.type.toUpperCase()}] {h.content.substring(0, 30)}...
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <button
-                  onClick={handleEditTask}
-                  className="w-full h-12 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl shadow-md transition-all active:scale-[0.98] text-sm uppercase tracking-wider"
-                >
-                  Update Task
-                </button>
-              </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Duration</label>
+              <Select
+                value={editDuration}
+                onChange={(val) => setEditDuration(Number(val))}
+                options={[
+                  { value: 15, label: '15 min' },
+                  { value: 25, label: '25 min' },
+                  { value: 30, label: '30 min' },
+                  { value: 45, label: '45 min' },
+                  { value: 60, label: '1 hour' },
+                  { value: 90, label: '1.5 hours' },
+                  { value: 120, label: '2 hours' },
+                ]}
+              />
             </div>
           </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Link to Dream Goal</label>
+            <Select
+              value={editHorizonId}
+              onChange={(val) => setEditHorizonId(val.toString())}
+              options={[
+                { value: '', label: '— No Dream Link —' },
+                ...horizons
+                  .filter(h => h.status === 'active')
+                  .map(h => ({
+                    value: h.id.toString(),
+                    label: `[${h.type.toUpperCase()}] ${h.content.substring(0, 30)}...`,
+                  })),
+              ]}
+            />
+          </div>
+
+          <Button
+            onClick={handleEditTask}
+            variant="primary"
+            className="w-full h-12 text-sm"
+          >
+            Update Task
+          </Button>
         </div>
-      )}
+      </Modal>
 
     </div>
   );

@@ -28,6 +28,8 @@ interface Idea {
   created_at: string;
 }
 
+type MentionItem = (Task & { _tagType: 'task' }) | (Horizon & { _tagType: 'plan' });
+
 export default function IdeaCapturePage() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -40,13 +42,14 @@ export default function IdeaCapturePage() {
 
   // Editor State
   const editorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [charCount, setCharCount] = useState(0);
   const [editingIdeaId, setEditingIdeaId] = useState<number | null>(null);
 
   // Mentions Dropdown State
   const [mentionActive, setMentionActive] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
-  const [mentionList, setMentionList] = useState<any[]>([]);
+  const [mentionList, setMentionList] = useState<MentionItem[]>([]);
   const [mentionIndex, setSelectedIndex] = useState(0);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
 
@@ -196,17 +199,25 @@ export default function IdeaCapturePage() {
 
       // Position dropdown
       const rect = range.getBoundingClientRect();
-      setDropdownPos({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX,
-      });
+      if (containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        setDropdownPos({
+          top: rect.bottom - containerRect.top + 8,
+          left: rect.left - containerRect.left,
+        });
+      } else {
+        setDropdownPos({
+          top: rect.bottom + window.scrollY + 8,
+          left: rect.left + window.scrollX,
+        });
+      }
     } else {
       setMentionActive(false);
     }
   };
 
   // Insert tag pill at caret position
-  const insertTagPill = (item: any) => {
+  const insertTagPill = (item: MentionItem) => {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount || !editorRef.current) return;
 
@@ -408,9 +419,12 @@ export default function IdeaCapturePage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in relative">
+    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8 animate-in relative">
       
-      {/* Floating Mentions Dropdown */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: FLOATING MENTIONS DROPDOWN MENU
+          Rendered absolute using page-relative coordinates for '@' queries
+          ────────────────────────────────────────────────────────── */}
       {mentionActive && mentionList.length > 0 && (
         <div 
           className="absolute z-50 w-64 max-h-64 overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800 rounded-2xl shadow-glass p-2 scale-100 opacity-100 transition-all"
@@ -454,7 +468,9 @@ export default function IdeaCapturePage() {
         </div>
       )}
 
-      {/* Page Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER SECTION
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-500/20">
@@ -473,7 +489,10 @@ export default function IdeaCapturePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        {/* Editor Area (Left Columns) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: CONTENTEDITABLE EDITOR WRAPPER
+            Supports rich pills, key listeners for Arrow/Enter/Esc dropdown control
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
             
@@ -541,7 +560,10 @@ export default function IdeaCapturePage() {
           </div>
         </div>
 
-        {/* Idea Vault Section (Right Columns) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: IDEA VAULT CARDS GRID
+            Renders filtered ideas list with edit/delete control and formatting
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col min-h-[460px]">
           <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 dark:border-slate-850">
             <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">

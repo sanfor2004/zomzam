@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useMoney } from '@/context/MoneyContext';
 import { useRouter } from 'next/navigation';
 import { DollarSign, Settings, Plus, Minus, ArrowRight, X, TrendingUp, Shield, Heart, PiggyBank, Briefcase, ChevronRight, HelpCircle } from 'lucide-react';
+import { Button, Select, Modal } from '@/components/ui';
 
 export default function MoneyDashboardPage() {
   const router = useRouter();
@@ -143,60 +144,60 @@ export default function MoneyDashboardPage() {
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Financial Overview</h1>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
             <span>Tracking your 60/20/20 rule progress.</span>
-            <div className="flex items-center gap-1.5 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/80 px-2.5 py-1 rounded-full shadow-apple-sm">
+            <div className="flex items-center gap-1.5">
               <span className="font-bold uppercase tracking-wider text-[9px]">Display:</span>
-              <select
+              <Select
                 value={displayCurrency}
-                onChange={(e) => setDisplayCurrency(e.target.value as any)}
-                className="bg-transparent font-bold text-primary-500 focus:outline-none cursor-pointer outline-none"
-              >
-                <option value="EGP" className="dark:bg-slate-900 text-slate-800 dark:text-white">EGP</option>
-                <option value="USD" className="dark:bg-slate-900 text-slate-800 dark:text-white">USD</option>
-                <option value="EUR" className="dark:bg-slate-900 text-slate-800 dark:text-white">EUR</option>
-                <option value="GBP" className="dark:bg-slate-900 text-slate-800 dark:text-white">GBP</option>
-              </select>
+                onChange={(val) => setDisplayCurrency(val)}
+                options={['EGP', 'USD', 'EUR', 'GBP']}
+                className="w-24"
+              />
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <button
+          <Button
             onClick={() => {
               setSettingsPrimary(settings.primary_currency);
               setSettingsSecondary(settings.secondary_currency);
               setIsSettingsOpen(true);
             }}
-            className="p-3 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 text-slate-400 hover:text-primary-500 hover:shadow-apple-sm rounded-2xl transition-all active:scale-95"
+            variant="outline"
+            size="icon"
             title="Money Settings"
+            className="rounded-2xl"
           >
             <Settings className="w-5 h-5" />
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => {
               setAccountSelect(accounts[0] ? accounts[0].id.toString() : '');
               const filtered = categories.filter(c => c.type === 'income');
               setCategorySelect(filtered[0] ? filtered[0].id.toString() : '');
               setIsIncomeOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-emerald-500/10 active:scale-95 text-xs uppercase tracking-wider"
+            variant="success"
+            className="text-xs font-bold h-11"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
+            <Plus className="w-4 h-4 stroke-[3] mr-2" />
             Income
-          </button>
+          </Button>
 
-          <button
+          <Button
             onClick={() => {
               setAccountSelect(accounts[0] ? accounts[0].id.toString() : '');
               const filtered = categories.filter(c => c.type !== 'income');
               setCategorySelect(filtered[0] ? filtered[0].id.toString() : '');
               setIsExpenseOpen(true);
             }}
-            className="flex items-center gap-2 px-5 py-3 bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-50 text-white dark:text-slate-900 font-bold rounded-2xl transition-all shadow-md active:scale-95 text-xs uppercase tracking-wider"
+            variant="secondary"
+            className="text-xs font-bold h-11"
           >
-            <Minus className="w-4 h-4 stroke-[3]" />
+            <Minus className="w-4 h-4 stroke-[3] mr-2" />
             Expense
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -382,219 +383,189 @@ export default function MoneyDashboardPage() {
             </div>
           </div>
         </div>
-
       </div>
 
-      {/* QUICK CONVERSION HELPER */}
-
       {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 w-full max-w-md rounded-3xl shadow-glass overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-150/40 dark:border-slate-850">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Settings</h3>
-                <button
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Primary Currency</label>
-                  <select
-                    value={settingsPrimary}
-                    onChange={(e) => setSettingsPrimary(e.target.value as any)}
-                    className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none text-slate-850 dark:text-white"
-                  >
-                    <option value="EGP">EGP (Egyptian Pound)</option>
-                    <option value="USD">USD (US Dollar)</option>
-                    <option value="EUR">EUR (Euro)</option>
-                    <option value="GBP">GBP (British Pound)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Secondary Currency</label>
-                  <select
-                    value={settingsSecondary}
-                    onChange={(e) => setSettingsSecondary(e.target.value as any)}
-                    className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none text-slate-850 dark:text-white"
-                  >
-                    <option value="EGP">EGP (Egyptian Pound)</option>
-                    <option value="USD">USD (US Dollar)</option>
-                    <option value="EUR">EUR (Euro)</option>
-                    <option value="GBP">GBP (British Pound)</option>
-                  </select>
-                  <p className="text-[9px] text-slate-400 mt-2 font-semibold">Used for quick conversion and alternative displays.</p>
-                </div>
-
-                <button
-                  onClick={handleSaveSettings}
-                  className="w-full h-12 bg-primary-500 hover:bg-primary-600 text-white font-black rounded-2xl shadow-lg shadow-primary-500/10 transition-all active:scale-95 text-xs uppercase tracking-wider"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </div>
+      <Modal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        title="Settings"
+      >
+        <div className="space-y-6">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Primary Currency</label>
+            <Select
+              value={settingsPrimary}
+              onChange={(val) => setSettingsPrimary(val)}
+              options={[
+                { value: 'EGP', label: 'EGP (Egyptian Pound)' },
+                { value: 'USD', label: 'USD (US Dollar)' },
+                { value: 'EUR', label: 'EUR (Euro)' },
+                { value: 'GBP', label: 'GBP (British Pound)' },
+              ]}
+            />
           </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Secondary Currency</label>
+            <Select
+              value={settingsSecondary}
+              onChange={(val) => setSettingsSecondary(val)}
+              options={[
+                { value: 'EGP', label: 'EGP (Egyptian Pound)' },
+                { value: 'USD', label: 'USD (US Dollar)' },
+                { value: 'EUR', label: 'EUR (Euro)' },
+                { value: 'GBP', label: 'GBP (British Pound)' },
+              ]}
+            />
+            <p className="text-[9px] text-slate-400 mt-2 font-semibold">Used for quick conversion and alternative displays.</p>
+          </div>
+
+          <Button
+            onClick={handleSaveSettings}
+            variant="primary"
+            className="w-full h-12 text-xs font-black"
+          >
+            Save Changes
+          </Button>
         </div>
-      )}
+      </Modal>
 
       {/* Quick Income Modal */}
-      {isIncomeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-glass overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-150/40 dark:border-slate-850">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Add Income</h3>
-                <button
-                  onClick={() => setIsIncomeOpen(false)}
-                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">EGP</span>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      value={amountInput}
-                      onChange={(e) => setAmountInput(e.target.value)}
-                      className="w-full pl-14 pr-4 h-12 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-slate-850 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account</label>
-                    <select
-                      value={accountSelect}
-                      onChange={(e) => setAccountSelect(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-850 dark:text-white"
-                    >
-                      {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
-                    <select
-                      value={categorySelect}
-                      onChange={(e) => setCategorySelect(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-850 dark:text-white"
-                    >
-                      {categories.filter(c => c.type === 'income').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Salary, Bonus"
-                    value={descInput}
-                    onChange={(e) => setDescInput(e.target.value)}
-                    className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-850 dark:text-white"
-                  />
-                </div>
-
-                <button
-                  onClick={() => handleSaveTransaction('income')}
-                  className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white font-black rounded-2xl shadow-lg shadow-emerald-500/10 transition-all active:scale-95 text-xs uppercase tracking-wider"
-                >
-                  Save Income
-                </button>
-              </div>
+      <Modal
+        isOpen={isIncomeOpen}
+        onClose={() => setIsIncomeOpen(false)}
+        title="Add Income"
+        className="max-w-lg"
+      >
+        <div className="space-y-6">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">EGP</span>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+                className="w-full pl-14 pr-4 h-12 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-slate-800 dark:text-white"
+              />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account</label>
+              <Select
+                value={accountSelect}
+                onChange={(val) => setAccountSelect(val)}
+                options={accounts.map(a => ({
+                  value: a.id.toString(),
+                  label: `${a.name} (${a.currency})`,
+                }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
+              <Select
+                value={categorySelect}
+                onChange={(val) => setCategorySelect(val)}
+                options={categories.filter(c => c.type === 'income').map(c => ({
+                  value: c.id.toString(),
+                  label: c.name,
+                }))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
+            <input
+              type="text"
+              placeholder="e.g. Salary, Bonus"
+              value={descInput}
+              onChange={(e) => setDescInput(e.target.value)}
+              className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+            />
+          </div>
+
+          <Button
+            onClick={() => handleSaveTransaction('income')}
+            variant="success"
+            className="w-full h-12 text-xs font-black"
+          >
+            Save Income
+          </Button>
         </div>
-      )}
+      </Modal>
 
       {/* Quick Expense Modal */}
-      {isExpenseOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/65 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 w-full max-w-lg rounded-3xl shadow-glass overflow-hidden animate-in zoom-in duration-200">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-150/40 dark:border-slate-850">
-                <h3 className="text-lg font-black text-slate-900 dark:text-white">Add Expense</h3>
-                <button
-                  onClick={() => setIsExpenseOpen(false)}
-                  className="p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">EGP</span>
-                    <input
-                      type="number"
-                      placeholder="0.00"
-                      value={amountInput}
-                      onChange={(e) => setAmountInput(e.target.value)}
-                      className="w-full pl-14 pr-4 h-12 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-primary-500 transition-all text-slate-850 dark:text-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account</label>
-                    <select
-                      value={accountSelect}
-                      onChange={(e) => setAccountSelect(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-850 dark:text-white"
-                    >
-                      {accounts.map(a => <option key={a.id} value={a.id}>{a.name} ({a.currency})</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
-                    <select
-                      value={categorySelect}
-                      onChange={(e) => setCategorySelect(e.target.value)}
-                      className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-850 dark:text-white"
-                    >
-                      {categories.filter(c => c.type !== 'income').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Groceries, Netflix"
-                    value={descInput}
-                    onChange={(e) => setDescInput(e.target.value)}
-                    className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-850 dark:text-white"
-                  />
-                </div>
-
-                <button
-                  onClick={() => handleSaveTransaction('expense')}
-                  className="w-full h-12 bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-50 text-white dark:text-slate-900 font-black rounded-2xl shadow-lg transition-all active:scale-95 text-xs uppercase tracking-wider"
-                >
-                  Save Expense
-                </button>
-              </div>
+      <Modal
+        isOpen={isExpenseOpen}
+        onClose={() => setIsExpenseOpen(false)}
+        title="Add Expense"
+        className="max-w-lg"
+      >
+        <div className="space-y-6">
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">EGP</span>
+              <input
+                type="number"
+                placeholder="0.00"
+                value={amountInput}
+                onChange={(e) => setAmountInput(e.target.value)}
+                className="w-full pl-14 pr-4 h-12 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+              />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Account</label>
+              <Select
+                value={accountSelect}
+                onChange={(val) => setAccountSelect(val)}
+                options={accounts.map(a => ({
+                  value: a.id.toString(),
+                  label: `${a.name} (${a.currency})`,
+                }))}
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Category</label>
+              <Select
+                value={categorySelect}
+                onChange={(val) => setCategorySelect(val)}
+                options={categories.filter(c => c.type !== 'income').map(c => ({
+                  value: c.id.toString(),
+                  label: c.name,
+                }))}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Description</label>
+            <input
+              type="text"
+              placeholder="e.g. Groceries, Netflix"
+              value={descInput}
+              onChange={(e) => setDescInput(e.target.value)}
+              className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+            />
+          </div>
+
+          <Button
+            onClick={() => handleSaveTransaction('expense')}
+            variant="secondary"
+            className="w-full h-12 text-xs font-black"
+          >
+            Save Expense
+          </Button>
         </div>
-      )}
+      </Modal>
 
     </div>
   );

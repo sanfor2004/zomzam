@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Sun, Moon, Globe, ArrowLeft, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Globe, ArrowLeft, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { DropdownItem } from '@/components/ui/DropdownItem';
 
@@ -14,7 +14,6 @@ function SignPageContent() {
 
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
   const [mounted, setMounted] = useState(false);
-  const [theme, setThemeState] = useState<'light' | 'dark'>('dark');
   const [langOpen, setLangOpen] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,30 +29,8 @@ function SignPageContent() {
     if (window.location.hash === '#signup') {
       setActiveTab('signup');
     }
-
-    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (stored) {
-      setThemeState(stored);
-      if (stored === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        document.documentElement.classList.add('dark');
-      }
-    } else {
-      document.documentElement.classList.add('dark');
-    }
+    document.documentElement.classList.add('dark');
   }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setThemeState(next);
-    localStorage.setItem('theme', next);
-    if (next === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
-  };
 
   const handleTabChange = (tab: 'signin' | 'signup') => {
     setActiveTab(tab);
@@ -168,19 +145,7 @@ function SignPageContent() {
             </DropdownMenu>
           </div>
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all bg-white dark:bg-[#1A1D24] shadow-sm"
-          >
-            {!mounted ? (
-              <div className="w-4 h-4" />
-            ) : theme === 'light' ? (
-              <Moon className="w-4 h-4" />
-            ) : (
-              <Sun className="w-4 h-4 text-amber-400" />
-            )}
-          </button>
+
 
           {/* Back Home */}
           <a

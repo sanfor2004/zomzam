@@ -2,14 +2,13 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Sun, Moon, ArrowLeft, CheckCircle, AlertCircle, Mail, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, Mail, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
 
 function ForgotPasswordContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
   const [mounted, setMounted] = useState(false);
-  const [theme, setThemeState] = useState<'light' | 'dark'>('dark');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -29,22 +28,8 @@ function ForgotPasswordContent() {
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    const effective = stored || 'dark';
-    setThemeState(effective);
-    if (effective === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.add('dark');
   }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setThemeState(next);
-    localStorage.setItem('theme', next);
-    document.documentElement.classList.toggle('dark', next === 'dark');
-  };
 
   // Step 1: Request password reset email
   const handleRequestReset = async (e: React.FormEvent) => {
@@ -136,12 +121,6 @@ function ForgotPasswordContent() {
 
         {/* Top controls */}
         <div className="absolute top-6 right-6 flex items-center gap-3 z-10">
-          <button
-            onClick={toggleTheme}
-            className="flex items-center justify-center w-10 h-10 rounded-full border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all bg-white dark:bg-[#1A1D24] shadow-sm"
-          >
-            {!mounted ? <div className="w-4 h-4" /> : theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4 text-amber-400" />}
-          </button>
           <a
             href="/sign"
             className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary-500 dark:text-slate-400 bg-white dark:bg-[#1A1D24] border border-slate-200 dark:border-slate-800 py-2.5 px-4 rounded-full shadow-sm"

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@/context/TranslationContext';
-import { Sun, Moon, Globe, ArrowRight, Shield, Heart, HelpCircle, Users, ArrowDown, Activity, DollarSign, Clock } from 'lucide-react';
+import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, ArrowDown, Activity, DollarSign, Clock } from 'lucide-react';
 import { DropdownMenu } from '@/components/ui/DropdownMenu';
 import { DropdownItem } from '@/components/ui/DropdownItem';
 import dynamic from 'next/dynamic';
@@ -12,35 +12,13 @@ const Silk = dynamic(() => import('@/components/Silk'), { ssr: false });
 
 export default function LandingPage() {
   const { t, language, setLanguage } = useTranslation();
-  const [theme, setThemeState] = useState<'light' | 'dark'>('dark');
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const stored = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (stored) {
-      setThemeState(stored);
-      if (stored === 'light') {
-        document.documentElement.classList.remove('dark');
-      } else {
-        document.documentElement.classList.add('dark');
-      }
-    } else {
-      document.documentElement.classList.add('dark');
-    }
+    document.documentElement.classList.add('dark');
   }, []);
-
-  const toggleTheme = () => {
-    const next = theme === 'light' ? 'dark' : 'light';
-    setThemeState(next);
-    localStorage.setItem('theme', next);
-    if (next === 'light') {
-      document.documentElement.classList.remove('dark');
-    } else {
-      document.documentElement.classList.add('dark');
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-surface-dark text-slate-800 dark:text-slate-100 transition-colors duration-300 font-sans">
@@ -110,19 +88,7 @@ export default function LandingPage() {
                 </DropdownMenu>
               </div>
 
-              {/* Theme Toggle */}
-              <button
-                onClick={toggleTheme}
-                className="flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all bg-white dark:bg-slate-900 shadow-sm cursor-pointer"
-              >
-                {!mounted ? (
-                  <div className="w-4 h-4" />
-                ) : theme === 'light' ? (
-                  <Moon className="w-4 h-4" />
-                ) : (
-                  <Sun className="w-4 h-4 text-amber-400" />
-                )}
-              </button>
+
 
               <a
                 href="/sign"

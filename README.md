@@ -1,6 +1,50 @@
 # Zomzam.com 🚀 | Developer Documentation & Architecture Guide
 
-Welcome to the **Zomzam** developer workspace! This document serves as the master guide for engineers and developers working on the Next.js migration of Zomzam. Zomzam is a professional life and money management platform built with a **Zenith-Tier architecture**, cinematic UI/UX details, and real-time synchronization.
+Welcome to the **Zomzam** developer workspace! Zomzam is a custom, high-orbit personal operating system that merges time engineering and wealth management into a single, high-fidelity digital dashboard. Built with a **Zenith-Tier architecture**, cinematic UI/UX details, and real-time synchronization, it is designed to feel premium, bespoke, and state-of-the-art.
+
+---
+
+## 🌟 The Vision: What is Zomzam & Why We Are Building It
+
+### What Zomzam is For
+Zomzam is a unified control center for a user's life. Instead of forcing users to scatter their personal data across fragmented platforms—using one app for Pomodoro tracking, another for notes, a third for budgeting, and yet another for tracking debts—Zomzam merges these suites into a single, cohesive interface. It balances daily execution metrics (**Time Suite**) with long-term financial sovereignty (**Money Suite**).
+
+### Why We Are Building It
+1. **Technological Sovereignty**: In an era of intrusive tracking and ad-driven subscription bloat, Zomzam provides a privacy-first, fully owned repository for personal time and currency ledgers.
+2. **Unified Cognitive Flow**: Transitioning between tasks and tracking financial records should not introduce cognitive load. Zomzam bridges the *Gulfs of Execution and Evaluation* by presenting clear, immediate feedback, and unified visual signifiers.
+3. **Cinematic Visual Excellence**: Productivity tools shouldn't feel boring. We believe that tools which inspire interaction are tools that get used. Zomzam features sleek dark modes, fluid micro-animations, glassmorphism aesthetics, and real-time Server-Sent Events (SSE) presence synchronization.
+
+---
+
+## ⚡ Core Platform Functions & Capabilities
+
+The platform is divided into three major suites:
+
+### 1. ⏳ The Time Suite (Time Engineering)
+* **Pomodoro Focus Engine** (`/time/execution`): A drift-corrected productivity timer that runs in real-time, allowing users to select tasks, manage custom focus and break durations, and persist timer states across multiple open browser tabs. Includes reward mechanics (particle confetti effects).
+* **Task Checklist Manager** (`/time/tasks`): Create, edit, prioritize, and delete tasks. Integrates custom select inputs for priority levels (`Urgent`, `Medium`, `Maybe`, `Free`) and duration blocks, complete with safe undo actions to revert accidental deletions.
+* **Dream Planning Board** (`/time/planning`): A drag-and-drop workflow visualizer dividing goals into three planning horizons: *This Week*, *This Month*, and *This Year*.
+* **Idea Vault** (`/time/ideas`): A quick-capture scratchpad for writing down raw thoughts, notes, and log details.
+
+### 2. 💰 The Money Suite (Wealth Ledger)
+* **Financial Net Worth Dashboard** (`/money/dashboard`): Aggregate balances across all active cards, banks, and cash accounts, display real-time income/expense distribution, and automatically convert figures between custom Primary and Secondary currencies.
+* **Bank Ledger & Accounts** (`/money/accounts`): Add, modify, and manage financial entities (Cash, Bank accounts, Credit/Debit cards) with initial balances and multi-currency denominations.
+* **Income & Expense logs** (`/money/income` & `/money/expenses`): Categorized transaction ledgers that enforce the **50/30/20 Budgeting Rule** (categorizing transactions as *Needs*, *Wants*, or *Savings*).
+* **Lending & Debt tracker** (`/money/lend`): Log outstanding loans and borrowings (`owe_me` or `i_owe`), define payment dates, and track settlement statuses (`pending`, `partial`, `settled`).
+
+### 3. 💼 The CRM Suite (Client Relations & Lead Generation)
+* **Map Leads Scraper** (`/crm`): A geographic prospecting interface that pulls active local business data directly from Google Maps (via custom Place Search proxy) and simulates lead acquisition pipelines.
+* **Lead Vault Directory** (`/crm/leads`): A structured leads database supporting quick search, niche filtering, status adjustments, and batch deletion controls.
+* **Kanban Pipeline Board** (`/crm/pipeline`): Visual deal-tracking columns representing lead lifecycles. Dragging a lead to `Qualified` launches a contract setup modal to select deposit accounts and payment dates, triggering multi-suite data bridges.
+* **Client Profiles** (`/crm/contacts`): Standardized client contact directory.
+* **Campaign Outreach Hub** (`/crm/outreach`): AI-assisted cold email writing tool using Claude Sonnet APIs (falling back to tailored design-audit templates if keys are missing) with signature customizations.
+* **Projects Hub** (`/crm/projects`): Delivery tracking for won client contracts, mapping development milestones (`Planning`, `Design`, `Feedback Review`, `Production Delivered`) to automated task-completion indicators.
+
+### 4. 🌐 Preferences & Social Integration (Platform Core)
+* **System Preferences** (`/settings`): Refactored to use unified UI selects for timezone adjustment (with live clock previews), multi-language configuration, and primary/secondary currency selections.
+* **Vanity Public Profiles** (`/u/[username]`): Public profile directories featuring real-time presence indicators (Online, Away, Offline) synchronized dynamically via Server-Sent Events (SSE) based on user mouse movements and idle timers.
+* **Social Connections** (`/community`): A member directory showing user availability, network contacts, and follows.
+* **Strict Security Guardrails**: Dynamic JWT edge middleware routing checks, cryptographically secure Bcrypt password hashing, and zero leak logs.
 
 ---
 
@@ -32,14 +76,16 @@ zomzam.com/
 │   ├── app/                  # Next.js App Router root
 │   │   ├── (dashboard)/      # Authenticated dashboard route group (shares layout wrapper)
 │   │   │   ├── community/    # Developer directory and profile cards (accessible at /community)
+│   │   │   ├── crm/          # CRM Dashboard, Lead Vault, Pipeline, Contacts, Outreach, Projects
 │   │   │   ├── dashboard/    # Primary user dashboard (accessible at /dashboard)
 │   │   │   ├── layout.tsx    # Central dashboard layout wrapper with navigation sidebar
 │   │   │   ├── me/           # Settings page for user profiles (accessible at /me)
 │   │   │   ├── money/        # Money account details, transactions, and lend tracking (accessible at /money/*)
 │   │   │   ├── settings/     # Security, primary currency, and system preferences (accessible at /settings)
 │   │   │   └── time/         # Time execution timers, planning boards, ideas, and tasks (accessible at /time/*)
-│   │   ├── api/              # Serverless API routes (Heartbeats, SSE Stream, Auth, Time, Money)
+│   │   ├── api/              # Serverless API routes (Heartbeats, SSE Stream, Auth, Time, Money, CRM)
 │   │   │   ├── auth/         # Login, Registration, Password reset
+│   │   │   ├── crm/          # Leads, Scraper Jobs, Claude settings, qualification API
 │   │   │   ├── heartbeat/    # Out-of-band active state & notifications sync
 │   │   │   ├── money/        # Transactions, Accounts, and Lending API
 │   │   │   ├── profile/      # User info modifications & password updates
@@ -203,6 +249,30 @@ Financial transactions are governed by the **50/30/20 Budgeting Rule**:
 * **Ledger API**: Records balances, accounts, and lending records.
 * **Multi-Currency Converter**: Displays net worth in the user's chosen primary and secondary currencies.
 * **Lending System**: Tracks debts owed to the user (`owe_me`) or by the user (`i_owe`) with status parameters (`pending`, `partial`, `settled`).
+
+---
+
+## 🔗 Cross-Suite Data Bridges & Transaction Engine
+
+Zomzam's unique value is its interconnectedness. Instead of siloed databases, events in one module automatically cascade across the entire platform through transactional integrity.
+
+### The Deal Qualification Bridge
+When a deal is qualified (moved to **Closed Won** / **Qualified** on the Kanban Board):
+1. **CRM State**: Updates lead status to `qualified`.
+2. **Projects State**: Spawns a new delivery tracker inside `crm_projects` with milestone stages.
+3. **Time Suite Sync**: Seeds 4 task blocks in the task queue (`time_tasks`) representing standard development deliverables:
+   * *Client Kickoff Consultation*
+   * *Mockup Blueprint Redesign*
+   * *Outreach Feedback Review*
+   * *Production Delivery & Launch*
+4. **Money Suite Sync**:
+   * Creates an income entry in `money_transactions` categorized under `Salary/Outreach` for the contract's total amount.
+   * Increments the user's chosen deposit bank account balance.
+   * If a due date is specified, creates an outstanding debtor ledger entry under `money_lend` (`owe_me`), tracking that the client owes the user that amount.
+
+### The Delivery Completion Bridge
+When the final development task (containing the phrase `Production Delivery & Launch`) is completed on the **Task Board**, the database trigger intercepts the mutation:
+* Automatically updates the associated project delivery status to `delivered`.
 
 ---
 

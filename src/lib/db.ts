@@ -1,6 +1,11 @@
 import mysql from 'mysql2/promise';
 
-const pool = mysql.createPool({
+// Prevent multiple connection pools in development hot-reloads
+declare global {
+  var mysqlPool: mysql.Pool | undefined;
+}
+
+const pool = globalThis.mysqlPool || mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '3306'),
   database: process.env.DB_NAME || 'zomzam_db',
@@ -13,6 +18,10 @@ const pool = mysql.createPool({
   enableKeepAlive: true,
   keepAliveInitialDelay: 10000,
 });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.mysqlPool = pool;
+}
 
 export default pool;
 
