@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, ZLANG_CONFIG } from '@/context/TranslationContext';
-import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2, Clock, Trash2, AlertOctagon, Briefcase } from 'lucide-react';
+import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
 import { Button, Switch, Modal, Select } from '@/components/ui';
 
 const COMMON_TIMEZONES = [
@@ -77,6 +77,19 @@ export default function SettingsPage() {
   const [crmError, setCrmError] = useState<string | null>(null);
   const [crmSuccess, setCrmSuccess] = useState<string | null>(null);
 
+  // Notion Settings States
+  const [notionSettings, setNotionSettings] = useState<Record<string, string>>({
+    NOTION_API_KEY: "",
+    NOTION_DATABASE_ID_TASKS: "",
+    NOTION_DATABASE_ID_PROJECTS: "",
+    NOTION_DATABASE_ID_LINKS: "",
+  });
+  const [showNotionKey, setShowNotionKey] = useState(false);
+  const [isSavingNotion, setIsSavingNotion] = useState(false);
+  const [notionError, setNotionError] = useState<string | null>(null);
+  const [notionSuccess, setNotionSuccess] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   // Fetch initial user settings
   useEffect(() => {
     const fetchSettings = async () => {
@@ -120,6 +133,85 @@ export default function SettingsPage() {
     }
     loadCrmSettings();
   }, []);
+
+  // Fetch Notion Settings
+  useEffect(() => {
+    async function loadNotionSettings() {
+      try {
+        const response = await fetch('/api/notion');
+        const res = await response.json();
+        if (res.success && res.settings) {
+          setNotionSettings(prev => ({
+            ...prev,
+            ...res.settings
+          }));
+        }
+      } catch (err) {
+        console.error("Failed to load Notion settings:", err);
+      }
+    }
+    loadNotionSettings();
+  }, []);
+
+  const handleSaveNotionSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotionError(null);
+    setNotionSuccess(null);
+    setIsSavingNotion(true);
+
+    try {
+      const res = await fetch('/api/notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_settings', settings: notionSettings }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotionSuccess('Notion settings updated successfully!');
+        setTimeout(() => setNotionSuccess(null), 3000);
+      } else {
+        setNotionError(data.error || 'Failed to save Notion settings');
+      }
+    } catch (err) {
+      console.error(err);
+      setNotionError('An error occurred while saving Notion settings');
+    } finally {
+      setIsSavingNotion(false);
+    }
+  };
+
+  const handleNotionFieldChange = (key: string, value: string) => {
+    setNotionSettings(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleSyncNotion = async () => {
+    setNotionError(null);
+    setNotionSuccess(null);
+    setIsSyncing(true);
+
+    try {
+      const res = await fetch('/api/notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const stats = data.stats;
+        setNotionSuccess(`Notion synchronization complete! Synced: ${stats.tasks} tasks, ${stats.projects} projects, ${stats.links} links.`);
+      } else {
+        setNotionError(data.error || 'Failed to synchronize with Notion');
+      }
+    } catch (err) {
+      console.error(err);
+      setNotionError('An error occurred during synchronization');
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleSaveCrmSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -341,6 +433,13 @@ export default function SettingsPage() {
                 <span>CRM & Outreach</span>
               </a>
               <a
+                href="#notion"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
+              >
+                <Database className="w-4 h-4 text-slate-400" />
+                <span>Notion Sync</span>
+              </a>
+              <a
                 href="#security"
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
               >
@@ -360,7 +459,10 @@ export default function SettingsPage() {
 
         {/* Form Container */}
         <div className="md:col-span-2 space-y-8">
-          {/* General Settings Form */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: GENERAL PREFERENCES SECTION
+              Contains: Language, Timezone, Currencies, and Notification options
+              ────────────────────────────────────────────────────────── */}
           <section
             id="preferences"
             className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
@@ -464,7 +566,10 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* CRM & Outreach Integration Settings */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION
+              Contains: Secure API keys (Claude, Maps) and Outreach tone parameters
+              ────────────────────────────────────────────────────────── */}
           <section
             id="crm"
             className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
@@ -664,7 +769,153 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* Security Change Password Form */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: NOTION INTEGRATION SECTION
+              Contains: Notion tokens, database mappings, and manual sync action
+              ────────────────────────────────────────────────────────── */}
+          <section
+            id="notion"
+            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+          >
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+              <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                <Database className="w-4.5 h-4.5" />
+              </div>
+              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                Notion Integration
+              </h2>
+            </div>
+
+            {notionSuccess && (
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{notionSuccess}</span>
+              </div>
+            )}
+
+            {notionError && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{notionError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveNotionSettings} className="space-y-6">
+              <div className="space-y-4">
+                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                  Notion Connection Parameters
+                </h3>
+
+                {/* Notion API Token */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                    Notion Integration Token
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showNotionKey ? 'text' : 'password'}
+                      value={notionSettings.NOTION_API_KEY || ''}
+                      onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}
+                      placeholder="secret_..."
+                      className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNotionKey(!showNotionKey)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors"
+                    >
+                      {showNotionKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    Create an internal integration in Notion and paste the secret token here.
+                  </span>
+                </div>
+
+                {/* Tasks Database ID */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 dark:text-gray-400 uppercase tracking-wider block">
+                    Tasks Database ID (Required)
+                  </label>
+                  <input
+                    type="text"
+                    value={notionSettings.NOTION_DATABASE_ID_TASKS || ''}
+                    onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_TASKS', e.target.value)}
+                    placeholder="e.g. 8f4b..."
+                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    The Notion database containing task columns: Name, Priority, status, Estimated Time In Hours, Actual Time in hours, Project, Links.
+                  </span>
+                </div>
+
+                {/* Projects Database ID */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 dark:text-gray-400 uppercase tracking-wider block">
+                    Projects Database ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={notionSettings.NOTION_DATABASE_ID_PROJECTS || ''}
+                    onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_PROJECTS', e.target.value)}
+                    placeholder="e.g. 5d1c..."
+                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    If configured, maps task project relations and imports project lists into the Zomzam CRM projects view.
+                  </span>
+                </div>
+
+                {/* Links Database ID */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-555 dark:text-gray-400 uppercase tracking-wider block">
+                    Links Database ID (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={notionSettings.NOTION_DATABASE_ID_LINKS || ''}
+                    onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_LINKS', e.target.value)}
+                    placeholder="e.g. 1a2b..."
+                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                  />
+                  <span className="text-[10px] text-slate-400 block leading-normal">
+                    If configured, maps task bookmark links bidirectionally to/from Notion.
+                  </span>
+                </div>
+              </div>
+
+              <Button
+                type="submit"
+                loading={isSavingNotion}
+                className="w-full h-11"
+              >
+                Save Notion Settings
+              </Button>
+            </form>
+
+            <div className="border-t border-slate-100 dark:border-slate-850 pt-5 mt-5 space-y-3">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                Manual Synchronization
+              </h3>
+              <p className="text-[10px] text-slate-400 leading-relaxed">
+                Run the bidirectional synchronization engine to push local tasks/projects/links to Notion and pull new items from Notion.
+              </p>
+              <Button
+                type="button"
+                onClick={handleSyncNotion}
+                loading={isSyncing}
+                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-bold"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Sync Notion Databases Now
+              </Button>
+            </div>
+          </section>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: SECURITY CREDENTIALS SECTION
+              Contains: Change password form inputs
+              ────────────────────────────────────────────────────────── */}
           <section
             id="security"
             className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
@@ -773,7 +1024,10 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* ── DANGER ZONE ── */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: DANGER ZONE
+              Contains: Irreversible account deletion controls
+              ────────────────────────────────────────────────────────── */}
           <section
             id="danger"
             className="bg-white dark:bg-[#1A1D24] border border-red-200 dark:border-red-900/40 rounded-3xl p-6 shadow-apple scroll-mt-6"

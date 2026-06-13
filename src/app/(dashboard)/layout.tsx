@@ -12,6 +12,8 @@ import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, Us
 // Loaded client-side only — WebGL requires browser APIs
 const LiquidEther = dynamicImport(() => import('@/components/LiquidEther'), { ssr: false });
 
+const BACKGROUND_COLORS = ['#EE5712', '#ff7340', '#C94A0D'];
+
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
   const { currentUserStatus, notificationsCount, notifications, markRead } = useStreamWaiter();
@@ -101,7 +103,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         style={{ opacity: 0.18 }}
       >
         <LiquidEther
-          colors={['#EE5712', '#ff7340', '#C94A0D']}
+          colors={BACKGROUND_COLORS}
           mouseForce={18}
           cursorSize={120}
           resolution={0.35}
@@ -121,7 +123,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
           Contains: Logo, Main Nav, and User Mini Profile (Status indicator)
           ────────────────────────────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-[calc(100vh-20px)] rounded-3xl m-2.5 flex-shrink-0 transition-all duration-300 relative z-10">
+      <aside className="hidden md:flex flex-col w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-[calc(100vh-20px)] rounded-3xl m-2.5 flex-shrink-0 transition-all duration-300 relative z-10 overflow-hidden">
         {/* Logo */}
         <div className="h-20 flex items-center px-6 border-b border-dashed border-slate-200 dark:border-slate-800/80">
           <a href="/dashboard" className="flex items-center gap-3 group">

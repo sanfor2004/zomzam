@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, X, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, X, AlertCircle, Database } from 'lucide-react';
 import { Button, Select, Modal } from '@/components/ui';
 
 interface Task {
@@ -36,6 +36,39 @@ export default function TaskBoardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [horizons, setHorizons] = useState<Horizon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Notion sync states
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStats, setSyncStats] = useState<any>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
+
+  const handleSyncNotion = async () => {
+    setIsSyncing(true);
+    setSyncError(null);
+    setSyncStats(null);
+    try {
+      const res = await fetch('/api/notion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'sync' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncStats(data.stats);
+        loadData();
+        setTimeout(() => setSyncStats(null), 5000);
+      } else {
+        setSyncError(data.error || 'Sync failed');
+        setTimeout(() => setSyncError(null), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+      setSyncError('Failed to sync tasks');
+      setTimeout(() => setSyncError(null), 5000);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Add Form State
   const [newTitle, setNewTitle] = useState('');
@@ -281,7 +314,10 @@ export default function TaskBoardPage() {
         </div>
       )}
 
-      {/* Page Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER SECTION
+          Contains: Title, Description, and Actions (Sync Notion / Start Session)
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white font-bold shadow-md shadow-amber-500/20">
@@ -293,22 +329,53 @@ export default function TaskBoardPage() {
           </div>
         </div>
 
-        <Button
-          onClick={() => router.push('/time/execution')}
-          variant="primary"
-          className="self-start text-xs"
-        >
-          <Play className="w-4 h-4 fill-currentColor mr-2" />
-          Start Focus Session
-        </Button>
+        <div className="flex items-center gap-2 self-start">
+          <Button
+            onClick={handleSyncNotion}
+            loading={isSyncing}
+            variant="secondary"
+            className="text-xs border-purple-500/20 hover:bg-purple-500/5 text-purple-650"
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Sync Notion
+          </Button>
+
+          <Button
+            onClick={() => router.push('/time/execution')}
+            variant="primary"
+            className="text-xs"
+          >
+            <Play className="w-4 h-4 fill-currentColor mr-2" />
+            Start Focus Session
+          </Button>
+        </div>
       </div>
+
+      {syncStats && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl text-xs flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
+          <Check className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Notion synchronization complete! Synced: {syncStats.tasks} tasks, {syncStats.projects} projects, {syncStats.links} links.
+          </span>
+        </div>
+      )}
+
+      {syncError && (
+        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-2xl text-xs flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{syncError}</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
         {/* Task List (Left Columns) */}
         <div className="lg:col-span-3 space-y-8">
           
-          {/* Active Tasks Board */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: ACTIVE TASKS BOARD
+              Contains: Priority Legend and List of Pending/Active Tasks
+              ────────────────────────────────────────────────────────── */}
           <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
               <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
@@ -395,7 +462,10 @@ export default function TaskBoardPage() {
             )}
           </div>
 
-          {/* Completed Tasks Card */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: COMPLETED TASKS CARD
+              Contains: List of Completed Tasks with restore triggers
+              ────────────────────────────────────────────────────────── */}
           <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-80">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
               <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
@@ -438,7 +508,10 @@ export default function TaskBoardPage() {
 
         </div>
 
-        {/* Add Task Form (Right Column) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: ADD TASK FORM
+            Contains: Form inputs to configure and add new task records
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
           <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
             <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-5">
@@ -558,7 +631,10 @@ export default function TaskBoardPage() {
 
       </div>
 
-      {/* Edit Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: EDIT TASK MODAL
+          Contains: Dialog overlay to edit task metadata
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={!!editingTask}
         onClose={() => setEditingTask(null)}

@@ -62,6 +62,7 @@ const schema: Record<string, Record<string, string>> = {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     user_id: 'INT UNSIGNED NOT NULL',
     horizon_id: 'INT UNSIGNED NULL',
+    project_id: 'INT UNSIGNED NULL',
     title: 'VARCHAR(255) NOT NULL',
     priority: "ENUM('urgent', 'medium', 'maybe', 'free') NOT NULL DEFAULT 'medium'",
     duration_block: 'INT UNSIGNED NOT NULL',
@@ -69,6 +70,7 @@ const schema: Record<string, Record<string, string>> = {
     status: "ENUM('pending', 'in_progress', 'completed', 'deleted') NOT NULL DEFAULT 'pending'",
     completed_at: 'DATETIME NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+    notion_page_id: 'VARCHAR(255) NULL UNIQUE',
   },
   time_ideas: {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
@@ -76,6 +78,20 @@ const schema: Record<string, Record<string, string>> = {
     linked_task_id: 'INT UNSIGNED NULL',
     linked_horizon_id: 'INT UNSIGNED NULL',
     content: 'TEXT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  time_links: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    title: 'VARCHAR(255) NOT NULL',
+    url: 'TEXT NOT NULL',
+    notion_page_id: 'VARCHAR(255) NULL UNIQUE',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  time_task_links: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    task_id: 'INT UNSIGNED NOT NULL',
+    link_id: 'INT UNSIGNED NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   money_accounts: {
@@ -182,13 +198,14 @@ const schema: Record<string, Record<string, string>> = {
   crm_projects: {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     user_id: 'INT UNSIGNED NOT NULL',
-    lead_id: 'INT UNSIGNED NOT NULL',
+    lead_id: 'INT UNSIGNED NULL',
     name: 'VARCHAR(255) NOT NULL',
     status: "ENUM('planning', 'in_design', 'review', 'delivered') NOT NULL DEFAULT 'planning'",
     amount: 'DECIMAL(15, 2) NOT NULL DEFAULT 0.00',
     currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
     updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+    notion_page_id: 'VARCHAR(255) NULL UNIQUE',
   },
 };
 
@@ -231,6 +248,18 @@ async function syncDatabase() {
         }
       }
     }
+  }
+
+  // Custom schema updates (making crm_projects.lead_id nullable)
+  try {
+    const [columnsInfo] = await connection.query<any[]>(`DESCRIBE \`crm_projects\``);
+    const leadIdCol = columnsInfo.find((c: any) => c.Field === 'lead_id');
+    if (leadIdCol && leadIdCol.Null === 'NO') {
+      console.log('Modifying crm_projects.lead_id to be nullable...');
+      await connection.query('ALTER TABLE `crm_projects` MODIFY COLUMN `lead_id` INT UNSIGNED NULL');
+    }
+  } catch (err) {
+    console.error('Failed to update crm_projects.lead_id column:', err);
   }
 
   console.log('Database synchronization complete.');

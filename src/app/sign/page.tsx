@@ -83,9 +83,14 @@ function SignPageContent() {
       
       {/* Left Side: Image Box (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#1A1D24] to-primary-900/40 z-0"></div>
-        <div className="absolute top-20 left-20 w-72 h-72 bg-primary-500/20 rounded-full blur-3xl z-0"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl z-0"></div>
+        <img 
+          src="/Assets/Img/auth-split-bg.jpg" 
+          alt="Auth Background" 
+          className="absolute inset-0 w-full h-full object-cover opacity-50 z-0 pointer-events-none select-none" 
+        />
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-[#1A1D24]/80 to-primary-900/30 z-10"></div>
+        <div className="absolute top-20 left-20 w-72 h-72 bg-primary-500/20 rounded-full blur-3xl z-10"></div>
+        <div className="absolute bottom-20 right-20 w-96 h-96 bg-orange-500/10 rounded-full blur-3xl z-10"></div>
 
         <div className="relative z-20 flex flex-col items-center justify-center p-12 text-center space-y-6">
           <span className="text-3xl font-black text-white tracking-widest flex items-center gap-3">
