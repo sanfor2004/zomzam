@@ -324,24 +324,34 @@ html[dir="rtl"] #communityGroup > div {
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
-/* Zomzam Dark Olive Borders & Lines Overrides */
-.border,
-.border-t,
-.border-b,
-.border-l,
-.border-r,
-[class*="border-slate-"],
-[class*="border-white"],
-[class*="border-zinc-"],
-[class*="border-gray-"],
-[class*="divide-slate-"],
-[class*="divide-white-"],
-[class*="divide-gray-"],
-hr {
-  border-color: rgba(74, 93, 62, 0.65) !important;
-}
+/* Zomzam Context-Aware Borders & Lines (Base Layer) */
+@layer base {
+  .border,
+  .border-t,
+  .border-b,
+  .border-l,
+  .border-r,
+  hr {
+    border-color: rgba(226, 232, 240, 0.8);
+    transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
 
-[class*="divide-"] > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(74, 93, 62, 0.65) !important;
+  .dark .border,
+  .dark .border-t,
+  .dark .border-b,
+  .dark .border-l,
+  .dark .border-r,
+  .dark hr {
+    border-color: rgba(51, 65, 85, 0.35);
+  }
+
+  [class*="divide-"] > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(226, 232, 240, 0.8);
+    transition: border-color 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .dark [class*="divide-"] > :not([hidden]) ~ :not([hidden]) {
+    border-color: rgba(51, 65, 85, 0.35);
+  }
 }
 

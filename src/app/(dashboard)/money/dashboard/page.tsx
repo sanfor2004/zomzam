@@ -118,7 +118,7 @@ export default function MoneyDashboardPage() {
   // Budget calculations
   const totalIncome = stats.income || 0;
   const displayIncome = totalIncome; // in EGP
-  
+
   const needsLimit = displayIncome * 0.6;
   const wantsLimit = displayIncome * 0.2;
   const savingsLimit = displayIncome * 0.2;
@@ -135,9 +135,28 @@ export default function MoneyDashboardPage() {
     { label: 'Savings (20%)', limit: savingsLimit, spent: savingsSpent, color: 'bg-emerald-500' }
   ];
 
+  // Donut chart logic: if all categories are 0 spent, make them equal size (33.33% each)
+  const totalSpent = needsSpent + wantsSpent + savingsSpent;
+  let needsPercent = 60;
+  let wantsPercent = 20;
+  let savingsPercent = 20;
+
+  if (totalSpent === 0) {
+    needsPercent = 33.333;
+    wantsPercent = 33.333;
+    savingsPercent = 33.333;
+  } else {
+    needsPercent = (needsSpent / totalSpent) * 100;
+    wantsPercent = (wantsSpent / totalSpent) * 100;
+    savingsPercent = (savingsSpent / totalSpent) * 100;
+  }
+
+  const wantsAngle = (needsPercent / 100) * 360;
+  const savingsAngle = ((needsPercent + wantsPercent) / 100) * 360;
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
-      
+
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -222,7 +241,7 @@ export default function MoneyDashboardPage() {
                   {formatAmount(acc.balance, acc.currency)}
                 </h3>
               </div>
-              
+
               <div className="flex items-center justify-between mt-4">
                 {acc.last_four ? (
                   <p className="text-[9px] text-slate-400 font-mono tracking-wider">•••• {acc.last_four}</p>
@@ -237,44 +256,97 @@ export default function MoneyDashboardPage() {
 
       {/* Main Budget Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Budget Allocation Progress bars */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
-            <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6">Budget Allocation</h2>
-            
-            <div className="space-y-6">
-              {budgetItems.map((item) => {
-                const percent = item.limit > 0 ? Math.min(100, (item.spent / item.limit) * 100) : 0;
-                return (
-                  <div key={item.label}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-350">{item.label}</span>
-                      <span className="text-[10px] font-black text-slate-400">
-                        {formatAmount(item.spent)} / {formatAmount(item.limit)}
-                      </span>
-                    </div>
-                    <div className="h-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-full overflow-hidden border border-slate-100 dark:border-slate-850">
-                      <div className={`h-full ${item.color} rounded-full transition-all duration-1000`} style={{ width: `${percent}%` }}></div>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
+            <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Budget Allocation</h2>
+
+            {/* SVG Donut Chart */}
+            <div className="relative flex items-center justify-center h-44">
+              <svg className="w-40 h-40 transform -rotate-90" viewBox="0 0 160 160">
+                <defs>
+                  {/* Diagonal striped pattern for Needs */}
+                  <pattern id="stripes" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="#EE5712" strokeWidth="2.5" />
+                  </pattern>
+                </defs>
+                {/* Background Ring */}
+                <circle 
+                  cx="80" 
+                  cy="80" 
+                  r="62" 
+                  stroke="rgba(226, 232, 240, 0.2)" 
+                  strokeWidth="18" 
+                  fill="transparent" 
+                />
+                
+                {/* Needs Segment - Striped Pattern */}
+                <circle 
+                  cx="80" 
+                  cy="80" 
+                  r="62" 
+                  stroke="url(#stripes)" 
+                  strokeWidth="18" 
+                  fill="transparent" 
+                  strokeDasharray="390" 
+                  strokeDashoffset={390 - (390 * needsPercent) / 100}
+                  strokeLinecap="round"
+                />
+                
+                {/* Wants Segment - Solid Green */}
+                <circle 
+                  cx="80" 
+                  cy="80" 
+                  r="62" 
+                  stroke="#10b981" 
+                  strokeWidth="18" 
+                  fill="transparent" 
+                  strokeDasharray="390" 
+                  strokeDashoffset={390 - (390 * wantsPercent) / 100}
+                  transform={`rotate(${wantsAngle} 80 80)`}
+                  strokeLinecap="round"
+                />
+
+                {/* Savings Segment - Solid Yellow */}
+                <circle 
+                  cx="80" 
+                  cy="80" 
+                  r="62" 
+                  stroke="#f59e0b" 
+                  strokeWidth="18" 
+                  fill="transparent" 
+                  strokeDasharray="390" 
+                  strokeDashoffset={390 - (390 * savingsPercent) / 100}
+                  transform={`rotate(${savingsAngle} 80 80)`}
+                  strokeLinecap="round"
+                />
+              </svg>
+
+              {/* Center Content: Remaining Monthly Budget */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                <span className="text-lg font-black text-slate-900 dark:text-white font-mono leading-none truncate max-w-[130px]">
+                  {formatAmount(showSecondaryBudget ? convertEGP(remainingEGP, settings.secondary_currency) : remainingEGP, showSecondaryBudget ? settings.secondary_currency : 'EGP')}
+                </span>
+                <span className="text-[8px] font-bold text-slate-450 uppercase tracking-tight mt-1">Remaining Budget</span>
+              </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-850 flex flex-col items-center">
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Remaining Monthly Budget</span>
-              <div className="flex items-center gap-2 mt-2">
-                <p className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
-                  {formatAmount(showSecondaryBudget ? convertEGP(remainingEGP, settings.secondary_currency) : remainingEGP, showSecondaryBudget ? settings.secondary_currency : 'EGP')}
-                </p>
-                <button
-                  onClick={() => setShowSecondaryBudget(!showSecondaryBudget)}
-                  className="p-1 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-lg text-slate-400 hover:text-primary-500 transition-colors"
-                  title="Toggle Display Currency"
-                >
-                  <ArrowRight className="w-4 h-4 rotate-45" />
-                </button>
+            {/* Legend */}
+            <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold border-t border-slate-100 dark:border-slate-850 pt-3 mt-4">
+              <div className="flex items-center gap-1.5">
+                <span className="w-3.5 h-3.5 rounded border border-[#EE5712]/40 flex-shrink-0" style={{
+                  backgroundImage: 'repeating-linear-gradient(45deg, #EE5712, #EE5712 1.5px, transparent 1.5px, transparent 4px)',
+                }} />
+                <span>Needs (60%)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] flex-shrink-0" />
+                <span>Wants (20%)</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
+                <span>Savings (20%)</span>
               </div>
             </div>
           </div>
