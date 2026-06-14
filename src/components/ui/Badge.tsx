@@ -36,11 +36,11 @@ export function Badge({
 
   return (
     <span
-      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${variants[variant]} ${className}`}
+      className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-wider transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]${variants[variant]}${className}`}
     >
       {pulse && (
         <span
-          className={`w-1.5 h-1.5 rounded-full animate-pulse ${dots[variant]}`}
+          className={`w-1.5 h-1.5 rounded-full animate-pulse${dots[variant]}`}
         />
       )}
       {children}

@@ -401,7 +401,7 @@ export default function SettingsPage() {
           <Settings className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             {t('settings_title')}
           </h1>
           <p className="text-xs text-slate-400">
@@ -413,42 +413,42 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Navigation / Intro card */}
         <div className="md:col-span-1 space-y-4">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Sections
             </h2>
             <nav className="flex flex-col gap-1">
               <a
                 href="#preferences"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
               >
                 <Globe className="w-4 h-4 text-slate-400" />
                 <span>{t('settings_pref')}</span>
               </a>
               <a
                 href="#crm"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
               >
                 <Briefcase className="w-4 h-4 text-slate-400" />
                 <span>CRM & Outreach</span>
               </a>
               <a
                 href="#notion"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
               >
                 <Database className="w-4 h-4 text-slate-400" />
                 <span>Notion Sync</span>
               </a>
               <a
                 href="#security"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-850 rounded-xl transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
               >
                 <Shield className="w-4 h-4 text-slate-400" />
                 <span>{t('settings_security')}</span>
               </a>
               <a
                 href="#danger"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-xl transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-950/20 rounded-xl transition-all"
               >
                 <Trash2 className="w-4 h-4" />
                 <span>Danger Zone</span>
@@ -465,19 +465,19 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="preferences"
-            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
               <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
                 <Globe className="w-4.5 h-4.5" />
               </div>
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 {t('settings_pref')}
               </h2>
             </div>
 
             {prefSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{prefSuccess}</span>
               </div>
@@ -512,9 +512,9 @@ export default function SettingsPage() {
                 />
                 {/* Live clock preview */}
                 {liveClock && (
-                  <div className="mt-2 flex items-center gap-2 px-3.5 py-2 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl">
+                  <div className="mt-2 flex items-center gap-2 px-3.5 py-2 bg-slate-900/30 border border-slate-850 rounded-xl">
                     <Clock className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 tabular-nums">
+                    <span className="text-xs font-bold text-slate-300 tabular-nums">
                       {liveClock}
                     </span>
                   </div>
@@ -539,9 +539,9 @@ export default function SettingsPage() {
               </div>
 
               {/* Notification Preference Toggle */}
-              <div className="flex items-start justify-between p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850/50 rounded-2xl">
+              <div className="flex items-start justify-between p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl">
                 <div className="space-y-0.5 pr-4">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
                     <Bell className="w-4 h-4 text-slate-400" />
                     {t('settings_notifications')}
                   </span>
@@ -572,19 +572,19 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="crm"
-            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
               <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
                 <Briefcase className="w-4.5 h-4.5" />
               </div>
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 CRM & Outreach Settings
               </h2>
             </div>
 
             {crmSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{crmSuccess}</span>
               </div>
@@ -606,7 +606,7 @@ export default function SettingsPage() {
 
                 {/* Claude API Key */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Anthropic Claude API Key
                   </label>
                   <div className="relative">
@@ -615,12 +615,12 @@ export default function SettingsPage() {
                       value={crmSettings.CLAUDE_API_KEY || ''}
                       onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
                       placeholder="sk-ant-..."
-                      className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                      className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowClaudeKey(!showClaudeKey)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                     >
                       {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -632,7 +632,7 @@ export default function SettingsPage() {
 
                 {/* Google Maps API Key */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Google Maps API Key
                   </label>
                   <div className="relative">
@@ -641,12 +641,12 @@ export default function SettingsPage() {
                       value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
                       onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
                       placeholder="AIzaSy..."
-                      className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                      className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowMapsKey(!showMapsKey)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                     >
                       {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -658,7 +658,7 @@ export default function SettingsPage() {
 
                 {/* Google Maps Map ID */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Google Maps Map ID
                   </label>
                   <input
@@ -666,16 +666,16 @@ export default function SettingsPage() {
                     value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
                     onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
                     placeholder="e.g. CRM_LEADS_MAP"
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <span className="text-[10px] text-slate-400 block leading-normal">
-                    Vector Map ID required for drawing administrative search boundary highlights. Defaults to <code className="bg-slate-105/85 dark:bg-white/5 px-1 py-0.5 rounded text-[#EE5712]">CRM_LEADS_MAP</code>.
+                    Vector Map ID required for drawing administrative search boundary highlights. Defaults to <code className="bg-white/5 px-1 py-0.5 rounded text-[#EE5712]">CRM_LEADS_MAP</code>.
                   </span>
                 </div>
               </div>
 
               {/* Claude Settings */}
-              <div className="space-y-4 border-t border-slate-100 dark:border-slate-850 pt-5">
+              <div className="space-y-4 border-t border-slate-850 pt-5">
                 <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
                   Claude Engine Parameters
                 </h3>
@@ -709,7 +709,7 @@ export default function SettingsPage() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                       Max Output Tokens
                     </label>
                     <input
@@ -718,12 +718,12 @@ export default function SettingsPage() {
                       max="4000"
                       value={crmSettings.claude_max_tokens || '800'}
                       onChange={(e) => handleCrmFieldChange('claude_max_tokens', e.target.value)}
-                      className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                      className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
                       <span>Temperature (Creativity)</span>
                       <span className="text-primary-500 font-extrabold">{crmSettings.claude_temperature || '0.75'}</span>
                     </div>
@@ -734,19 +734,19 @@ export default function SettingsPage() {
                       step="0.05"
                       value={crmSettings.claude_temperature || '0.75'}
                       onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
-                      className="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
+                      className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Outreach Signature */}
-              <div className="space-y-2 border-t border-slate-100 dark:border-slate-850 pt-5">
+              <div className="space-y-2 border-t border-slate-850 pt-5">
                 <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
                   System Signature
                 </h3>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Outbound Email Signature
                   </label>
                   <textarea
@@ -754,7 +754,7 @@ export default function SettingsPage() {
                     onChange={(e) => handleCrmFieldChange('system_signature', e.target.value)}
                     placeholder="e.g. Best regards,&#10;[Your Name]&#10;Zomzam Executive"
                     rows={3}
-                    className="w-full p-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white resize-none"
+                    className="w-full p-3.5 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 transition-all text-white resize-none"
                   />
                 </div>
               </div>
@@ -775,19 +775,19 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="notion"
-            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
               <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
                 <Database className="w-4.5 h-4.5" />
               </div>
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 Notion Integration
               </h2>
             </div>
 
             {notionSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{notionSuccess}</span>
               </div>
@@ -808,7 +808,7 @@ export default function SettingsPage() {
 
                 {/* Notion API Token */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-550 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Notion Integration Token
                   </label>
                   <div className="relative">
@@ -817,12 +817,12 @@ export default function SettingsPage() {
                       value={notionSettings.NOTION_API_KEY || ''}
                       onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}
                       placeholder="secret_..."
-                      className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                      className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNotionKey(!showNotionKey)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-350 transition-colors"
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                     >
                       {showNotionKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -834,7 +834,7 @@ export default function SettingsPage() {
 
                 {/* Tasks Database ID */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-555 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Tasks Database ID (Required)
                   </label>
                   <input
@@ -842,7 +842,7 @@ export default function SettingsPage() {
                     value={notionSettings.NOTION_DATABASE_ID_TASKS || ''}
                     onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_TASKS', e.target.value)}
                     placeholder="e.g. 8f4b..."
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <span className="text-[10px] text-slate-400 block leading-normal">
                     The Notion database containing task columns: Name, Priority, status, Estimated Time In Hours, Actual Time in hours, Project, Links.
@@ -851,7 +851,7 @@ export default function SettingsPage() {
 
                 {/* Projects Database ID */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-555 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Projects Database ID (Optional)
                   </label>
                   <input
@@ -859,7 +859,7 @@ export default function SettingsPage() {
                     value={notionSettings.NOTION_DATABASE_ID_PROJECTS || ''}
                     onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_PROJECTS', e.target.value)}
                     placeholder="e.g. 5d1c..."
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <span className="text-[10px] text-slate-400 block leading-normal">
                     If configured, maps task project relations and imports project lists into the Zomzam CRM projects view.
@@ -868,7 +868,7 @@ export default function SettingsPage() {
 
                 {/* Links Database ID */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-555 dark:text-gray-400 uppercase tracking-wider block">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                     Links Database ID (Optional)
                   </label>
                   <input
@@ -876,7 +876,7 @@ export default function SettingsPage() {
                     value={notionSettings.NOTION_DATABASE_ID_LINKS || ''}
                     onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_LINKS', e.target.value)}
                     placeholder="e.g. 1a2b..."
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white font-mono"
+                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <span className="text-[10px] text-slate-400 block leading-normal">
                     If configured, maps task bookmark links bidirectionally to/from Notion.
@@ -893,7 +893,7 @@ export default function SettingsPage() {
               </Button>
             </form>
 
-            <div className="border-t border-slate-100 dark:border-slate-850 pt-5 mt-5 space-y-3">
+            <div className="border-t border-slate-850 pt-5 mt-5 space-y-3">
               <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
                 Manual Synchronization
               </h3>
@@ -918,19 +918,19 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="security"
-            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
               <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
                 <Key className="w-4.5 h-4.5" />
               </div>
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 {t('settings_security')}
               </h2>
             </div>
 
             {passSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
                 <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{passSuccess}</span>
               </div>
@@ -955,12 +955,12 @@ export default function SettingsPage() {
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     required
-                    className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowCurrentPass(!showCurrentPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                   >
                     {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -978,12 +978,12 @@ export default function SettingsPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
-                    className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNewPass(!showNewPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                   >
                     {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1001,12 +1001,12 @@ export default function SettingsPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
-                    className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPass(!showConfirmPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                   >
                     {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -1030,22 +1030,22 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="danger"
-            className="bg-white dark:bg-[#1A1D24] border border-red-200 dark:border-red-900/40 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            className="bg-[#1A1D24] border border-red-900/40 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-red-100 dark:border-red-900/30">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-red-900/30">
               <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
                 <AlertOctagon className="w-4.5 h-4.5" />
               </div>
               <div>
-                <h2 className="text-sm font-black text-red-600 dark:text-red-400 uppercase tracking-widest">Danger Zone</h2>
+                <h2 className="text-sm font-black text-red-400 uppercase tracking-widest">Danger Zone</h2>
                 <p className="text-[10px] text-slate-400 mt-0.5">Irreversible actions. Proceed with caution.</p>
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-2xl">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-red-950/20 border border-red-900/30 rounded-2xl">
               <div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">Delete Account</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 max-w-xs">
+                <p className="text-sm font-bold text-white">Delete Account</p>
+                <p className="text-[11px] text-slate-400 mt-0.5 max-w-xs">
                   Permanently delete your account and all associated data. This action cannot be undone.
                 </p>
               </div>
@@ -1071,7 +1071,7 @@ export default function SettingsPage() {
               <Trash2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">Delete Account?</h3>
+              <h3 className="text-lg font-black text-white">Delete Account?</h3>
               <p className="text-xs text-slate-400">This action is permanent and irreversible.</p>
             </div>
           </div>
@@ -1098,7 +1098,7 @@ export default function SettingsPage() {
           </>
         }
       >
-        <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+        <p className="text-sm text-slate-400 mb-6 leading-relaxed">
           All your data — tasks, money records, ideas, plans, and social connections — will be permanently removed.
           Enter your current password to confirm.
         </p>
@@ -1120,13 +1120,13 @@ export default function SettingsPage() {
               value={deletePassword}
               onChange={(e) => setDeletePassword(e.target.value)}
               placeholder="Enter your current password"
-              className="w-full h-11 pl-4 pr-11 bg-slate-50 dark:bg-slate-900/30 border border-red-200 dark:border-red-900/40 rounded-xl text-sm focus:outline-none focus:border-red-500 transition-all text-slate-800 dark:text-white"
+              className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-red-900/40 rounded-xl text-sm focus:outline-none focus:border-red-500 transition-all text-white"
               autoFocus
             />
             <button
               type="button"
               onClick={() => setShowDeletePass(!showDeletePass)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
             >
               {showDeletePass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>

@@ -40,7 +40,7 @@ export default function PipelinesPage() {
     return (
       <div className="h-[70vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Opening Pipeline Workspace...</span>
+        <span className="text-xs font-semibold text-slate-400">Opening Pipeline Workspace...</span>
       </div>
     );
   }
@@ -49,18 +49,18 @@ export default function PipelinesPage() {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <GitFork className="h-6 w-6 text-[#EE5712]" />
             Niche Acquisition Funnel
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Audit, sequence, and move your business leads along standard growth markers.</p>
+          <p className="text-xs text-slate-400 mt-1 font-medium">Audit, sequence, and move your business leads along standard growth markers.</p>
         </div>
         
-        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-150 dark:border-white/5 text-xs font-bold text-slate-500 dark:text-slate-400">
+        <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-xs font-bold text-slate-400">
           <TrendingUp className="h-4 w-4 text-emerald-500" />
-          Active Leads: <span className="text-slate-900 dark:text-white ml-0.5 font-extrabold">{leads.length}</span>
+          Active Leads: <span className="text-white ml-0.5 font-extrabold">{leads.length}</span>
         </div>
       </div>
 

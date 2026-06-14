@@ -227,7 +227,7 @@ export default function DreamPlanningPage() {
           <Target className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Dream Planning</h1>
+          <h1 className="text-2xl font-black tracking-tight text-white">Dream Planning</h1>
           <p className="text-xs text-slate-400">Build your vision across Week · Month · Year</p>
         </div>
       </div>
@@ -255,7 +255,7 @@ export default function DreamPlanningPage() {
             >
               {/* Column Header */}
               <div className="flex items-center justify-between mb-5">
-                <span className={`${colColor} text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1`}>
+                <span className={`${colColor}text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1`}>
                   <Calendar className="w-3.5 h-3.5" />
                   {colLabel}
                 </span>
@@ -276,17 +276,17 @@ export default function DreamPlanningPage() {
                       key={h.id}
                       draggable
                       onDragStart={(e) => handleDragStart(e, h.id)}
-                      className="group flex items-start gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850/50 transition-all hover:border-slate-200 dark:hover:border-slate-700 cursor-grab active:cursor-grabbing hover:shadow-apple-sm"
+                      className="group flex items-start gap-2.5 p-3 rounded-2xl bg-slate-900/30 border border-slate-850/50 transition-all hover:border-slate-700 cursor-grab active:cursor-grabbing hover:shadow-apple-sm"
                     >
                       <button
                         onClick={() => handleCompleteGoal(h.id, type)}
                         title="Complete Goal"
-                        className="mt-0.5 w-4 h-4 rounded border border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors flex-shrink-0"
+                        className="mt-0.5 w-4 h-4 rounded border border-slate-700 hover:border-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors flex-shrink-0"
                       >
                         <Check className="w-2.5 h-2.5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </button>
 
-                      <p className="flex-1 text-sm text-slate-700 dark:text-slate-200 leading-tight">
+                      <p className="flex-1 text-sm text-slate-200 leading-tight">
                         {h.content}
                       </p>
 
@@ -310,11 +310,11 @@ export default function DreamPlanningPage() {
                   value={inputs[type]}
                   onChange={(e) => setInputs(prev => ({ ...prev, [type]: e.target.value }))}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddGoal(type)}
-                  className="w-full px-4 h-10 text-xs bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 transition-all"
+                  className="w-full px-4 h-10 text-xs bg-slate-900/30 border border-slate-850 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 transition-all"
                 />
                 <button
                   onClick={() => handleAddGoal(type)}
-                  className={`w-full ${colColor} text-white text-xs font-black uppercase tracking-wider h-10 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1`}
+                  className={`w-full${colColor}text-white text-xs font-black uppercase tracking-wider h-10 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1`}
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add Goal
@@ -328,17 +328,17 @@ export default function DreamPlanningPage() {
       </div>
 
       {/* Archived Goals Section */}
-      <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-850">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900/40 text-slate-500 flex items-center justify-center border border-slate-100 dark:border-slate-850">
+            <div className="w-8 h-8 rounded-xl bg-slate-900/40 text-slate-500 flex items-center justify-center border border-slate-850">
               <Archive className="w-4 h-4" />
             </div>
-            <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
               Archived Goals
             </h2>
           </div>
-          <span className="text-xs bg-slate-50 dark:bg-slate-900/60 text-slate-500 font-bold px-2.5 py-1 rounded-full">
+          <span className="text-xs bg-slate-900/60 text-slate-500 font-bold px-2.5 py-1 rounded-full">
             {archived.length}
           </span>
         </div>
@@ -350,7 +350,7 @@ export default function DreamPlanningPage() {
             {archived.map((h) => (
               <div
                 key={h.id}
-                className="group flex items-start gap-2.5 p-3.5 rounded-2xl bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/50 dark:border-slate-850/20"
+                className="group flex items-start gap-2.5 p-3.5 rounded-2xl bg-slate-900/10 border border-slate-850/20"
               >
                 <div className="mt-0.5 w-4 h-4 rounded bg-emerald-500 flex items-center justify-center flex-shrink-0">
                   <Check className="w-2.5 h-2.5 text-white" />

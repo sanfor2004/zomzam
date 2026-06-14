@@ -29,14 +29,14 @@ export function Switch({
       role="switch"
       onClick={handleToggle}
       disabled={disabled}
-      className={`w-11 h-6 rounded-full transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] relative flex items-center disabled:opacity-50 disabled:cursor-not-allowed ${
-        checked ? 'bg-primary-500' : 'bg-[#eee] dark:bg-slate-700'
-      } ${className}`}
+      className={`w-11 h-6 rounded-full transition-colors duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] relative flex items-center disabled:opacity-50 disabled:cursor-not-allowed${
+        checked ? 'bg-primary-500' : 'bg-slate-700'
+      }${className}`}
       aria-label={ariaLabel}
       aria-checked={checked}
     >
       <span
-        className={`w-4 h-4 bg-white rounded-full absolute shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] ${
+        className={`w-4 h-4 bg-white rounded-full absolute shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]${
           checked ? 'translate-x-6' : 'translate-x-1'
         }`}
       />

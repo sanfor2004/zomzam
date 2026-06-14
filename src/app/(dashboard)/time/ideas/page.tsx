@@ -404,7 +404,7 @@ export default function IdeaCapturePage() {
 
     return (
       <p 
-        className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed pr-6 whitespace-pre-wrap"
+        className="text-sm text-slate-300 leading-relaxed pr-6 whitespace-pre-wrap"
         dangerouslySetInnerHTML={{ __html: parsed }}
       />
     );
@@ -427,14 +427,14 @@ export default function IdeaCapturePage() {
           ────────────────────────────────────────────────────────── */}
       {mentionActive && mentionList.length > 0 && (
         <div 
-          className="absolute z-50 w-64 max-h-64 overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200/50 dark:border-slate-800 rounded-2xl shadow-glass p-2 scale-100 opacity-100 transition-all"
+          className="absolute z-50 w-64 max-h-64 overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-glass p-2 scale-100 opacity-100 transition-all"
           style={{
             position: 'absolute',
             top: `${dropdownPos.top - 20}px`,
             left: `${dropdownPos.left}px`
           }}
         >
-          <div className="px-3 pb-2 mb-2 border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
+          <div className="px-3 pb-2 mb-2 border-b border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400">
             Link to...
           </div>
           <div className="space-y-0.5">
@@ -447,14 +447,14 @@ export default function IdeaCapturePage() {
                   key={`${item._tagType}-${item.id}`}
                   onClick={() => insertTagPill(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-colors ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-colors${
                     isSelected 
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white' 
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-850/50'
+                      ? 'bg-slate-800 text-white' 
+                      : 'text-slate-400 hover:bg-slate-850/50'
                   }`}
                 >
                   <span className="truncate max-w-[150px]">{title}</span>
-                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full${
                     isTask 
                       ? 'bg-primary-500/15 text-primary-500' 
                       : 'bg-purple-500/15 text-purple-500'
@@ -477,12 +477,12 @@ export default function IdeaCapturePage() {
             <Lightbulb className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Idea Capture</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white">Idea Capture</h1>
             <p className="text-xs text-slate-400">Your brain dump zone — write freely, tag later.</p>
           </div>
         </div>
 
-        <div className="text-xs text-slate-400 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 px-4 py-2.5 rounded-2xl shadow-apple-sm self-start">
+        <div className="text-xs text-slate-400 bg-[#1A1D24] border border-slate-800/60 px-4 py-2.5 rounded-2xl shadow-apple-sm self-start">
           Link items: <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1.5 py-0.5 rounded ml-1">@task</code> or <code className="text-purple-500 font-bold bg-purple-500/5 px-1.5 py-0.5 rounded">@plan</code>
         </div>
       </div>
@@ -494,7 +494,7 @@ export default function IdeaCapturePage() {
             Supports rich pills, key listeners for Arrow/Enter/Esc dropdown control
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
             
             {/* Editor Textarea */}
             <div className="relative">
@@ -503,7 +503,7 @@ export default function IdeaCapturePage() {
                 contentEditable
                 onKeyDown={handleEditorKeyDown}
                 onInput={handleEditorInput}
-                className="w-full min-h-[220px] bg-transparent text-sm text-slate-800 dark:text-slate-200 focus:outline-none leading-relaxed whitespace-pre-wrap outline-none"
+                className="w-full min-h-[220px] bg-transparent text-sm text-slate-200 focus:outline-none leading-relaxed whitespace-pre-wrap outline-none"
                 data-placeholder="Start writing your idea... Type @ to link a task or dream goal. Press Ctrl+Enter to save instantly."
               />
               
@@ -522,7 +522,7 @@ export default function IdeaCapturePage() {
             </div>
 
             {/* Footer Row */}
-            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-100 dark:border-slate-850">
+            <div className="flex items-center justify-between mt-6 pt-4 border-t border-slate-850">
               <div className="flex items-center gap-3 text-xs text-slate-400 font-semibold">
                 <span>Ctrl + Enter to save</span>
                 <span className="font-mono">{charCount} chars</span>
@@ -550,11 +550,11 @@ export default function IdeaCapturePage() {
           </div>
 
           {/* Guide Help Card */}
-          <div className="bg-emerald-50/50 dark:bg-emerald-950/10 rounded-2xl p-5 border border-emerald-100/40 dark:border-emerald-900/20">
-            <h3 className="text-xs font-bold text-emerald-800 dark:text-emerald-400 uppercase tracking-wider mb-2">
+          <div className="bg-emerald-950/10 rounded-2xl p-5 border border-emerald-900/20">
+            <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
               Mentions Engine
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed">
               When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. You can search and link task entries or dream horizons, turning a simple brain dump into an actionable network of thoughts.
             </p>
           </div>
@@ -564,12 +564,12 @@ export default function IdeaCapturePage() {
             DEVELOPMENT NAVIGATOR: IDEA VAULT CARDS GRID
             Renders filtered ideas list with edit/delete control and formatting
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col min-h-[460px]">
-          <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-100 dark:border-slate-850">
-            <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+        <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col min-h-[460px]">
+          <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-850">
+            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
               Idea Vault
             </h2>
-            <span className="text-xs text-slate-400 font-bold bg-slate-50 dark:bg-slate-900/60 px-2.5 py-1 rounded-full">
+            <span className="text-xs text-slate-400 font-bold bg-slate-900/60 px-2.5 py-1 rounded-full">
               {ideas.length} {ideas.length === 1 ? 'idea' : 'ideas'}
             </span>
           </div>
@@ -597,21 +597,21 @@ export default function IdeaCapturePage() {
                 return (
                   <div
                     key={idea.id}
-                    className="p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850/50 rounded-2xl transition-all hover:border-slate-200 dark:hover:border-slate-800 group relative hover:shadow-apple-sm"
+                    className="p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl transition-all hover:border-slate-800 group relative hover:shadow-apple-sm"
                   >
                     {/* Action Buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleEditIdea(idea)}
                         title="Edit Idea"
-                        className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-750 transition-all"
+                        className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => handleDeleteIdea(idea.id)}
                         title="Delete Idea"
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-750 transition-all"
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -630,7 +630,7 @@ export default function IdeaCapturePage() {
                     )}
 
                     {/* Metadata Footer */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100/50 dark:border-slate-850/30">
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-850/30">
                       <span className="text-[10px] font-semibold text-slate-400">
                         {new Date(idea.created_at).toLocaleDateString(undefined, {
                           month: 'short',

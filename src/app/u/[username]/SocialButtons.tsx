@@ -91,7 +91,7 @@ export default function SocialButtons({
           <button
             onClick={() => handleAction('friend_cancel')}
             disabled={loading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 disabled:opacity-50 text-slate-700 dark:text-slate-200 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98]"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-200 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98]"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
             Cancel Request
@@ -143,10 +143,10 @@ export default function SocialButtons({
           <button
             onClick={() => handleAction(isFollowing ? 'unfollow' : 'follow')}
             disabled={loading}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] border ${
+            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] border${
               isFollowing
-                ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20'
-                : 'bg-transparent border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-800'
+                ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20'
+                : 'bg-transparent border-slate-700 text-slate-350 hover:bg-slate-800'
             }`}
           >
             {loading ? (

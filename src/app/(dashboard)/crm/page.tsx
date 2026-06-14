@@ -76,7 +76,7 @@ export default function CrmDashboardPage() {
     return (
       <div className="h-[70vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading Zomzam Dashboard...</span>
+        <span className="text-xs font-semibold text-slate-400">Loading Zomzam Dashboard...</span>
       </div>
     );
   }
@@ -85,13 +85,13 @@ export default function CrmDashboardPage() {
     <div className="space-y-8 animate-in fade-in duration-300">
       
       {/* Header and Brand Vibe */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Compass className="h-6 w-6 text-[#EE5712]" />
             Executive Control Center
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Lead acquisition streams, pipeline diagnostics, and outreach personalizations.</p>
+          <p className="text-xs text-slate-400 mt-1 font-medium">Lead acquisition streams, pipeline diagnostics, and outreach personalizations.</p>
         </div>
         <div className="flex flex-col md:flex-row items-end md:items-center gap-2">
           {process.env.NODE_ENV === 'development' && (
@@ -105,7 +105,7 @@ export default function CrmDashboardPage() {
               Debug: Clear Data
             </Button>
           )}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-150 dark:border-white/5 text-xs font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/[0.02] border border-white/5 text-xs font-bold text-slate-400">
             <Sparkles className="h-4 w-4 text-[#EE5712]" />
             Zomzam Engine Active
           </div>
@@ -125,13 +125,13 @@ export default function CrmDashboardPage() {
             <Grid className="h-5 w-5 text-[#EE5712]" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-white leading-none">Fresh Hot Leads</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Newly acquired business cards awaiting outreach campaigns.</p>
+            <h3 className="text-sm font-bold text-white leading-none">Fresh Hot Leads</h3>
+            <p className="text-xs text-slate-400 mt-1 font-medium">Newly acquired business cards awaiting outreach campaigns.</p>
           </div>
         </div>
 
         {leads.length === 0 ? (
-          <div className="p-10 border border-dashed border-slate-200 dark:border-slate-800 rounded-3xl bg-slate-50/50 dark:bg-slate-900/10 text-center text-slate-500 dark:text-slate-450 italic text-xs font-semibold">
+          <div className="p-10 border border-dashed border-slate-800 rounded-3xl bg-slate-900/10 text-center text-slate-450 italic text-xs font-semibold">
             No leads in local database yet. Use the Scraper command panel above to find some!
           </div>
         ) : (

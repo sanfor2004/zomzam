@@ -487,14 +487,14 @@ export default function PomodoroPage() {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Pomodoro Focus</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white">Pomodoro Focus</h1>
             <p className="text-xs text-slate-400">Stay in the zone. One task at a time.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-2xl px-4 py-2.5 shadow-apple-sm self-start">
+        <div className="flex items-center gap-2 bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-4 py-2.5 shadow-apple-sm self-start">
           <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
-          <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+          <span className="text-xs font-semibold text-slate-300">
             Sessions Completed Today: <span className="text-primary-500 font-bold ml-1">{sessionsToday}</span>
           </span>
         </div>
@@ -503,7 +503,7 @@ export default function PomodoroPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
         {/* Timer Section (Left Column) */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-8 shadow-apple flex flex-col items-center justify-center relative overflow-hidden">
+        <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-0 left-0 -mt-24 -ml-24 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
           {/* Visual SVG Ring */}
@@ -516,7 +516,7 @@ export default function PomodoroPage() {
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="6"
-                className="text-slate-100 dark:text-slate-800/40"
+                className="text-slate-800/40"
               />
               <circle
                 cx="100"
@@ -535,7 +535,7 @@ export default function PomodoroPage() {
               <span className="text-[10px] font-black uppercase tracking-widest text-primary-500">
                 {isBreak ? 'Break Time' : 'Focus Session'}
               </span>
-              <span className="text-5xl font-black tabular-nums text-slate-900 dark:text-white mt-1.5 tracking-tight">
+              <span className="text-5xl font-black tabular-nums text-white mt-1.5 tracking-tight">
                 {formatTime(remaining)}
               </span>
             </div>
@@ -547,16 +547,16 @@ export default function PomodoroPage() {
               <button
                 onClick={resetTimer}
                 title="Reset Session"
-                className="w-12 h-12 rounded-full border border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-900/40 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95"
+                className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95"
               >
                 <RotateCcw className="w-5 h-5" />
               </button>
 
               <button
                 onClick={isRunning ? pauseTimer : startTimer}
-                className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all transform hover:scale-105 active:scale-95 ${
+                className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all transform hover:scale-105 active:scale-95${
                   isRunning 
-                    ? 'bg-slate-900 hover:bg-slate-850 dark:bg-slate-850 dark:hover:bg-slate-800 shadow-slate-900/10' 
+                    ? 'bg-slate-850 hover:bg-slate-800 shadow-slate-900/10' 
                     : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/20'
                 }`}
               >
@@ -567,7 +567,7 @@ export default function PomodoroPage() {
                 onClick={skipTask}
                 disabled={pendingTasks.length < 2}
                 title="Skip Task"
-                className="w-12 h-12 rounded-full border border-slate-100 dark:border-slate-800/80 bg-slate-50 dark:bg-slate-900/40 text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <SkipForward className="w-5 h-5" />
               </button>
@@ -576,31 +576,31 @@ export default function PomodoroPage() {
             {isBreak && (
               <button
                 onClick={skipBreak}
-                className="px-5 py-2 text-xs font-black uppercase tracking-widest bg-primary-50 dark:bg-primary-950/20 text-primary-500 hover:bg-primary-100 dark:hover:bg-primary-900/30 rounded-full border border-primary-100 dark:border-primary-900/30 transition-colors"
+                className="px-5 py-2 text-xs font-black uppercase tracking-widest bg-primary-950/20 text-primary-500 hover:bg-primary-900/30 rounded-full border border-primary-900/30 transition-colors"
               >
                 Skip Break
               </button>
             )}
 
             {/* Adjuster Inputs */}
-            <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/50 w-full text-xs">
+            <div className="flex items-center gap-4 pt-4 border-t border-slate-800/50 w-full text-xs">
               
               {/* Focus adjuster */}
               <div className="flex-1 flex flex-col gap-1.5">
                 <span className="text-slate-400 font-medium">Focus duration</span>
-                <div className="flex items-center border border-slate-100 dark:border-slate-850 rounded-xl bg-slate-50 dark:bg-slate-900/30 overflow-hidden h-10">
+                <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
                   <button
                     onClick={() => adjustFocus(-5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-r border-slate-100 dark:border-slate-850"
+                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
                   >
                     -
                   </button>
-                  <span className="flex-1 text-center font-bold text-slate-700 dark:text-slate-200">
+                  <span className="flex-1 text-center font-bold text-slate-200">
                     {Math.floor(duration / 60)}m
                   </span>
                   <button
                     onClick={() => adjustFocus(5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-l border-slate-100 dark:border-slate-850"
+                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
                   >
                     +
                   </button>
@@ -610,19 +610,19 @@ export default function PomodoroPage() {
               {/* Break adjuster */}
               <div className="flex-1 flex flex-col gap-1.5">
                 <span className="text-slate-400 font-medium">Break duration</span>
-                <div className="flex items-center border border-slate-100 dark:border-slate-850 rounded-xl bg-slate-50 dark:bg-slate-900/30 overflow-hidden h-10">
+                <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
                   <button
                     onClick={() => adjustBreak(-5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-r border-slate-100 dark:border-slate-850"
+                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
                   >
                     -
                   </button>
-                  <span className="flex-1 text-center font-bold text-slate-700 dark:text-slate-200">
+                  <span className="flex-1 text-center font-bold text-slate-200">
                     {Math.floor(breakDuration / 60)}m
                   </span>
                   <button
                     onClick={() => adjustBreak(5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-l border-slate-100 dark:border-slate-850"
+                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
                   >
                     +
                   </button>
@@ -637,15 +637,15 @@ export default function PomodoroPage() {
         <div className="lg:col-span-3 flex flex-col gap-6">
           
           {/* Previous Card */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm opacity-50">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm opacity-50">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Previously completed</span>
-            <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+            <p className="text-sm font-semibold text-slate-400 mt-0.5 truncate">
               {tasks.filter(t => t.status === 'completed')[0]?.title || 'No completed tasks recently'}
             </p>
           </div>
 
           {/* Current Focus Task Card */}
-          <div className="flex-1 bg-gradient-to-br from-primary-500/5 via-white to-amber-500/5 dark:from-primary-500/10 dark:via-[#13161C] dark:to-amber-500/5 border border-primary-500/20 dark:border-slate-800/60 rounded-3xl p-8 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+          <div className="flex-1 bg-gradient-to-br from-primary-500/10 via-[#13161C] to-amber-500/5 border border-slate-800/60 rounded-3xl p-8 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between min-h-[300px]">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white bg-primary-500 rounded-full">
@@ -660,11 +660,11 @@ export default function PomodoroPage() {
 
               {topTask ? (
                 <div className="space-y-3">
-                  <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  <h2 className="text-2xl font-black text-white tracking-tight leading-tight">
                     {topTask.title}
                   </h2>
                   <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${
+                    <span className={`w-2 h-2 rounded-full${
                       topTask.priority === 'urgent' ? 'bg-red-500' :
                       topTask.priority === 'medium' ? 'bg-amber-400' :
                       topTask.priority === 'maybe' ? 'bg-blue-400' : 'bg-slate-350'
@@ -676,7 +676,7 @@ export default function PomodoroPage() {
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-base text-slate-500 dark:text-slate-400 italic font-medium">
+                  <p className="text-base text-slate-400 italic font-medium">
                     No active tasks in your queue.
                   </p>
                   <Button
@@ -716,9 +716,9 @@ export default function PomodoroPage() {
           </div>
 
           {/* Next Up Card */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Next up in queue</span>
-            <p className="text-sm font-semibold text-slate-700 dark:text-slate-300 mt-0.5 truncate">
+            <p className="text-sm font-semibold text-slate-300 mt-0.5 truncate">
               {pendingTasks[1]?.title || '—'}
             </p>
           </div>
@@ -727,26 +727,26 @@ export default function PomodoroPage() {
           <div className="grid grid-cols-2 gap-4">
             <button
               onClick={() => router.push('/time/tasks')}
-              className="flex items-center gap-3 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-amber-400/40 hover:shadow-apple transition-all group"
+              className="flex items-center gap-3 bg-[#1A1D24] border border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-amber-400/40 hover:shadow-apple transition-all group"
             >
               <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Plus className="w-5 h-5" />
               </div>
               <div className="text-left min-w-0">
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">Manage Tasks</span>
+                <span className="block text-xs font-bold text-slate-300">Manage Tasks</span>
                 <span className="block text-[10px] text-slate-400 truncate">Go to task board</span>
               </div>
             </button>
 
             <button
               onClick={() => router.push('/time/ideas')}
-              className="flex items-center gap-3 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-emerald-400/40 hover:shadow-apple transition-all group"
+              className="flex items-center gap-3 bg-[#1A1D24] border border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-emerald-400/40 hover:shadow-apple transition-all group"
             >
               <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Lightbulb className="w-5 h-5" />
               </div>
               <div className="text-left min-w-0">
-                <span className="block text-xs font-bold text-slate-700 dark:text-slate-300">Capture Idea</span>
+                <span className="block text-xs font-bold text-slate-300">Capture Idea</span>
                 <span className="block text-[10px] text-slate-400 truncate">Go to idea capture</span>
               </div>
             </button>

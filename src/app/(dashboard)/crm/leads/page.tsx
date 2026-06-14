@@ -179,13 +179,13 @@ export default function LeadsPage() {
     <div className="space-y-6 animate-in fade-in duration-300">
       
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Database className="h-6 w-6 text-[#EE5712]" />
             Lead Vault Directory
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">Audit, modify, and curate your collected geographical business leads.</p>
+          <p className="text-xs text-slate-400 mt-1 font-medium">Audit, modify, and curate your collected geographical business leads.</p>
         </div>
         
         <Button 
@@ -198,17 +198,17 @@ export default function LeadsPage() {
       </div>
 
       {/* Control Panel Filter Hub */}
-      <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
+      <div className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
         
         {/* Search Input */}
         <div className="relative w-full md:max-w-sm">
-          <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400 dark:text-slate-500 pointer-events-none" />
+          <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search name, company, address or industry..."
-            className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-800 dark:text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white"
+            className="w-full text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white"
           />
         </div>
 
@@ -217,7 +217,7 @@ export default function LeadsPage() {
           
           {/* Industry Filter */}
           <div className="flex items-center gap-2 min-w-[150px]">
-            <SlidersHorizontal className="h-4 w-4 text-slate-450 dark:text-slate-500 shrink-0" />
+            <SlidersHorizontal className="h-4 w-4 text-slate-500 shrink-0" />
             <Select
               value={industryFilter}
               onChange={setIndustryFilter}
@@ -244,23 +244,23 @@ export default function LeadsPage() {
           </div>
 
           {/* View Toggles */}
-          <div className="flex items-center p-1 bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-xl shrink-0">
+          <div className="flex items-center p-1 bg-slate-900/40 border border-slate-800 rounded-xl shrink-0">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`p-1.5 rounded-lg transition-all cursor-pointer${
                 viewMode === "grid" 
                   ? "bg-[#EE5712] text-white shadow" 
-                  : "text-slate-455 dark:text-slate-400 hover:text-[#EE5712] dark:hover:text-[#EE5712]"
+                  : "text-slate-400 hover:text-[#EE5712]"
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+              className={`p-1.5 rounded-lg transition-all cursor-pointer${
                 viewMode === "table" 
                   ? "bg-[#EE5712] text-white shadow" 
-                  : "text-slate-455 dark:text-slate-400 hover:text-[#EE5712] dark:hover:text-[#EE5712]"
+                  : "text-slate-400 hover:text-[#EE5712]"
               }`}
             >
               <List className="h-4 w-4" />
@@ -272,18 +272,18 @@ export default function LeadsPage() {
       </div>
 
       {/* Multi-Selection Control & Action Strip */}
-      <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
+      <div className="bg-[#1A1D24] border border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
-          <span className="text-slate-500 dark:text-slate-400">
-            Vault Directory: <strong className="text-slate-800 dark:text-white">{leads.length}</strong> leads
+          <span className="text-slate-400">
+            Vault Directory: <strong className="text-white">{leads.length}</strong> leads
           </span>
-          <span className="text-slate-300 dark:text-slate-700">|</span>
-          <span className="text-slate-500 dark:text-slate-400">
-            Filtered: <strong className="text-slate-800 dark:text-white">{filteredLeads.length}</strong> leads
+          <span className="text-slate-700">|</span>
+          <span className="text-slate-400">
+            Filtered: <strong className="text-white">{filteredLeads.length}</strong> leads
           </span>
           {selectedLeadIds.length > 0 && (
             <>
-              <span className="text-slate-300 dark:text-slate-700">|</span>
+              <span className="text-slate-700">|</span>
               <span className="text-[#EE5712] font-extrabold flex items-center gap-1 animate-pulse">
                 Selected: <strong>{selectedLeadIds.length}</strong> leads
               </span>
@@ -296,7 +296,7 @@ export default function LeadsPage() {
             variant="outline"
             size="xs"
             onClick={handleSelectAllFiltered}
-            className="text-xs font-semibold px-3 py-1.5 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-700 dark:text-slate-300 rounded-xl transition-all cursor-pointer"
+            className="text-xs font-semibold px-3 py-1.5 border-slate-800 hover:bg-slate-850 text-slate-300 rounded-xl transition-all cursor-pointer"
           >
             {filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id)) 
               ? "Deselect All" 
@@ -324,10 +324,10 @@ export default function LeadsPage() {
       {loading ? (
         <div className="h-[40vh] flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-          <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Retrieving secure records...</span>
+          <span className="text-xs text-slate-400 font-semibold">Retrieving secure records...</span>
         </div>
       ) : filteredLeads.length === 0 ? (
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 p-16 rounded-3xl text-center text-slate-400 dark:text-slate-600 italic font-semibold text-xs">
+        <div className="bg-[#1A1D24] border border-slate-800/60 p-16 rounded-3xl text-center text-slate-600 italic font-semibold text-xs">
           No records matched your search query. Add new parameters or scrape Google maps listings.
         </div>
       ) : viewMode === "grid" ? (
@@ -343,32 +343,32 @@ export default function LeadsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl overflow-hidden overflow-x-auto shadow-apple">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl overflow-hidden overflow-x-auto shadow-apple">
           <table className="w-full border-collapse text-left">
             <thead>
-              <tr className="border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-900/40 text-slate-450 dark:text-slate-550 font-extrabold uppercase text-[10px] tracking-wider select-none">
+              <tr className="border-b border-slate-800/60 bg-slate-900/40 text-slate-550 font-extrabold uppercase text-[10px] tracking-wider select-none">
                 <th className="py-4 px-5 w-12">
                   <input
                     type="checkbox"
                     checked={filteredLeads.length > 0 && filteredLeads.every(l => selectedLeadIds.includes(l.id))}
                     onChange={handleSelectAllFiltered}
-                    className="w-4 h-4 rounded border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-[#EE5712] focus:ring-[#EE5712]/50 accent-[#EE5712] cursor-pointer mt-1"
+                    className="w-4 h-4 rounded border-slate-800 bg-slate-900 text-[#EE5712] focus:ring-[#EE5712]/50 accent-[#EE5712] cursor-pointer mt-1"
                   />
                 </th>
-                <th className="py-4 px-5 text-slate-600 dark:text-slate-400 font-black">Business Name</th>
-                <th className="py-4 px-5 text-slate-600 dark:text-slate-400 font-black">Industry / Niche</th>
-                <th className="py-4 px-5 text-slate-600 dark:text-slate-400 font-black">Contact Details</th>
-                <th className="py-4 px-5 text-slate-600 dark:text-slate-400 font-black">Status</th>
-                <th className="py-4 px-5 text-right text-slate-600 dark:text-slate-400 font-black">Actions</th>
+                <th className="py-4 px-5 text-slate-400 font-black">Business Name</th>
+                <th className="py-4 px-5 text-slate-400 font-black">Industry / Niche</th>
+                <th className="py-4 px-5 text-slate-400 font-black">Contact Details</th>
+                <th className="py-4 px-5 text-slate-400 font-black">Status</th>
+                <th className="py-4 px-5 text-right text-slate-400 font-black">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 font-medium text-slate-700 dark:text-slate-300">
+            <tbody className="divide-y divide-slate-800/40 font-medium text-slate-300">
               {filteredLeads.map((lead) => (
                 <tr 
                   key={lead.id} 
                   className={cn(
-                    "hover:bg-slate-50 dark:hover:bg-white/[0.01] transition-all border-b border-slate-100 dark:border-slate-800/40 last:border-b-0",
-                    selectedLeadIds.includes(lead.id) && "bg-slate-50/50 dark:bg-white/[0.015]"
+                    "hover:bg-white/[0.01] transition-all border-b border-slate-800/40 last:border-b-0",
+                    selectedLeadIds.includes(lead.id) && "bg-white/[0.015]"
                   )}
                 >
                   <td className="py-4 px-5 w-12 text-xs">
@@ -376,35 +376,35 @@ export default function LeadsPage() {
                       type="checkbox"
                       checked={selectedLeadIds.includes(lead.id)}
                       onChange={() => handleToggleSelect(lead.id)}
-                      className="w-4 h-4 rounded border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-[#EE5712] focus:ring-[#EE5712]/50 accent-[#EE5712] cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-800 bg-slate-900 text-[#EE5712] focus:ring-[#EE5712]/50 accent-[#EE5712] cursor-pointer"
                     />
                   </td>
                   <td className="py-4 px-5 text-xs">
                     <div className="flex flex-col">
-                      <span className="font-bold text-slate-800 dark:text-white text-xs">{lead.name}</span>
+                      <span className="font-bold text-white text-xs">{lead.name}</span>
                       {lead.company && lead.company !== lead.name && (
-                        <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate max-w-[200px]">{lead.company}</span>
+                        <span className="text-[11px] text-slate-500 mt-0.5 truncate max-w-[200px]">{lead.company}</span>
                       )}
                     </div>
                   </td>
                   
                   <td className="py-4 px-5 text-xs font-semibold">
-                    <Badge className="text-[10px] font-bold bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 py-0.5 px-2 rounded-full">
+                    <Badge className="text-[10px] font-bold bg-slate-900 border border-slate-800 text-slate-400 py-0.5 px-2 rounded-full">
                       {lead.industry || 'Local Business'}
                     </Badge>
                   </td>
 
                   <td className="py-4 px-5 text-xs">
-                    <div className="flex flex-col gap-0.5 text-slate-550 dark:text-slate-400">
-                      <span>{lead.phone || <span className="text-slate-350 dark:text-slate-650 italic">No phone</span>}</span>
+                    <div className="flex flex-col gap-0.5 text-slate-400">
+                      <span>{lead.phone || <span className="text-slate-650 italic">No phone</span>}</span>
                       <span className="text-xs text-[#EE5712] truncate max-w-[200px] font-semibold">
-                        {lead.email || (lead.website ? <a href={lead.website} target="_blank" rel="noopener noreferrer" className="hover:underline">{lead.website}</a> : <span className="text-slate-350 dark:text-slate-650 italic">No web info</span>)}
+                        {lead.email || (lead.website ? <a href={lead.website} target="_blank" rel="noopener noreferrer" className="hover:underline">{lead.website}</a> : <span className="text-slate-650 italic">No web info</span>)}
                       </span>
                     </div>
                   </td>
 
                   <td className="py-4 px-5 text-xs font-semibold">
-                    <Badge className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${(statusConfigs[lead.status] || statusConfigs.new).bg}`}>
+                    <Badge className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border${(statusConfigs[lead.status] || statusConfigs.new).bg}`}>
                       {(statusConfigs[lead.status] || statusConfigs.new).label.toUpperCase()}
                     </Badge>
                   </td>
@@ -467,91 +467,91 @@ export default function LeadsPage() {
           <div className="space-y-4 pt-2 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Business Name *</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Business Name *</label>
                 <input
                   type="text"
                   required
                   value={newLeadData.name}
                   onChange={(e) => setNewLeadData({...newLeadData, name: e.target.value})}
                   placeholder="e.g. Blue Lagoon Specialty Cafe"
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Company Group</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Company Group</label>
                 <input
                   type="text"
                   value={newLeadData.company}
                   onChange={(e) => setNewLeadData({...newLeadData, company: e.target.value})}
                   placeholder="e.g. Blue Lagoon Inc."
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Niche / Industry</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Niche / Industry</label>
                 <input
                   type="text"
                   value={newLeadData.industry}
                   onChange={(e) => setNewLeadData({...newLeadData, industry: e.target.value})}
                   placeholder="e.g. Coffee Shop"
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Email Address</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
                 <input
                   type="email"
                   value={newLeadData.email}
                   onChange={(e) => setNewLeadData({...newLeadData, email: e.target.value})}
                   placeholder="e.g. info@bluelagoon.com"
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Phone</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Phone</label>
                 <input
                   type="text"
                   value={newLeadData.phone}
                   onChange={(e) => setNewLeadData({...newLeadData, phone: e.target.value})}
                   placeholder="e.g. (310) 555-0922"
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Website URL</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Website URL</label>
                 <input
                   type="text"
                   value={newLeadData.website}
                   onChange={(e) => setNewLeadData({...newLeadData, website: e.target.value})}
                   placeholder="e.g. https://www.bluelagoon.com"
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Address Location</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Address Location</label>
                 <input
                   type="text"
                   value={newLeadData.address}
                   onChange={(e) => setNewLeadData({...newLeadData, address: e.target.value})}
                   placeholder="e.g. 520 S Grand Ave, Los Angeles, CA"
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-800 dark:text-white outline-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40"
                 />
               </div>
 
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Internal Notes</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Internal Notes</label>
                 <textarea
                   value={newLeadData.notes}
                   onChange={(e) => setNewLeadData({...newLeadData, notes: e.target.value})}
                   placeholder="Add brief details about the client intake..."
                   rows={3}
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-slate-800 dark:text-white outline-none resize-none focus:border-[#EE5712]/40"
+                  className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl p-3 text-white outline-none resize-none focus:border-[#EE5712]/40"
                 />
               </div>
             </div>

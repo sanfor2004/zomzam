@@ -234,7 +234,7 @@ export default function MyProfilePage() {
           <User className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-black tracking-tight text-white">
             {t('profile_title')}
           </h1>
           <p className="text-xs text-slate-400">
@@ -247,7 +247,7 @@ export default function MyProfilePage() {
         
         {/* Left Side: Photo Upload Card & Info Details */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
             
             {/* Avatar Photo Frame */}
             <div className="relative group w-32 h-32 rounded-3xl overflow-hidden shadow-lg mb-5 bg-[#111318] isolate [transform:translateZ(0)]">
@@ -280,7 +280,7 @@ export default function MyProfilePage() {
               <button
                 type="button"
                 onClick={triggerFileSelect}
-                className="px-3.5 py-2 bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-xl text-xs font-semibold transition-all cursor-pointer text-slate-700 dark:text-slate-350"
+                className="px-3.5 py-2 bg-slate-800/40 border border-slate-800/50 hover:bg-slate-850 rounded-xl text-xs font-semibold transition-all cursor-pointer text-slate-350"
               >
                 {t('profile_avatar_change')}
               </button>
@@ -303,18 +303,18 @@ export default function MyProfilePage() {
           </div>
 
           {/* Social Stats Info */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Account Information
             </h3>
             <div className="space-y-3">
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Username</span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">@{username}</span>
+                <span className="text-sm font-bold text-white">@{username}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Email Address</span>
-                <span className="text-sm font-bold text-slate-900 dark:text-white">{email}</span>
+                <span className="text-sm font-bold text-white">{email}</span>
               </div>
               <a
                 href={`/u/${username}`}
@@ -331,16 +331,16 @@ export default function MyProfilePage() {
         {/* Right Side: Edit Form Fields */}
         <div className="lg:col-span-2 space-y-8">
           
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
             
-            <div className="mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+            <div className="mb-6 pb-4 border-b border-slate-850">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 Identity & Bio
               </h2>
             </div>
 
             {successMsg && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs">
+              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 <span>{successMsg}</span>
               </div>
@@ -366,7 +366,7 @@ export default function MyProfilePage() {
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     maxLength={100}
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
                 </div>
 
@@ -379,7 +379,7 @@ export default function MyProfilePage() {
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     maxLength={100}
-                    className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
                 </div>
               </div>
@@ -395,7 +395,7 @@ export default function MyProfilePage() {
                   maxLength={500}
                   rows={4}
                   placeholder="Tell us about yourself, your skills, or current projects..."
-                  className="w-full p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white resize-none"
+                  className="w-full p-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white resize-none"
                 />
                 <div className="flex justify-end mt-1.5">
                   <span className="text-[9px] text-slate-400 font-semibold">
@@ -415,7 +415,7 @@ export default function MyProfilePage() {
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 p-3.5 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl min-h-[50px] mb-3">
+                <div className="flex flex-wrap gap-1.5 p-3.5 bg-slate-900/30 border border-slate-850 rounded-xl min-h-[50px] mb-3">
                   {tags.length === 0 ? (
                     <span className="text-xs text-slate-400 italic">No tags selected. Add some below!</span>
                   ) : (
@@ -444,12 +444,12 @@ export default function MyProfilePage() {
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={handleAddTag}
                     placeholder="Type a tag (e.g. typescript) and press Enter or comma"
-                    className="flex-grow h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                    className="flex-grow h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
                   <button
                     type="button"
                     onClick={addTagButton}
-                    className="h-11 px-4 bg-slate-950 dark:bg-slate-800 hover:bg-slate-900 dark:hover:bg-slate-750 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    className="h-11 px-4 bg-slate-800 hover:bg-slate-750 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     Add

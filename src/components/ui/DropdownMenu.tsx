@@ -44,11 +44,11 @@ export function DropdownMenu({
       {trigger}
 
       <div
-        className={`absolute z-50 mt-2 rounded-3xl border border-slate-200/85 bg-white shadow-2xl shadow-slate-950/10 ring-1 ring-slate-900/5 transition-all duration-200 dark:border-slate-700/75 dark:bg-slate-950 ${
+        className={`absolute z-50 mt-2 rounded-3xl border border-slate-700/75 bg-slate-950 shadow-2xl shadow-slate-950/10 ring-1 ring-slate-900/5 transition-all duration-200${
           open
             ? 'visible opacity-100 scale-100'
             : 'invisible opacity-0 scale-95 pointer-events-none'
-        } ${align === 'left' ? 'left-0' : 'right-0'} ${
+        }${align === 'left' ? 'left-0' : 'right-0'}${
           dropdownClassName || 'min-w-[18rem] max-w-sm'
         }`}
       >

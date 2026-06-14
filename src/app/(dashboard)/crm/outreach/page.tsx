@@ -61,7 +61,7 @@ export default function OutreachSettingsPage() {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Loading Outreach Console...</span>
+        <span className="text-xs font-semibold text-slate-400">Loading Outreach Console...</span>
       </div>
     );
   }
@@ -72,13 +72,13 @@ export default function OutreachSettingsPage() {
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
       
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 dark:border-slate-800/60 pb-5">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Mail className="h-6 w-6 text-[#EE5712]" />
             Campaign Outreach Hub
           </h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-medium">
+          <p className="text-xs text-slate-400 mt-1 font-medium">
             AI-powered personalized cold email drafting and campaign statistics.
           </p>
         </div>
@@ -89,7 +89,7 @@ export default function OutreachSettingsPage() {
         
         {/* Settings Relocation Banner (Span 2) */}
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden group">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-300">
               <Sparkles className="h-40 w-40 text-[#EE5712]" />
             </div>
@@ -100,11 +100,11 @@ export default function OutreachSettingsPage() {
                 <span>Centralized Settings</span>
               </div>
               
-              <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">
+              <h2 className="text-lg font-black text-white tracking-tight">
                 AI & Map Settings Moved to Global Settings
               </h2>
               
-              <p className="text-xs text-slate-550 dark:text-slate-400 leading-relaxed max-w-lg font-medium">
+              <p className="text-xs text-slate-400 leading-relaxed max-w-lg font-medium">
                 To streamline Zomzam Freelancer OS operations, all CRM integrations—including Anthropic Claude API keys, Google Maps keys/Map IDs, LLM temperature/creativity controls, and email signatures—have been merged into the central settings panel.
               </p>
 
@@ -121,35 +121,35 @@ export default function OutreachSettingsPage() {
           </div>
 
           {/* Active Model Status card */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
-            <h3 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-[#EE5712]" />
               Active LLM Engine Configuration
             </h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/50 rounded-2xl space-y-1">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Claude Model</span>
-                <span className="text-slate-800 dark:text-slate-200 block truncate">
+              <div className="p-3 bg-slate-900/35 border border-slate-800/50 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Claude Model</span>
+                <span className="text-slate-200 block truncate">
                   {crmSettings.claude_model || 'claude-3-5-sonnet-latest'}
                 </span>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/50 rounded-2xl space-y-1">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Tone Setting</span>
-                <span className="text-slate-800 dark:text-slate-200 block capitalize">
+              <div className="p-3 bg-slate-900/35 border border-slate-800/50 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Tone Setting</span>
+                <span className="text-slate-200 block capitalize">
                   {crmSettings.claude_tone || 'professional'}
                 </span>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/50 rounded-2xl space-y-1">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Temperature</span>
+              <div className="p-3 bg-slate-900/35 border border-slate-800/50 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">Temperature</span>
                 <span className="text-[#EE5712] block">
                   {crmSettings.claude_temperature || '0.75'} (Creativity)
                 </span>
               </div>
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/50 rounded-2xl space-y-1">
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider block">API Integration Status</span>
-                <span className={`block flex items-center gap-1.5 ${hasClaudeKey ? 'text-emerald-600 dark:text-emerald-450' : 'text-amber-600 dark:text-amber-500'}`}>
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${hasClaudeKey ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
+              <div className="p-3 bg-slate-900/35 border border-slate-800/50 rounded-2xl space-y-1">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider block">API Integration Status</span>
+                <span className={`block flex items-center gap-1.5${hasClaudeKey ? 'text-emerald-450' : 'text-amber-500'}`}>
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0${hasClaudeKey ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400'}`} />
                   {hasClaudeKey ? 'Custom API Key Active' : 'Template Fallback Mode'}
                 </span>
               </div>
@@ -159,40 +159,40 @@ export default function OutreachSettingsPage() {
 
         {/* Campaign Stats Sidebar (Col 1) */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
-            <h3 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest">
               Outreach Stats
             </h3>
             
             <div className="space-y-4">
-              <div className="flex justify-between items-center py-2 border-b border-slate-50 dark:border-slate-800/40">
-                <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold">New Outreach Leads</span>
-                <span className="text-slate-950 dark:text-white text-xs font-bold">{stats.newLeads}</span>
+              <div className="flex justify-between items-center py-2 border-b border-slate-800/40">
+                <span className="text-slate-400 text-xs font-semibold">New Outreach Leads</span>
+                <span className="text-white text-xs font-bold">{stats.newLeads}</span>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-slate-50 dark:border-slate-800/40">
-                <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold">Contacted Leads</span>
-                <span className="text-slate-950 dark:text-white text-xs font-bold">{stats.contactedLeads}</span>
+              <div className="flex justify-between items-center py-2 border-b border-slate-800/40">
+                <span className="text-slate-400 text-xs font-semibold">Contacted Leads</span>
+                <span className="text-white text-xs font-bold">{stats.contactedLeads}</span>
               </div>
               <div className="flex justify-between items-center py-2">
-                <span className="text-slate-500 dark:text-slate-400 text-xs font-semibold">Outreach Conversion</span>
-                <span className="text-emerald-600 dark:text-emerald-400 text-xs font-bold">{stats.conversionRate}%</span>
+                <span className="text-slate-400 text-xs font-semibold">Outreach Conversion</span>
+                <span className="text-emerald-400 text-xs font-bold">{stats.conversionRate}%</span>
               </div>
             </div>
           </div>
 
           {/* Email Signature Block Preview */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
-            <h3 className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+            <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
               <FileText className="w-4.5 h-4.5 text-[#EE5712]" />
               Signature Block
             </h3>
             
             {crmSettings.system_signature ? (
-              <pre className="p-3 bg-slate-50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/50 rounded-2xl text-[10px] font-mono text-slate-600 dark:text-slate-450 whitespace-pre-wrap leading-relaxed select-all">
+              <pre className="p-3 bg-slate-900/35 border border-slate-800/50 rounded-2xl text-[10px] font-mono text-slate-450 whitespace-pre-wrap leading-relaxed select-all">
                 {crmSettings.system_signature}
               </pre>
             ) : (
-              <p className="text-[10px] text-slate-400 dark:text-slate-600 italic">
+              <p className="text-[10px] text-slate-600 italic">
                 No signature block set. Append one in Settings.
               </p>
             )}

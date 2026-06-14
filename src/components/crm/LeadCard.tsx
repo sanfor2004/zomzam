@@ -85,7 +85,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
   });
 
   return (
-    <Card className="hover:border-[#EE5712]/35 hover:shadow-apple-lg hover:scale-[1.01] transition-all duration-300 relative group overflow-hidden flex flex-col justify-between p-6 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl">
+    <Card className="hover:border-[#EE5712]/35 hover:shadow-apple-lg hover:scale-[1.01] transition-all duration-300 relative group overflow-hidden flex flex-col justify-between p-6 bg-[#1A1D24] border border-slate-800/60 rounded-3xl">
       {/* Dynamic Glow Line */}
       <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#EE5712]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
@@ -95,7 +95,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
             type="checkbox"
             checked={isSelected || false}
             onChange={(e) => onSelectChange(e.target.checked)}
-            className="w-4.5 h-4.5 rounded border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-[#EE5712] focus:ring-[#EE5712]/40 accent-[#EE5712] cursor-pointer"
+            className="w-4.5 h-4.5 rounded border-slate-800 bg-slate-900 text-[#EE5712] focus:ring-[#EE5712]/40 accent-[#EE5712] cursor-pointer"
           />
         </div>
       )}
@@ -103,7 +103,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
       <div className={cn("pb-4 space-y-2.5", onSelectChange && "pl-8")}>
         <div className="flex justify-between items-center gap-2">
           {/* Industry Niche Badge */}
-          <Badge className="text-[10px] uppercase font-extrabold tracking-wider bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-500 dark:text-slate-300 py-0.5 px-2.5 rounded-full shadow-sm">
+          <Badge className="text-[10px] uppercase font-extrabold tracking-wider bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-300 py-0.5 px-2.5 rounded-full shadow-sm">
             {lead.industry || 'Local Niche'}
           </Badge>
           
@@ -139,7 +139,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
                   "w-full text-left px-3 py-1.5 rounded-xl text-[10px] font-bold flex items-center gap-2 transition-colors cursor-pointer",
                   status === opt.value
                     ? "bg-[#EE5712]/15 text-[#EE5712]"
-                    : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-900 hover:text-slate-900 dark:hover:text-white"
+                    : "text-slate-400 hover:bg-slate-900 hover:text-white"
                 )}
               >
                 <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", opt.indicatorColor)} />
@@ -150,14 +150,14 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
         </div>
 
         {/* Business Name */}
-        <h4 className="text-sm font-black text-slate-800 dark:text-white mt-2 group-hover:text-[#EE5712] transition-colors leading-tight truncate">
+        <h4 className="text-sm font-black text-white mt-2 group-hover:text-[#EE5712] transition-colors leading-tight truncate">
           {lead.name}
         </h4>
         
         {/* Company Subtext */}
         {lead.company && lead.company !== lead.name && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 mt-1 truncate">
-            <Building className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-500" />
+          <p className="text-xs text-slate-400 flex items-center gap-2 mt-1 truncate">
+            <Building className="h-3.5 w-3.5 shrink-0 text-slate-500" />
             <span>{lead.company}</span>
           </p>
         )}
@@ -168,16 +168,16 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
             <div className="flex text-amber-400 shrink-0">
               <Star className="h-3.5 w-3.5 fill-current" />
             </div>
-            <span className="text-xs font-black text-slate-800 dark:text-slate-200">{lead.rating}</span>
-            <span className="text-[10px] text-slate-450 dark:text-slate-500 font-bold">({lead.review_count} reviews)</span>
+            <span className="text-xs font-black text-slate-200">{lead.rating}</span>
+            <span className="text-[10px] text-slate-500 font-bold">({lead.review_count} reviews)</span>
           </div>
         )}
       </div>
 
-      <div className={cn("space-y-3 pb-4 border-t border-slate-100 dark:border-slate-800/60 pt-4", onSelectChange && "pl-8")}>
+      <div className={cn("space-y-3 pb-4 border-t border-slate-800/60 pt-4", onSelectChange && "pl-8")}>
         {/* Address */}
         {lead.address && (
-          <div className="flex items-start gap-2 text-xs text-slate-550 dark:text-slate-400 leading-relaxed">
+          <div className="flex items-start gap-2 text-xs text-slate-400 leading-relaxed">
             <MapPin className="h-3.5 w-3.5 text-[#EE5712]/75 shrink-0 mt-0.5" />
             <span className="line-clamp-2 select-all">{lead.address}</span>
           </div>
@@ -188,13 +188,13 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
           {lead.phone ? (
             <a 
               href={`tel:${lead.phone}`}
-              className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-[#EE5712] dark:hover:text-[#EE5712] transition-colors py-1 truncate"
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-[#EE5712] transition-colors py-1 truncate"
             >
               <Phone className="h-3.5 w-3.5 text-[#EE5712]/60 shrink-0" />
               <span className="truncate">{lead.phone}</span>
             </a>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs text-slate-350 dark:text-slate-650 py-1 select-none">
+            <div className="flex items-center gap-1.5 text-xs text-slate-650 py-1 select-none">
               <Phone className="h-3.5 w-3.5 shrink-0" />
               <span className="italic">No phone</span>
             </div>
@@ -211,7 +211,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
               <span className="truncate">Visit site</span>
             </a>
           ) : (
-            <div className="flex items-center gap-1.5 text-xs text-slate-350 dark:text-slate-650 py-1 select-none">
+            <div className="flex items-center gap-1.5 text-xs text-slate-650 py-1 select-none">
               <Globe className="h-3.5 w-3.5 shrink-0" />
               <span className="italic">No site</span>
             </div>
@@ -219,8 +219,8 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
         </div>
       </div>
 
-      <div className={cn("pt-4 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between mt-auto -mx-6 -mb-6 px-6 pb-6 bg-slate-50/50 dark:bg-white/[0.003]", onSelectChange && "pl-14")}>
-        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 flex items-center gap-1 uppercase tracking-wider">
+      <div className={cn("pt-4 border-t border-slate-800/60 flex items-center justify-between mt-auto -mx-6 -mb-6 px-6 pb-6 bg-white/[0.003]", onSelectChange && "pl-14")}>
+        <span className="text-[9px] font-bold text-slate-500 flex items-center gap-1 uppercase tracking-wider">
           <Calendar className="h-3.5 w-3.5 shrink-0" />
           {formattedDate}
         </span>

@@ -86,12 +86,12 @@ export default function BankAccountsPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/money/dashboard')}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-slate-800 dark:hover:text-white"
+            className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Bank Accounts</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Bank Accounts</h1>
             <p className="text-xs text-slate-400">Manage your connected wallets, cash reserves, and banks.</p>
           </div>
         </div>
@@ -111,13 +111,13 @@ export default function BankAccountsPage() {
         {accounts.map((acc) => (
           <div
             key={acc.id}
-            className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden flex flex-col justify-between min-h-[170px]"
+            className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden flex flex-col justify-between min-h-[170px]"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors pointer-events-none"></div>
             
             <div className="relative z-10 flex flex-col justify-between h-full w-full">
               <div className="flex items-start justify-between">
-                <div className="w-10 h-10 rounded-xl bg-primary-50 dark:bg-primary-950/20 flex items-center justify-center text-primary-500">
+                <div className="w-10 h-10 rounded-xl bg-primary-950/20 flex items-center justify-center text-primary-500">
                   {getAccountIcon(acc.type)}
                 </div>
                 <button
@@ -131,7 +131,7 @@ export default function BankAccountsPage() {
 
               <div className="mt-4">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate mb-0.5">{acc.name}</p>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+                <h3 className="text-xl font-black text-white tracking-tight">
                   {formatAmount(acc.balance, acc.currency)}
                 </h3>
               </div>
@@ -161,7 +161,7 @@ export default function BankAccountsPage() {
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               required
-              className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-bold"
+              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function BankAccountsPage() {
                 value={balanceInput}
                 onChange={(e) => setBalanceInput(e.target.value)}
                 required
-                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-bold"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
               />
             </div>
             <div>
@@ -216,7 +216,7 @@ export default function BankAccountsPage() {
                 placeholder="e.g. 4193"
                 value={lastFourInput}
                 onChange={(e) => setLastFourInput(e.target.value)}
-                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-mono"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-mono"
               />
             </div>
           </div>

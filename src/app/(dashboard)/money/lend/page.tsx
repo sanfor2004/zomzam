@@ -107,12 +107,12 @@ export default function LendingDebtPage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/money/dashboard')}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-slate-800 dark:hover:text-white"
+            className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Lending & Debt</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Lending & Debt</h1>
             <p className="text-xs text-slate-400">Track money you owe others or are owed by others.</p>
           </div>
         </div>
@@ -130,10 +130,10 @@ export default function LendingDebtPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* People Owe Me Card */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
           <div>
-            <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-slate-850">
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-350 uppercase tracking-widest">
+            <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
+              <h2 className="text-sm font-black text-slate-350 uppercase tracking-widest">
                 People Owe Me
               </h2>
               <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-xs font-bold rounded-full border border-emerald-500/20">
@@ -148,14 +148,14 @@ export default function LendingDebtPage() {
                 activeOweMe.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/30 dark:border-slate-850/20 rounded-2xl group hover:border-slate-200 dark:hover:border-slate-750 transition-all hover:shadow-apple-sm"
+                    className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-850 border border-slate-100/80 dark:border-slate-800 flex items-center justify-center text-slate-400">
+                      <div className="w-8 h-8 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-400">
                         <User className="w-4.5 h-4.5 text-emerald-500" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        <p className="text-xs font-bold text-white truncate">
                           {item.person_name}
                         </p>
                         <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1.5 mt-0.5">
@@ -195,10 +195,10 @@ export default function LendingDebtPage() {
         </div>
 
         {/* I Owe People Card */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
           <div>
-            <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-slate-850">
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-350 uppercase tracking-widest">
+            <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
+              <h2 className="text-sm font-black text-slate-350 uppercase tracking-widest">
                 I Owe People
               </h2>
               <span className="px-3 py-1 bg-rose-500/10 text-rose-500 text-xs font-bold rounded-full border border-rose-500/20">
@@ -216,14 +216,14 @@ export default function LendingDebtPage() {
                 activeIOwe.map((item) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/30 dark:border-slate-855/20 rounded-2xl group hover:border-slate-200 dark:hover:border-slate-750 transition-all hover:shadow-apple-sm"
+                    className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-855/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-850 border border-slate-100/80 dark:border-slate-800 flex items-center justify-center text-slate-450">
+                      <div className="w-8 h-8 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-450">
                         <User className="w-4.5 h-4.5 text-rose-550" />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                        <p className="text-xs font-bold text-white truncate">
                           {item.person_name}
                         </p>
                         <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-tight flex items-center gap-1.5 mt-0.5">
@@ -266,15 +266,15 @@ export default function LendingDebtPage() {
 
       {/* Settled Ledger List */}
       {settledList.length > 0 && (
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-70">
-          <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4 pb-3 border-b border-slate-100 dark:border-slate-850">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-70">
+          <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4 pb-3 border-b border-slate-850">
             Settle Logs
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {settledList.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900/20 border border-slate-100/50 dark:border-slate-850/20 rounded-2xl"
+                className="flex items-center justify-between p-3.5 bg-slate-900/20 border border-slate-850/20 rounded-2xl"
               >
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-slate-500 line-through truncate leading-tight">
@@ -318,7 +318,7 @@ export default function LendingDebtPage() {
               value={personInput}
               onChange={(e) => setPersonInput(e.target.value)}
               required
-              className="w-full px-4 h-11 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-bold"
+              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
             />
           </div>
 
@@ -359,7 +359,7 @@ export default function LendingDebtPage() {
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
                 required
-                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white font-bold"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
               />
             </div>
             <div>
@@ -368,7 +368,7 @@ export default function LendingDebtPage() {
                 type="date"
                 value={dueDateInput}
                 onChange={(e) => setDueDateInput(e.target.value)}
-                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
               />
             </div>
           </div>

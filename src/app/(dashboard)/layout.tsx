@@ -86,14 +86,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-surface-dark">
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-slate-50 dark:bg-[#111318] relative">
+    <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-[#111318] relative">
 
       {/* ── LiquidEther WebGL background ── */}
       {/* Fixed behind all content; pointer-events-none so UI stays fully interactive */}
@@ -123,12 +123,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
           Contains: Logo, Main Nav, and User Mini Profile (Status indicator)
           ────────────────────────────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col w-64 bg-white/90 dark:bg-surface-dark/90 backdrop-blur-xl border border-slate-200 dark:border-slate-800 h-[calc(100vh-20px)] rounded-3xl m-2.5 flex-shrink-0 transition-all duration-300 relative z-10 overflow-hidden">
+      <aside className="hidden md:flex flex-col w-64 bg-surface-dark/90 backdrop-blur-xl border border-slate-800 h-[calc(100vh-20px)] rounded-3xl m-2.5 flex-shrink-0 transition-all duration-300 relative z-10 overflow-hidden">
         {/* Logo */}
-        <div className="h-20 flex items-center px-6 border-b border-dashed border-slate-200 dark:border-slate-800/80">
+        <div className="h-20 flex items-center px-6 border-b border-dashed border-slate-800/80">
           <a href="/dashboard" className="flex items-center gap-3 group">
-            <img src="/Assets/Img/logo-word-horizontal-orange.svg" alt="zomzam" className="h-8 dark:hidden" />
-            <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-8 hidden dark:block" />
+            <img src="/Assets/Img/logo-word-horizontal-orange.svg" alt="zomzam" className="h-8 hidden" />
+            <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-8 block" />
           </a>
         </div>
 
@@ -136,7 +136,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           <button
             onClick={() => router.push('/dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/dashboard')}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/dashboard')}`}
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_dashboard')}</span>
@@ -146,41 +146,41 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="space-y-1">
             <button
               onClick={() => setTimeGroupOpen(!timeGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
             >
               <span>{t('nav_time')}</span>
               <Clock className="w-4 h-4 text-slate-400" />
             </button>
             {timeGroupOpen && (
               <div id="timeGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
                   <button
                     onClick={() => router.push('/time/execution')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/time/execution')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/execution')}`}
                   >
                     Pomodoro Timer
                   </button>
                   <button
                     onClick={() => router.push('/time/tasks')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/time/tasks')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/tasks')}`}
                   >
                     Task Board
                   </button>
                   <button
                     onClick={() => router.push('/time/planning')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/time/planning')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/planning')}`}
                   >
                     Dream Planning
                   </button>
                   <button
                     onClick={() => router.push('/time/ideas')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/time/ideas')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/ideas')}`}
                   >
                     Idea Capture
                   </button>
                   <button
                     onClick={() => router.push('/time/tracker')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/time/tracker')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/tracker')}`}
                   >
                     Daily Tracker
                   </button>
@@ -193,41 +193,41 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="space-y-1">
             <button
               onClick={() => setMoneyGroupOpen(!moneyGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
             >
               <span>{t('nav_money')}</span>
               <DollarSign className="w-4 h-4 text-slate-400" />
             </button>
             {moneyGroupOpen && (
               <div id="moneyGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
                   <button
                     onClick={() => router.push('/money/dashboard')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/money/dashboard')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/dashboard')}`}
                   >
                     Overview
                   </button>
                   <button
                     onClick={() => router.push('/money/expenses')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/money/expenses')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/expenses')}`}
                   >
                     Expenses
                   </button>
                   <button
                     onClick={() => router.push('/money/income')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/money/income')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/income')}`}
                   >
                     Income
                   </button>
                   <button
                     onClick={() => router.push('/money/accounts')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/money/accounts')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/accounts')}`}
                   >
                     Accounts
                   </button>
                   <button
                     onClick={() => router.push('/money/lend')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/money/lend')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/lend')}`}
                   >
                     Lending
                   </button>
@@ -240,47 +240,47 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="space-y-1">
             <button
               onClick={() => setCrmGroupOpen(!crmGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
             >
               <span>{t('nav_crm')}</span>
               <Briefcase className="w-4 h-4 text-slate-400" />
             </button>
             {crmGroupOpen && (
               <div id="crmGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
                   <button
                     onClick={() => router.push('/crm')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm')}`}
                   >
                     CRM Dashboard
                   </button>
                   <button
                     onClick={() => router.push('/crm/leads')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/leads')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/leads')}`}
                   >
                     Lead Vault
                   </button>
                   <button
                     onClick={() => router.push('/crm/pipeline')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/pipeline')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/pipeline')}`}
                   >
                     Kanban Pipeline
                   </button>
                   <button
                     onClick={() => router.push('/crm/contacts')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/contacts')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/contacts')}`}
                   >
                     Client Profiles
                   </button>
                   <button
                     onClick={() => router.push('/crm/outreach')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/outreach')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/outreach')}`}
                   >
                     Outreach AI
                   </button>
                   <button
                     onClick={() => router.push('/crm/projects')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/crm/projects')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/projects')}`}
                   >
                     Projects Hub
                   </button>
@@ -293,35 +293,35 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           <div className="space-y-1">
             <button
               onClick={() => setCommunityGroupOpen(!communityGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-800 dark:text-slate-200 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               <span>{t('nav_community') || 'Community'}</span>
               <Users className="w-4 h-4 text-slate-400" />
             </button>
             {communityGroupOpen && (
               <div id="communityGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-200 dark:border-slate-700 space-y-1">
+                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
                   <button
                     onClick={() => router.push('/community/friends')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/friends')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/friends')}`}
                   >
                     Friends Grid
                   </button>
                   <button
                     onClick={() => router.push('/community/discover')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/discover')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/discover')}`}
                   >
                     Discover People
                   </button>
                   <button
                     onClick={() => router.push('/community/requests')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/requests')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/requests')}`}
                   >
                     Friend Requests
                   </button>
                   <button
                     onClick={() => router.push('/community/following')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-500 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer ${isActive('/community/following')}`}
+                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/following')}`}
                   >
                     Connections & Follows
                   </button>
@@ -333,7 +333,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           {/* Settings */}
           <button
             onClick={() => router.push('/settings')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white transition-colors ${isActive('/settings')}`}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/settings')}`}
           >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_settings')}</span>
@@ -341,7 +341,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* User Mini Profile */}
-        <div className="relative border-t border-slate-100 dark:border-slate-800/50 overflow-hidden">
+        <div className="relative border-t border-slate-800/50 overflow-hidden">
           {/* Online Tracker Indicator background */}
           <div
             className="absolute inset-0 z-0 pointer-events-none transition-colors duration-500"
@@ -359,7 +359,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between px-3">
               <div className="flex items-center gap-2">
                 <span
-                  className={`w-1.5 h-1.5 rounded-full ${
+                  className={`w-1.5 h-1.5 rounded-full${
                     currentUserStatus === 'online'
                       ? 'bg-green-500 animate-pulse'
                       : currentUserStatus === 'away'
@@ -381,10 +381,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 <img
                   src={currentUser.avatar || '/Assets/Img/default-avatar.png'}
                   alt="Avatar"
-                  className="w-9 h-9 rounded-xl object-cover border border-slate-200 dark:border-slate-800"
+                  className="w-9 h-9 rounded-xl object-cover border border-slate-800"
                 />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate group-hover:text-primary-500 transition-colors">
+                  <p className="text-xs font-bold text-white truncate group-hover:text-primary-500 transition-colors">
                     {currentUser.username}
                   </p>
                   <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
@@ -408,15 +408,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             DEVELOPMENT NAVIGATOR: MOBILE HEADER / TOP BAR
             Contains: Mobile drawer toggle, notifications Bell with dropdown
             ────────────────────────────────────────────────────────── */}
-        <header className="h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-200 dark:border-slate-800 flex items-center justify-between px-6 z-40">
+        <header className="h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-6 z-40">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-500 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl"
+              className="md:hidden p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
-            <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 hidden sm:block">
+            <h2 className="text-sm font-bold text-slate-400 hidden sm:block">
               {pathname === '/dashboard' ? 'Welcome Back' : 'Zomzam Workspace'}
             </h2>
           </div>
@@ -430,7 +430,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             trigger={
               <button
                 onClick={handleNotificationToggle}
-                className="relative p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-100 dark:border-slate-800/60"
+                className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
                 aria-expanded={notifDropdownOpen}
                 aria-label="Open notifications"
                 type="button"
@@ -443,7 +443,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             }
           >
             <div className="py-3">
-              <div className="px-4 pb-2 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
+              <div className="px-4 pb-2 border-b border-slate-800 flex justify-between items-center">
                 <span className="text-xs font-bold">Notifications</span>
                 {notificationsCount > 0 && (
                   <span className="px-2 py-0.5 bg-primary-500/10 text-primary-500 text-[9px] font-black rounded-full">
@@ -458,7 +458,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   notifications.map((n) => (
                     <div
                       key={n.id}
-                      className="px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-800/30 flex gap-3 items-start border-b border-slate-50 dark:border-slate-800/40 last:border-b-0 cursor-pointer"
+                      className="px-4 py-3 hover:bg-slate-800/30 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 cursor-pointer"
                     >
                       <img
                         src={n.data?.from_avatar || '/Assets/Img/default-avatar.png'}
@@ -492,13 +492,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 top-[75px] bg-slate-900/50 backdrop-blur-sm z-30">
-          <div className="w-64 bg-white dark:bg-surface-dark h-full border-r border-slate-200 dark:border-slate-800 p-6 flex flex-col space-y-4">
+          <div className="w-64 bg-surface-dark h-full border-r border-slate-800 p-6 flex flex-col space-y-4">
             <button
               onClick={() => {
                 router.push('/dashboard');
                 setMobileMenuOpen(false);
               }}
-              className="w-full text-left block py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300"
+              className="w-full text-left block py-2.5 text-sm font-semibold text-slate-300"
             >
               Dashboard Home
             </button>
@@ -509,7 +509,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/time/execution');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Pomodoro Focus
               </button>
@@ -518,7 +518,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/time/tasks');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Task Board
               </button>
@@ -530,7 +530,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/money/dashboard');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Ledger Overview
               </button>
@@ -542,7 +542,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/crm');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 CRM Dashboard
               </button>
@@ -551,7 +551,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/crm/leads');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Lead Vault
               </button>
@@ -560,7 +560,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/crm/pipeline');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Kanban Pipeline
               </button>
@@ -569,7 +569,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/crm/contacts');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Client Profiles
               </button>
@@ -578,7 +578,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/crm/outreach');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Outreach AI
               </button>
@@ -587,7 +587,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/crm/projects');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Projects Hub
               </button>
@@ -599,7 +599,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/community/friends');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Friends Grid
               </button>
@@ -608,7 +608,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/community/discover');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Discover People
               </button>
@@ -617,7 +617,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/community/requests');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Friend Requests
               </button>
@@ -626,7 +626,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   router.push('/community/following');
                   setMobileMenuOpen(false);
                 }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-600 dark:text-slate-400"
+                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Connections & Follows
               </button>
@@ -636,7 +636,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 router.push('/settings');
                 setMobileMenuOpen(false);
               }}
-              className="w-full text-left block py-2.5 text-sm font-semibold text-slate-700 dark:text-slate-300"
+              className="w-full text-left block py-2.5 text-sm font-semibold text-slate-300"
             >
               Settings
             </button>

@@ -88,12 +88,12 @@ export default function IncomePage() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push('/money/dashboard')}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-slate-800 dark:hover:text-white"
+            className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Income Tracking</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Income Tracking</h1>
             <p className="text-xs text-slate-400">Manage your salary, bonuses, and earnings.</p>
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function IncomePage() {
       </div>
 
       {/* Income List */}
-      <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
+      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         {incomes.length === 0 ? (
           <p className="text-center py-20 text-slate-400 italic text-sm">No income transactions found.</p>
         ) : (
@@ -122,14 +122,14 @@ export default function IncomePage() {
             {incomes.map((t) => (
               <div
                 key={t.id}
-                className="flex items-center justify-between p-4 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/30 dark:border-slate-850/20 rounded-2xl group hover:border-slate-200 dark:hover:border-slate-750 transition-all hover:shadow-apple-sm"
+                className="flex items-center justify-between p-4 bg-slate-900/10 border border-slate-850/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
               >
                 <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-white dark:bg-slate-850 border border-slate-100/80 dark:border-slate-800 flex items-center justify-center text-slate-450">
+                  <div className="w-10 h-10 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-450">
                     <DollarSign className="w-5 h-5 text-emerald-500" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                    <p className="text-sm font-bold text-white truncate">
                       {t.description || t.category_name || 'Income'}
                     </p>
                     <span className="block text-[10px] text-slate-455 font-bold uppercase tracking-tight mt-0.5">
@@ -175,7 +175,7 @@ export default function IncomePage() {
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
                 required
-                className="w-full pl-14 pr-4 h-12 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-slate-800 dark:text-white"
+                className="w-full pl-14 pr-4 h-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-white"
               />
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function IncomePage() {
                 value={dateInput}
                 onChange={(e) => setDateInput(e.target.value)}
                 required
-                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
               />
             </div>
             <div>
@@ -223,7 +223,7 @@ export default function IncomePage() {
                 placeholder="e.g. Salary, Bonus"
                 value={descInput}
                 onChange={(e) => setDescInput(e.target.value)}
-                className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
               />
             </div>
           </div>

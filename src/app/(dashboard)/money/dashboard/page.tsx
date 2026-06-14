@@ -160,7 +160,7 @@ export default function MoneyDashboardPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Financial Overview</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
             <span>Tracking your 60/20/20 rule progress.</span>
             <div className="flex items-center gap-1.5">
@@ -225,19 +225,19 @@ export default function MoneyDashboardPage() {
         {accounts.map((acc) => (
           <div
             key={acc.id}
-            className="bg-white dark:bg-[#1A1D24] rounded-3xl p-6 border border-slate-100 dark:border-slate-800/60 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden"
+            className="bg-[#1A1D24] rounded-3xl p-6 border border-slate-800/60 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors pointer-events-none"></div>
             <div className="relative z-10 flex flex-col justify-between h-full">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="w-9 h-9 rounded-xl bg-primary-50 dark:bg-primary-950/20 flex items-center justify-center text-primary-500">
+                  <div className="w-9 h-9 rounded-xl bg-primary-950/20 flex items-center justify-center text-primary-500">
                     {getAccountIcon(acc.type)}
                   </div>
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{acc.currency}</span>
                 </div>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 truncate">{acc.name}</p>
-                <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                <h3 className="text-2xl font-black text-white tracking-tight">
                   {formatAmount(acc.balance, acc.currency)}
                 </h3>
               </div>
@@ -259,7 +259,7 @@ export default function MoneyDashboardPage() {
 
         {/* Budget Allocation Progress bars */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
             <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Budget Allocation</h2>
 
             {/* SVG Donut Chart */}
@@ -325,7 +325,7 @@ export default function MoneyDashboardPage() {
 
               {/* Center Content: Remaining Monthly Budget */}
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-                <span className="text-lg font-black text-slate-900 dark:text-white font-mono leading-none truncate max-w-[130px]">
+                <span className="text-lg font-black text-white font-mono leading-none truncate max-w-[130px]">
                   {formatAmount(showSecondaryBudget ? convertEGP(remainingEGP, settings.secondary_currency) : remainingEGP, showSecondaryBudget ? settings.secondary_currency : 'EGP')}
                 </span>
                 <span className="text-[8px] font-bold text-slate-450 uppercase tracking-tight mt-1">Remaining Budget</span>
@@ -333,7 +333,7 @@ export default function MoneyDashboardPage() {
             </div>
 
             {/* Legend */}
-            <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold border-t border-slate-100 dark:border-slate-850 pt-3 mt-4">
+            <div className="flex items-center justify-between text-[10px] text-slate-500 font-bold border-t border-slate-850 pt-3 mt-4">
               <div className="flex items-center gap-1.5">
                 <span className="w-3.5 h-3.5 rounded border border-[#EE5712]/40 flex-shrink-0" style={{
                   backgroundImage: 'repeating-linear-gradient(45deg, #EE5712, #EE5712 1.5px, transparent 1.5px, transparent 4px)',
@@ -361,20 +361,20 @@ export default function MoneyDashboardPage() {
           </div>
 
           {/* Debts Summary */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
             <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Lending Summary</h3>
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-650 dark:text-slate-450">People Owe Me</span>
+                <span className="text-xs font-bold text-slate-450">People Owe Me</span>
                 <span className="text-xs font-black text-emerald-500">{formatAmount(stats.lend.owe_me || 0)}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-650 dark:text-slate-450">I Owe People</span>
+                <span className="text-xs font-bold text-slate-450">I Owe People</span>
                 <span className="text-xs font-black text-rose-500">{formatAmount(stats.lend.i_owe || 0)}</span>
               </div>
               <button
                 onClick={() => router.push('/money/lend')}
-                className="w-full h-9 bg-slate-50 dark:bg-slate-900/30 text-[9px] font-black uppercase text-slate-450 tracking-widest hover:text-primary-500 hover:bg-slate-100/50 dark:hover:bg-slate-850 rounded-xl transition-all border border-slate-100 dark:border-slate-850 flex items-center justify-center gap-1.5"
+                className="w-full h-9 bg-slate-900/30 text-[9px] font-black uppercase text-slate-450 tracking-widest hover:text-primary-500 hover:bg-slate-850 rounded-xl transition-all border border-slate-850 flex items-center justify-center gap-1.5"
               >
                 Manage All
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -385,10 +385,10 @@ export default function MoneyDashboardPage() {
 
         {/* Recent Transactions List (Right Columns) */}
         <div className="lg:col-span-2">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100 dark:border-slate-850">
-                <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+              <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
+                <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                   Recent Transactions
                 </h2>
                 <button
@@ -406,14 +406,14 @@ export default function MoneyDashboardPage() {
                   transactions.map((t) => (
                     <div
                       key={t.id}
-                      className="flex items-center justify-between p-3 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/30 dark:border-slate-850/20 rounded-2xl group hover:border-slate-200 dark:hover:border-slate-750 transition-all hover:shadow-apple-sm"
+                      className="flex items-center justify-between p-3 bg-slate-900/10 border border-slate-850/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-8 h-8 rounded-xl bg-white dark:bg-slate-850 border border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-450">
+                        <div className="w-8 h-8 rounded-xl bg-slate-850 border border-slate-800 flex items-center justify-center text-slate-450">
                           {getCategoryIcon(t.category_icon)}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                          <p className="text-xs font-bold text-white truncate">
                             {t.description || t.category_name || 'Transaction'}
                           </p>
                           <span className="block text-[9px] text-slate-400 font-semibold uppercase tracking-tight">
@@ -423,7 +423,7 @@ export default function MoneyDashboardPage() {
                       </div>
 
                       <div className="text-right flex flex-col items-end gap-0.5">
-                        <p className={`text-xs font-black ${t.type === 'income' ? 'text-emerald-500' : 'text-slate-850 dark:text-white'}`}>
+                        <p className={`text-xs font-black${t.type === 'income' ? 'text-emerald-500' : 'text-white'}`}>
                           {t.type === 'income' ? '+' : '-'}{formatAmount(t.amount, t.currency)}
                         </p>
                         <button
@@ -439,16 +439,16 @@ export default function MoneyDashboardPage() {
               </div>
             </div>
 
-            <div className="mt-8 pt-4 border-t border-slate-150/40 dark:border-slate-850 flex items-center gap-3">
+            <div className="mt-8 pt-4 border-t border-slate-850 flex items-center gap-3">
               <button
                 onClick={() => router.push('/money/expenses')}
-                className="flex-1 h-10 bg-slate-50 dark:bg-slate-900/30 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-150/50 dark:border-slate-850 rounded-xl transition-all uppercase tracking-wider"
+                className="flex-1 h-10 bg-slate-900/30 text-xs font-bold text-slate-350 hover:bg-slate-800 border border-slate-850 rounded-xl transition-all uppercase tracking-wider"
               >
                 Expenses
               </button>
               <button
                 onClick={() => router.push('/money/income')}
-                className="flex-1 h-10 bg-slate-50 dark:bg-slate-900/30 text-xs font-bold text-slate-700 dark:text-slate-350 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-150/50 dark:border-slate-850 rounded-xl transition-all uppercase tracking-wider"
+                className="flex-1 h-10 bg-slate-900/30 text-xs font-bold text-slate-350 hover:bg-slate-800 border border-slate-850 rounded-xl transition-all uppercase tracking-wider"
               >
                 Income
               </button>
@@ -520,7 +520,7 @@ export default function MoneyDashboardPage() {
                 placeholder="0.00"
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
-                className="w-full pl-14 pr-4 h-12 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-slate-800 dark:text-white"
+                className="w-full pl-14 pr-4 h-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-white"
               />
             </div>
           </div>
@@ -557,7 +557,7 @@ export default function MoneyDashboardPage() {
               placeholder="e.g. Salary, Bonus"
               value={descInput}
               onChange={(e) => setDescInput(e.target.value)}
-              className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
             />
           </div>
 
@@ -588,7 +588,7 @@ export default function MoneyDashboardPage() {
                 placeholder="0.00"
                 value={amountInput}
                 onChange={(e) => setAmountInput(e.target.value)}
-                className="w-full pl-14 pr-4 h-12 bg-slate-55 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+                className="w-full pl-14 pr-4 h-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-primary-500 transition-all text-white"
               />
             </div>
           </div>
@@ -625,7 +625,7 @@ export default function MoneyDashboardPage() {
               placeholder="e.g. Groceries, Netflix"
               value={descInput}
               onChange={(e) => setDescInput(e.target.value)}
-              className="w-full px-4 h-11 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-xs focus:outline-none text-slate-800 dark:text-white"
+              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
             />
           </div>
 

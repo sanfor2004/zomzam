@@ -325,39 +325,39 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map Search Control Placeholder */}
-        <div className="lg:col-span-1 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px]">
+        <div className="lg:col-span-1 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px]">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-[#EE5712]/10 border border-[#EE5712]/20 text-[#EE5712]">
                 <Search className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-slate-750 dark:text-slate-350 uppercase tracking-widest leading-none">Map Scanner Search</h3>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-1">Scan for businesses dynamically on the map</span>
+                <h3 className="text-xs font-black text-slate-350 uppercase tracking-widest leading-none">Map Scanner Search</h3>
+                <span className="text-[10px] text-slate-500 block mt-1">Scan for businesses dynamically on the map</span>
               </div>
             </div>
 
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4 pt-1">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
                   Target Area
                 </label>
                 <input 
                   disabled 
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl px-4 py-2.5 text-slate-450 placeholder-slate-400 outline-none opacity-40 cursor-not-allowed"
+                  className="w-full text-xs bg-slate-900/30 border border-slate-850 rounded-xl px-4 py-2.5 text-slate-450 placeholder-slate-400 outline-none opacity-40 cursor-not-allowed"
                   placeholder="Configure Maps API Key to search"
                 />
               </div>
 
               <div className="space-y-1.5 opacity-40">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
                   Search Query
                 </label>
                 <input 
                   type="text"
                   disabled
                   placeholder="e.g. coffee shops, web design..."
-                  className="w-full text-xs bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-850 rounded-xl px-4 py-2.5 text-slate-450 placeholder-slate-400 outline-none cursor-not-allowed"
+                  className="w-full text-xs bg-slate-900/30 border border-slate-850 rounded-xl px-4 py-2.5 text-slate-450 placeholder-slate-400 outline-none cursor-not-allowed"
                 />
               </div>
             </form>
@@ -366,7 +366,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
           <div>
             <Button
               disabled
-              className="w-full text-xs font-semibold h-10 bg-slate-100 dark:bg-slate-900/40 border border-slate-200/50 dark:border-slate-800/60 text-slate-400 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
+              className="w-full text-xs font-semibold h-10 bg-slate-900/40 border border-slate-800/60 text-slate-400 rounded-xl flex items-center justify-center gap-2 cursor-not-allowed opacity-50"
             >
               <Play className="h-4 w-4 fill-current text-slate-400" />
               Configure Maps Key to Scan
@@ -375,21 +375,21 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
         </div>
 
         {/* Interactive Google Map Panel Placeholder */}
-        <div className="lg:col-span-2 bg-slate-50 dark:bg-slate-900/20 border border-slate-100 dark:border-slate-800/60 rounded-3xl flex flex-col overflow-hidden h-[500px] relative">
-          <div className="absolute bottom-5 left-5 z-10 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-150 dark:border-white/10 px-4 py-2 rounded-xl flex items-center gap-2 shadow-apple pointer-events-none">
+        <div className="lg:col-span-2 bg-slate-900/20 border border-slate-800/60 rounded-3xl flex flex-col overflow-hidden h-[500px] relative">
+          <div className="absolute bottom-5 left-5 z-10 bg-slate-900/90 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl flex items-center gap-2 shadow-apple pointer-events-none">
             <MapIcon className="h-4 w-4 text-[#EE5712]" />
-            <span className="text-[10px] font-extrabold text-slate-700 dark:text-white tracking-widest uppercase">Live Map Scanner</span>
+            <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Live Map Scanner</span>
           </div>
           
-          <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50/20 dark:bg-black/30 backdrop-blur-md relative overflow-hidden">
+          <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-black/30 backdrop-blur-md relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-tr from-[#EE5712]/5 to-transparent pointer-events-none" />
             <div className="relative z-10 max-w-sm space-y-5 animate-in fade-in zoom-in duration-300">
               <div className="mx-auto w-12 h-12 rounded-2xl bg-[#EE5712]/10 border border-[#EE5712]/20 flex items-center justify-center shadow-lg shadow-[#EE5712]/10">
                 <MapIcon className="h-5 w-5 text-[#EE5712]" />
               </div>
               <div className="space-y-2">
-                <h4 className="text-sm font-black text-slate-800 dark:text-white tracking-tight">Enable Live Map Scanner</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-semibold">
+                <h4 className="text-sm font-black text-white tracking-tight">Enable Live Map Scanner</h4>
+                <p className="text-xs text-slate-400 leading-relaxed font-semibold">
                   Power your lead generation with real-time geographic search and client mapping by configuring your Google Maps credentials.
                 </p>
               </div>
@@ -413,24 +413,24 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Map Search Control & Sidebar results list */}
-        <div className="lg:col-span-1 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px] gap-4">
+        <div className="lg:col-span-1 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px] gap-4">
           <div className="space-y-4 flex flex-col h-full overflow-hidden">
             
             {/* Minimalist Search Header */}
-            <div className="flex items-center gap-3 border-b border-slate-100 dark:border-slate-800/60 pb-3 shrink-0">
+            <div className="flex items-center gap-3 border-b border-slate-800/60 pb-3 shrink-0">
               <div className="p-1.5 rounded-xl bg-[#EE5712]/10 border border-[#EE5712]/20 text-[#EE5712]">
                 <Search className="h-4 w-4" />
               </div>
               <div>
-                <h3 className="text-xs font-black text-slate-700 dark:text-slate-350 uppercase tracking-widest leading-none">Map Scanner Cabinet</h3>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 block mt-1">Unified Search & Lead Management</span>
+                <h3 className="text-xs font-black text-slate-350 uppercase tracking-widest leading-none">Map Scanner Cabinet</h3>
+                <span className="text-[10px] text-slate-500 block mt-1">Unified Search & Lead Management</span>
               </div>
             </div>
 
             {/* Compact Search Form */}
             <form onSubmit={handleStartScrape} className="space-y-3 pt-1 shrink-0">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
                   1. Target Area
                 </label>
                 <MapAutocomplete 
@@ -443,7 +443,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-gray-500 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">
                   2. Search Query
                 </label>
                 <input 
@@ -451,12 +451,12 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                   placeholder="e.g. coffee, dentists..."
                   value={serviceType}
                   onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full h-10 text-xs bg-slate-50 dark:bg-slate-900/35 border border-slate-200 dark:border-slate-850 focus:border-[#EE5712]/40 rounded-xl px-4 py-2 text-slate-800 dark:text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white"
+                  className="w-full h-10 text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl px-4 py-2 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white"
                 />
               </div>
 
               {error && (
-                <p className="text-[10px] font-bold text-rose-600 dark:text-rose-450 flex items-center gap-1">
+                <p className="text-[10px] font-bold text-rose-450 flex items-center gap-1">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                   {error}
                 </p>
@@ -465,9 +465,9 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
 
             {/* Dynamic Results list cabinet */}
             {shops.length > 0 ? (
-              <div className="space-y-2.5 flex-1 overflow-y-auto pr-1 border-t border-slate-100 dark:border-slate-800/60 pt-3 select-none custom-scrollbar">
+              <div className="space-y-2.5 flex-1 overflow-y-auto pr-1 border-t border-slate-800/60 pt-3 select-none custom-scrollbar">
                 <div className="flex justify-between items-center pb-1">
-                  <h4 className="text-[9px] font-extrabold text-slate-400 dark:text-gray-500 uppercase tracking-wider">Scanned Places ({shops.length})</h4>
+                  <h4 className="text-[9px] font-extrabold text-gray-500 uppercase tracking-wider">Scanned Places ({shops.length})</h4>
                   <button 
                     onClick={() => setShops([])} 
                     className="text-[9px] text-slate-400 hover:text-[#EE5712] font-extrabold transition-all cursor-pointer"
@@ -485,23 +485,23 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                         onMouseEnter={() => setHoveredShopId(shop.id)}
                         onMouseLeave={() => setHoveredShopId(null)}
                         onClick={() => setInfoCardShop(shop)}
-                        className={`p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex justify-between items-start ${
+                        className={`p-3 rounded-2xl border transition-all duration-300 cursor-pointer flex justify-between items-start${
                           isHovered 
-                            ? 'bg-slate-50 dark:bg-white/[0.03] border-[#EE5712]/30 shadow-sm' 
-                            : 'bg-slate-50/50 dark:bg-white/[0.01] border-slate-100 dark:border-white/5 hover:border-slate-200 dark:hover:border-white/10'
+                            ? 'bg-white/[0.03] border-[#EE5712]/30 shadow-sm' 
+                            : 'bg-white/[0.01] border-white/5 hover:border-white/10'
                         }`}
                       >
                         <div className="space-y-1 flex-1 min-w-0 pr-2">
-                          <h5 className="text-[11px] font-bold text-slate-800 dark:text-white truncate leading-tight">{shop.displayName?.text}</h5>
+                          <h5 className="text-[11px] font-bold text-white truncate leading-tight">{shop.displayName?.text}</h5>
                           <span className="text-[8px] text-[#EE5712] font-bold block uppercase tracking-wider">
                             {shop.primaryType ? shop.primaryType.replace(/_/g, ' ') : 'Local Business'}
                           </span>
-                          <span className="text-[9px] text-slate-500 dark:text-slate-400 block truncate font-medium">{shop.formattedAddress}</span>
+                          <span className="text-[9px] text-slate-400 block truncate font-medium">{shop.formattedAddress}</span>
                           {shop.rating && (
                             <div className="flex items-center gap-0.5 text-[9px] font-bold text-amber-400 pt-0.5">
                               <span>★</span>
-                              <span className="text-slate-800 dark:text-slate-200">{shop.rating}</span>
-                              <span className="text-slate-400 dark:text-slate-500 font-normal">({shop.userRatingCount})</span>
+                              <span className="text-slate-200">{shop.rating}</span>
+                              <span className="text-slate-500 font-normal">({shop.userRatingCount})</span>
                             </div>
                           )}
                         </div>
@@ -524,16 +524,16 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 border-t border-slate-100 dark:border-slate-800/60 pt-3 flex flex-col items-center justify-center text-center opacity-40">
-                <Database className="h-6 w-6 text-slate-400 dark:text-slate-650" />
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mt-1.5">No scanned leads loaded yet.</span>
+              <div className="flex-1 border-t border-slate-800/60 pt-3 flex flex-col items-center justify-center text-center opacity-40">
+                <Database className="h-6 w-6 text-slate-650" />
+                <span className="text-[10px] font-bold text-slate-500 mt-1.5">No scanned leads loaded yet.</span>
               </div>
             )}
 
           </div>
 
           {/* Action buttons */}
-          <div className="space-y-2 pt-3 border-t border-slate-100 dark:border-slate-800/60 shrink-0">
+          <div className="space-y-2 pt-3 border-t border-slate-800/60 shrink-0">
             {shops.length > 0 ? (
               <div className="grid grid-cols-2 gap-2 animate-in fade-in zoom-in duration-200">
                 <Button
@@ -553,7 +553,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                   variant="outline"
                   onClick={() => setShops([])}
                   disabled={isSaving}
-                  className="w-full text-xs font-semibold h-10 border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="w-full text-xs font-semibold h-10 border-white/10 hover:bg-white/5 text-slate-400 hover:text-white rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
                 >
                   <XCircle className="h-4 w-4" />
                   Discard All
@@ -583,10 +583,10 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
         </div>
 
         {/* Interactive Google Map Panel */}
-        <div className="lg:col-span-2 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl flex flex-col overflow-hidden h-[500px] relative shadow-apple">
-          <div className="absolute bottom-5 left-5 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-100 dark:border-white/10 px-4 py-2 rounded-xl flex items-center gap-2 shadow-apple pointer-events-none">
+        <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl flex flex-col overflow-hidden h-[500px] relative shadow-apple">
+          <div className="absolute bottom-5 left-5 z-10 bg-slate-900/95 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl flex items-center gap-2 shadow-apple pointer-events-none">
             <MapIcon className="h-4 w-4 text-[#EE5712]" />
-            <span className="text-[10px] font-extrabold text-slate-800 dark:text-white tracking-widest uppercase">Live Map Scanner</span>
+            <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Live Map Scanner</span>
           </div>
 
           {/* Center Crosshair overlay */}
@@ -640,22 +640,22 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                     setInfoCardShop(shop);
                   }}
                 >
-                  <div className={`relative flex flex-col items-center group transition-all duration-300 ${
+                  <div className={`relative flex flex-col items-center group transition-all duration-300${
                     isHovered ? 'scale-110 -translate-y-1' : 'scale-100'
                   }`}>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border shadow-xl transition-all duration-300 ${
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center border shadow-xl transition-all duration-300${
                       isHovered 
                         ? 'bg-[#EE5712] border-white text-white scale-105 shadow-[#EE5712]/40' 
-                        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/20 text-[#EE5712]'
+                        : 'bg-slate-900 border-white/20 text-[#EE5712]'
                     }`}>
                       <MapPin className="h-4 w-4 fill-current" />
                     </div>
 
                     {shop.rating && (
-                      <div className={`mt-1 px-1.5 py-0.5 rounded-full text-[7px] font-extrabold border transition-all duration-300 ${
+                      <div className={`mt-1 px-1.5 py-0.5 rounded-full text-[7px] font-extrabold border transition-all duration-300${
                         isHovered 
                           ? 'bg-[#EE5712] text-white border-[#EE5712]' 
-                          : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border-slate-200 dark:border-white/10 shadow-sm'
+                          : 'bg-slate-800 text-slate-200 border-white/10 shadow-sm'
                       }`}>
                         {shop.rating} ★
                       </div>
@@ -668,35 +668,35 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
 
           {/* Floating Place Info Details Card Overlay */}
           {infoCardShop && (
-            <div className="absolute bottom-5 right-5 z-20 w-72 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md p-5 rounded-2xl shadow-apple border border-slate-200/60 dark:border-white/10 animate-in slide-in-from-bottom-2 duration-300">
+            <div className="absolute bottom-5 right-5 z-20 w-72 bg-slate-900/95 backdrop-blur-md p-5 rounded-2xl shadow-apple border border-white/10 animate-in slide-in-from-bottom-2 duration-300">
               <div className="flex justify-between items-start">
                 <div className="space-y-1 min-w-0 pr-2">
                   <span className="inline-block text-[8px] font-extrabold text-[#EE5712] uppercase tracking-wider bg-[#EE5712]/10 border border-[#EE5712]/20 px-2 py-0.5 rounded-full">
                     {infoCardShop.primaryType ? infoCardShop.primaryType.replace(/_/g, ' ') : 'Local Business'}
                   </span>
-                  <h4 className="text-xs font-black text-slate-800 dark:text-white leading-tight mt-1 truncate">{infoCardShop.displayName?.text}</h4>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 line-clamp-2 mt-0.5 leading-normal">{infoCardShop.formattedAddress}</p>
+                  <h4 className="text-xs font-black text-white leading-tight mt-1 truncate">{infoCardShop.displayName?.text}</h4>
+                  <p className="text-[10px] text-slate-400 line-clamp-2 mt-0.5 leading-normal">{infoCardShop.formattedAddress}</p>
                 </div>
                 <button 
                   onClick={() => setInfoCardShop(null)}
-                  className="p-1 rounded-lg text-slate-400 hover:text-slate-800 dark:text-slate-500 dark:hover:text-white transition-all text-xs font-bold leading-none -mt-1 cursor-pointer"
+                  className="p-1 rounded-lg text-slate-500 hover:text-white transition-all text-xs font-bold leading-none -mt-1 cursor-pointer"
                 >
                   ✕
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mt-3.5 pt-3.5 border-t border-slate-100 dark:border-slate-800/60">
+              <div className="grid grid-cols-2 gap-2 mt-3.5 pt-3.5 border-t border-slate-800/60">
                 <div className="space-y-0.5">
-                  <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Rating</span>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-slate-800 dark:text-white">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Rating</span>
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-white">
                     <span className="text-amber-400 text-xs">★</span>
                     {infoCardShop.rating || 'N/A'} 
-                    <span className="text-[9px] text-slate-400 dark:text-slate-500 font-normal">({infoCardShop.userRatingCount || 0})</span>
+                    <span className="text-[9px] text-slate-500 font-normal">({infoCardShop.userRatingCount || 0})</span>
                   </div>
                 </div>
                 <div className="space-y-0.5">
-                  <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Phone</span>
-                  <span className="text-[9px] text-slate-800 dark:text-slate-200 font-bold block truncate">
+                  <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Phone</span>
+                  <span className="text-[9px] text-slate-200 font-bold block truncate">
                     {infoCardShop.nationalPhoneNumber || 'Not available'}
                   </span>
                 </div>
@@ -716,7 +716,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                     href={infoCardShop.websiteUri}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-1 text-[9px] font-bold h-8 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-lg flex items-center justify-center gap-1 shadow-sm transition-all text-center flex items-center justify-center cursor-pointer"
+                    className="flex-1 text-[9px] font-bold h-8 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg flex items-center justify-center gap-1 shadow-sm transition-all text-center flex items-center justify-center cursor-pointer"
                   >
                     <Globe className="h-3.5 w-3.5 text-[#EE5712] animate-pulse" />
                     Website

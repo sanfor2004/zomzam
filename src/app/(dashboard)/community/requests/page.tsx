@@ -107,7 +107,7 @@ export default function RequestsPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Community Hub</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
             <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
           </div>
         </div>
@@ -122,19 +122,19 @@ export default function RequestsPage() {
             placeholder="Search users by username..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full h-11 pl-10 pr-4 bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800 rounded-2xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
+            className="w-full h-11 pl-10 pr-4 bg-[#1A1D24] border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
           />
 
           {/* Search Dropdown Panel */}
           {isSearching && searchQuery.trim().length >= 2 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D24] border border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
               {searchResults.length === 0 ? (
                 <p className="text-center text-xs text-slate-450 py-6 italic">No users found.</p>
               ) : (
                 searchResults.map((usr) => (
                   <div
                     key={usr.id}
-                    className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-slate-850/50 transition-colors"
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-850/50 transition-colors"
                   >
                     <button
                       onClick={() => router.push(`/u/${usr.username}`)}
@@ -143,10 +143,10 @@ export default function RequestsPage() {
                       <img
                         src={usr.avatar}
                         alt=""
-                        className="w-8.5 h-8.5 rounded-full object-cover border border-slate-200 dark:border-slate-800 flex-shrink-0"
+                        className="w-8.5 h-8.5 rounded-full object-cover border border-slate-800 flex-shrink-0"
                       />
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 dark:text-white group-hover:text-primary-500 transition-colors truncate">
+                        <p className="text-xs font-bold text-white group-hover:text-primary-500 transition-colors truncate">
                           {usr.username}
                         </p>
                         <p className="text-[10px] text-slate-400 truncate">
@@ -158,7 +158,7 @@ export default function RequestsPage() {
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
                       <button
                         onClick={() => executeSocialAction('friend_request', usr.id)}
-                        className="p-1.5 bg-slate-50 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-100 dark:bg-slate-900/40 dark:border-slate-800"
+                        className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
                         title="Add Friend"
                       >
                         <UserPlus className="w-4 h-4" />
@@ -182,9 +182,9 @@ export default function RequestsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Incoming Requests */}
-            <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px]">
+            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px]">
               <div>
-                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-100 dark:border-slate-850">
+                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                   Incoming Requests ({incomingRequests.length})
                 </h3>
                 <div className="space-y-3">
@@ -194,14 +194,14 @@ export default function RequestsPage() {
                     incomingRequests.map((r) => (
                       <div
                         key={r.id}
-                        className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/30 dark:border-slate-850/20 rounded-2xl"
+                        className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-2xl"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img src={r.avatar} alt="" className="w-9 h-9 rounded-xl object-cover" />
                           <div className="min-w-0">
                             <button
                               onClick={() => router.push(`/u/${r.username}`)}
-                              className="text-xs font-bold text-slate-900 dark:text-white hover:underline truncate"
+                              className="text-xs font-bold text-white hover:underline truncate"
                             >
                               {r.username}
                             </button>
@@ -218,7 +218,7 @@ export default function RequestsPage() {
                           </button>
                           <button
                             onClick={() => executeSocialAction('friend_decline', r.id)}
-                            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-900/65 text-slate-500 hover:text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors border border-slate-150/40 dark:border-slate-800"
+                            className="px-3 py-1.5 bg-slate-900/65 text-slate-500 hover:text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors border border-slate-800"
                           >
                             Decline
                           </button>
@@ -231,9 +231,9 @@ export default function RequestsPage() {
             </div>
 
             {/* Outgoing Requests */}
-            <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px]">
+            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px]">
               <div>
-                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-100 dark:border-slate-850">
+                <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                   Outgoing Requests ({outgoingRequests.length})
                 </h3>
                 <div className="space-y-3">
@@ -243,14 +243,14 @@ export default function RequestsPage() {
                     outgoingRequests.map((r) => (
                       <div
                         key={r.id}
-                        className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/30 dark:border-slate-850/20 rounded-2xl"
+                        className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-2xl"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <img src={r.avatar} alt="" className="w-9 h-9 rounded-xl object-cover" />
                           <div className="min-w-0">
                             <button
                               onClick={() => router.push(`/u/${r.username}`)}
-                              className="text-xs font-bold text-slate-900 dark:text-white hover:underline truncate"
+                              className="text-xs font-bold text-white hover:underline truncate"
                             >
                               {r.username}
                             </button>
@@ -260,7 +260,7 @@ export default function RequestsPage() {
 
                         <button
                           onClick={() => executeSocialAction('friend_cancel', r.id)}
-                          className="px-3 py-1.5 bg-slate-50 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 border border-slate-150/40 dark:bg-slate-900/40 dark:border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors"
+                          className="px-3 py-1.5 bg-slate-900/40 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors"
                         >
                           Cancel
                         </button>

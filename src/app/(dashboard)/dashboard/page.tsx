@@ -254,7 +254,7 @@ export default function DashboardPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-semibold text-slate-400 dark:text-slate-500 animate-pulse">
+        <p className="text-sm font-semibold text-slate-500 animate-pulse">
           Compiling your operational workspace...
         </p>
       </div>
@@ -263,10 +263,10 @@ export default function DashboardPage() {
 
   if (error || !data) {
     return (
-      <div className="max-w-md mx-auto mt-12 bg-white dark:bg-[#1A1D24] border border-red-100 dark:border-red-950/40 rounded-3xl p-6 shadow-apple text-center space-y-4">
+      <div className="max-w-md mx-auto mt-12 bg-[#1A1D24] border border-red-950/40 rounded-3xl p-6 shadow-apple text-center space-y-4">
         <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h3 className="font-bold text-lg text-slate-900 dark:text-white">Workspace Sync Error</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
+        <h3 className="font-bold text-lg text-white">Workspace Sync Error</h3>
+        <p className="text-sm text-slate-400">
           {error || 'Failed to fetch dashboard data.'}
         </p>
         <Button onClick={fetchDashboardData} variant="primary" className="w-full">
@@ -329,27 +329,27 @@ export default function DashboardPage() {
           DEVELOPMENT NAVIGATOR: CORE HOURLY RATE HUD
           Contains: Earnings metrics, tracked time, effective and projected hourly rates
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 dark:bg-primary-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
                 <Sparkles className="w-3.5 h-3.5" /> Effective Hourly Rate HUD
               </span>
-              <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              <h3 className="text-xl font-black text-white tracking-tight">
                 Freelancer Efficiency Analyzer
               </h3>
             </div>
-            <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800/80 rounded-xl self-start">
-              <span>Primary Currency: <strong className="text-slate-800 dark:text-white">{profile.primary_currency}</strong></span>
+            <div className="flex items-center gap-2 text-xs font-bold px-3 py-1.5 bg-slate-900/60 text-slate-400 border border-slate-800/80 rounded-xl self-start">
+              <span>Primary Currency: <strong className="text-white">{profile.primary_currency}</strong></span>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Hourly Rate Card */}
-            <div className="relative group bg-gradient-to-br from-primary-500/10 to-primary-600/5 dark:from-primary-500/20 dark:to-transparent border border-primary-500/25 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-apple-sm transition-all duration-300">
+            <div className="relative group bg-gradient-to-br from-primary-500/20 to-transparent border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-apple-sm transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-primary-500">
                   Effective Income Rate
@@ -358,19 +358,19 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
+                  <span className="text-4xl font-black tracking-tight text-white font-mono">
                     {formatCurrency(rates.hourlyRateIncome, profile.primary_currency)}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">/ hr</span>
+                  <span className="text-xs font-semibold text-slate-400">/ hr</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                <p className="text-[11px] text-slate-400 mt-2 font-medium">
                   Calculated from received income transactions & total tracked hours.
                 </p>
               </div>
             </div>
 
             {/* Projected Contract Rate Card */}
-            <div className="relative group bg-slate-50/50 dark:bg-[#13161C]/50 border border-slate-100 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-200 dark:hover:border-slate-700/60 hover:shadow-apple-sm transition-all duration-300">
+            <div className="relative group bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-700/60 hover:shadow-apple-sm transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Delivered Contract Rate
@@ -379,19 +379,19 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black tracking-tight text-slate-900 dark:text-white font-mono">
+                  <span className="text-4xl font-black tracking-tight text-white font-mono">
                     {formatCurrency(rates.hourlyRateProjects, profile.primary_currency)}
                   </span>
-                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">/ hr</span>
+                  <span className="text-xs font-semibold text-slate-400">/ hr</span>
                 </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
+                <p className="text-[11px] text-slate-400 mt-2 font-medium">
                   Calculated from delivered projects value & total tracked hours.
                 </p>
               </div>
             </div>
 
             {/* Efficiency Overview Card */}
-            <div className="bg-slate-50/50 dark:bg-[#13161C]/50 border border-slate-100 dark:border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
+            <div className="bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Tracked Metrics
@@ -399,16 +399,16 @@ export default function DashboardPage() {
                 <Clock className="w-5 h-5 text-emerald-500" />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="border-r border-slate-100 dark:border-slate-800/80 pr-2">
+                <div className="border-r border-slate-800/80 pr-2">
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Time</span>
-                  <span className="text-2xl font-black text-slate-800 dark:text-white font-mono">
+                  <span className="text-2xl font-black text-white font-mono">
                     {time.completedHours}h
                   </span>
                   <span className="block text-[9px] text-slate-400 mt-0.5">({time.completedMinutes} mins)</span>
                 </div>
                 <div className="pl-2">
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tasks Done</span>
-                  <span className="text-2xl font-black text-slate-800 dark:text-white font-mono">
+                  <span className="text-2xl font-black text-white font-mono">
                     {time.completedTasksCount}
                   </span>
                   <span className="block text-[9px] text-slate-400 mt-0.5">in operational queue</span>
@@ -424,13 +424,13 @@ export default function DashboardPage() {
           DEVELOPMENT NAVIGATOR: HOURLY ACTIVITY HEATMAP
           Contains: Week selector tabs, 7x24 grid representing active hours per day, and a legend
           ────────────────────────────────────────────────────────── */}
-      <div ref={cardRef} className="relative bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
+      <div ref={cardRef} className="relative bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
               <Zap className="w-3.5 h-3.5" /> Hourly Activity Heatmap
             </span>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-xl font-black text-white tracking-tight">
               Productivity Pixel Grid
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -439,15 +439,15 @@ export default function DashboardPage() {
           </div>
 
           {/* Week Selector Tab */}
-          <div className="flex p-1 bg-slate-100 dark:bg-slate-900/40 border border-slate-200/30 dark:border-slate-850 rounded-2xl self-start gap-1">
+          <div className="flex p-1 bg-slate-900/40 border border-slate-850 rounded-2xl self-start gap-1">
             {[0, 1, 2, 3].map((offset) => (
               <button
                 key={offset}
                 onClick={() => setSelectedWeek(offset)}
-                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all${
                   selectedWeek === offset
-                    ? 'bg-white dark:bg-[#252830] text-primary-500 shadow-sm border border-slate-200/10 dark:border-slate-700/60'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-[#252830] text-primary-500 shadow-sm border border-slate-700/60'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {offset === 0 ? 'This Week' : offset === 1 ? 'Last Week' : `${offset}w Ago`}
@@ -457,12 +457,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Selected Week Range Indicator */}
-        <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 px-3 py-1.5 bg-slate-50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/80 rounded-xl inline-block">
+        <div className="text-xs font-semibold text-slate-400 px-3 py-1.5 bg-slate-900/35 border border-slate-800/80 rounded-xl inline-block">
           {getWeekRangeLabel(selectedWeek)}
         </div>
 
         {/* Heatmap Grid Wrapper */}
-        <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-800">
+        <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800">
           <div className="min-w-[480px] flex flex-col gap-[2px]">
             {/* Hour Labels Header (X-Axis) */}
             <div className="flex items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-10 h-5 mb-1">
@@ -491,7 +491,7 @@ export default function DashboardPage() {
               return days.map((dayName, dayIdx) => (
                 <div key={dayName} className="flex items-center">
                   {/* Day Label */}
-                  <span className="w-10 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex-shrink-0">
+                  <span className="w-10 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">
                     {dayName}
                   </span>
                   
@@ -503,7 +503,7 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={hourIdx}
-                          className={`w-full aspect-square rounded-[2px] transition-all duration-150 cursor-pointer ${getColorForCount(count)}`}
+                          className={`w-full aspect-square rounded-[2px] transition-all duration-150 cursor-pointer${getColorForCount(count)}`}
                           onMouseEnter={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();
                             const cardRect = cardRef.current?.getBoundingClientRect();
@@ -560,7 +560,7 @@ export default function DashboardPage() {
               transform: hoveredCell.placement === 'below' ? 'translate(-50%, 0)' : 'translate(-50%, -100%)',
             }}
           >
-            <div className="w-64 bg-slate-900/95 dark:bg-[#151820]/95 backdrop-blur-md border border-slate-700/50 dark:border-slate-800 text-white rounded-2xl p-4 shadow-2xl flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-64 bg-[#151820]/95 backdrop-blur-md border border-slate-800 text-white rounded-2xl p-4 shadow-2xl flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-white/10 pb-2">
                 <span className="font-black text-primary-400">
@@ -634,14 +634,14 @@ export default function DashboardPage() {
         )}
 
         {/* Legend */}
-        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/60 text-[10px] text-slate-400 font-bold">
+        <div className="flex items-center justify-between pt-3 border-t border-slate-800/60 text-[10px] text-slate-400 font-bold">
           <span>* Coordinates: Y = Days of week, X = 24 Hours of day</span>
           <div className="flex items-center gap-1.5">
             <span>Less</span>
-            <div className="w-[10px] h-[10px] rounded-[2px] bg-slate-100 dark:bg-slate-800/30 border border-slate-200/5 dark:border-slate-800/20" />
-            <div className="w-[10px] h-[10px] rounded-[2px] bg-primary-500/20 dark:bg-primary-500/15 border border-primary-500/10" />
-            <div className="w-[10px] h-[10px] rounded-[2px] bg-primary-500/50 dark:bg-primary-500/40 border border-primary-500/20" />
-            <div className="w-[10px] h-[10px] rounded-[2px] bg-primary-500 dark:bg-primary-500" />
+            <div className="w-[10px] h-[10px] rounded-[2px] bg-slate-800/30 border border-slate-800/20" />
+            <div className="w-[10px] h-[10px] rounded-[2px] bg-primary-500/15 border border-primary-500/10" />
+            <div className="w-[10px] h-[10px] rounded-[2px] bg-primary-500/40 border border-primary-500/20" />
+            <div className="w-[10px] h-[10px] rounded-[2px] bg-primary-500" />
             <span>More</span>
           </div>
         </div>
@@ -654,51 +654,51 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Time Pillar Card */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-primary-500">
+              <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-primary-500">
                 <Clock className="w-5 h-5" />
               </div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Time Suite</span>
             </div>
             <div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-200">Time & Productivity</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <h4 className="font-bold text-slate-200">Time & Productivity</h4>
+              <p className="text-xs text-slate-400 mt-1">
                 Your focus states and task workflows are cataloged in minutes.
               </p>
             </div>
             <div className="space-y-2.5 pt-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">In Progress Tasks</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{time.inProgressTasksCount}</span>
+                <span className="font-bold text-slate-200">{time.inProgressTasksCount}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Pending Backlog</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{time.pendingTasksCount}</span>
+                <span className="font-bold text-slate-200">{time.pendingTasksCount}</span>
               </div>
             </div>
           </div>
           <button
             onClick={() => router.push('/time/execution')}
-            className="w-full mt-6 py-2 px-4 bg-slate-50 dark:bg-slate-900/60 hover:bg-primary-500 dark:hover:bg-primary-500 hover:text-white text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-all border border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-1.5 text-xs h-11"
+            className="w-full mt-6 py-2 px-4 bg-slate-900/60 hover:bg-primary-500 hover:text-white text-slate-300 font-bold rounded-xl transition-all border border-slate-800/80 flex items-center justify-center gap-1.5 text-xs h-11"
           >
             Launch Focus Mode <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Money Pillar Card */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                 <DollarSign className="w-5 h-5" />
               </div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Money Suite</span>
             </div>
             <div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-200">Financial Ledger</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <h4 className="font-bold text-slate-200">Financial Ledger</h4>
+              <p className="text-xs text-slate-400 mt-1">
                 Your net wealth balance across connected bank cards and PayPal accounts.
               </p>
             </div>
@@ -715,31 +715,31 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => router.push('/money')}
-            className="w-full mt-6 py-2 px-4 bg-slate-50 dark:bg-slate-900/60 hover:bg-primary-500 dark:hover:bg-primary-500 hover:text-white text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-all border border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-1.5 text-xs h-11"
+            className="w-full mt-6 py-2 px-4 bg-slate-900/60 hover:bg-primary-500 hover:text-white text-slate-300 font-bold rounded-xl transition-all border border-slate-800/80 flex items-center justify-center gap-1.5 text-xs h-11"
           >
             Manage Accounts <ArrowRight className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* CRM Pillar Card */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="w-10 h-10 rounded-xl bg-violet-50 dark:bg-violet-500/10 flex items-center justify-center text-violet-500">
+              <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
                 <Users className="w-5 h-5" />
               </div>
               <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">CRM Suite</span>
             </div>
             <div>
-              <h4 className="font-bold text-slate-800 dark:text-slate-200">Leads & Client Pipeline</h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+              <h4 className="font-bold text-slate-200">Leads & Client Pipeline</h4>
+              <p className="text-xs text-slate-400 mt-1">
                 Active business leads sourced dynamically and synced projects.
               </p>
             </div>
             <div className="space-y-2.5 pt-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Active Pipeline Leads</span>
-                <span className="font-bold text-slate-800 dark:text-slate-200">{activeLeads}</span>
+                <span className="font-bold text-slate-200">{activeLeads}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Conversion Rate</span>
@@ -749,7 +749,7 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={() => router.push('/crm')}
-            className="w-full mt-6 py-2 px-4 bg-slate-50 dark:bg-slate-900/60 hover:bg-primary-500 dark:hover:bg-primary-500 hover:text-white text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-all border border-slate-100 dark:border-slate-800/80 flex items-center justify-center gap-1.5 text-xs h-11"
+            className="w-full mt-6 py-2 px-4 bg-slate-900/60 hover:bg-primary-500 hover:text-white text-slate-300 font-bold rounded-xl transition-all border border-slate-800/80 flex items-center justify-center gap-1.5 text-xs h-11"
           >
             Open CRM Board <ArrowRight className="w-3.5 h-3.5" />
           </button>
@@ -764,9 +764,9 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Time Tasks Deep Dive */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="font-black text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <h3 className="font-black text-lg text-white tracking-tight flex items-center gap-2">
               <Layers className="w-5 h-5 text-primary-500" /> Recent Task Backlog
             </h3>
             <button 
@@ -786,18 +786,18 @@ export default function DashboardPage() {
               time.recentTasks.map((t) => (
                 <div 
                   key={t.id}
-                  className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50/50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/40 hover:border-slate-200 dark:hover:border-slate-750 transition-colors"
+                  className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/35 border border-slate-800/40 hover:border-slate-750 transition-colors"
                 >
                   <div className="min-w-0 pr-2">
-                    <p className="font-bold text-xs text-slate-800 dark:text-slate-200 truncate">
+                    <p className="font-bold text-xs text-slate-200 truncate">
                       {t.title}
                     </p>
                     <div className="flex items-center gap-2 mt-1 text-[10px]">
-                      <span className={`px-1.5 py-0.5 rounded font-black uppercase tracking-wider text-[8px] ${
-                        t.priority === 'urgent' ? 'bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400' :
-                        t.priority === 'medium' ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/20 dark:text-amber-400' :
-                        t.priority === 'maybe' ? 'bg-blue-50 text-blue-600 dark:bg-blue-950/20 dark:text-blue-400' :
-                        'bg-slate-50 text-slate-500 dark:bg-slate-900 dark:text-slate-400'
+                      <span className={`px-1.5 py-0.5 rounded font-black uppercase tracking-wider text-[8px]${
+                        t.priority === 'urgent' ? 'bg-rose-950/20 text-rose-400' :
+                        t.priority === 'medium' ? 'bg-amber-950/20 text-amber-400' :
+                        t.priority === 'maybe' ? 'bg-blue-950/20 text-blue-400' :
+                        'bg-slate-900 text-slate-400'
                       }`}>
                         {t.priority}
                       </span>
@@ -806,12 +806,12 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
+                  <span className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider${
                     t.status === 'completed' 
-                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/20 dark:text-emerald-400'
+                      ? 'bg-emerald-950/20 text-emerald-400'
                       : t.status === 'in_progress'
-                      ? 'bg-primary-50 text-primary-600 dark:bg-primary-950/20 dark:text-primary-400 animate-pulse'
-                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'
+                      ? 'bg-primary-950/20 text-primary-400 animate-pulse'
+                      : 'bg-slate-800 text-slate-400'
                   }`}>
                     {t.status === 'in_progress' ? 'Focusing' : t.status}
                   </span>
@@ -822,9 +822,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Financial Accounts & CRM Projects */}
-        <div className="bg-white dark:bg-[#1A1D24] border border-slate-150 dark:border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
           <div className="flex items-center justify-between">
-            <h3 className="font-black text-lg text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <h3 className="font-black text-lg text-white tracking-tight flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-amber-500" /> CRM Project Revenue
             </h3>
             <button 
@@ -836,14 +836,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-50/50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/40 p-4 rounded-2xl">
+            <div className="bg-slate-900/35 border border-slate-800/40 p-4 rounded-2xl">
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active projects</span>
-              <span className="text-3xl font-black text-slate-800 dark:text-white font-mono mt-1 block">
+              <span className="text-3xl font-black text-white font-mono mt-1 block">
                 {crm.activeProjectsCount}
               </span>
               <span className="text-[10px] text-slate-400 block mt-1">Planning or in design</span>
             </div>
-            <div className="bg-slate-50/50 dark:bg-slate-900/35 border border-slate-100 dark:border-slate-800/40 p-4 rounded-2xl">
+            <div className="bg-slate-900/35 border border-slate-800/40 p-4 rounded-2xl">
               <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delivered revenue</span>
               <span className="text-3xl font-black text-emerald-500 font-mono mt-1 block">
                 {formatCurrency(crm.deliveredProjectRevenuePrimary, profile.primary_currency)}
@@ -858,9 +858,9 @@ export default function DashboardPage() {
               <p className="text-xs italic text-slate-400 py-2">No active financial accounts connected.</p>
             ) : (
               money.accounts.map((acc, index) => (
-                <div key={index} className="flex justify-between items-center text-xs border-b border-dashed border-slate-100 dark:border-slate-800/80 pb-2 last:border-b-0">
-                  <span className="text-slate-500 dark:text-slate-400 font-medium">{acc.name}</span>
-                  <span className="font-bold text-slate-800 dark:text-slate-200 font-mono">
+                <div key={index} className="flex justify-between items-center text-xs border-b border-dashed border-slate-800/80 pb-2 last:border-b-0">
+                  <span className="text-slate-400 font-medium">{acc.name}</span>
+                  <span className="font-bold text-slate-200 font-mono">
                     {formatCurrency(parseFloat(acc.balance), acc.currency)}
                   </span>
                 </div>

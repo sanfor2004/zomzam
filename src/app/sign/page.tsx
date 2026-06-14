@@ -79,7 +79,7 @@ function SignPageContent() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex w-full bg-[#0f1115] text-slate-100 transition-colors duration-300">
       
       {/* Left Side: Image Box (Hidden on Mobile) */}
       <div className="hidden lg:flex w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
@@ -119,7 +119,7 @@ function SignPageContent() {
               trigger={
                 <button
                   onClick={() => setLangOpen(!langOpen)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary-500 dark:text-slate-400 bg-white dark:bg-[#1A1D24] border border-slate-200 dark:border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary-500 bg-[#1A1D24] border border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
                   type="button"
                   aria-expanded={langOpen}
                 >
@@ -155,7 +155,7 @@ function SignPageContent() {
           {/* Back Home */}
           <a
             href="/"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary-500 dark:text-slate-400 bg-white dark:bg-[#1A1D24] border border-slate-200 dark:border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary-500 bg-[#1A1D24] border border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             {t('auth_back')}
@@ -163,35 +163,35 @@ function SignPageContent() {
         </div>
 
         {/* Form Container */}
-        <div className="w-full max-w-md bg-white dark:bg-[#1A1D24] rounded-[2rem] p-8 sm:p-12 shadow-apple border border-slate-100 dark:border-slate-800/60 mt-12">
+        <div className="w-full max-w-md bg-[#1A1D24] rounded-[2rem] p-8 sm:p-12 shadow-apple border border-slate-800/60 mt-12">
           
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl font-black text-white tracking-tight">
               {activeTab === 'signin' ? t('auth_signin') : t('auth_signup')}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-sm text-slate-400 mt-2">
               {activeTab === 'signin' ? t('auth_signin_desc') : t('auth_signup_desc')}
             </p>
           </div>
 
           {/* Tabs */}
-          <div className="flex p-1 bg-slate-100 dark:bg-[#0f1115] rounded-2xl mb-8">
+          <div className="flex p-1 bg-[#0f1115] rounded-2xl mb-8">
             <button
               onClick={() => handleTabChange('signin')}
-              className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${
+              className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all${
                 activeTab === 'signin'
-                  ? 'bg-white dark:bg-[#252830] text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#252830] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Sign In
             </button>
             <button
               onClick={() => handleTabChange('signup')}
-              className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all ${
+              className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all${
                 activeTab === 'signup'
-                  ? 'bg-white dark:bg-[#252830] text-slate-900 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#252830] text-white shadow-sm'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               Create Account
@@ -201,10 +201,10 @@ function SignPageContent() {
           {/* Status Message */}
           {message && (
             <div
-              className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-start gap-3 border ${
+              className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-start gap-3 border${
                 message.type === 'success'
-                  ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-400'
-                  : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400'
+                  ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                  : 'bg-red-500/10 border-red-500/20 text-red-400'
               }`}
             >
               {message.type === 'success' ? (
@@ -222,7 +222,7 @@ function SignPageContent() {
           <form onSubmit={handleSubmit} className="space-y-5">
             {activeTab === 'signup' && (
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-bold text-slate-300 mb-2">
                   {t('auth_fullname')}
                 </label>
                 <input
@@ -232,13 +232,13 @@ function SignPageContent() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Unique_Username"
-                  className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                  className="w-full px-5 py-3.5 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                 />
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-sm font-bold text-slate-300 mb-2">
                 {t('auth_email')}
               </label>
               <input
@@ -247,13 +247,13 @@ function SignPageContent() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder={activeTab === 'signin' ? 'Username or Email' : 'name@company.com'}
-                className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                className="w-full px-5 py-3.5 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                <label className="text-sm font-bold text-slate-300">
                   {t('auth_password')}
                 </label>
                 {activeTab === 'signin' && (
@@ -269,10 +269,10 @@ function SignPageContent() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                className="w-full px-5 py-3.5 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
               />
               {activeTab === 'signup' && (
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                <p className="text-xs text-slate-400 mt-2">
                   {t('auth_pass_rule')}
                 </p>
               )}
@@ -290,7 +290,7 @@ function SignPageContent() {
             </div>
 
             {activeTab === 'signup' && (
-              <p className="text-[10px] text-center text-slate-500 dark:text-slate-400 mt-4 leading-relaxed">
+              <p className="text-[10px] text-center text-slate-400 mt-4 leading-relaxed">
                 {t('auth_terms')}
               </p>
             )}
@@ -305,7 +305,7 @@ function SignPageContent() {
 export default function SignPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0f1115]">
+      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
         <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     }>

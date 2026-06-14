@@ -210,14 +210,14 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, column.id)}
               className={cn(
-                "flex flex-col rounded-3xl bg-slate-50/80 dark:bg-[#1A1D24]/80 border border-slate-200 dark:border-slate-800/80 pb-6 overflow-hidden transition-all duration-300 min-h-[500px]",
+                "flex flex-col rounded-3xl bg-[#1A1D24]/80 border border-slate-800/80 pb-6 overflow-hidden transition-all duration-300 min-h-[500px]",
                 column.glowColor,
-                isOver && "bg-slate-100/80 dark:bg-white/[0.03] border-[#EE5712]/30 shadow-apple-lg"
+                isOver && "bg-white/[0.03] border-[#EE5712]/30 shadow-apple-lg"
               )}
             >
               {/* Column Header */}
-              <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-800/50 bg-slate-100/50 dark:bg-slate-900/30 flex items-center justify-between">
-                <span className="font-black text-sm text-slate-850 dark:text-white tracking-tight flex items-center gap-2">
+              <div className="px-5 py-4 border-b border-slate-800/50 bg-slate-900/30 flex items-center justify-between">
+                <span className="font-black text-sm text-white tracking-tight flex items-center gap-2">
                   {column.title}
                 </span>
                 <Badge className={cn("text-xs font-extrabold py-0.5 px-2.5 rounded-full border shadow-sm", column.pillBg)}>
@@ -228,9 +228,9 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
               {/* Column Cards */}
               <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4 max-h-[70vh] custom-scrollbar">
                 {colLeads.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center h-48 border border-dashed border-slate-200 dark:border-white/5 rounded-3xl p-6 text-center">
-                    <AlertCircle className="h-5 w-5 text-slate-400 dark:text-slate-650" />
-                    <span className="text-sm font-bold text-slate-400 dark:text-slate-600 mt-2">Empty Stage</span>
+                  <div className="flex flex-col items-center justify-center h-48 border border-dashed border-white/5 rounded-3xl p-6 text-center">
+                    <AlertCircle className="h-5 w-5 text-slate-650" />
+                    <span className="text-sm font-bold text-slate-600 mt-2">Empty Stage</span>
                   </div>
                 ) : (
                   colLeads.map((lead) => (
@@ -239,43 +239,43 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
                        draggable
                        onDragStart={(e) => handleDragStart(e, lead.id)}
                        className={cn(
-                        "group p-5 rounded-2xl border bg-white dark:bg-[#1f232d] border-slate-200 dark:border-slate-800/80 hover:border-[#EE5712]/40 hover:shadow-apple transition-all duration-300 cursor-grab active:cursor-grabbing relative",
+                        "group p-5 rounded-2xl border bg-[#1f232d] border-slate-800/80 hover:border-[#EE5712]/40 hover:shadow-apple transition-all duration-300 cursor-grab active:cursor-grabbing relative",
                         draggedLeadId === lead.id ? 'opacity-30 border-dashed border-[#EE5712]' : 'shadow-sm'
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <Badge className="text-[9px] uppercase tracking-wider font-extrabold bg-slate-50 dark:bg-white/5 border border-slate-250 dark:border-white/10 text-slate-600 dark:text-slate-300 py-0.5 px-2 rounded-full">
+                        <Badge className="text-[9px] uppercase tracking-wider font-extrabold bg-white/5 border border-white/10 text-slate-300 py-0.5 px-2 rounded-full">
                           {lead.industry || 'Local Niche'}
                         </Badge>
                         {lead.rating !== null && (
                           <div className="flex items-center gap-1 text-amber-500 shrink-0">
                             <Star className="h-3.5 w-3.5 fill-current" />
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-300">{lead.rating}</span>
+                            <span className="text-xs font-bold text-slate-300">{lead.rating}</span>
                           </div>
                         )}
                       </div>
 
-                      <h4 className="text-sm font-black text-slate-850 dark:text-white tracking-tight mt-1.5 leading-snug group-hover:text-[#EE5712] transition-colors truncate">
+                      <h4 className="text-sm font-black text-white tracking-tight mt-1.5 leading-snug group-hover:text-[#EE5712] transition-colors truncate">
                         {lead.name}
                       </h4>
 
                       {lead.company && lead.company !== lead.name && (
-                        <p className="text-xs text-slate-500 dark:text-slate-400 leading-none mt-1 truncate">{lead.company}</p>
+                        <p className="text-xs text-slate-400 leading-none mt-1 truncate">{lead.company}</p>
                       )}
 
                       {lead.address && (
-                        <div className="flex items-start gap-1 text-xs text-slate-600 dark:text-slate-350 mt-2 leading-none">
+                        <div className="flex items-start gap-1 text-xs text-slate-350 mt-2 leading-none">
                           <MapPin className="h-3.5 w-3.5 shrink-0 text-[#EE5712]/75 mt-0.5" />
                           <span className="truncate">{lead.address.split(',')[0]}</span>
                         </div>
                       )}
 
-                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-200 dark:border-slate-800/60">
-                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600">ID #{lead.id}</span>
+                      <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/60">
+                        <span className="text-[10px] font-bold text-slate-600">ID #{lead.id}</span>
                         
                         <button
                           onClick={() => onOpenDetails(lead)}
-                          className="text-xs font-black text-slate-600 hover:text-[#EE5712] dark:text-[#EE5712] dark:hover:text-[#ff7d44] hover:underline flex items-center gap-1 transition-all cursor-pointer"
+                          className="text-xs font-black text-[#EE5712] hover:text-[#ff7d44] hover:underline flex items-center gap-1 transition-all cursor-pointer"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
                           Outreach
@@ -322,32 +322,32 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
           }
         >
           <div className="space-y-4 pt-2">
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
-              Qualifying <strong className="text-slate-805 dark:text-white">{qualifyingLead.name}</strong> will trigger a unified CRM-time-money sync.
+            <p className="text-xs text-slate-400 font-semibold">
+              Qualifying <strong className="text-white">{qualifyingLead.name}</strong> will trigger a unified CRM-time-money sync.
             </p>
 
             <div className="grid grid-cols-2 gap-4">
               {/* Amount */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block">
                   Contract Amount
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-xs text-slate-400 dark:text-slate-500">$</span>
+                  <span className="absolute left-3.5 top-2.5 text-xs text-slate-500">$</span>
                   <input
                     type="number"
                     min="1"
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="1500"
-                    className="w-full h-11 text-xs bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl pl-7 pr-4 py-2.5 text-slate-900 dark:text-white outline-none focus:border-[#EE5712]/40 focus:bg-white transition-all"
+                    className="w-full h-11 text-xs bg-slate-900/30 border border-slate-800 rounded-xl pl-7 pr-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40 focus:bg-white transition-all"
                   />
                 </div>
               </div>
 
               {/* Currency */}
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block">
                   Currency
                 </label>
                 <Select
@@ -359,7 +359,7 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
 
               {/* Deposit Account */}
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-wider block">
+                <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block">
                   Deposit Account (Money Suite)
                 </label>
                 {moneyAccounts.length > 0 ? (
@@ -380,7 +380,7 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
 
               {/* Due Date (Optional) */}
               <div className="col-span-2 space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
                   <Calendar className="h-3.5 w-3.5 text-slate-400" />
                   Lending Ledgering: Payment Due Date (Optional)
                 </label>
@@ -388,10 +388,10 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full h-11 text-xs bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white outline-none focus:border-[#EE5712]/40 focus:bg-white transition-all"
+                  className="w-full h-11 text-xs bg-slate-900/30 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40 focus:bg-white transition-all"
                 />
-                <span className="text-[9px] text-slate-400 dark:text-slate-550 leading-normal block pt-1 font-semibold">
-                  If set, a lending record marked as <strong className="text-slate-700 dark:text-slate-350">"Owe Me"</strong> will automatically be registered in the Money suite.
+                <span className="text-[9px] text-slate-550 leading-normal block pt-1 font-semibold">
+                  If set, a lending record marked as <strong className="text-slate-350">"Owe Me"</strong> will automatically be registered in the Money suite.
                 </span>
               </div>
             </div>

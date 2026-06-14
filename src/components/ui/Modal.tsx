@@ -72,13 +72,13 @@ export function Modal({
         ref={modalRef}
         role="dialog"
         aria-modal="true"
-        className={`w-full max-w-md bg-white dark:bg-[#1A1D24] rounded-3xl p-8 shadow-2xl border ${borderClasses} animate-in scale-100 opacity-100 transition-all duration-300 ${className}`}
+        className={`w-full max-w-md bg-[#1A1D24] rounded-3xl p-8 shadow-2xl border${borderClasses}animate-in scale-100 opacity-100 transition-all duration-300${className}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-6">
           <div className="flex-1 min-w-0">
             {title && (
-              <h3 className="text-lg font-black text-slate-900 dark:text-white tracking-tight leading-snug">
+              <h3 className="text-lg font-black text-white tracking-tight leading-snug">
                 {title}
               </h3>
             )}
@@ -88,7 +88,7 @@ export function Modal({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors focus:outline-none"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors focus:outline-none"
             aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
@@ -96,13 +96,13 @@ export function Modal({
         </div>
 
         {/* Content */}
-        <div className="text-sm text-slate-600 dark:text-slate-350 leading-relaxed mb-6">
+        <div className="text-sm text-slate-350 leading-relaxed mb-6">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="flex gap-3 mt-6 pt-4 border-t border-slate-50 dark:border-slate-850">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-slate-850">
             {footer}
           </div>
         )}

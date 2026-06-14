@@ -93,7 +93,7 @@ function ForgotPasswordContent() {
   };
 
   return (
-    <div className="min-h-screen flex w-full bg-slate-50 dark:bg-[#0f1115] text-slate-900 dark:text-slate-100 transition-colors duration-300">
+    <div className="min-h-screen flex w-full bg-[#0f1115] text-slate-100 transition-colors duration-300">
 
       {/* Left decorative panel */}
       <div className="hidden lg:flex w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
@@ -123,7 +123,7 @@ function ForgotPasswordContent() {
         <div className="absolute top-6 right-6 flex items-center gap-3 z-10">
           <a
             href="/sign"
-            className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-primary-500 dark:text-slate-400 bg-white dark:bg-[#1A1D24] border border-slate-200 dark:border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
+            className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary-500 bg-[#1A1D24] border border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to Sign In
@@ -131,7 +131,7 @@ function ForgotPasswordContent() {
         </div>
 
         {/* Form card */}
-        <div className="w-full max-w-md bg-white dark:bg-[#1A1D24] rounded-[2rem] p-8 sm:p-12 shadow-apple border border-slate-100 dark:border-slate-800/60 mt-12">
+        <div className="w-full max-w-md bg-[#1A1D24] rounded-[2rem] p-8 sm:p-12 shadow-apple border border-slate-800/60 mt-12">
 
           {/* Icon */}
           <div className="flex justify-center mb-6">
@@ -141,10 +141,10 @@ function ForgotPasswordContent() {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            <h1 className="text-3xl font-black text-white tracking-tight">
               {isResetStep ? 'New Password' : 'Forgot Password?'}
             </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-sm text-slate-400 mt-2">
               {isResetStep
                 ? 'Enter and confirm your new password below.'
                 : 'No worries — we\'ll send a reset link to your email.'}
@@ -153,10 +153,10 @@ function ForgotPasswordContent() {
 
           {/* Status message */}
           {message && (
-            <div className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-start gap-3 border ${
+            <div className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-start gap-3 border${
               message.type === 'success'
-                ? 'bg-green-50 dark:bg-green-500/10 border-green-200 dark:border-green-500/20 text-green-700 dark:text-green-400'
-                : 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400'
+                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                : 'bg-red-500/10 border-red-500/20 text-red-400'
             }`}>
               {message.type === 'success'
                 ? <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
@@ -169,7 +169,7 @@ function ForgotPasswordContent() {
           {!isResetStep && !requestSent && (
             <form onSubmit={handleRequestReset} className="space-y-5">
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-bold text-slate-300 mb-2">
                   Email Address
                 </label>
                 <input
@@ -178,7 +178,7 @@ function ForgotPasswordContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full px-5 py-3.5 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                  className="w-full px-5 py-3.5 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                 />
               </div>
               <div className="pt-2">
@@ -199,8 +199,8 @@ function ForgotPasswordContent() {
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
                 <CheckCircle className="w-8 h-8 text-emerald-500" />
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Check your inbox at <span className="font-bold text-slate-900 dark:text-white">{email}</span> for the reset link.
+              <p className="text-sm text-slate-400">
+                Check your inbox at <span className="font-bold text-white">{email}</span> for the reset link.
               </p>
               <button
                 onClick={() => { setRequestSent(false); setEmail(''); setMessage(null); }}
@@ -216,7 +216,7 @@ function ForgotPasswordContent() {
             <form onSubmit={handleResetPassword} className="space-y-5">
               {/* New password */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-bold text-slate-300 mb-2">
                   New Password
                 </label>
                 <div className="relative">
@@ -227,12 +227,12 @@ function ForgotPasswordContent() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-5 py-3.5 pr-12 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                    className="w-full px-5 py-3.5 pr-12 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowNew(!showNew)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -242,7 +242,7 @@ function ForgotPasswordContent() {
 
               {/* Confirm password */}
               <div>
-                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-bold text-slate-300 mb-2">
                   Confirm New Password
                 </label>
                 <div className="relative">
@@ -253,12 +253,12 @@ function ForgotPasswordContent() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-5 py-3.5 pr-12 bg-slate-50 dark:bg-[#0f1115] border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
+                    className="w-full px-5 py-3.5 pr-12 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -283,7 +283,7 @@ function ForgotPasswordContent() {
               <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto">
                 <CheckCircle className="w-8 h-8 text-emerald-500" />
               </div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-slate-400">
                 Your password has been updated. Redirecting you to sign in…
               </p>
             </div>
@@ -298,7 +298,7 @@ function ForgotPasswordContent() {
 export default function ForgotPasswordPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0f1115]">
+      <div className="min-h-screen flex items-center justify-center bg-[#0f1115]">
         <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     }>

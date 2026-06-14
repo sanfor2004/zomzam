@@ -300,7 +300,7 @@ export default function TaskBoardPage() {
       
       {/* Undo Toast */}
       {showUndoToast && undoTask && (
-        <div className="fixed bottom-6 right-6 bg-slate-900/90 dark:bg-slate-800/90 backdrop-blur-xl border border-slate-200/20 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in slide-in-from-bottom duration-300">
+        <div className="fixed bottom-6 right-6 bg-slate-800/90 backdrop-blur-xl border border-slate-200/20 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center gap-2 text-xs">
             <AlertCircle className="w-4 h-4 text-amber-500" />
             <span>Task &quot;{undoTask.title}&quot; deleted.</span>
@@ -324,7 +324,7 @@ export default function TaskBoardPage() {
             <LayoutDashboard className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">Task Board</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white">Task Board</h1>
             <p className="text-xs text-slate-400">Prioritize, time-block, and link to your dreams.</p>
           </div>
         </div>
@@ -352,7 +352,7 @@ export default function TaskBoardPage() {
       </div>
 
       {syncStats && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 p-4 rounded-2xl text-xs flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-2xl text-xs flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
           <Check className="w-4 h-4 flex-shrink-0" />
           <span>
             Notion synchronization complete! Synced: {syncStats.tasks} tasks, {syncStats.projects} projects, {syncStats.links} links.
@@ -376,9 +376,9 @@ export default function TaskBoardPage() {
               DEVELOPMENT NAVIGATOR: ACTIVE TASKS BOARD
               Contains: Priority Legend and List of Pending/Active Tasks
               ────────────────────────────────────────────────────────── */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-850">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 Active Tasks
               </h2>
               <div className="flex flex-wrap items-center gap-3">
@@ -412,12 +412,12 @@ export default function TaskBoardPage() {
                 {activeTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850/50 rounded-2xl transition-all hover:shadow-apple-sm hover:border-slate-200 dark:hover:border-slate-800 group"
+                    className="flex items-center justify-between p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl transition-all hover:shadow-apple-sm hover:border-slate-800 group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${getPriorityColor(task.priority)}`} />
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0${getPriorityColor(task.priority)}`} />
                       <div className="min-w-0">
-                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                        <p className="text-sm font-bold text-white truncate">
                           {task.title}
                         </p>
                         <span className="inline-flex items-center gap-1.5 text-[10px] text-slate-400 font-semibold mt-0.5">
@@ -425,7 +425,7 @@ export default function TaskBoardPage() {
                           Block: {task.duration_block} mins
                           {task.horizon_id && (
                             <>
-                              <span className="mx-1 text-slate-300 dark:text-slate-700">•</span>
+                              <span className="mx-1 text-slate-700">•</span>
                               <span className="text-purple-500 font-bold">Dream Link</span>
                             </>
                           )}
@@ -466,12 +466,12 @@ export default function TaskBoardPage() {
               DEVELOPMENT NAVIGATOR: COMPLETED TASKS CARD
               Contains: List of Completed Tasks with restore triggers
               ────────────────────────────────────────────────────────── */}
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-80">
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
-              <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-80">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-850">
+              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
                 Completed Tasks
               </h2>
-              <span className="text-xs bg-slate-50 dark:bg-slate-900/60 text-slate-500 font-bold px-2.5 py-1 rounded-full">
+              <span className="text-xs bg-slate-900/60 text-slate-500 font-bold px-2.5 py-1 rounded-full">
                 {completedTasks.length}
               </span>
             </div>
@@ -483,7 +483,7 @@ export default function TaskBoardPage() {
                 {completedTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between p-3.5 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100/50 dark:border-slate-850/20 rounded-xl"
+                    className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-xl"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-bold text-slate-500 line-through truncate">
@@ -513,8 +513,8 @@ export default function TaskBoardPage() {
             Contains: Form inputs to configure and add new task records
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
-            <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-5">
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-5">
               Add New Task
             </h2>
             <form onSubmit={handleAddTask} className="space-y-4">
@@ -526,7 +526,7 @@ export default function TaskBoardPage() {
                   placeholder="What needs to be done?"
                   value={newTitle}
                   onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
+                  className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all"
                 />
               </div>
 
@@ -543,7 +543,7 @@ export default function TaskBoardPage() {
                         label: (
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                            <span className="capitalize text-slate-800 dark:text-white">Urgent</span>
+                            <span className="capitalize text-white">Urgent</span>
                           </div>
                         ),
                       },
@@ -552,7 +552,7 @@ export default function TaskBoardPage() {
                         label: (
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                            <span className="capitalize text-slate-800 dark:text-white">Medium</span>
+                            <span className="capitalize text-white">Medium</span>
                           </div>
                         ),
                       },
@@ -561,7 +561,7 @@ export default function TaskBoardPage() {
                         label: (
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                            <span className="capitalize text-slate-800 dark:text-white">Maybe</span>
+                            <span className="capitalize text-white">Maybe</span>
                           </div>
                         ),
                       },
@@ -570,7 +570,7 @@ export default function TaskBoardPage() {
                         label: (
                           <div className="flex items-center gap-2">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                            <span className="capitalize text-slate-800 dark:text-white">Free</span>
+                            <span className="capitalize text-white">Free</span>
                           </div>
                         ),
                       },
@@ -648,7 +648,7 @@ export default function TaskBoardPage() {
               type="text"
               value={editTitle}
               onChange={(e) => setEditTitle(e.target.value)}
-              className="w-full h-12 px-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850 rounded-xl text-sm font-bold focus:outline-none focus:border-primary-500 transition-all text-slate-800 dark:text-white"
+              className="w-full h-12 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm font-bold focus:outline-none focus:border-primary-500 transition-all text-white"
             />
           </div>
 
@@ -665,7 +665,7 @@ export default function TaskBoardPage() {
                     label: (
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-                        <span className="capitalize text-slate-800 dark:text-white">Urgent</span>
+                        <span className="capitalize text-white">Urgent</span>
                       </div>
                     ),
                   },
@@ -674,7 +674,7 @@ export default function TaskBoardPage() {
                     label: (
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                        <span className="capitalize text-slate-800 dark:text-white">Medium</span>
+                        <span className="capitalize text-white">Medium</span>
                       </div>
                     ),
                   },
@@ -683,7 +683,7 @@ export default function TaskBoardPage() {
                     label: (
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-                        <span className="capitalize text-slate-800 dark:text-white">Maybe</span>
+                        <span className="capitalize text-white">Maybe</span>
                       </div>
                     ),
                   },
@@ -692,7 +692,7 @@ export default function TaskBoardPage() {
                     label: (
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                        <span className="capitalize text-slate-800 dark:text-white">Free</span>
+                        <span className="capitalize text-white">Free</span>
                       </div>
                     ),
                   },

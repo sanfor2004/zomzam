@@ -123,12 +123,12 @@ export default function DailyTrackerPage() {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white font-display">Daily Tracker</h1>
+            <h1 className="text-2xl font-black tracking-tight text-white font-display">Daily Tracker</h1>
             <p className="text-xs text-slate-400">Your focus and accomplishments for today.</p>
           </div>
         </div>
 
-        <div className="text-sm font-bold text-slate-600 dark:text-slate-400 bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 px-4 py-2.5 rounded-2xl shadow-apple-sm flex items-center gap-2 self-start">
+        <div className="text-sm font-bold text-slate-400 bg-[#1A1D24] border border-slate-800/60 px-4 py-2.5 rounded-2xl shadow-apple-sm flex items-center gap-2 self-start">
           <Calendar className="w-4 h-4 text-slate-400" />
           {todayStr}
         </div>
@@ -138,42 +138,42 @@ export default function DailyTrackerPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Metric: Hours Focused */}
-        <div className="bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:from-blue-900/10 dark:to-indigo-900/15 border border-blue-500/10 dark:border-blue-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+        <div className="bg-gradient-to-br from-blue-900/10 to-indigo-900/15 border border-blue-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-500/10">
               <Clock className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest leading-none mb-1">Total Focus Time</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Time spent on tasks today</p>
+              <p className="text-xs font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Total Focus Time</p>
+              <p className="text-[10px] text-slate-400 font-semibold">Time spent on tasks today</p>
             </div>
           </div>
           <div className="mt-auto">
-            <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{formatMins(totalActual)}</span>
+            <span className="text-4xl font-black text-white tracking-tight">{formatMins(totalActual)}</span>
           </div>
         </div>
 
         {/* Metric: Tasks Done */}
-        <div className="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-emerald-900/10 dark:to-teal-900/15 border border-emerald-500/10 dark:border-emerald-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+        <div className="bg-gradient-to-br from-emerald-900/10 to-teal-900/15 border border-emerald-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl"></div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/10">
               <Check className="w-5 h-5 stroke-[3]" />
             </div>
             <div>
-              <p className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none mb-1">Tasks Done</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Completed items today</p>
+              <p className="text-xs font-black text-emerald-400 uppercase tracking-widest leading-none mb-1">Tasks Done</p>
+              <p className="text-[10px] text-slate-400 font-semibold">Completed items today</p>
             </div>
           </div>
           <div className="flex items-end justify-between mt-auto">
             <div>
-              <span className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">{totalTasks}</span>
+              <span className="text-4xl font-black text-white tracking-tight">{totalTasks}</span>
               <span className="text-xs font-bold text-slate-400 ml-1.5 uppercase tracking-wide">tasks</span>
             </div>
             {totalSaved > 0 && (
               <div className="text-right">
-                <p className="text-[8px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest leading-none mb-0.5">Time Saved</p>
+                <p className="text-[8px] font-black text-emerald-400 uppercase tracking-widest leading-none mb-0.5">Time Saved</p>
                 <span className="text-lg font-black text-emerald-500">{formatMins(totalSaved)}</span>
               </div>
             )}
@@ -181,19 +181,19 @@ export default function DailyTrackerPage() {
         </div>
 
         {/* Metric: Wasted Time */}
-        <div className="bg-gradient-to-br from-rose-500/5 to-red-500/5 dark:from-rose-900/10 dark:to-red-900/15 border border-rose-500/10 dark:border-rose-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+        <div className="bg-gradient-to-br from-rose-900/10 to-red-900/15 border border-rose-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-500/10">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <p className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-widest leading-none mb-1">Wasted Time</p>
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Time beyond what was planned</p>
+              <p className="text-xs font-black text-rose-400 uppercase tracking-widest leading-none mb-1">Wasted Time</p>
+              <p className="text-[10px] text-slate-400 font-semibold">Time beyond what was planned</p>
             </div>
           </div>
           <div className="mt-auto flex items-end justify-between">
-            <span className={`text-4xl font-black tracking-tight ${totalWasted > 0 ? 'text-rose-500' : 'text-slate-900 dark:text-white'}`}>
+            <span className={`text-4xl font-black tracking-tight${totalWasted > 0 ? 'text-rose-500' : 'text-white'}`}>
               {totalWasted > 0 ? formatMins(totalWasted) : '0m'}
             </span>
             {totalWasted === 0 ? (
@@ -211,18 +211,18 @@ export default function DailyTrackerPage() {
       </div>
 
       {/* Activity List */}
-      <div className="bg-white dark:bg-[#1A1D24] border border-slate-100 dark:border-slate-800/60 rounded-3xl p-6 shadow-apple">
-        <h2 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest mb-6 pb-4 border-b border-slate-100 dark:border-slate-850">
+      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+        <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-6 pb-4 border-b border-slate-850">
           What you did today
         </h2>
 
         {completedToday.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-slate-900/40 flex items-center justify-center mx-auto mb-4 border border-slate-100 dark:border-slate-850">
-              <Award className="w-8 h-8 text-slate-350 dark:text-slate-650" />
+            <div className="w-16 h-16 rounded-full bg-slate-900/40 flex items-center justify-center mx-auto mb-4 border border-slate-850">
+              <Award className="w-8 h-8 text-slate-650" />
             </div>
-            <h3 className="text-base font-semibold text-slate-850 dark:text-slate-300">No tasks completed today</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-sm mx-auto">
+            <h3 className="text-base font-semibold text-slate-300">No tasks completed today</h3>
+            <p className="text-xs text-slate-400 mt-1.5 max-w-sm mx-auto">
               Start a focus session or check tasks on the Task Board to build your record of accomplishment.
             </p>
             <button
@@ -242,22 +242,22 @@ export default function DailyTrackerPage() {
               return (
                 <div
                   key={task.id}
-                  className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-900/30 border border-slate-100 dark:border-slate-850/50 rounded-2xl transition-all hover:border-slate-200 dark:hover:border-slate-700 hover:shadow-apple-sm"
+                  className="flex items-center gap-4 p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl transition-all hover:border-slate-700 hover:shadow-apple-sm"
                 >
                   {/* Actual mins circle */}
-                  <div className="w-14 h-14 rounded-full bg-slate-100 dark:bg-slate-850 flex flex-col items-center justify-center flex-shrink-0 border border-slate-200/40 dark:border-slate-700/50">
-                    <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 leading-none">ACTUAL</span>
-                    <span className="text-lg font-black text-slate-800 dark:text-slate-200 mt-0.5 leading-none">{actual}</span>
-                    <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 leading-none mt-0.5">MIN</span>
+                  <div className="w-14 h-14 rounded-full bg-slate-850 flex flex-col items-center justify-center flex-shrink-0 border border-slate-700/50">
+                    <span className="text-[8px] font-black text-slate-500 leading-none">ACTUAL</span>
+                    <span className="text-lg font-black text-slate-200 mt-0.5 leading-none">{actual}</span>
+                    <span className="text-[8px] font-black text-slate-500 leading-none mt-0.5">MIN</span>
                   </div>
 
                   {/* Details */}
                   <div className="flex-grow min-w-0">
-                    <p className="text-sm font-bold text-slate-400 dark:text-slate-500 line-through truncate leading-tight">
+                    <p className="text-sm font-bold text-slate-500 line-through truncate leading-tight">
                       {task.title}
                     </p>
                     <div className="flex items-center flex-wrap gap-2.5 mt-2">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wider ${getPriorityColor(task.priority)}`}>
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[9px] font-black uppercase tracking-wider${getPriorityColor(task.priority)}`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         {task.priority}
                       </span>
@@ -272,11 +272,11 @@ export default function DailyTrackerPage() {
                       )}
 
                       {diff > 0 ? (
-                        <span className="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/25 dark:bg-emerald-950/20 dark:text-emerald-400 rounded-md px-1.5 py-0.5">
+                        <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/20 border border-emerald-500/25 rounded-md px-1.5 py-0.5">
                           Saved {diff}m
                         </span>
                       ) : diff < 0 ? (
-                        <span className="text-[9px] font-bold text-rose-600 bg-rose-500/10 border border-rose-500/25 dark:bg-rose-950/20 dark:text-rose-400 rounded-md px-1.5 py-0.5">
+                        <span className="text-[9px] font-bold text-rose-400 bg-rose-950/20 border border-rose-500/25 rounded-md px-1.5 py-0.5">
                           Over {Math.abs(diff)}m
                         </span>
                       ) : null}
@@ -286,7 +286,7 @@ export default function DailyTrackerPage() {
                   {/* Planned info */}
                   <div className="text-right hidden sm:block flex-shrink-0">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Planned</p>
-                    <p className="text-sm font-bold text-slate-600 dark:text-slate-400">{planned}m</p>
+                    <p className="text-sm font-bold text-slate-400">{planned}m</p>
                   </div>
 
                 </div>
