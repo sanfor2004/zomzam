@@ -425,6 +425,8 @@ export default function SettingsPage() {
                 <Globe className="w-4 h-4 text-slate-400" />
                 <span>{t('settings_pref')}</span>
               </a>
+              {/* CRM & Outreach nav link — DISABLED for now (CRM & Lead Generation paused).
+                  Kept in code for future re-activation. Restore by uncommenting.
               <a
                 href="#crm"
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
@@ -432,6 +434,7 @@ export default function SettingsPage() {
                 <Briefcase className="w-4 h-4 text-slate-400" />
                 <span>CRM & Outreach</span>
               </a>
+              */}
               <a
                 href="#notion"
                 className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
@@ -567,9 +570,13 @@ export default function SettingsPage() {
           </section>
 
           {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION
+              DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION — DISABLED
+              Status: Temporarily disabled (CRM & Lead Generation feature paused).
+                      Kept in code for future re-activation — flip the `false &&`
+                      guard below back on to restore the full section.
               Contains: Secure API keys (Claude, Maps) and Outreach tone parameters
               ────────────────────────────────────────────────────────── */}
+          {false && (
           <section
             id="crm"
             className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
@@ -767,6 +774,7 @@ export default function SettingsPage() {
               </Button>
             </form>
           </section>
+          )}
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: NOTION INTEGRATION SECTION
