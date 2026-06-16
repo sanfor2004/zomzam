@@ -180,7 +180,7 @@ export default function PostDetail({
 
         {/* Post content */}
         <div
-          className="text-[15px] text-slate-200 leading-[1.75] post-content"
+          className="text-[15px] text-slate-200 leading-[1.75] post-content break-words [overflow-wrap:anywhere]"
           dangerouslySetInnerHTML={{ __html: post.content_html }}
         />
 
@@ -324,7 +324,7 @@ function CommentRow({
               </button>
             )}
           </div>
-          <p className="text-sm text-slate-300 leading-relaxed">{comment.content}</p>
+          <p className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
         </div>
       </div>
 

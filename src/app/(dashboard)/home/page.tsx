@@ -93,6 +93,10 @@ function displayName(u: { first_name: string | null; last_name: string | null; u
   return [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username;
 }
 
+// Maximum visible characters allowed per post. Mention (@) and tag (#) pills
+// count toward this via innerText, so the limit reflects what the reader sees.
+const MAX_POST_CHARS = 500;
+
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [friends, setFriends] = useState<MentionUser[]>([]);
@@ -218,6 +222,42 @@ export default function HomePage() {
     };
     document.addEventListener('selectionchange', onSelectionChange);
     return () => document.removeEventListener('selectionchange', onSelectionChange);
+  }, []);
+
+  // ── Hard-cap typing/pasting at MAX_POST_CHARS ───────────────
+  // Counted from innerText so mention/tag pills count toward the limit.
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+
+    const INSERTIONS = [
+      'insertText', 'insertReplacementText', 'insertCompositionText',
+      'insertFromPaste', 'insertFromDrop', 'insertLineBreak', 'insertParagraph',
+    ];
+
+    const onBeforeInput = (e: InputEvent) => {
+      if (!INSERTIONS.includes(e.inputType)) return; // allow deletes & formatting
+
+      // Replacing a selection frees up room — let it through.
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed) return;
+
+      const current = (el.innerText || '').trim().length;
+
+      let addLen = (e.data || '').length;
+      if (e.inputType === 'insertFromPaste' || e.inputType === 'insertFromDrop') {
+        addLen = e.dataTransfer?.getData('text')?.length ?? addLen;
+      } else if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph') {
+        addLen = 1;
+      }
+
+      if (current + addLen > MAX_POST_CHARS) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('beforeinput', onBeforeInput);
+    return () => el.removeEventListener('beforeinput', onBeforeInput);
   }, []);
 
   // ── Char count ──────────────────────────────────────────────
@@ -422,7 +462,7 @@ export default function HomePage() {
 
   // ── Post ────────────────────────────────────────────────────
   const handlePost = async () => {
-    if (!editorRef.current || charCount === 0 || postingLoading) return;
+    if (!editorRef.current || charCount === 0 || charCount > MAX_POST_CHARS || postingLoading) return;
     const content_html = editorRef.current.innerHTML;
     setPostingLoading(true);
     try {
@@ -480,7 +520,7 @@ export default function HomePage() {
                     onInput={handleInput}
                     onKeyDown={handleKeyDown}
                     data-placeholder={`What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`}
-                    className="w-full min-h-[44px] bg-[#111318] rounded-2xl px-4 py-2.5 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap outline-none focus:border-primary-500/40 transition-colors"
+                    className="w-full min-h-[44px] max-w-full bg-[#111318] rounded-2xl px-4 py-2.5 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden outline-none focus:border-primary-500/40 transition-colors"
                   />
                   <style jsx>{`
                     div[contenteditable]:empty:before {
@@ -534,16 +574,33 @@ export default function HomePage() {
                     </ToolbarButton>
                   </div>
 
-                  <button
-                    onClick={handlePost}
-                    disabled={charCount === 0 || postingLoading}
-                    className="px-5 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-primary-500/10 active:scale-[0.98] flex items-center gap-2"
-                  >
-                    {postingLoading
-                      ? <Loader2 className="w-4 h-4 animate-spin" />
-                      : <Send className="w-4 h-4" />}
-                    Post
-                  </button>
+                  <div className="flex items-center gap-3">
+                    {/* Character counter — amber near limit, rose when over */}
+                    <span
+                      aria-live="polite"
+                      title={`${MAX_POST_CHARS - charCount} characters remaining`}
+                      className={`text-[11px] font-bold tabular-nums transition-colors ${
+                        charCount > MAX_POST_CHARS
+                          ? 'text-rose-500'
+                          : charCount >= MAX_POST_CHARS * 0.9
+                          ? 'text-amber-400'
+                          : 'text-slate-600'
+                      }`}
+                    >
+                      {charCount}/{MAX_POST_CHARS}
+                    </span>
+
+                    <button
+                      onClick={handlePost}
+                      disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
+                      className="px-5 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-primary-500/10 active:scale-[0.98] flex items-center gap-2"
+                    >
+                      {postingLoading
+                        ? <Loader2 className="w-4 h-4 animate-spin" />
+                        : <Send className="w-4 h-4" />}
+                      Post
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -712,8 +769,8 @@ export default function HomePage() {
             DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR
             Contains: My Friends list, People You May Know suggestions
             ────────────────────────────────────────────────────────── */}
-        <aside className="hidden lg:block">
-          <div className="sticky top-24 h-[calc(100vh-7rem)] overflow-y-auto space-y-4 pr-0.5">
+        <aside className="hidden lg:block self-start lg:sticky lg:top-24">
+          <div className="space-y-4">
 
             {/* My Friends */}
             <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
@@ -965,7 +1022,7 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
             )}
           </div>
           <div
-            className="mt-2 text-sm text-slate-300 leading-relaxed"
+            className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
             dangerouslySetInnerHTML={{ __html: post.content_html }}
           />
         </div>
@@ -1089,7 +1146,7 @@ function CommentRow({
               </button>
             )}
           </div>
-          <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{comment.content}</p>
+          <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
         </div>
       </div>
 
