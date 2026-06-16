@@ -769,7 +769,7 @@ export default function HomePage() {
             DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR
             Contains: My Friends list, People You May Know suggestions
             ────────────────────────────────────────────────────────── */}
-        <aside className="hidden lg:block self-start lg:sticky lg:top-24">
+        <aside className="hidden lg:block self-start lg:sticky lg:top-0">
           <div className="space-y-4">
 
             {/* My Friends */}

@@ -157,6 +157,8 @@ export interface DropdownSelectProps {
   className?: string;
   dropdownClassName?: string;
   disabled?: boolean;
+  /** Text shown in the panel when `options` is empty. */
+  emptyMessage?: ReactNode;
 }
 
 export function DropdownSelect({
@@ -169,6 +171,7 @@ export function DropdownSelect({
   className = '',
   dropdownClassName = 'w-full max-h-60 overflow-y-auto p-1.5 space-y-0.5',
   disabled = false,
+  emptyMessage = 'No options available',
 }: Omit<DropdownSelectProps, 'mode'>) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -221,15 +224,21 @@ export function DropdownSelect({
           </button>
         }
       >
-        {normalizedOptions.map((opt) => (
-          <DropdownItem
-            key={opt.value}
-            active={opt.value === value}
-            onClick={() => handleSelect(opt.value)}
-          >
-            {opt.label}
-          </DropdownItem>
-        ))}
+        {normalizedOptions.length > 0 ? (
+          normalizedOptions.map((opt) => (
+            <DropdownItem
+              key={opt.value}
+              active={opt.value === value}
+              onClick={() => handleSelect(opt.value)}
+            >
+              {opt.label}
+            </DropdownItem>
+          ))
+        ) : (
+          <div className="px-3.5 py-6 text-center text-sm text-slate-500 select-none">
+            {emptyMessage}
+          </div>
+        )}
       </DropdownShell>
     </div>
   );
