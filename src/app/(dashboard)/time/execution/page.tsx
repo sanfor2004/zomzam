@@ -480,7 +480,10 @@ export default function PomodoroPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Icon badge, title + subtitle, sessions-completed-today pill
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -502,7 +505,11 @@ export default function PomodoroPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        {/* Timer Section (Left Column) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: TIMER COLUMN (left)
+            Contains: SVG countdown ring, play/pause/reset controls,
+            focus/break duration adjusters
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-0 left-0 -mt-24 -ml-24 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
@@ -554,10 +561,12 @@ export default function PomodoroPage() {
 
               <button
                 onClick={isRunning ? pauseTimer : startTimer}
-                className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all transform hover:scale-105 active:scale-95${
-                  isRunning 
-                    ? 'bg-slate-850 hover:bg-slate-800 shadow-slate-900/10' 
-                    : 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/20'
+                title={isRunning ? 'Pause Session' : 'Start Session'}
+                aria-label={isRunning ? 'Pause Session' : 'Start Session'}
+                className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 ${
+                  isRunning
+                    ? 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 ring-2 ring-primary-400/40 focus-visible:ring-primary-500/40'
+                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 focus-visible:ring-emerald-500/40'
                 }`}
               >
                 {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8" fill="currentColor" />}
@@ -633,9 +642,13 @@ export default function PomodoroPage() {
           </div>
         </div>
 
-        {/* Task Stack Section (Right Column) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: TASK STACK COLUMN (right)
+            Contains: Previous task card, current focus task card, next-up card,
+            quick action shortcuts
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 flex flex-col gap-6">
-          
+
           {/* Previous Card */}
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm opacity-50">
             <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Previously completed</span>

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, ZLANG_CONFIG } from '@/context/TranslationContext';
 import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
-import { Button, Switch, Modal, Select } from '@/components/ui';
+import { Button, Switch, Modal, Select, NumberInput } from '@/components/ui';
 
 const COMMON_TIMEZONES = [
   'UTC',
@@ -712,13 +712,12 @@ export default function SettingsPage() {
                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                       Max Output Tokens
                     </label>
-                    <input
-                      type="number"
-                      min="100"
-                      max="4000"
+                    <NumberInput
+                      min={100}
+                      max={4000}
+                      step={100}
                       value={crmSettings.claude_max_tokens || '800'}
-                      onChange={(e) => handleCrmFieldChange('claude_max_tokens', e.target.value)}
-                      className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
+                      onChange={(val) => handleCrmFieldChange('claude_max_tokens', val)}
                     />
                   </div>
 

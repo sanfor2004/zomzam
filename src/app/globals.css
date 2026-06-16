@@ -20,6 +20,34 @@
   --color-surface-dark: #111318;
   --color-surface-hover: #f8fafc;
 
+  /* ----------------------------------------------------------------
+     Intermediate scale shades (NOT in default Tailwind).
+     These were used throughout the app but never defined, so the
+     utilities (e.g. bg-slate-850, text-slate-450) silently produced
+     NO color — the root cause of invisible text & inconsistent
+     surfaces in dark mode. Values are interpolated from the adjacent
+     standard shades to keep the dark palette smooth and harmonious.
+     ---------------------------------------------------------------- */
+  --color-slate-250: #d6dee8;
+  --color-slate-350: #afbccd;
+  --color-slate-450: #7c8ba2;
+  --color-slate-455: #7a89a0;
+  --color-slate-505: #62718a;
+  --color-slate-550: #56647a;
+  --color-slate-650: #3d4d5f;
+  --color-slate-750: #283748;
+  --color-slate-850: #172033;
+  --color-slate-855: #161f31;
+
+  --color-rose-450: #f75872;
+  --color-rose-550: #ea2e53;
+
+  --color-emerald-450: #22c68d;
+  --color-emerald-550: #0ba775;
+  --color-emerald-650: #048760;
+
+  --color-purple-650: #882adc;
+
   --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.05);
   --shadow-apple: 0 4px 24px -6px rgba(0, 0, 0, 0.08);
   
@@ -322,6 +350,24 @@ html[dir="rtl"] #communityGroup > div {
   background: #dc2626;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Interactive cursor affordance — buttons & links feel clickable (HIG affordance) */
+@layer base {
+  button,
+  [role="button"],
+  a[href],
+  label[for],
+  summary,
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  button[disabled],
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
 /* Zomzam Context-Aware Borders & Lines (Base Layer) */

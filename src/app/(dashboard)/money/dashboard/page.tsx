@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useMoney } from '@/context/MoneyContext';
 import { useRouter } from 'next/navigation';
 import { DollarSign, Settings, Plus, Minus, ArrowRight, X, TrendingUp, Shield, Heart, PiggyBank, Briefcase, ChevronRight, HelpCircle } from 'lucide-react';
-import { Button, Select, Modal } from '@/components/ui';
+import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function MoneyDashboardPage() {
   const router = useRouter();
@@ -157,7 +157,10 @@ export default function MoneyDashboardPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
 
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Title + display-currency selector, Settings / Income / Expense buttons
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
@@ -220,7 +223,10 @@ export default function MoneyDashboardPage() {
         </div>
       </div>
 
-      {/* Account Balances Grid */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ACCOUNT BALANCES GRID
+          Contains: Per-account balance cards (icon, currency, name, last-4)
+          ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {accounts.map((acc) => (
           <div
@@ -257,7 +263,11 @@ export default function MoneyDashboardPage() {
       {/* Main Budget Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* Budget Allocation Progress bars */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: LEFT COLUMN — BUDGET, TIP, LENDING
+            Contains: 60/20/20 budget allocation donut + legend, financial-mastery
+            tip card, lending summary card
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
             <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Budget Allocation</h2>
@@ -383,7 +393,11 @@ export default function MoneyDashboardPage() {
           </div>
         </div>
 
-        {/* Recent Transactions List (Right Columns) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: RIGHT COLUMN — RECENT TRANSACTIONS
+            Contains: Transaction list (empty state, per-entry rows with delete),
+            Expenses / Income footer nav buttons
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2">
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
             <div>
@@ -457,7 +471,10 @@ export default function MoneyDashboardPage() {
         </div>
       </div>
 
-      {/* Settings Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: SETTINGS MODAL
+          Contains: Primary / secondary currency selectors
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -503,7 +520,10 @@ export default function MoneyDashboardPage() {
         </div>
       </Modal>
 
-      {/* Quick Income Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: QUICK INCOME MODAL
+          Contains: Quick-add income form (amount, account, category, description)
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isIncomeOpen}
         onClose={() => setIsIncomeOpen(false)}
@@ -513,16 +533,15 @@ export default function MoneyDashboardPage() {
         <div className="space-y-6">
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">EGP</span>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
-                className="w-full pl-14 pr-4 h-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-white"
-              />
-            </div>
+            <NumberInput
+              size="lg"
+              accent="emerald"
+              prefix="EGP"
+              step={0.01}
+              placeholder="0.00"
+              value={amountInput}
+              onChange={setAmountInput}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -571,7 +590,10 @@ export default function MoneyDashboardPage() {
         </div>
       </Modal>
 
-      {/* Quick Expense Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: QUICK EXPENSE MODAL
+          Contains: Quick-add expense form (amount, account, category, description)
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isExpenseOpen}
         onClose={() => setIsExpenseOpen(false)}
@@ -581,16 +603,15 @@ export default function MoneyDashboardPage() {
         <div className="space-y-6">
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">EGP</span>
-              <input
-                type="number"
-                placeholder="0.00"
-                value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
-                className="w-full pl-14 pr-4 h-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-primary-500 transition-all text-white"
-              />
-            </div>
+            <NumberInput
+              size="lg"
+              accent="primary"
+              prefix="EGP"
+              step={0.01}
+              placeholder="0.00"
+              value={amountInput}
+              onChange={setAmountInput}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

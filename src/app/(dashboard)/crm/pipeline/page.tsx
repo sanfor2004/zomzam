@@ -48,7 +48,10 @@ export default function PipelinesPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Title Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Title + subtitle, active-leads counter
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -64,14 +67,20 @@ export default function PipelinesPage() {
         </div>
       </div>
 
-      {/* Kanban Board Container */}
-      <KanbanBoard 
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: KANBAN PIPELINE BOARD
+          Contains: <KanbanBoard> drag-and-drop lead stage columns
+          ────────────────────────────────────────────────────────── */}
+      <KanbanBoard
         initialLeads={leads} 
         onOpenDetails={(l) => setSelectedLead(l)} 
         onRefresh={fetchLeads}
       />
 
-      {/* Outreach Drawer Modal Overlay */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LEAD DETAILS MODAL
+          Contains: <LeadDetailsModal> drawer (rendered when a lead is selected)
+          ────────────────────────────────────────────────────────── */}
       {selectedLead && (
         <LeadDetailsModal 
           lead={selectedLead}

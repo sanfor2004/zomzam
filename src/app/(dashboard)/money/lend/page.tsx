@@ -5,7 +5,7 @@ import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, CheckCircle2, User, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
-import { Button, Select, Modal } from '@/components/ui';
+import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function LendingDebtPage() {
   const router = useRouter();
@@ -102,7 +102,10 @@ export default function LendingDebtPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Back button, title + subtitle, "Add Entry" button
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
@@ -129,7 +132,11 @@ export default function LendingDebtPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
-        {/* People Owe Me Card */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: "PEOPLE OWE ME" CARD
+            Contains: Total receivable badge, active owe-me entries with
+            settle/delete actions
+            ────────────────────────────────────────────────────────── */}
         <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
           <div>
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
@@ -194,7 +201,11 @@ export default function LendingDebtPage() {
           </div>
         </div>
 
-        {/* I Owe People Card */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: "I OWE PEOPLE" CARD
+            Contains: Total payable badge, active i-owe entries with
+            settle/delete actions, debt-free empty state
+            ────────────────────────────────────────────────────────── */}
         <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
           <div>
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
@@ -264,7 +275,10 @@ export default function LendingDebtPage() {
 
       </div>
 
-      {/* Settled Ledger List */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: SETTLED LEDGER
+          Contains: Archived/settled entries (rendered only when any exist)
+          ────────────────────────────────────────────────────────── */}
       {settledList.length > 0 && (
         <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-70">
           <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4 pb-3 border-b border-slate-850">
@@ -302,7 +316,10 @@ export default function LendingDebtPage() {
         </div>
       )}
 
-      {/* Add Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ADD LENDING ENTRY MODAL
+          Contains: New-entry form (person, type, currency, amount, due date)
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
@@ -352,14 +369,12 @@ export default function LendingDebtPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-              <input
-                type="number"
-                step="any"
+              <NumberInput
+                step={0.01}
                 placeholder="0.00"
                 value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
+                onChange={setAmountInput}
                 required
-                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
               />
             </div>
             <div>

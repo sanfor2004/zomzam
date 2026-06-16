@@ -72,7 +72,10 @@ export default function ProjectsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Title + subtitle, active-deliveries counter
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -87,6 +90,11 @@ export default function ProjectsPage() {
         </div>
       </div>
 
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PROJECT CARD GRID
+          Contains: Empty state, per-project cards (status badge, contract value
+          + start date, milestone progress bar, status <Select>, footer actions)
+          ────────────────────────────────────────────────────────── */}
       {projects.length === 0 ? (
         <div className="bg-[#1A1D24] border border-slate-800/60 p-16 rounded-3xl text-center text-slate-500 italic font-semibold text-xs shadow-apple">
           No projects started yet. Complete a contract from the Funnel/Pipeline column to seed a new delivery lifecycle.

@@ -116,7 +116,10 @@ export default function DailyTrackerPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Icon badge, title + subtitle, today's date pill
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20">
@@ -134,7 +137,10 @@ export default function DailyTrackerPage() {
         </div>
       </div>
 
-      {/* Grid of Metric Cards */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: METRIC CARDS GRID
+          Contains: Hours Focused, Tasks Done, Wasted Time metric cards
+          ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Metric: Hours Focused */}
@@ -210,7 +216,10 @@ export default function DailyTrackerPage() {
 
       </div>
 
-      {/* Activity List */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ACTIVITY LIST
+          Contains: Today's completed-task entries (planned vs actual minutes)
+          ────────────────────────────────────────────────────────── */}
       <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-6 pb-4 border-b border-slate-850">
           What you did today

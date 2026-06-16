@@ -25,8 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable}dark h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} dark h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300">
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: ROOT APP SHELL
+            Contains: Global context Providers wrapper, routed page children
+            ────────────────────────────────────────────────────────── */}
         <Providers>
           {children}
         </Providers>

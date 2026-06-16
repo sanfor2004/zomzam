@@ -11,7 +11,7 @@ import {
   Sparkles,
   Loader2
 } from "lucide-react";
-import { Badge, Button, Modal, Select } from "@/components/ui";
+import { Badge, Button, Modal, Select, NumberInput } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 interface Lead {
@@ -332,17 +332,14 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
                 <label className="text-[10px] font-bold text-slate-550 uppercase tracking-wider block">
                   Contract Amount
                 </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-2.5 text-xs text-slate-500">$</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="1500"
-                    className="w-full h-11 text-xs bg-slate-900/30 border border-slate-800 rounded-xl pl-7 pr-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40 focus:bg-white transition-all"
-                  />
-                </div>
+                <NumberInput
+                  prefix="$"
+                  min={1}
+                  step={1}
+                  value={amount}
+                  onChange={setAmount}
+                  placeholder="1500"
+                />
               </div>
 
               {/* Currency */}
@@ -388,7 +385,7 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full h-11 text-xs bg-slate-900/30 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40 focus:bg-white transition-all"
+                  className="w-full h-11 text-xs bg-slate-900/30 border border-slate-800 rounded-xl px-4 py-2.5 text-white outline-none focus:border-[#EE5712]/40 focus:bg-white/[0.04] transition-all"
                 />
                 <span className="text-[9px] text-slate-550 leading-normal block pt-1 font-semibold">
                   If set, a lending record marked as <strong className="text-slate-350">"Owe Me"</strong> will automatically be registered in the Money suite.

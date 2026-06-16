@@ -71,7 +71,10 @@ export default function OutreachSettingsPage() {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
       
-      {/* Title Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Title + subtitle for the outreach hub
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -87,7 +90,11 @@ export default function OutreachSettingsPage() {
       {/* Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         
-        {/* Settings Relocation Banner (Span 2) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: LEFT COLUMN — SETTINGS + LLM CONFIG
+            Contains: Centralized-settings relocation banner with CTA,
+            active LLM engine config card (model / tone / temperature / API status)
+            ────────────────────────────────────────────────────────── */}
         <div className="md:col-span-2 space-y-6">
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-300">
@@ -157,7 +164,11 @@ export default function OutreachSettingsPage() {
           </div>
         </div>
 
-        {/* Campaign Stats Sidebar (Col 1) */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR — STATS + SIGNATURE
+            Contains: Outreach stats (new / contacted / conversion),
+            email signature block preview
+            ────────────────────────────────────────────────────────── */}
         <div className="md:col-span-1 space-y-6">
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
             <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest">

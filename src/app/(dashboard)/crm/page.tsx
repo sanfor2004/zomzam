@@ -84,7 +84,10 @@ export default function CrmDashboardPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       
-      {/* Header and Brand Vibe */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Title + subtitle, dev-only "Clear Data" button, engine-active badge
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -112,13 +115,22 @@ export default function CrmDashboardPage() {
         </div>
       </div>
 
-      {/* Analytics overview */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ANALYTICS OVERVIEW
+          Contains: <AnalyticsOverview> KPI stat cards
+          ────────────────────────────────────────────────────────── */}
       <AnalyticsOverview stats={stats} />
 
-      {/* Scraper console controller */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: SCRAPER CONSOLE
+          Contains: <ScraperPanel> lead-acquisition controller
+          ────────────────────────────────────────────────────────── */}
       <ScraperPanel onScrapeFinished={fetchDashboardData} />
 
-      {/* High-priority fresh leads list */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: FRESH HOT LEADS
+          Contains: Section heading, empty state, grid of <LeadCard>
+          ────────────────────────────────────────────────────────── */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <div className="p-2 rounded-lg bg-[#EE5712]/10 border border-[#EE5712]/20">
@@ -147,7 +159,10 @@ export default function CrmDashboardPage() {
         )}
       </div>
 
-      {/* Outreach Details Modal Drawer */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LEAD DETAILS MODAL
+          Contains: <LeadDetailsModal> drawer (rendered when a lead is selected)
+          ────────────────────────────────────────────────────────── */}
       {selectedLead && (
         <LeadDetailsModal 
           key={selectedLead.id}

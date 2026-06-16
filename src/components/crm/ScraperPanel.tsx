@@ -451,7 +451,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                   placeholder="e.g. coffee, dentists..."
                   value={serviceType}
                   onChange={(e) => setServiceType(e.target.value)}
-                  className="w-full h-10 text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl px-4 py-2 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white"
+                  className="w-full h-10 text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl px-4 py-2 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white/[0.04]"
                 />
               </div>
 

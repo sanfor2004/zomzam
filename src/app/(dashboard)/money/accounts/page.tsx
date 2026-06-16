@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, Briefcase, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button, Select, Modal } from '@/components/ui';
+import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function BankAccountsPage() {
   const router = useRouter();
@@ -81,7 +81,10 @@ export default function BankAccountsPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Back button, title + subtitle, "Add Account" button
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
@@ -106,7 +109,10 @@ export default function BankAccountsPage() {
         </Button>
       </div>
 
-      {/* Accounts Grid */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ACCOUNTS GRID
+          Contains: Per-account cards (icon, balance, type, last-4, delete action)
+          ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {accounts.map((acc) => (
           <div
@@ -145,7 +151,10 @@ export default function BankAccountsPage() {
         ))}
       </div>
 
-      {/* Add Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ADD ACCOUNT MODAL
+          Contains: New-account form (name, type, currency, balance, last-4)
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
@@ -198,14 +207,12 @@ export default function BankAccountsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Initial Balance</label>
-              <input
-                type="number"
-                step="any"
+              <NumberInput
+                step={0.01}
                 placeholder="0.00"
                 value={balanceInput}
-                onChange={(e) => setBalanceInput(e.target.value)}
+                onChange={setBalanceInput}
                 required
-                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
               />
             </div>
             <div>

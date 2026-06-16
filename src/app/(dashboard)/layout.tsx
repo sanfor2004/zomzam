@@ -6,8 +6,8 @@ import dynamicImport from 'next/dynamic';
 import { useTranslation } from '@/context/TranslationContext';
 import { useStreamWaiter, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase } from 'lucide-react';
+import { DropdownMenu } from '@/components/ui/Dropdown';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
 
 // Loaded client-side only — WebGL requires browser APIs
 const LiquidEther = dynamicImport(() => import('@/components/LiquidEther'), { ssr: false });
@@ -84,6 +84,46 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     });
   };
 
+  // Visual config for the sidebar user-status indicator (dot, pill, glow, shine)
+  const STATUS_CONFIG: Record<string, {
+    label: string;
+    dot: string;
+    ring: string;
+    pill: string;
+    glow: string;
+    gradient: string;
+    animate: boolean;
+  }> = {
+    online: {
+      label: 'Online Mode',
+      dot: 'bg-green-500',
+      ring: 'bg-green-400',
+      pill: 'bg-green-500/15 border-green-500/40 text-green-300',
+      glow: 'shadow-[0_0_12px_3px_rgba(34,197,94,0.7)]',
+      gradient: 'linear-gradient(to top, rgba(34, 197, 94, 0.18) 0%, transparent 100%)',
+      animate: true,
+    },
+    away: {
+      label: 'Away',
+      dot: 'bg-amber-400',
+      ring: 'bg-amber-300',
+      pill: 'bg-amber-400/15 border-amber-400/40 text-amber-200',
+      glow: 'shadow-[0_0_12px_3px_rgba(251,191,36,0.7)]',
+      gradient: 'linear-gradient(to top, rgba(251, 191, 36, 0.18) 0%, transparent 100%)',
+      animate: true,
+    },
+    offline: {
+      label: 'Offline',
+      dot: 'bg-slate-400',
+      ring: 'bg-slate-400',
+      pill: 'bg-slate-500/10 border-slate-600/40 text-slate-400',
+      glow: '',
+      gradient: 'linear-gradient(to top, rgba(100, 116, 139, 0.12) 0%, transparent 100%)',
+      animate: false,
+    },
+  };
+  const status = STATUS_CONFIG[currentUserStatus] ?? STATUS_CONFIG.offline;
+
   if (!currentUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
@@ -95,8 +135,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-[#111318] relative">
 
-      {/* ── LiquidEther WebGL background ── */}
-      {/* Fixed behind all content; pointer-events-none so UI stays fully interactive */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LIQUIDETHER WEBGL BACKGROUND
+          Contains: Fixed full-bleed animated canvas behind all content
+          (pointer-events-none so the UI stays fully interactive)
+          ────────────────────────────────────────────────────────── */}
       <div
         aria-hidden="true"
         className="fixed inset-0 z-0 pointer-events-none"
@@ -123,23 +166,26 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
           DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
           Contains: Logo, Main Nav, and User Mini Profile (Status indicator)
           ────────────────────────────────────────────────────────── */}
-      <aside className="hidden md:flex flex-col w-64 bg-surface-dark/90 backdrop-blur-xl border border-slate-800 h-[calc(100vh-20px)] rounded-3xl m-2.5 flex-shrink-0 transition-all duration-300 relative z-10 overflow-hidden">
+      <aside className="hidden md:flex flex-col w-64 h-[calc(100vh-20px)] m-2.5 flex-shrink-0 transition-all duration-300 relative z-10">
         {/* Logo */}
-        <div className="h-20 flex items-center px-6 border-b border-dashed border-slate-800/80">
-          <a href="/dashboard" className="flex items-center gap-3 group">
+        <div className="h-20 flex items-center px-6">
+          <a href="/home" className="flex items-center gap-3 group">
             <img src="/Assets/Img/logo-word-horizontal-orange.svg" alt="zomzam" className="h-8 hidden" />
             <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-8 block" />
           </a>
         </div>
 
+        {/* Sidebar surface — rounded bordered card begins at the nav bar */}
+        <div className="flex-1 flex flex-col min-h-0 bg-surface-dark/90 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden">
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          {/* Home */}
           <button
-            onClick={() => router.push('/dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/dashboard')}`}
+            onClick={() => router.push('/home')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/home')}`}
           >
-            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
-            <span>{t('nav_dashboard')}</span>
+            <Home className="w-5 h-5 flex-shrink-0" />
+            <span>{t('nav_home') || 'Home'}</span>
           </button>
 
           {/* Time Management Group */}
@@ -236,7 +282,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          {/* CRM Management Group */}
+          {/* ──────────────────────────────────────────────────────────
+              TEMPORARILY DISABLED: CRM SUITE + DASHBOARD
+              Both features are parked for later work. Re-enable by
+              uncommenting the block below (and the matching mobile-menu
+              + auto-expand sections).
+              ──────────────────────────────────────────────────────────
+          {/* CRM Management Group * /}
           <div className="space-y-1">
             <button
               onClick={() => setCrmGroupOpen(!crmGroupOpen)}
@@ -288,6 +340,16 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               </div>
             )}
           </div>
+
+          {/* Dashboard * /}
+          <button
+            onClick={() => router.push('/dashboard')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/dashboard')}`}
+          >
+            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
+            <span>{t('nav_dashboard')}</span>
+          </button>
+              ────────────────────────────────────────────────────────── */}
 
           {/* Community Group */}
           <div className="space-y-1">
@@ -344,48 +406,33 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="relative border-t border-slate-800/50 overflow-hidden">
           {/* Online Tracker Indicator background */}
           <div
-            className="absolute inset-0 z-0 pointer-events-none transition-colors duration-500"
-            style={{
-              background:
-                currentUserStatus === 'online'
-                  ? 'linear-gradient(to top, rgba(34, 197, 94, 0.1) 0%, transparent 100%)'
-                  : currentUserStatus === 'away'
-                  ? 'linear-gradient(to top, rgba(251, 191, 36, 0.1) 0%, transparent 100%)'
-                  : 'linear-gradient(to top, rgba(100, 116, 139, 0.1) 0%, transparent 100%)',
-            }}
+            className="absolute inset-0 z-0 pointer-events-none transition-all duration-500"
+            style={{ background: status.gradient }}
           ></div>
 
-          <div className="p-4 relative z-10 space-y-3">
-            <div className="flex items-center justify-between px-3">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-1.5 h-1.5 rounded-full${
-                    currentUserStatus === 'online'
-                      ? 'bg-green-500 animate-pulse'
-                      : currentUserStatus === 'away'
-                      ? 'bg-amber-400 animate-pulse'
-                      : 'bg-slate-400'
-                  }`}
-                />
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                  {currentUserStatus === 'online' ? 'Online Mode' : currentUserStatus === 'away' ? 'Away' : 'Offline'}
-                </span>
-              </div>
-            </div>
-
+          <div className="p-4 relative z-10">
             <div className="flex items-center justify-between gap-3 px-3">
               <button
                 onClick={() => router.push('/me')}
                 className="flex items-center gap-3 text-left group flex-grow min-w-0"
               >
-                <img
-                  src={currentUser.avatar || '/Assets/Img/default-avatar.png'}
-                  alt="Avatar"
-                  className="w-9 h-9 rounded-xl object-cover border border-slate-800"
-                />
+                {/* Avatar with live status dot anchored 2px outside the bottom-right of the frame */}
+                <div className="relative flex-shrink-0">
+                  <img
+                    src={currentUser.avatar || '/Assets/Img/default-avatar.png'}
+                    alt="Avatar"
+                    className="w-9 h-9 rounded-xl object-cover border border-slate-800"
+                  />
+                  <span className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-3 h-3">
+                    {status.animate && (
+                      <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 animate-ping ${status.ring}`} />
+                    )}
+                    <span className={`relative inline-flex w-3 h-3 rounded-full ${status.dot} ${status.glow}`} />
+                  </span>
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-bold text-white truncate group-hover:text-primary-500 transition-colors">
-                    {currentUser.username}
+                    {[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
                   </p>
                   <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
                 </div>
@@ -399,6 +446,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               </button>
             </div>
           </div>
+        </div>
         </div>
       </aside>
 
@@ -489,10 +537,15 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         </main>
       </div>
 
-      {/* Mobile Menu Overlay */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: MOBILE MENU OVERLAY (drawer)
+          Contains: Dashboard link + Time / Money / CRM / Community nav groups,
+          Settings and Sign Out actions (rendered only when mobileMenuOpen)
+          ────────────────────────────────────────────────────────── */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 top-[75px] bg-slate-900/50 backdrop-blur-sm z-30">
           <div className="w-64 bg-surface-dark h-full border-r border-slate-800 p-6 flex flex-col space-y-4">
+            {/* TEMPORARILY DISABLED: Dashboard Home — parked for later work
             <button
               onClick={() => {
                 router.push('/dashboard');
@@ -502,6 +555,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             >
               Dashboard Home
             </button>
+            */}
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Time Suite</p>
               <button
@@ -535,6 +589,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 Ledger Overview
               </button>
             </div>
+            {/* TEMPORARILY DISABLED: CRM Suite — parked for later work
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('nav_crm')}</p>
               <button
@@ -592,6 +647,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 Projects Hub
               </button>
             </div>
+            */}
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Community</p>
               <button

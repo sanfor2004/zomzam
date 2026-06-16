@@ -298,7 +298,10 @@ export default function TaskBoardPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in">
       
-      {/* Undo Toast */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: UNDO TOAST
+          Contains: Floating "task deleted — undo" toast (rendered transiently)
+          ────────────────────────────────────────────────────────── */}
       {showUndoToast && undoTask && (
         <div className="fixed bottom-6 right-6 bg-slate-800/90 backdrop-blur-xl border border-slate-200/20 text-white px-5 py-3.5 rounded-2xl shadow-2xl flex items-center gap-4 z-50 animate-in slide-in-from-bottom duration-300">
           <div className="flex items-center gap-2 text-xs">

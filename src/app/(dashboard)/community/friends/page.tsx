@@ -96,7 +96,10 @@ export default function FriendsPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Page Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Icon badge, title + subtitle, global user-search autocomplete
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -168,7 +171,10 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      {/* Content */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: CONTENT — FRIENDS GRID
+          Contains: Accepted-friends grid with status and management actions
+          ────────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>

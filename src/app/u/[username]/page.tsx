@@ -107,7 +107,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-[#111318] text-slate-100 flex flex-col font-sans transition-colors duration-300">
       
-      {/* Navigation Header (Glassmorphic) */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: TOP NAVIGATION HEADER
+          Contains: Brand logo, viewer-aware Dashboard / Sign In action
+          ────────────────────────────────────────────────────────── */}
       <nav className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex items-center justify-between h-[75px]">
@@ -140,7 +143,11 @@ export default async function PublicProfilePage({ params }: PageProps) {
         </div>
       </nav>
 
-      {/* Main Profile Layout */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PUBLIC PROFILE CARD
+          Contains: Avatar + name/role/meta header, online status, biography,
+          interest tags, social interaction buttons (friend/follow)
+          ────────────────────────────────────────────────────────── */}
       <main className="flex-grow pt-32 pb-24 px-6 max-w-4xl mx-auto w-full">
         
         {/* Profile Card */}
@@ -272,7 +279,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
       </main>
 
-      {/* Footer */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: FOOTER
+          Contains: Brand logo + name, copyright line
+          ────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-800 bg-surface-dark/50 backdrop-blur-sm py-12 mt-auto">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">

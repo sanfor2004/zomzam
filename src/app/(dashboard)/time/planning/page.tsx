@@ -221,7 +221,10 @@ export default function DreamPlanningPage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Page Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Icon badge, title + subtitle
+          ────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md shadow-purple-500/20">
           <Target className="w-5 h-5" />
@@ -232,9 +235,12 @@ export default function DreamPlanningPage() {
         </div>
       </div>
 
-      {/* Grid of Columns */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: HORIZON COLUMNS (WEEK / MONTH / YEAR)
+          Contains: Per-horizon goal columns (header, goals list, add input)
+          ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
+
         {/* Column Generator */}
         {(['week', 'month', 'year'] as const).map((type) => {
           const colLabel = type === 'week' ? 'This Week' : type === 'month' ? 'This Month' : 'This Year';
@@ -327,7 +333,10 @@ export default function DreamPlanningPage() {
 
       </div>
 
-      {/* Archived Goals Section */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ARCHIVED GOALS
+          Contains: Completed / archived goals list
+          ────────────────────────────────────────────────────────── */}
       <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-850">
           <div className="flex items-center gap-2">

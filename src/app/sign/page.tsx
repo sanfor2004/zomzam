@@ -4,8 +4,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Globe, ArrowLeft, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { DropdownItem } from '@/components/ui/DropdownItem';
+import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 
 function SignPageContent() {
   const { t, language, setLanguage } = useTranslation();
@@ -81,7 +80,10 @@ function SignPageContent() {
   return (
     <div className="min-h-screen flex w-full bg-[#0f1115] text-slate-100 transition-colors duration-300">
       
-      {/* Left Side: Image Box (Hidden on Mobile) */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LEFT BRAND PANEL (desktop only)
+          Contains: Background image + gradient/blur overlays, brand logo, welcome copy
+          ────────────────────────────────────────────────────────── */}
       <div className="hidden lg:flex w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
         <img 
           src="/Assets/Img/auth-split-bg.jpg" 
@@ -106,9 +108,13 @@ function SignPageContent() {
         </div>
       </div>
 
-      {/* Right Side: Form Box */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: RIGHT AUTH FORM PANEL
+          Contains: Top controls (language selector, back-home), signin/signup tabs,
+          status message, email/username/password form, submit button
+          ────────────────────────────────────────────────────────── */}
       <div className="w-full lg:w-1/2 relative flex items-center justify-center p-6 sm:p-12 overflow-y-auto min-h-screen">
-        
+
         {/* Top Controls */}
         <div className="absolute top-6 right-6 flex items-center gap-3 z-10">
           <div>

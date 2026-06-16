@@ -1,0 +1,1160 @@
+'use client';
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Link from 'next/link';
+import {
+  Bold, Italic, Underline, List, Smile, Image as ImageIcon,
+  AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2, Share2,
+  UserPlus, Check, Users,
+} from 'lucide-react';
+
+interface CurrentUser {
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string | null;
+}
+
+interface MentionUser {
+  id: number;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string;
+  is_online?: boolean;
+  online_label?: string;
+  bio?: string | null;
+}
+
+interface SuggestedUser {
+  id: number;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string;
+  bio?: string | null;
+  matching_tags?: string[];
+}
+
+interface Post {
+  id: number;
+  user_id: number;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string;
+  content_html: string;
+  created_at: string;
+  like_count: number;
+  comment_count: number;
+  liked_by_me: boolean;
+}
+
+interface Comment {
+  id: number;
+  post_id: number;
+  parent_id: number | null;
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+  avatar: string;
+  content: string;
+  created_at: string;
+  replies?: Comment[];
+}
+
+function buildTree(flat: Comment[]): Comment[] {
+  const map = new Map<number, Comment>();
+  const roots: Comment[] = [];
+  for (const c of flat) map.set(c.id, { ...c, replies: [] });
+  for (const c of flat) {
+    const node = map.get(c.id)!;
+    if (c.parent_id != null && map.has(c.parent_id)) {
+      map.get(c.parent_id)!.replies!.push(node);
+    } else {
+      roots.push(node);
+    }
+  }
+  return roots;
+}
+
+type Trigger = '@' | '#';
+
+function relativeTime(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
+
+function displayName(u: { first_name: string | null; last_name: string | null; username: string }) {
+  return [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username;
+}
+
+export default function HomePage() {
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [friends, setFriends] = useState<MentionUser[]>([]);
+  const [peopleSuggestions, setPeopleSuggestions] = useState<SuggestedUser[]>([]);
+  const [sentRequests, setSentRequests] = useState<Set<number>>(new Set());
+
+  // Editor refs / state
+  const editorRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [charCount, setCharCount] = useState(0);
+  const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+
+  // Autocomplete dropdown state
+  const [popoverActive, setPopoverActive] = useState(false);
+  const [triggerType, setTriggerType] = useState<Trigger>('@');
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<MentionUser[]>([]);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
+
+  // Feed state
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingFeed, setLoadingFeed] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [postingLoading, setPostingLoading] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const loadingFeedRef = useRef(false);
+
+  // ── Data bootstrap ──────────────────────────────────────────
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/auth?action=check');
+        const data = await res.json();
+        if (data.success && data.authenticated) setCurrentUser(data.user);
+      } catch { /* non-blocking */ }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetch('/api/social?action=friends');
+        const data = await res.json();
+        if (data.success) setFriends(data.friends || []);
+      } catch { /* non-blocking */ }
+    })();
+
+    (async () => {
+      try {
+        const res = await fetch('/api/social?action=discover');
+        const data = await res.json();
+        if (data.success) setPeopleSuggestions((data.users || []).slice(0, 5));
+      } catch { /* non-blocking */ }
+    })();
+  }, []);
+
+  const handleAddFriend = async (userId: number) => {
+    setSentRequests((prev) => new Set(prev).add(userId));
+    try {
+      await fetch('/api/social', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'friend_request', user_id: userId }),
+      });
+    } catch { /* non-blocking */ }
+  };
+
+  // ── Feed loading ────────────────────────────────────────────
+  const loadFeed = useCallback(async (beforeId?: number) => {
+    if (loadingFeedRef.current) return;
+    loadingFeedRef.current = true;
+    setLoadingFeed(true);
+    try {
+      const url = `/api/posts?action=feed${beforeId ? `&before_id=${beforeId}` : ''}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.success) {
+        setPosts((prev) => beforeId ? [...prev, ...data.posts] : data.posts);
+        setHasMore(data.has_more);
+      }
+    } catch { /* non-blocking */ }
+    setLoadingFeed(false);
+    setInitialLoading(false);
+    loadingFeedRef.current = false;
+  }, []);
+
+  useEffect(() => { loadFeed(); }, [loadFeed]);
+
+  // ── Infinite scroll sentinel ────────────────────────────────
+  useEffect(() => {
+    const sentinel = bottomRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore && !loadingFeedRef.current) {
+          const last = posts[posts.length - 1];
+          if (last) loadFeed(last.id);
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [posts, hasMore, loadFeed]);
+
+  // ── Sync which formats are active at the caret/selection ────
+  const FORMAT_COMMANDS = ['bold', 'italic', 'underline', 'insertUnorderedList'];
+  const syncFormats = () => {
+    if (!editorRef.current) return;
+    const next: Record<string, boolean> = {};
+    for (const cmd of FORMAT_COMMANDS) {
+      try { next[cmd] = document.queryCommandState(cmd); } catch { next[cmd] = false; }
+    }
+    setActiveFormats(next);
+  };
+
+  useEffect(() => {
+    const onSelectionChange = () => {
+      const sel = window.getSelection();
+      if (sel?.anchorNode && editorRef.current?.contains(sel.anchorNode)) {
+        syncFormats();
+      }
+    };
+    document.addEventListener('selectionchange', onSelectionChange);
+    return () => document.removeEventListener('selectionchange', onSelectionChange);
+  }, []);
+
+  // ── Char count ──────────────────────────────────────────────
+  const updateCharCount = () => {
+    if (!editorRef.current) return;
+    const text = (editorRef.current.innerText || '').trim();
+    if (text.length === 0 && editorRef.current.innerHTML !== '') {
+      editorRef.current.innerHTML = '';
+    }
+    setCharCount(text.length);
+  };
+
+  // ── Text formatting ─────────────────────────────────────────
+  const applyFormat = (command: string) => {
+    document.execCommand(command, false);
+    editorRef.current?.focus();
+    updateCharCount();
+    syncFormats();
+  };
+
+  // ── Detect @ / # trigger as the user types ──────────────────
+  const handleInput = () => {
+    updateCharCount();
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return setPopoverActive(false);
+
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return setPopoverActive(false);
+
+    const textBeforeCaret = node.textContent?.substring(0, range.startOffset) || '';
+    const match = textBeforeCaret.match(/([@#])(\w*)$/);
+    if (!match) return setPopoverActive(false);
+
+    const trigger = match[1] as Trigger;
+    const q = match[2].toLowerCase();
+    setTriggerType(trigger);
+    setQuery(q);
+    setSelectedIndex(0);
+    setPopoverActive(true);
+
+    if (trigger === '@') {
+      const pool = q
+        ? friends.filter((f) =>
+            f.username.toLowerCase().includes(q) ||
+            displayName(f).toLowerCase().includes(q))
+        : friends;
+      setSuggestions(pool.slice(0, 8));
+    } else {
+      setSuggestions([]);
+    }
+
+    const rect = range.getBoundingClientRect();
+    const containerRect = containerRef.current?.getBoundingClientRect();
+    if (containerRect) {
+      setPopoverPos({
+        top: rect.bottom - containerRect.top + 8,
+        left: rect.left - containerRect.left,
+      });
+    }
+  };
+
+  // ── Keyboard nav ────────────────────────────────────────────
+  const optionsCount = triggerType === '@' ? suggestions.length : (query ? 1 : 0);
+
+  const isPill = (node: Node | null): boolean => {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+    const el = node as HTMLElement;
+    return el.hasAttribute('data-mention') || el.hasAttribute('data-tag');
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    // Popover navigation
+    if (popoverActive && optionsCount > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedIndex((p) => (p + 1) % optionsCount);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedIndex((p) => (p - 1 + optionsCount) % optionsCount);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        if (triggerType === '@') insertPill('@', suggestions[selectedIndex]);
+        else insertPill('#');
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setPopoverActive(false);
+        return;
+      }
+    }
+
+    // Delete key: remove pill immediately after the caret
+    if (e.key === 'Delete' && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+      const sel = window.getSelection();
+      if (sel?.isCollapsed && sel.rangeCount) {
+        const range = sel.getRangeAt(0);
+        let candidate: Node | null = null;
+        if (range.startContainer.nodeType === Node.TEXT_NODE) {
+          if (range.startOffset === (range.startContainer as Text).length)
+            candidate = range.startContainer.nextSibling;
+        } else {
+          candidate = (range.startContainer as Element).childNodes[range.startOffset] ?? null;
+        }
+        if (isPill(candidate)) {
+          e.preventDefault();
+          candidate!.parentNode?.removeChild(candidate!);
+          updateCharCount();
+        }
+      }
+    }
+
+    // Ctrl/Cmd+Left (with or without Shift): prevent caret entering pill
+    if (e.key === 'ArrowLeft' && (e.ctrlKey || e.metaKey)) {
+      const sel = window.getSelection();
+      if (sel?.rangeCount) {
+        const focusNode = sel.focusNode;
+        const focusOffset = sel.focusOffset;
+        let candidate: Node | null = null;
+        if (focusNode?.nodeType === Node.TEXT_NODE) {
+          const txt = focusNode as Text;
+          if (focusOffset === 0 || (focusOffset === 1 && txt.textContent?.[0] === ' '))
+            candidate = txt.previousSibling;
+        }
+        if (isPill(candidate)) {
+          e.preventDefault();
+          const before = candidate!.previousSibling;
+          if (e.shiftKey) {
+            if (before?.nodeType === Node.TEXT_NODE) {
+              sel.extend(before, (before as Text).length);
+            } else {
+              const parent = candidate!.parentNode!;
+              sel.extend(parent, Array.from(parent.childNodes).indexOf(candidate as ChildNode));
+            }
+          } else {
+            const newRange = document.createRange();
+            if (before?.nodeType === Node.TEXT_NODE) {
+              newRange.setStart(before, (before as Text).length);
+            } else {
+              newRange.setStartBefore(candidate!);
+            }
+            newRange.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(newRange);
+          }
+        }
+      }
+    }
+  };
+
+  // ── Insert pill ─────────────────────────────────────────────
+  const insertPill = (trigger: Trigger, user?: MentionUser) => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount || !editorRef.current) return;
+
+    const range = selection.getRangeAt(0);
+    const node = range.startContainer;
+    if (node.nodeType !== Node.TEXT_NODE) return;
+
+    const text = node.textContent || '';
+    const triggerOffset = text.substring(0, range.startOffset).lastIndexOf(trigger);
+    if (triggerOffset === -1) return;
+
+    const textBefore = text.substring(0, triggerOffset);
+    const textAfter = text.substring(triggerOffset + 1 + query.length);
+
+    let pillHtml = '';
+    if (trigger === '@' && user) {
+      pillHtml = `<span contenteditable="false" data-mention-id="${user.id}" data-mention="${user.username}" class="inline-flex items-center px-0.5 mx-0.5 text-sm font-bold cursor-text text-primary-500">@${user.username}</span>`;
+    } else if (trigger === '#') {
+      const tag = query;
+      if (!tag) return;
+      pillHtml = `<span contenteditable="false" data-tag="${tag}" class="inline-flex items-center px-0.5 mx-0.5 text-sm font-bold cursor-text text-sky-400">#${tag}</span>`;
+    }
+    if (!pillHtml) return;
+
+    const frag = document.createDocumentFragment();
+    frag.appendChild(document.createTextNode(textBefore));
+    const temp = document.createElement('div');
+    temp.innerHTML = pillHtml;
+    frag.appendChild(temp.firstChild!);
+    const spaceNode = document.createTextNode(' ' + textAfter);
+    frag.appendChild(spaceNode);
+
+    node.parentNode!.replaceChild(frag, node);
+
+    const newRange = document.createRange();
+    newRange.setStart(spaceNode, 1);
+    newRange.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+
+    setPopoverActive(false);
+    editorRef.current.focus();
+    updateCharCount();
+  };
+
+  // ── Post ────────────────────────────────────────────────────
+  const handlePost = async () => {
+    if (!editorRef.current || charCount === 0 || postingLoading) return;
+    const content_html = editorRef.current.innerHTML;
+    setPostingLoading(true);
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', content_html }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        editorRef.current.innerHTML = '';
+        setCharCount(0);
+        setPopoverActive(false);
+        setPosts((prev) => [data.post, ...prev]);
+      }
+    } catch { /* non-blocking */ }
+    setPostingLoading(false);
+  };
+
+  function insertChar(char: string) {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand('insertText', false, char);
+    handleInput();
+  }
+
+  return (
+    /* ──────────────────────────────────────────────────────────
+        DEVELOPMENT NAVIGATOR: HOME / COMMUNITY FEED
+        Contains: Post composer, infinite-scroll feed, right sidebar
+        ────────────────────────────────────────────────────────── */
+    <div ref={containerRef} className="max-w-6xl mx-auto relative animate-in">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: MAIN FEED COLUMN
+            Contains: Composer card, post feed with infinite scroll
+            ────────────────────────────────────────────────────────── */}
+        <div className="lg:col-span-2 space-y-4">
+
+          {/* Composer */}
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+            <div className="flex gap-3">
+              <img
+                src={currentUser?.avatar || '/Assets/Img/default-avatar.png'}
+                alt="You"
+                className="w-10 h-10 rounded-xl object-cover border border-slate-800 flex-shrink-0"
+              />
+
+              <div className="flex-1 min-w-0">
+                <div className="relative">
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    onInput={handleInput}
+                    onKeyDown={handleKeyDown}
+                    data-placeholder={`What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`}
+                    className="w-full min-h-[44px] bg-[#111318] rounded-2xl px-4 py-2.5 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap outline-none focus:border-primary-500/40 transition-colors"
+                  />
+                  <style jsx>{`
+                    div[contenteditable]:empty:before {
+                      content: attr(data-placeholder);
+                      color: #64748b;
+                      pointer-events: none;
+                    }
+                    div[contenteditable] :global(ul) {
+                      list-style: disc;
+                      padding-left: 1.5rem;
+                      margin: 0.25rem 0;
+                    }
+                    div[contenteditable] :global(ol) {
+                      list-style: decimal;
+                      padding-left: 1.5rem;
+                      margin: 0.25rem 0;
+                    }
+                    div[contenteditable] :global(li) {
+                      margin: 0.125rem 0;
+                    }
+                  `}</style>
+                </div>
+
+                {/* Toolbar */}
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800/60">
+                  <div className="flex items-center gap-1">
+                    <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
+                      <Bold className="w-4 h-4" />
+                    </ToolbarButton>
+                    <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
+                      <Italic className="w-4 h-4" />
+                    </ToolbarButton>
+                    <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
+                      <Underline className="w-4 h-4" />
+                    </ToolbarButton>
+                    <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
+                      <List className="w-4 h-4" />
+                    </ToolbarButton>
+                    <span className="w-px h-5 bg-slate-800 mx-1" />
+                    <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
+                      <AtSign className="w-4 h-4" />
+                    </ToolbarButton>
+                    <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
+                      <Hash className="w-4 h-4" />
+                    </ToolbarButton>
+                    <ToolbarButton label="Emoji (soon)" onClick={() => {}} disabled>
+                      <Smile className="w-4 h-4" />
+                    </ToolbarButton>
+                    <ToolbarButton label="Photo (soon)" onClick={() => {}} disabled>
+                      <ImageIcon className="w-4 h-4" />
+                    </ToolbarButton>
+                  </div>
+
+                  <button
+                    onClick={handlePost}
+                    disabled={charCount === 0 || postingLoading}
+                    className="px-5 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-primary-500/10 active:scale-[0.98] flex items-center gap-2"
+                  >
+                    {postingLoading
+                      ? <Loader2 className="w-4 h-4 animate-spin" />
+                      : <Send className="w-4 h-4" />}
+                    Post
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* ──────────────────────────────────────────────────────────
+                DEVELOPMENT NAVIGATOR: AUTOCOMPLETE POPOVER
+                Contains: @-mention friend list, #-tag creator, keyboard nav hints
+                ────────────────────────────────────────────────────────── */}
+            {popoverActive && (
+              <div
+                role="listbox"
+                aria-label={triggerType === '@' ? 'Mention a friend' : 'Create a tag'}
+                className="absolute z-50 w-80 overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1A1D24]/95 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/5 origin-top animate-in"
+                style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}
+              >
+                {/* Header */}
+                <div className="flex items-center gap-2 px-3.5 py-2.5 border-b border-slate-800/80 bg-slate-900/40">
+                  {triggerType === '@' ? (
+                    <AtSign className="w-3.5 h-3.5 text-primary-500" />
+                  ) : (
+                    <Hash className="w-3.5 h-3.5 text-sky-400" />
+                  )}
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                    {triggerType === '@' ? 'Mention a friend' : 'Create a tag'}
+                  </span>
+                  {triggerType === '@' && suggestions.length > 0 && (
+                    <span className="ml-auto text-[10px] font-bold text-slate-600 tabular-nums">
+                      {suggestions.length}
+                    </span>
+                  )}
+                </div>
+
+                {/* Body */}
+                <div className="max-h-64 overflow-y-auto p-1.5">
+                  {triggerType === '@' ? (
+                    suggestions.length > 0 ? (
+                      suggestions.map((u, idx) => (
+                        <button
+                          key={u.id}
+                          role="option"
+                          aria-selected={idx === selectedIndex}
+                          onMouseEnter={() => setSelectedIndex(idx)}
+                          onClick={() => insertPill('@', u)}
+                          className={`group w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-all duration-150 ${
+                            idx === selectedIndex
+                              ? 'bg-primary-500/15 ring-1 ring-primary-500/30'
+                              : 'hover:bg-slate-800/60'
+                          }`}
+                        >
+                          <span className="relative flex-shrink-0">
+                            <img
+                              src={u.avatar}
+                              alt=""
+                              className="w-8 h-8 rounded-lg object-cover border border-slate-800"
+                            />
+                            {u.is_online && (
+                              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-[#1A1D24]" />
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className={`block text-xs font-bold truncate transition-colors ${
+                              idx === selectedIndex ? 'text-white' : 'text-slate-200'
+                            }`}>
+                              {displayName(u)}
+                            </span>
+                            <span className="block text-[10px] text-slate-500 truncate">@{u.username}</span>
+                          </span>
+                        </button>
+                      ))
+                    ) : (
+                      <div className="flex flex-col items-center gap-1.5 px-3 py-6 text-center">
+                        <Users className="w-5 h-5 text-slate-700" />
+                        <p className="text-xs font-semibold text-slate-500">No matching friends</p>
+                        <p className="text-[10px] text-slate-600">Try a different name.</p>
+                      </div>
+                    )
+                  ) : query ? (
+                    <button
+                      role="option"
+                      aria-selected
+                      onClick={() => insertPill('#')}
+                      className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left bg-sky-500/10 ring-1 ring-sky-500/25 transition-all"
+                    >
+                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/15 flex-shrink-0">
+                        <Hash className="w-4 h-4 text-sky-400" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Create tag</span>
+                        <span className="block text-xs font-bold text-sky-400 truncate">#{query}</span>
+                      </span>
+                      <kbd className="flex-shrink-0 text-[9px] font-bold text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded">↵</kbd>
+                    </button>
+                  ) : (
+                    <div className="flex flex-col items-center gap-1.5 px-3 py-6 text-center">
+                      <Hash className="w-5 h-5 text-slate-700" />
+                      <p className="text-xs font-semibold text-slate-500">Keep typing…</p>
+                      <p className="text-[10px] text-slate-600">Type a word to create a tag.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Keyboard hint footer */}
+                {((triggerType === '@' && suggestions.length > 0) || (triggerType === '#' && query)) && (
+                  <div className="flex items-center gap-3 px-3.5 py-2 border-t border-slate-800/80 bg-slate-900/40 text-[9px] font-semibold text-slate-500">
+                    {triggerType === '@' && (
+                      <span className="flex items-center gap-1">
+                        <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">↑↓</kbd>
+                        navigate
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">↵</kbd>
+                      select
+                    </span>
+                    <span className="flex items-center gap-1 ml-auto">
+                      <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">esc</kbd>
+                      dismiss
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: FEED
+              Contains: Post cards, infinite scroll sentinel, empty state
+              ────────────────────────────────────────────────────────── */}
+          {initialLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="bg-[#1A1D24] border border-dashed border-slate-800/60 rounded-3xl p-10 text-center">
+              <p className="text-sm font-semibold text-slate-400">No posts yet</p>
+              <p className="text-xs text-slate-500 mt-1">Be the first to share something with the community.</p>
+            </div>
+          ) : (
+            <>
+              {posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  isOwn={currentUser?.username === post.username}
+                  onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+                />
+              ))}
+
+              {/* Infinite scroll sentinel */}
+              <div ref={bottomRef} className="h-1" />
+
+              {loadingFeed && (
+                <div className="flex justify-center py-6">
+                  <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+                </div>
+              )}
+
+              {!hasMore && (
+                <p className="text-center text-xs text-slate-600 py-4">You're all caught up</p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR
+            Contains: My Friends list, People You May Know suggestions
+            ────────────────────────────────────────────────────────── */}
+        <aside className="hidden lg:block">
+          <div className="sticky top-24 h-[calc(100vh-7rem)] overflow-y-auto space-y-4 pr-0.5">
+
+            {/* My Friends */}
+            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-slate-400" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    My Friends
+                  </h3>
+                  {friends.length > 0 && (
+                    <span className="text-[10px] font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full">
+                      {friends.length}
+                    </span>
+                  )}
+                </div>
+                <Link
+                  href="/community/friends"
+                  className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
+                >
+                  View All
+                </Link>
+              </div>
+
+              {friends.length === 0 ? (
+                <p className="text-xs text-slate-600 text-center py-4">
+                  No friends yet — discover people below.
+                </p>
+              ) : (
+                <div className="space-y-1">
+                  {friends.slice(0, 7).map((f) => (
+                    <Link
+                      key={f.id}
+                      href={`/u/${f.username}`}
+                      className="flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-slate-800/50 transition-colors group"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <img
+                          src={f.avatar}
+                          alt=""
+                          className="w-8 h-8 rounded-xl object-cover border border-slate-800 group-hover:border-primary-500/30 transition-colors"
+                        />
+                        <span
+                          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${
+                            f.is_online ? 'bg-emerald-500' : 'bg-slate-600'
+                          }`}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-200 truncate group-hover:text-white transition-colors">
+                          {displayName(f)}
+                        </p>
+                        <p className="text-[10px] text-slate-600 truncate">{f.online_label || 'Offline'}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* People You May Know */}
+            {peopleSuggestions.length > 0 && (
+              <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    People You May Know
+                  </h3>
+                  <Link
+                    href="/community/discover"
+                    className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
+                  >
+                    See More
+                  </Link>
+                </div>
+
+                <div className="space-y-3">
+                  {peopleSuggestions.map((u) => (
+                    <div key={u.id} className="flex items-center gap-3">
+                      <Link href={`/u/${u.username}`} className="flex-shrink-0">
+                        <img
+                          src={u.avatar}
+                          alt=""
+                          className="w-9 h-9 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
+                        />
+                      </Link>
+                      <div className="flex-1 min-w-0">
+                        <Link href={`/u/${u.username}`}>
+                          <p className="text-xs font-bold text-slate-200 truncate hover:text-white transition-colors">
+                            {displayName(u)}
+                          </p>
+                        </Link>
+                        <p className="text-[10px] text-slate-600 truncate">@{u.username}</p>
+                      </div>
+                      <button
+                        onClick={() => handleAddFriend(u.id)}
+                        disabled={sentRequests.has(u.id)}
+                        title={sentRequests.has(u.id) ? 'Request sent' : 'Add friend'}
+                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all disabled:cursor-default ${
+                          sentRequests.has(u.id)
+                            ? 'bg-emerald-500/10 text-emerald-400'
+                            : 'bg-primary-500/10 text-primary-500 hover:bg-primary-500/20'
+                        }`}
+                      >
+                        {sentRequests.has(u.id)
+                          ? <><Check className="w-3 h-3" /> Sent</>
+                          : <><UserPlus className="w-3 h-3" /> Add</>}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+          </div>
+        </aside>
+
+      </div>
+    </div>
+  );
+}
+
+// ── Post card ─────────────────────────────────────────────────
+function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDelete: (id: number) => void }) {
+  const name = displayName(post);
+
+  const [liked, setLiked] = useState(post.liked_by_me);
+  const [likeCount, setLikeCount] = useState(post.like_count);
+  const [commentCount, setCommentCount] = useState(post.comment_count);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [loadingComments, setLoadingComments] = useState(false);
+  const [commentText, setCommentText] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const handleDelete = async () => {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', post_id: post.id }),
+      });
+      const data = await res.json();
+      if (data.success) onDelete(post.id);
+    } catch { /* non-blocking */ }
+    setDeleting(false);
+    setConfirmDelete(false);
+  };
+
+  const toggleLike = async () => {
+    setLiked((prev) => !prev);
+    setLikeCount((prev) => liked ? prev - 1 : prev + 1);
+    try {
+      await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'like', post_id: post.id }),
+      });
+    } catch { /* non-blocking */ }
+  };
+
+  const handleShare = async () => {
+    const url = `${window.location.origin}/p/${post.id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: `${name} on Zomzam`, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
+      }
+    } catch { /* cancelled */ }
+  };
+
+  const toggleComments = async () => {
+    const opening = !commentsOpen;
+    setCommentsOpen(opening);
+    if (opening && comments.length === 0) {
+      setLoadingComments(true);
+      try {
+        const res = await fetch(`/api/posts?action=comments&post_id=${post.id}`);
+        const data = await res.json();
+        if (data.success) setComments(data.comments);
+      } catch { /* non-blocking */ }
+      setLoadingComments(false);
+    }
+  };
+
+  // Shared by PostCard (top-level) and CommentRow (replies)
+  const addComment = async (text: string, parentId?: number): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'comment', post_id: post.id, content: text, parent_id: parentId ?? null }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setComments((prev) => [...prev, data.comment]);
+        setCommentCount((prev) => prev + 1);
+        return true;
+      }
+    } catch { /* non-blocking */ }
+    return false;
+  };
+
+  const submitTopComment = async () => {
+    if (!commentText.trim() || submittingComment) return;
+    setSubmittingComment(true);
+    const ok = await addComment(commentText);
+    if (ok) setCommentText('');
+    setSubmittingComment(false);
+  };
+
+  const tree = buildTree(comments);
+
+  return (
+    <div id={`post-${post.id}`} className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+      {/* Header + content */}
+      <div className="flex gap-3">
+        <img
+          src={post.avatar}
+          alt=""
+          className="w-10 h-10 rounded-xl object-cover border border-slate-800 flex-shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-sm font-bold text-white">{name}</span>
+            <span className="text-xs text-slate-500">@{post.username}</span>
+            <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
+            {isOwn && (
+              <button
+                onClick={handleDelete}
+                onBlur={() => setConfirmDelete(false)}
+                disabled={deleting}
+                title={confirmDelete ? 'Click again to confirm' : 'Delete post'}
+                className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-lg transition-colors disabled:opacity-40 ${
+                  confirmDelete
+                    ? 'text-rose-400 bg-rose-500/10'
+                    : 'text-slate-600 hover:text-rose-400 hover:bg-rose-500/10'
+                }`}
+              >
+                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                {confirmDelete && <span>Confirm?</span>}
+              </button>
+            )}
+          </div>
+          <div
+            className="mt-2 text-sm text-slate-300 leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: post.content_html }}
+          />
+        </div>
+      </div>
+
+      {/* Action bar */}
+      <div className="flex items-center gap-5 mt-4 pt-3 border-t border-slate-800/40">
+        <button
+          onClick={toggleLike}
+          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+            liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
+          }`}
+        >
+          <Heart className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
+          {likeCount > 0 && <span>{likeCount}</span>}
+        </button>
+
+        <button
+          onClick={toggleComments}
+          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+            commentsOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
+          }`}
+        >
+          <MessageCircle className="w-4 h-4" />
+          {commentCount > 0 && <span>{commentCount}</span>}
+        </button>
+
+        <button
+          onClick={handleShare}
+          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ml-auto ${
+            shareCopied ? 'text-emerald-400' : 'text-slate-500 hover:text-emerald-400'
+          }`}
+        >
+          <Share2 className="w-4 h-4" />
+          {shareCopied && <span>Copied!</span>}
+        </button>
+      </div>
+
+      {/* Comments section */}
+      {commentsOpen && (
+        <div className="mt-4 space-y-3">
+          {loadingComments ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+            </div>
+          ) : tree.length === 0 ? (
+            <p className="text-xs text-slate-600 text-center py-2">No comments yet — be the first!</p>
+          ) : (
+            tree.map((c) => <CommentRow key={c.id} comment={c} onReply={addComment} depth={0} />)
+          )}
+
+          {/* Top-level comment input */}
+          <div className="flex gap-2 pt-1">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTopComment(); } }}
+              placeholder="Write a comment…"
+              maxLength={1000}
+              className="flex-1 bg-[#111318] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
+            />
+            <button
+              onClick={submitTopComment}
+              disabled={!commentText.trim() || submittingComment}
+              className="p-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors flex-shrink-0"
+            >
+              {submittingComment
+                ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                : <Send className="w-3.5 h-3.5 text-white" />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Comment row (recursive — supports reply threads) ──────────
+function CommentRow({
+  comment,
+  onReply,
+  depth,
+}: {
+  comment: Comment;
+  onReply: (text: string, parentId?: number) => Promise<boolean>;
+  depth: number;
+}) {
+  const name = displayName(comment);
+  const [replyOpen, setReplyOpen] = useState(false);
+  const [replyText, setReplyText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const submitReply = async () => {
+    if (!replyText.trim() || submitting) return;
+    setSubmitting(true);
+    const ok = await onReply(replyText, comment.id);
+    if (ok) { setReplyText(''); setReplyOpen(false); }
+    setSubmitting(false);
+  };
+
+  return (
+    <div className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-3' : ''}>
+      <div className="flex gap-2">
+        <img
+          src={comment.avatar}
+          alt=""
+          className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
+        />
+        <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-xs font-bold text-white">{name}</span>
+            <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
+            {depth < 2 && (
+              <button
+                onClick={() => setReplyOpen((p) => !p)}
+                className={`text-[10px] font-semibold transition-colors ml-auto ${
+                  replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
+                }`}
+              >
+                Reply
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">{comment.content}</p>
+        </div>
+      </div>
+
+      {/* Inline reply input */}
+      {replyOpen && (
+        <div className="flex gap-2 mt-2 ml-9">
+          <input
+            autoFocus
+            value={replyText}
+            onChange={(e) => setReplyText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply(); } }}
+            placeholder={`Reply to ${name}…`}
+            maxLength={1000}
+            className="flex-1 bg-[#111318] rounded-xl px-3 py-1.5 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
+          />
+          <button
+            onClick={submitReply}
+            disabled={!replyText.trim() || submitting}
+            className="p-1.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors flex-shrink-0"
+          >
+            {submitting
+              ? <Loader2 className="w-3 h-3 text-white animate-spin" />
+              : <Send className="w-3 h-3 text-white" />}
+          </button>
+        </div>
+      )}
+
+      {/* Nested replies */}
+      {comment.replies && comment.replies.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {comment.replies.map((reply) => (
+            <CommentRow key={reply.id} comment={reply} onReply={onReply} depth={depth + 1} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Toolbar button ────────────────────────────────────────────
+function ToolbarButton({
+  children, onClick, label, disabled, active,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  label: string;
+  disabled?: boolean;
+  active?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+      onMouseDown={(e) => e.preventDefault()}
+      onClick={onClick}
+      disabled={disabled}
+      className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 ${
+        active
+          ? 'text-primary-500 bg-primary-500/15'
+          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+      }`}
+    >
+      {children}
+    </button>
+  );
+}

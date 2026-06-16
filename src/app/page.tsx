@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@/context/TranslationContext';
 import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, ArrowDown, Activity, DollarSign, Clock } from 'lucide-react';
-import { DropdownMenu } from '@/components/ui/DropdownMenu';
-import { DropdownItem } from '@/components/ui/DropdownItem';
+import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
 
 // Load Silk component dynamically to avoid SSR/hydration issues with ThreeJS/WebGL
@@ -23,7 +22,10 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300 font-sans">
       
-      {/* Navigation (Apple-style Glassmorphism) */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: TOP NAVIGATION BAR
+          Contains: Logo, desktop menu links, language selector, sign-in / get-started CTAs
+          ────────────────────────────────────────────────────────── */}
       <nav className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-[75px]">
@@ -107,7 +109,11 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Main Container / Bento Grid Layout */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: HERO + BENTO GRID
+          Contains: Hero heading card, goal card, Silk canvas card, community card,
+          native-tools card, security card, real-time card, partner logo bar
+          ────────────────────────────────────────────────────────── */}
       <main id="hero" className="flex-grow pt-32 pb-20 px-6 max-w-7xl mx-auto w-full flex flex-col justify-center gap-6">
         
         {/* Bento Grid */}
@@ -309,7 +315,10 @@ export default function LandingPage() {
 
       </main>
 
-      {/* Footer */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: FOOTER
+          Contains: Brand logo + name, copyright line
+          ────────────────────────────────────────────────────────── */}
       <footer id="about" className="border-t border-slate-800 bg-surface-dark/50 backdrop-blur-sm py-12 mt-auto">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">

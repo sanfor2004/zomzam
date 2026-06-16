@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button, Select, Modal } from '@/components/ui';
+import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function IncomePage() {
   const router = useRouter();
@@ -83,7 +83,10 @@ export default function IncomePage() {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
       
-      {/* Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Back button, title + subtitle, "Add Income" button
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <button
@@ -113,7 +116,11 @@ export default function IncomePage() {
         </Button>
       </div>
 
-      {/* Income List */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: INCOME LIST
+          Contains: Empty state, per-transaction rows (icon, description,
+          account/date, amount, delete action)
+          ────────────────────────────────────────────────────────── */}
       <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         {incomes.length === 0 ? (
           <p className="text-center py-20 text-slate-400 italic text-sm">No income transactions found.</p>
@@ -156,7 +163,10 @@ export default function IncomePage() {
         )}
       </div>
 
-      {/* Add Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ADD INCOME MODAL
+          Contains: New-income form (amount, account, category, date, description)
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
@@ -166,18 +176,16 @@ export default function IncomePage() {
         <form onSubmit={handleSave} className="space-y-6">
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Amount</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-xs">VAL</span>
-              <input
-                type="number"
-                step="any"
-                placeholder="0.00"
-                value={amountInput}
-                onChange={(e) => setAmountInput(e.target.value)}
-                required
-                className="w-full pl-14 pr-4 h-12 bg-slate-900/30 border border-slate-850 rounded-2xl text-xl font-black focus:outline-none focus:border-emerald-500 transition-all text-white"
-              />
-            </div>
+            <NumberInput
+              size="lg"
+              accent="emerald"
+              prefix="VAL"
+              step={0.01}
+              placeholder="0.00"
+              value={amountInput}
+              onChange={setAmountInput}
+              required
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

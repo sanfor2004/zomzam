@@ -95,7 +95,10 @@ function ForgotPasswordContent() {
   return (
     <div className="min-h-screen flex w-full bg-[#0f1115] text-slate-100 transition-colors duration-300">
 
-      {/* Left decorative panel */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LEFT BRAND PANEL (desktop only)
+          Contains: Gradient/blur backdrop, brand logo, request-vs-reset headline copy
+          ────────────────────────────────────────────────────────── */}
       <div className="hidden lg:flex w-1/2 relative bg-slate-900 overflow-hidden items-center justify-center">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-[#1A1D24] to-primary-900/40 z-0" />
         <div className="absolute top-20 left-20 w-72 h-72 bg-primary-500/20 rounded-full blur-3xl z-0" />
@@ -116,7 +119,11 @@ function ForgotPasswordContent() {
         </div>
       </div>
 
-      {/* Right form panel */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: RIGHT RECOVERY FORM PANEL
+          Contains: Back-to-signin control, icon, status message, Step 1 request-reset form
+          + success state, Step 2 new-password form + success state
+          ────────────────────────────────────────────────────────── */}
       <div className="w-full lg:w-1/2 relative flex items-center justify-center p-6 sm:p-12 overflow-y-auto min-h-screen">
 
         {/* Top controls */}

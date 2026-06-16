@@ -228,7 +228,10 @@ export default function MyProfilePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in pb-16">
-      {/* Page Title */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Profile icon badge, title + description copy
+          ────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
           <User className="w-5 h-5" />
@@ -245,7 +248,11 @@ export default function MyProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* Left Side: Photo Upload Card & Info Details */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: LEFT COLUMN — AVATAR + ACCOUNT INFO
+            Contains: Avatar frame with upload/remove, hidden file input,
+            photo action buttons, account info card, public-profile link
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
             
@@ -328,7 +335,11 @@ export default function MyProfilePage() {
           </div>
         </div>
 
-        {/* Right Side: Edit Form Fields */}
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: RIGHT COLUMN — IDENTITY & BIO FORM
+            Contains: Success/error banners, first/last name, bio textarea,
+            interests tag selector, save button
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-8">
           
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">

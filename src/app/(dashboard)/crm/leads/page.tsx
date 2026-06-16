@@ -178,7 +178,10 @@ export default function LeadsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       
-      {/* Title Header */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PAGE HEADER
+          Contains: Title + subtitle, "Create New Lead" button
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -197,7 +200,10 @@ export default function LeadsPage() {
         </Button>
       </div>
 
-      {/* Control Panel Filter Hub */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: FILTER & VIEW CONTROL BAR
+          Contains: Search input, industry filter, status filter, grid/table view toggles
+          ────────────────────────────────────────────────────────── */}
       <div className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
         
         {/* Search Input */}
@@ -208,7 +214,7 @@ export default function LeadsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search name, company, address or industry..."
-            className="w-full text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white"
+            className="w-full text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white/[0.04]"
           />
         </div>
 
@@ -271,7 +277,10 @@ export default function LeadsPage() {
 
       </div>
 
-      {/* Multi-Selection Control & Action Strip */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: SELECTION & BATCH ACTION STRIP
+          Contains: Vault/filtered/selected counters, Select-All toggle, batch Delete
+          ────────────────────────────────────────────────────────── */}
       <div className="bg-[#1A1D24] border border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
           <span className="text-slate-400">
@@ -320,7 +329,10 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* Directory Content Workspace */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: DIRECTORY WORKSPACE
+          Contains: Loading state, empty state, grid of <LeadCard>, and table view
+          ────────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="h-[40vh] flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
@@ -427,9 +439,12 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* Outreach Details Modal Drawer */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LEAD DETAILS MODAL
+          Contains: <LeadDetailsModal> drawer (rendered when a lead is selected)
+          ────────────────────────────────────────────────────────── */}
       {selectedLead && (
-        <LeadDetailsModal 
+        <LeadDetailsModal
           key={selectedLead.id}
           lead={selectedLead}
           onClose={() => setSelectedLead(null)}
@@ -437,7 +452,11 @@ export default function LeadsPage() {
         />
       )}
 
-      {/* Add Lead Form Overlay Modal */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: ADD LEAD MODAL
+          Contains: Manual lead-injection form (name, company, niche, email,
+          phone, website, address, notes) inside <Modal>
+          ────────────────────────────────────────────────────────── */}
       {showAddForm && (
         <Modal
           isOpen={true}
