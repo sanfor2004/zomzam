@@ -12,7 +12,7 @@ import { gsap, useGSAP, SplitText, ScrollTrigger, getScrollParent } from '@/lib/
  */
 export function usePageEntrance(
   pageRef: RefObject<HTMLElement | null>,
-  deps: unknown[] = [],
+  deps: readonly unknown[] = [],
 ) {
   useGSAP(() => {
     const root = pageRef.current;
