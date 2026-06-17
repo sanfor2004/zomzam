@@ -153,54 +153,72 @@ export default function DashboardPage() {
     const mm = gsap.matchMedia();
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      // Welcome banner: rises on load.
+      // Welcome banner: rises on load (no ScrollTrigger — runs immediately).
       if (welcomeRef.current) {
         gsap.from(welcomeRef.current, {
           autoAlpha: 0, y: 44, duration: 0.65, ease: 'power3.out', delay: 0.05,
         });
       }
 
-      // Helper: hide a group, then stagger-reveal it on scroll.
-      const revealOnScroll = (selector: string, y: number, stagger: number) => {
-        const items = gsap.utils.toArray<HTMLElement>(selector, root);
-        if (!items.length) return;
-        gsap.set(items, { autoAlpha: 0, y });
-        ScrollTrigger.batch(items, {
-          scroller,
-          start: 'top 88%',
-          once: true,
-          onEnter: (batch) =>
-            gsap.to(batch, {
-              autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger, overwrite: true,
-            }),
-        });
-      };
+      // Collect all targets first — querySelectorAll has no layout cost.
+      const hudCards    = gsap.utils.toArray<HTMLElement>('[data-animate="hud-card"]',    root);
+      const heatmapRows = gsap.utils.toArray<HTMLElement>('[data-animate="heatmap-row"]', root);
+      const pillarCards = gsap.utils.toArray<HTMLElement>('[data-animate="pillar-card"]', root);
+      const detailCols  = gsap.utils.toArray<HTMLElement>('[data-animate="detail-col"]',  root);
 
-      revealOnScroll('[data-animate="hud-card"]', 28, 0.1);
-      revealOnScroll('[data-animate="pillar-card"]', 32, 0.12);
-      revealOnScroll('[data-animate="detail-col"]', 40, 0.14);
+      // --- ALL WRITES FIRST (one layout-dirty cycle, not four) ---
+      // gsap-performance: "Batch Reads and Writes — avoid interleaving reads and
+      // writes in a way that causes repeated layout thrashing."
+      if (hudCards.length)    gsap.set(hudCards,    { autoAlpha: 0, y: 28 });
+      if (heatmapRows.length) gsap.set(heatmapRows, { autoAlpha: 0, x: -20 });
+      if (pillarCards.length) gsap.set(pillarCards, { autoAlpha: 0, y: 32 });
+      if (detailCols.length)  gsap.set(detailCols,  { autoAlpha: 0, y: 40 });
 
-      // Heatmap: reveal by ROW (7 elements), not by cell (168) — animating 168
-      // simultaneous tweens risks jank on low-end devices (performance guidance).
-      const rows = gsap.utils.toArray<HTMLElement>('[data-animate="heatmap-row"]', root);
-      if (rows.length) {
-        gsap.set(rows, { autoAlpha: 0, x: -20 });
-        ScrollTrigger.create({
-          trigger: rows[0],
-          scroller,
-          start: 'top 85%',
-          once: true,
-          onEnter: () =>
-            gsap.to(rows, {
-              autoAlpha: 1, x: 0, duration: 0.38, ease: 'power2.out', stagger: 0.06,
-            }),
+      // --- ALL READS (ScrollTrigger setup) IN PAGE ORDER ---
+      // gsap-scrolltrigger: "Create ScrollTriggers in the order they appear on
+      // the page (top to bottom)." Page order: hud → heatmap → pillar → detail.
+      if (hudCards.length) {
+        ScrollTrigger.batch(hudCards, {
+          scroller, start: 'top 88%', once: true,
+          onEnter: (batch) => gsap.to(batch, {
+            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.1, overwrite: true,
+          }),
         });
       }
 
-      // Data loaded asynchronously, so positions were computed against a shorter
-      // DOM — refresh once now that the real content height is in place (perf
-      // guidance: refresh only when layout actually changes, not on every frame).
-      ScrollTrigger.refresh();
+      // Heatmap: reveal by ROW (7 elements), not by cell (168) — animating 168
+      // simultaneous tweens risks jank on low-end devices (performance guidance).
+      if (heatmapRows.length) {
+        ScrollTrigger.create({
+          trigger: heatmapRows[0], scroller, start: 'top 85%', once: true,
+          onEnter: () => gsap.to(heatmapRows, {
+            autoAlpha: 1, x: 0, duration: 0.38, ease: 'power2.out', stagger: 0.06,
+          }),
+        });
+      }
+
+      if (pillarCards.length) {
+        ScrollTrigger.batch(pillarCards, {
+          scroller, start: 'top 88%', once: true,
+          onEnter: (batch) => gsap.to(batch, {
+            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.12, overwrite: true,
+          }),
+        });
+      }
+
+      if (detailCols.length) {
+        ScrollTrigger.batch(detailCols, {
+          scroller, start: 'top 88%', once: true,
+          onEnter: (batch) => gsap.to(batch, {
+            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.14, overwrite: true,
+          }),
+        });
+      }
+
+      // Defer refresh to after the browser's first paint — running it synchronously
+      // inside a layout effect blocks the render frame that the user sees first.
+      // gsap-performance: "refresh only when layout actually changes."
+      requestAnimationFrame(() => ScrollTrigger.refresh());
     });
   }, { scope: pageRef, dependencies: [loading], revertOnUpdate: true });
 
