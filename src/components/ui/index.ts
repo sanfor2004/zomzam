@@ -6,3 +6,4 @@ export * from './Card';
 export * from './Dropdown';
 export * from './Modal';
 export * from './NumberInput';
+export * from './CountUp';
