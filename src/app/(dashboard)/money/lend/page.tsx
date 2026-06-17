@@ -10,7 +10,6 @@ import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function LendingDebtPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  usePageEntrance(containerRef, [isLoading]);
   const router = useRouter();
   const {
     lendList,
@@ -20,6 +19,7 @@ export default function LendingDebtPage() {
     deleteLend,
     formatAmount,
   } = useMoney();
+  usePageEntrance(containerRef, [isLoading]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [personInput, setPersonInput] = useState('');

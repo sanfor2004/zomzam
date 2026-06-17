@@ -9,7 +9,6 @@ import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function MoneyDashboardPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  usePageEntrance(containerRef, [isLoading]);
   const router = useRouter();
   const {
     accounts,
@@ -26,6 +25,7 @@ export default function MoneyDashboardPage() {
     setDisplayCurrency,
     formatAmount,
   } = useMoney();
+  usePageEntrance(containerRef, [isLoading]);
 
   // Modals state
   const [isIncomeOpen, setIsIncomeOpen] = useState(false);

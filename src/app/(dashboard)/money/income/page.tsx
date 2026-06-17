@@ -9,7 +9,6 @@ import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function IncomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  usePageEntrance(containerRef, [isLoading]);
   const router = useRouter();
   const {
     accounts,
@@ -20,6 +19,7 @@ export default function IncomePage() {
     deleteTransaction,
     formatAmount,
   } = useMoney();
+  usePageEntrance(containerRef, [isLoading]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [amountInput, setAmountInput] = useState('');

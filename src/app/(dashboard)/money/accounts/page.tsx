@@ -9,7 +9,6 @@ import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function BankAccountsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  usePageEntrance(containerRef, [isLoading]);
   const router = useRouter();
   const {
     accounts,
@@ -18,6 +17,7 @@ export default function BankAccountsPage() {
     deleteAccount,
     formatAmount,
   } = useMoney();
+  usePageEntrance(containerRef, [isLoading]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
