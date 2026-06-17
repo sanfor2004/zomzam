@@ -27,6 +27,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = pathname.startsWith('/sign') || pathname === '/';
   const isProtectedRoute =
     pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/home') ||
     pathname.startsWith('/time') ||
     pathname.startsWith('/money') ||
     pathname.startsWith('/me') ||

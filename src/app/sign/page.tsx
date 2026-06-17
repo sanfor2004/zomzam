@@ -63,7 +63,7 @@ function SignPageContent() {
       const data = await res.json();
       if (data.success) {
         setMessage({ type: 'success', text: 'Authentication successful. Redirecting...' });
-        const redirect = searchParams.get('redirect') || '/dashboard';
+        const redirect = searchParams.get('redirect') || '/home';
         setTimeout(() => {
           router.push(redirect);
           router.refresh();
