@@ -2,6 +2,7 @@
 import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { User, Upload, Trash2, X, Plus, Loader2, Sparkles, HelpCircle } from 'lucide-react';
@@ -35,6 +36,8 @@ export default function MyProfilePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef, [isPageLoading]);
 
   // Fetch initial profile data
   useEffect(() => {
@@ -229,7 +232,7 @@ export default function MyProfilePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in pb-16">
+    <div ref={containerRef} className="max-w-4xl mx-auto space-y-8 pb-16">
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Profile icon badge, title + description copy
@@ -239,7 +242,7 @@ export default function MyProfilePage() {
           <User className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">
             {t('profile_title')}
           </h1>
           <p className="text-xs text-slate-400">
@@ -256,10 +259,10 @@ export default function MyProfilePage() {
             photo action buttons, account info card, public-profile link
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
             
             {/* Avatar Photo Frame */}
-            <div className="relative group w-32 h-32 rounded-3xl overflow-hidden shadow-lg mb-5 bg-[#111318] isolate [transform:translateZ(0)]">
+            <div className="relative group w-32 h-32 rounded-3xl overflow-hidden shadow-lg mb-5 bg-[#111318] isolate [transform:translateZ(0)] outline outline-2 outline-offset-2 outline-transparent hover:outline-primary-500/50 transition-colors duration-300">
               <img
                 src={displayAvatar}
                 alt="Profile photo"
@@ -312,7 +315,7 @@ export default function MyProfilePage() {
           </div>
 
           {/* Social Stats Info */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Account Information
             </h3>
@@ -344,8 +347,8 @@ export default function MyProfilePage() {
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-8">
           
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
-            
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+
             <div className="mb-6 pb-4 border-b border-slate-850">
               <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                 Identity & Bio
@@ -358,7 +361,7 @@ export default function MyProfilePage() {
             <form onSubmit={handleSubmit} className="space-y-6">
               
               {/* First Name & Last Name */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div data-entrance="list-item" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
                     {t('profile_first_name')}
@@ -387,7 +390,7 @@ export default function MyProfilePage() {
               </div>
 
               {/* Bio Field */}
-              <div>
+              <div data-entrance="list-item">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
                   {t('profile_bio')}
                 </label>
@@ -407,7 +410,7 @@ export default function MyProfilePage() {
               </div>
 
               {/* Interactive Interests Tags Selector */}
-              <div>
+              <div data-entrance="list-item">
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                     {t('profile_tags')}

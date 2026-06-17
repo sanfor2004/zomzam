@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useRouter } from 'next/navigation';
 import { useTranslation, ZLANG_CONFIG } from '@/context/TranslationContext';
 import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
@@ -59,6 +60,9 @@ export default function SettingsPage() {
   const [prefSuccess, setPrefSuccess] = useState<string | null>(null);
   const [passError, setPassError] = useState<string | null>(null);
   const [passSuccess, setPassSuccess] = useState<string | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef, [isPageLoading]);
 
   // CRM settings states
   const [crmSettings, setCrmSettings] = useState<Record<string, string>>({
@@ -394,14 +398,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in pb-16">
+    <div ref={containerRef} className="max-w-4xl mx-auto space-y-8 pb-16">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
           <Settings className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">
+          <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">
             {t('settings_title')}
           </h1>
           <p className="text-xs text-slate-400">
@@ -413,7 +417,7 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         {/* Navigation / Intro card */}
         <div className="md:col-span-1 space-y-4">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Sections
             </h2>
@@ -468,6 +472,7 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="preferences"
+            data-entrance="card"
             className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
@@ -495,7 +500,7 @@ export default function SettingsPage() {
               />
 
               {/* Timezone Preference */}
-              <div>
+              <div data-entrance="list-item">
                 <Select
                   label={t('settings_timezone')}
                   value={timezone}
@@ -514,7 +519,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Currencies preferences */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div data-entrance="list-item" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <Select
                   label={t('settings_primary_curr')}
                   value={primaryCurrency}
@@ -531,7 +536,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Notification Preference Toggle */}
-              <div className="flex items-start justify-between p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl">
+              <div data-entrance="list-item" className="flex items-start justify-between p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl">
                 <div className="space-y-0.5 pr-4">
                   <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
                     <Bell className="w-4 h-4 text-slate-400" />
@@ -760,6 +765,7 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="notion"
+            data-entrance="card"
             className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
@@ -892,6 +898,7 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="security"
+            data-entrance="card"
             className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
@@ -908,7 +915,7 @@ export default function SettingsPage() {
 
             <form onSubmit={handleSavePassword} className="space-y-5">
               {/* Current Password */}
-              <div className="relative">
+              <div data-entrance="list-item" className="relative">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
                   {t('settings_curr_pass')}
                 </label>
@@ -931,7 +938,7 @@ export default function SettingsPage() {
               </div>
 
               {/* New Password */}
-              <div className="relative">
+              <div data-entrance="list-item" className="relative">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
                   {t('settings_new_pass')}
                 </label>
@@ -954,7 +961,7 @@ export default function SettingsPage() {
               </div>
 
               {/* Confirm New Password */}
-              <div className="relative">
+              <div data-entrance="list-item" className="relative">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
                   {t('settings_confirm_pass')}
                 </label>
@@ -993,6 +1000,7 @@ export default function SettingsPage() {
               ────────────────────────────────────────────────────────── */}
           <section
             id="danger"
+            data-entrance="card"
             className="bg-[#1A1D24] border border-red-900/40 rounded-3xl p-6 shadow-apple scroll-mt-6"
           >
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-red-900/30">

@@ -10,7 +10,7 @@ import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function LendingDebtPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  usePageEntrance(containerRef);
+  usePageEntrance(containerRef, [isLoading]);
   const router = useRouter();
   const {
     lendList,

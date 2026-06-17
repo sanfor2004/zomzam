@@ -8,6 +8,7 @@ import { verifyToken } from '@/lib/auth';
 import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
 import PublicUserStatus from './PublicUserStatus';
+import ProfileAnimationKit from './ProfileAnimationKit';
 import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, LogIn, Laptop, Globe } from 'lucide-react';
 
 interface PageProps {
@@ -149,9 +150,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
           interest tags, social interaction buttons (friend/follow)
           ────────────────────────────────────────────────────────── */}
       <main className="flex-grow pt-32 pb-24 px-6 max-w-4xl mx-auto w-full">
-        
+        <ProfileAnimationKit>
+
         {/* Profile Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple relative overflow-hidden space-y-8">
+        <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple relative overflow-hidden space-y-8">
           
           {/* Accent Glow Background */}
           <div className="absolute top-0 right-0 w-40 h-40 bg-primary-500/5 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none"></div>
@@ -173,7 +175,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
               {/* Name Details */}
               <div className="space-y-1.5">
                 <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                  <h1 className="text-2xl font-black tracking-tight text-white">
+                  <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">
                     {fullName || profileUser.username}
                   </h1>
                   <span className="px-2.5 py-0.5 bg-slate-800 text-slate-400 font-bold rounded-full text-[9px] uppercase tracking-wider">
@@ -231,6 +233,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 {tags.map((tag, idx) => (
                   <span
                     key={idx}
+                    data-entrance="list-item"
                     className="px-3 py-1 bg-slate-900 border border-slate-800/80 text-slate-350 font-bold text-xs rounded-xl transition-colors hover:border-primary-500/30"
                   >
                     #{tag}
@@ -277,6 +280,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
         </div>
 
+        </ProfileAnimationKit>
       </main>
 
       {/* ──────────────────────────────────────────────────────────

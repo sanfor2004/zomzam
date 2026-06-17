@@ -1,7 +1,8 @@
 'use client';
 import { Button } from '@/components/ui';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check } from 'lucide-react';
 
@@ -69,6 +70,8 @@ export default function PostDetail({
   initialComments: Comment[];
   viewerId: number | null;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef);
   const authorName = displayName(post);
   const [liked, setLiked] = useState(post.liked_by_me);
   const [likeCount, setLikeCount] = useState(post.like_count);
@@ -132,7 +135,7 @@ export default function PostDetail({
   const tree = buildTree(comments);
 
   return (
-    <div className="space-y-5 animate-in">
+    <div ref={containerRef} className="space-y-5">
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: BREADCRUMB
@@ -150,7 +153,7 @@ export default function PostDetail({
           DEVELOPMENT NAVIGATOR: POST CARD
           Contains: Author row, post content, like/comment/share actions
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-7 shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-7 shadow-apple">
 
         {/* Author row */}
         <div className="flex items-center gap-4 pb-6 border-b border-slate-800/40 mb-6">
@@ -223,7 +226,7 @@ export default function PostDetail({
           DEVELOPMENT NAVIGATOR: COMMENTS SECTION
           Contains: Comment count header, comment input, threaded comment tree
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-7 shadow-apple space-y-5">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-7 shadow-apple space-y-5">
         <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">
           {comments.length === 0
             ? 'No comments yet'
@@ -294,7 +297,7 @@ function CommentRow({
   };
 
   return (
-    <div className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-4' : ''}>
+    <div data-entrance={depth === 0 ? 'list-item' : undefined} className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-4' : ''}>
       <div className="flex gap-3">
         <Link href={`/u/${comment.username}`} className="flex-shrink-0 mt-0.5">
           <img

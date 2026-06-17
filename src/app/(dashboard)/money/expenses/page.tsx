@@ -9,7 +9,7 @@ import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function ExpensesPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  usePageEntrance(containerRef);
+  usePageEntrance(containerRef, [isLoading]);
   const router = useRouter();
   const {
     accounts,
