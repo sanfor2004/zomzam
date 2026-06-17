@@ -7,6 +7,7 @@ import { useStreamWaiter } from '@/context/StreamWaiterContext';
 import { Clock, RotateCcw, Play, Pause, SkipForward, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button, Select, Modal } from '@/components/ui';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface Task {
   id: number;
@@ -24,6 +25,9 @@ interface Task {
 export default function PomodoroPage() {
   const { t } = useTranslation();
   const router = useRouter();
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, []);
 
   // Tasks & Server Sync
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -478,7 +482,7 @@ export default function PomodoroPage() {
     : circumference;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -490,7 +494,7 @@ export default function PomodoroPage() {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Pomodoro Focus</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Pomodoro Focus</h1>
             <p className="text-xs text-slate-400">Stay in the zone. One task at a time.</p>
           </div>
         </div>
@@ -510,7 +514,7 @@ export default function PomodoroPage() {
             Contains: SVG countdown ring, play/pause/reset controls,
             focus/break duration adjusters
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple flex flex-col items-center justify-center relative overflow-hidden">
+        <div data-entrance="card" className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple flex flex-col items-center justify-center relative overflow-hidden">
           <div className="absolute top-0 left-0 -mt-24 -ml-24 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none"></div>
           
           {/* Visual SVG Ring */}
@@ -658,7 +662,7 @@ export default function PomodoroPage() {
           </div>
 
           {/* Current Focus Task Card */}
-          <div className="flex-1 bg-gradient-to-br from-primary-500/10 via-[#13161C] to-amber-500/5 border border-slate-800/60 rounded-3xl p-8 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+          <div data-entrance="card" className="flex-1 bg-gradient-to-br from-primary-500/10 via-[#13161C] to-amber-500/5 border border-slate-800/60 rounded-3xl p-8 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between min-h-[300px]">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <span className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white bg-primary-500 rounded-full">

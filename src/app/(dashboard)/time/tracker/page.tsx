@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Clock, Check, Award, TrendingUp, AlertTriangle, Play, Calendar } from 'lucide-react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface Task {
   id: number;
@@ -25,6 +26,9 @@ export default function DailyTrackerPage() {
   // Tasks state
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [isLoading]);
 
   const loadData = async () => {
     try {
@@ -114,7 +118,7 @@ export default function DailyTrackerPage() {
   });
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -126,7 +130,7 @@ export default function DailyTrackerPage() {
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white font-display">Daily Tracker</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white font-display">Daily Tracker</h1>
             <p className="text-xs text-slate-400">Your focus and accomplishments for today.</p>
           </div>
         </div>
@@ -144,7 +148,7 @@ export default function DailyTrackerPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Metric: Hours Focused */}
-        <div className="bg-gradient-to-br from-blue-900/10 to-indigo-900/15 border border-blue-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+        <div data-entrance="card" className="bg-gradient-to-br from-blue-900/10 to-indigo-900/15 border border-blue-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl"></div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md shadow-blue-500/10">
@@ -161,7 +165,7 @@ export default function DailyTrackerPage() {
         </div>
 
         {/* Metric: Tasks Done */}
-        <div className="bg-gradient-to-br from-emerald-900/10 to-teal-900/15 border border-emerald-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+        <div data-entrance="card" className="bg-gradient-to-br from-emerald-900/10 to-teal-900/15 border border-emerald-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl"></div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/10">
@@ -187,7 +191,7 @@ export default function DailyTrackerPage() {
         </div>
 
         {/* Metric: Wasted Time */}
-        <div className="bg-gradient-to-br from-rose-900/10 to-red-900/15 border border-rose-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
+        <div data-entrance="card" className="bg-gradient-to-br from-rose-900/10 to-red-900/15 border border-rose-900/30 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-24 h-24 bg-rose-500/5 rounded-full blur-2xl"></div>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-md shadow-rose-500/10">
@@ -220,7 +224,7 @@ export default function DailyTrackerPage() {
           DEVELOPMENT NAVIGATOR: ACTIVITY LIST
           Contains: Today's completed-task entries (planned vs actual minutes)
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest mb-6 pb-4 border-b border-slate-850">
           What you did today
         </h2>

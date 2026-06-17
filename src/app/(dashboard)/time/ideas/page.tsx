@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Lightbulb, Plus, Trash2, Edit2, X, Check, Save } from 'lucide-react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface Task {
   id: number;
@@ -39,6 +40,9 @@ export default function IdeaCapturePage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [horizons, setHorizons] = useState<Horizon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [isLoading]);
 
   // Editor State
   const editorRef = useRef<HTMLDivElement>(null);
@@ -419,7 +423,13 @@ export default function IdeaCapturePage() {
   }
 
   return (
-    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8 animate-in relative">
+    <div
+      ref={(el) => {
+        (containerRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+        (pageRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+      }}
+      className="max-w-6xl mx-auto space-y-8 relative"
+    >
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: FLOATING MENTIONS DROPDOWN MENU
@@ -477,7 +487,7 @@ export default function IdeaCapturePage() {
             <Lightbulb className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Idea Capture</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Idea Capture</h1>
             <p className="text-xs text-slate-400">Your brain dump zone — write freely, tag later.</p>
           </div>
         </div>
@@ -494,8 +504,8 @@ export default function IdeaCapturePage() {
             Supports rich pills, key listeners for Arrow/Enter/Esc dropdown control
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-6">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
-            
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+
             {/* Editor Textarea */}
             <div className="relative">
               <div
@@ -564,7 +574,7 @@ export default function IdeaCapturePage() {
             DEVELOPMENT NAVIGATOR: IDEA VAULT CARDS GRID
             Renders filtered ideas list with edit/delete control and formatting
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col min-h-[460px]">
+        <div data-entrance="card" className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col min-h-[460px]">
           <div className="flex items-center justify-between mb-5 pb-3 border-b border-slate-850">
             <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
               Idea Vault
