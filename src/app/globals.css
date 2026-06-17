@@ -463,3 +463,58 @@ html[dir="rtl"] #communityGroup > div {
   }
 }
 
+/* ============================================================================
+   CREATIVE HOVER UTILITIES — draw-underline, card-lift, breathing, dot-pulse
+   No glow. All transforms. All performance-safe.
+   ============================================================================ */
+
+/* Draw-underline: scaleX 0→1 from left on hover. Apply to any nav link or CTA text. */
+.hover-underline {
+  position: relative;
+}
+.hover-underline::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 1.5px;
+  background: currentColor;
+  transform-origin: left center;
+  transform: scaleX(0);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.hover-underline:hover::after {
+  transform: scaleX(1);
+}
+
+/* Card-lift: translateY -3px + deeper layered shadows on hover (no glow). */
+.card-lift {
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-lift:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 36px -6px rgba(0, 0, 0, 0.28),
+    0 4px 12px -3px rgba(0, 0, 0, 0.16),
+    0 1px 4px -1px rgba(0, 0, 0, 0.10);
+}
+
+/* Breathing: loopy subtle scale for primary CTAs — draws the eye without distraction. */
+@keyframes breathing {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.018); }
+}
+.breathing {
+  animation: breathing 2.8s ease-in-out infinite;
+}
+
+/* Dot-pulse: loopy scale for online status indicators — alive without bouncing. */
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.6); opacity: 0.55; }
+}
+.dot-pulse {
+  animation: dot-pulse 1.8s ease-in-out infinite;
+}
