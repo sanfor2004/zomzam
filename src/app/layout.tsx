@@ -1,19 +1,12 @@
 import type { Metadata } from 'next';
-import { Inter, Montserrat, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
 
 const inter = Inter({
   variable: '--font-sans',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-});
-
-const montserrat = Montserrat({
-  variable: '--font-display-face',
-  subsets: ['latin'],
-  weight: ['600', '700', '800', '900'],
-  display: 'swap',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -39,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${montserrat.variable} ${jetbrainsMono.variable} dark h-full antialiased`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} dark h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300">
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: ROOT APP SHELL
