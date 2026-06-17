@@ -304,7 +304,7 @@ export default function DashboardPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold text-primary-50">Operational Hub</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight font-display">
+            <h2 className="text-title font-black tracking-tight font-display">
               Welcome back, {profile.username}!
             </h2>
             <p className="text-primary-50/90 text-sm sm:text-base max-w-xl font-medium">
@@ -337,7 +337,7 @@ export default function DashboardPage() {
               <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
                 <Sparkles className="w-3.5 h-3.5" /> Effective Hourly Rate HUD
               </span>
-              <h3 className="text-xl font-black text-white tracking-tight">
+              <h3 className="font-display text-headline font-black text-white tracking-tight">
                 Freelancer Efficiency Analyzer
               </h3>
             </div>
@@ -430,7 +430,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
               <Zap className="w-3.5 h-3.5" /> Hourly Activity Heatmap
             </span>
-            <h3 className="text-xl font-black text-white tracking-tight">
+            <h3 className="font-display text-headline font-black text-white tracking-tight">
               Productivity Pixel Grid
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
