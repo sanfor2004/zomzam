@@ -4,7 +4,9 @@
 
 @theme {
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  
+  --font-display: var(--font-display-face, "Montserrat"), "Inter", sans-serif;
+  --font-mono: var(--font-mono-face, "JetBrains Mono"), "Fira Code", ui-monospace, monospace;
+
   --color-primary-50: #fff0eb;
   --color-primary-100: #ffdcd1;
   --color-primary-200: #ffbfa8;
