@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus } from 'lucide-react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface SocialUser {
   id: number;
@@ -31,6 +32,8 @@ export default function FollowingPage() {
   const [searchResults, setSearchResults] = useState<SocialUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchFollowing = async () => {
     setLoading(true);
@@ -98,7 +101,7 @@ export default function FollowingPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -110,7 +113,7 @@ export default function FollowingPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
             <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
           </div>
         </div>
@@ -188,7 +191,7 @@ export default function FollowingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* People I Follow */}
-            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple min-h-[300px]">
+            <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple min-h-[300px] card-lift">
               <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                 People I Follow ({following.length})
               </h3>
@@ -223,7 +226,7 @@ export default function FollowingPage() {
             </div>
 
             {/* Followers */}
-            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple min-h-[300px]">
+            <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple min-h-[300px] card-lift">
               <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                 My Followers ({followers.length})
               </h3>

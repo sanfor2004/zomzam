@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, ShieldAlert } from 'lucide-react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface SocialUser {
   id: number;
@@ -30,6 +31,8 @@ export default function FriendsPage() {
   const [searchResults, setSearchResults] = useState<SocialUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchFriends = async () => {
     setLoading(true);
@@ -94,7 +97,7 @@ export default function FriendsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -106,7 +109,7 @@ export default function FriendsPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
             <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
           </div>
         </div>
@@ -197,7 +200,8 @@ export default function FriendsPage() {
               friends.map((f) => (
                 <div
                   key={f.id}
-                  className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden"
+                  data-entrance="card"
+                  className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden card-lift"
                 >
                   <div className="flex items-start gap-4">
                     <div className="relative flex-shrink-0">
@@ -208,7 +212,7 @@ export default function FriendsPage() {
                       />
                       <span className={`absolute bottom-[-2px] right-[-2px] w-3 h-3 rounded-full border-2 border-[#1A1D24]${
                         f.is_online
-                          ? (f.is_idle ? 'bg-amber-400' : 'bg-green-500 animate-pulse')
+                          ? (f.is_idle ? 'bg-amber-400' : 'bg-green-500 dot-pulse')
                           : 'bg-slate-400'
                       }`} />
                     </div>

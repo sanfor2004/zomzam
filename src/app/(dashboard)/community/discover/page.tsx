@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, Sparkles } from 'lucide-react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface SocialUser {
   id: number;
@@ -30,6 +31,8 @@ export default function DiscoverPage() {
   const [searchResults, setSearchResults] = useState<SocialUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchDiscover = async () => {
     setLoading(true);
@@ -94,7 +97,7 @@ export default function DiscoverPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -106,7 +109,7 @@ export default function DiscoverPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
             <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
           </div>
         </div>
@@ -188,7 +191,8 @@ export default function DiscoverPage() {
               discoverUsers.map((usr) => (
                 <div
                   key={usr.id}
-                  className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group flex flex-col justify-between"
+                  data-entrance="card"
+                  className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group flex flex-col justify-between card-lift"
                 >
                   <div className="flex items-start gap-4">
                     <img
