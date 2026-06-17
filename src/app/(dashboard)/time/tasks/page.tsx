@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, X, AlertCircle, Database } from 'lucide-react';
-import { Button, Select, Modal } from '@/components/ui';
+import { Button, Select, Modal, Alert } from '@/components/ui';
 
 interface Task {
   id: number;
@@ -355,19 +355,13 @@ export default function TaskBoardPage() {
       </div>
 
       {syncStats && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-2xl text-xs flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
-          <Check className="w-4 h-4 flex-shrink-0" />
-          <span>
-            Notion synchronization complete! Synced: {syncStats.tasks} tasks, {syncStats.projects} projects, {syncStats.links} links.
-          </span>
-        </div>
+        <Alert variant="success" animate>
+          Notion synchronization complete! Synced: {syncStats.tasks} tasks, {syncStats.projects} projects, {syncStats.links} links.
+        </Alert>
       )}
 
       {syncError && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-2xl text-xs flex items-center gap-2.5 animate-in slide-in-from-top duration-300">
-          <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          <span>{syncError}</span>
-        </div>
+        <Alert variant="error" animate>{syncError}</Alert>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">

@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { User, Upload, Trash2, X, Plus, AlertCircle, CheckCircle2, Loader2, Sparkles, HelpCircle } from 'lucide-react';
+import { User, Upload, Trash2, X, Plus, Loader2, Sparkles, HelpCircle } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
 
 export default function MyProfilePage() {
   const { t } = useTranslation();
@@ -350,19 +351,8 @@ export default function MyProfilePage() {
               </h2>
             </div>
 
-            {successMsg && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            {errorMsg && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
+            {successMsg && <Alert variant="success" className="mb-6">{successMsg}</Alert>}
+            {errorMsg && <Alert variant="error" className="mb-6">{errorMsg}</Alert>}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               

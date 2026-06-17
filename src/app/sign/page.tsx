@@ -3,8 +3,9 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Globe, ArrowLeft, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Globe, ArrowLeft, ArrowRight } from 'lucide-react';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
+import { Alert } from '@/components/ui/Alert';
 
 function SignPageContent() {
   const { t, language, setLanguage } = useTranslation();
@@ -206,23 +207,13 @@ function SignPageContent() {
 
           {/* Status Message */}
           {message && (
-            <div
-              className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-start gap-3 border${
-                message.type === 'success'
-                  ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                  : 'bg-red-500/10 border-red-500/20 text-red-400'
-              }`}
+            <Alert
+              variant={message.type}
+              title={message.type === 'success' ? 'Success' : 'Error'}
+              className="mb-6"
             >
-              {message.type === 'success' ? (
-                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              ) : (
-                <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-              )}
-              <div>
-                <p className="font-bold">{message.type === 'success' ? 'Success' : 'Error'}</p>
-                <p className="text-xs mt-0.5 opacity-90">{message.text}</p>
-              </div>
-            </div>
+              {message.text}
+            </Alert>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">

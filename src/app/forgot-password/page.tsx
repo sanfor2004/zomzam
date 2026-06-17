@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle, AlertCircle, Mail, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Mail, KeyRound, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Alert } from '@/components/ui/Alert';
 
 function ForgotPasswordContent() {
   const searchParams = useSearchParams();
@@ -160,16 +161,9 @@ function ForgotPasswordContent() {
 
           {/* Status message */}
           {message && (
-            <div className={`mb-6 p-4 rounded-xl text-sm font-bold flex items-start gap-3 border${
-              message.type === 'success'
-                ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                : 'bg-red-500/10 border-red-500/20 text-red-400'
-            }`}>
-              {message.type === 'success'
-                ? <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                : <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />}
-              <p className="text-xs mt-0.5 opacity-90">{message.text}</p>
-            </div>
+            <Alert variant={message.type} className="mb-6">
+              {message.text}
+            </Alert>
           )}
 
           {/* ── STEP 1: Request Reset ── */}

@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation, ZLANG_CONFIG } from '@/context/TranslationContext';
-import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, CheckCircle, AlertTriangle, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
-import { Button, Switch, Modal, Select, NumberInput } from '@/components/ui';
+import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
+import { Button, Switch, Modal, Select, NumberInput, Alert } from '@/components/ui';
 
 const COMMON_TIMEZONES = [
   'UTC',
@@ -479,19 +479,8 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            {prefSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{prefSuccess}</span>
-              </div>
-            )}
-
-            {prefError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{prefError}</span>
-              </div>
-            )}
+            {prefSuccess && <Alert variant="success" className="mb-6">{prefSuccess}</Alert>}
+            {prefError && <Alert variant="error" className="mb-6">{prefError}</Alert>}
 
             <form onSubmit={handleSavePreferences} className="space-y-6">
               {/* Language Preference */}
@@ -590,19 +579,8 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            {crmSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{crmSuccess}</span>
-              </div>
-            )}
-
-            {crmError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{crmError}</span>
-              </div>
-            )}
+            {crmSuccess && <Alert variant="success" className="mb-6">{crmSuccess}</Alert>}
+            {crmError && <Alert variant="error" className="mb-6">{crmError}</Alert>}
 
             <form onSubmit={handleSaveCrmSettings} className="space-y-6">
               {/* API Keys */}
@@ -793,19 +771,8 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            {notionSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{notionSuccess}</span>
-              </div>
-            )}
-
-            {notionError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{notionError}</span>
-              </div>
-            )}
+            {notionSuccess && <Alert variant="success" className="mb-6">{notionSuccess}</Alert>}
+            {notionError && <Alert variant="error" className="mb-6">{notionError}</Alert>}
 
             <form onSubmit={handleSaveNotionSettings} className="space-y-6">
               <div className="space-y-4">
@@ -936,19 +903,8 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            {passSuccess && (
-              <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3 text-emerald-400 text-xs">
-                <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{passSuccess}</span>
-              </div>
-            )}
-
-            {passError && (
-              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-500 text-xs">
-                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                <span>{passError}</span>
-              </div>
-            )}
+            {passSuccess && <Alert variant="success" className="mb-6">{passSuccess}</Alert>}
+            {passError && <Alert variant="error" className="mb-6">{passError}</Alert>}
 
             <form onSubmit={handleSavePassword} className="space-y-5">
               {/* Current Password */}
@@ -1110,12 +1066,7 @@ export default function SettingsPage() {
           Enter your current password to confirm.
         </p>
 
-        {deleteError && (
-          <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-center gap-2 text-red-500 text-xs">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-            <span>{deleteError}</span>
-          </div>
-        )}
+        {deleteError && <Alert variant="error" className="mb-4">{deleteError}</Alert>}
 
         <div className="mb-2">
           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
