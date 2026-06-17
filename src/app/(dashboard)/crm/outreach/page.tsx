@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Mail, 
@@ -13,6 +13,7 @@ import {
   MessageSquare
 } from "lucide-react";
 import { Button } from "@/components/ui";
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 export default function OutreachSettingsPage() {
   const router = useRouter();
@@ -25,6 +26,9 @@ export default function OutreachSettingsPage() {
   });
   const [crmSettings, setCrmSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   useEffect(() => {
     async function loadData() {
@@ -69,7 +73,7 @@ export default function OutreachSettingsPage() {
   const hasClaudeKey = crmSettings.CLAUDE_API_KEY && crmSettings.CLAUDE_API_KEY.trim() !== "";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
+    <div ref={pageRef} className="max-w-4xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -77,7 +81,7 @@ export default function OutreachSettingsPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Mail className="h-6 w-6 text-[#EE5712]" />
             Campaign Outreach Hub
           </h1>
@@ -96,7 +100,7 @@ export default function OutreachSettingsPage() {
             active LLM engine config card (model / tone / temperature / API status)
             ────────────────────────────────────────────────────────── */}
         <div className="md:col-span-2 space-y-6">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden group">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-300">
               <Sparkles className="h-40 w-40 text-[#EE5712]" />
             </div>
@@ -128,7 +132,7 @@ export default function OutreachSettingsPage() {
           </div>
 
           {/* Active Model Status card */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
             <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-[#EE5712]" />
               Active LLM Engine Configuration
@@ -170,7 +174,7 @@ export default function OutreachSettingsPage() {
             email signature block preview
             ────────────────────────────────────────────────────────── */}
         <div className="md:col-span-1 space-y-6">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
             <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest">
               Outreach Stats
             </h3>
@@ -192,7 +196,7 @@ export default function OutreachSettingsPage() {
           </div>
 
           {/* Email Signature Block Preview */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
             <h3 className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
               <FileText className="w-4.5 h-4.5 text-[#EE5712]" />
               Signature Block

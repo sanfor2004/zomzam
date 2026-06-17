@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   GitFork, 
   Loader2, 
@@ -8,11 +8,15 @@ import {
 } from "lucide-react";
 import { KanbanBoard } from "@/components/crm/KanbanBoard";
 import { LeadDetailsModal } from "@/components/crm/LeadDetailsModal";
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 export default function PipelinesPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchLeads = async () => {
     try {
@@ -46,7 +50,7 @@ export default function PipelinesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div ref={pageRef} className="space-y-6">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -54,7 +58,7 @@ export default function PipelinesPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <GitFork className="h-6 w-6 text-[#EE5712]" />
             Niche Acquisition Funnel
           </h1>
@@ -71,11 +75,13 @@ export default function PipelinesPage() {
           DEVELOPMENT NAVIGATOR: KANBAN PIPELINE BOARD
           Contains: <KanbanBoard> drag-and-drop lead stage columns
           ────────────────────────────────────────────────────────── */}
-      <KanbanBoard
-        initialLeads={leads} 
-        onOpenDetails={(l) => setSelectedLead(l)} 
-        onRefresh={fetchLeads}
-      />
+      <div data-entrance="card">
+        <KanbanBoard
+          initialLeads={leads}
+          onOpenDetails={(l) => setSelectedLead(l)}
+          onRefresh={fetchLeads}
+        />
+      </div>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: LEAD DETAILS MODAL

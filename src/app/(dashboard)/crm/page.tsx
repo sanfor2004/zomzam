@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Sparkles, 
   Compass, 
@@ -13,12 +13,16 @@ import { AnalyticsOverview } from "@/components/crm/AnalyticsOverview";
 import { ScraperPanel } from "@/components/crm/ScraperPanel";
 import { LeadCard } from "@/components/crm/LeadCard";
 import { LeadDetailsModal } from "@/components/crm/LeadDetailsModal";
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 export default function CrmDashboardPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchDashboardData = async () => {
     try {
@@ -82,7 +86,7 @@ export default function CrmDashboardPage() {
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
+    <div ref={pageRef} className="space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -90,7 +94,7 @@ export default function CrmDashboardPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Compass className="h-6 w-6 text-[#EE5712]" />
             Executive Control Center
           </h1>
@@ -119,7 +123,9 @@ export default function CrmDashboardPage() {
           DEVELOPMENT NAVIGATOR: ANALYTICS OVERVIEW
           Contains: <AnalyticsOverview> KPI stat cards
           ────────────────────────────────────────────────────────── */}
-      <AnalyticsOverview stats={stats} />
+      <div data-entrance="card">
+        <AnalyticsOverview stats={stats} />
+      </div>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: SCRAPER CONSOLE
@@ -149,11 +155,12 @@ export default function CrmDashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {leads.map((lead) => (
-              <LeadCard 
-                key={lead.id} 
-                lead={lead} 
-                onOpenDetails={(l) => setSelectedLead(l)} 
-              />
+              <div key={lead.id} data-entrance="card" className="card-lift">
+                <LeadCard
+                  lead={lead}
+                  onOpenDetails={(l) => setSelectedLead(l)}
+                />
+              </div>
             ))}
           </div>
         )}

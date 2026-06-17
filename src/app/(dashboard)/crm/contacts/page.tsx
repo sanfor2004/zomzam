@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   Search, 
@@ -14,12 +14,16 @@ import {
 } from 'lucide-react';
 import { Button, Badge, Card } from '@/components/ui';
 import { LeadDetailsModal } from '@/components/crm/LeadDetailsModal';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 export default function ContactsPage() {
   const [contacts, setContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchContacts = async () => {
     try {
@@ -59,7 +63,7 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div ref={pageRef} className="space-y-6">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -67,7 +71,7 @@ export default function ContactsPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Users className="h-6 w-6 text-[#EE5712]" />
             Client Profiles
           </h1>
@@ -83,7 +87,7 @@ export default function ContactsPage() {
           DEVELOPMENT NAVIGATOR: SEARCH BAR
           Contains: Client search input (filters by name / brand / niche)
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 pointer-events-none" />
           <input
@@ -108,7 +112,7 @@ export default function ContactsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredContacts.map((contact) => (
-            <Card key={contact.id} className="bg-[#1A1D24] border border-slate-800/60 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between hover:border-[#EE5712]/30 transition-all duration-300 shadow-apple">
+            <Card key={contact.id} data-entrance="list-item" className="bg-[#1A1D24] border border-slate-800/60 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between hover:border-[#EE5712]/30 transition-all duration-300 shadow-apple">
               <div className="space-y-4">
                 <div className="flex justify-between items-start">
                   <div>
