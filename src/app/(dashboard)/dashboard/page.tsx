@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
+import { gsap, useGSAP, ScrollTrigger, SplitText, getScrollParent } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
 import { 
   User, 
@@ -100,6 +100,7 @@ export default function DashboardPage() {
   const cardRef = React.useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const welcomeRef = useRef<HTMLDivElement>(null);
+  const welcomeTitleRef = useRef<HTMLHeadingElement>(null);
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,11 +154,27 @@ export default function DashboardPage() {
     const mm = gsap.matchMedia();
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      // Welcome banner: rises on load (no ScrollTrigger — runs immediately).
-      if (welcomeRef.current) {
-        gsap.from(welcomeRef.current, {
-          autoAlpha: 0, y: 44, duration: 0.65, ease: 'power3.out', delay: 0.05,
+      // Welcome banner: rises on load, then title chars spring up.
+      if (welcomeRef.current && welcomeTitleRef.current) {
+        const welcomeSplit = SplitText.create(welcomeTitleRef.current, {
+          type: 'chars,words',
+          mask: 'chars',
+          aria: 'auto',
         });
+
+        const welcomeTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+        welcomeTl
+          .from(welcomeRef.current, { autoAlpha: 0, y: 28, duration: 0.5 })
+          .from(
+            welcomeSplit.chars,
+            {
+              yPercent: 110,
+              duration: 0.42,
+              stagger: { amount: 0.38, from: 'start' },
+              ease: 'back.out(1.4)',
+            },
+            '-=0.2'
+          );
       }
 
       // Collect all targets first — querySelectorAll has no layout cost.
@@ -181,7 +198,12 @@ export default function DashboardPage() {
         ScrollTrigger.batch(hudCards, {
           scroller, start: 'top 88%', once: true,
           onEnter: (batch) => gsap.to(batch, {
-            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.1, overwrite: true,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: { amount: 0.35, from: 'center' },
+            overwrite: true,
           }),
         });
       }
@@ -201,7 +223,12 @@ export default function DashboardPage() {
         ScrollTrigger.batch(pillarCards, {
           scroller, start: 'top 88%', once: true,
           onEnter: (batch) => gsap.to(batch, {
-            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.12, overwrite: true,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: { amount: 0.4, from: 'center' },
+            overwrite: true,
           }),
         });
       }
@@ -210,7 +237,12 @@ export default function DashboardPage() {
         ScrollTrigger.batch(detailCols, {
           scroller, start: 'top 88%', once: true,
           onEnter: (batch) => gsap.to(batch, {
-            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.14, overwrite: true,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: { amount: 0.42, from: 'center' },
+            overwrite: true,
           }),
         });
       }
@@ -397,7 +429,7 @@ export default function DashboardPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold text-primary-50">Operational Hub</span>
             </div>
-            <h2 className="text-title font-black tracking-tight font-display">
+            <h2 ref={welcomeTitleRef} className="text-title font-black tracking-tight font-display">
               Welcome back, {profile.username}!
             </h2>
             <p className="text-primary-50/90 text-sm sm:text-base max-w-xl font-medium">
