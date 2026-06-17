@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
 
   // If user is authenticated and goes to sign/landing, redirect to dashboard
   if (user && isAuthRoute) {
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+    return NextResponse.redirect(new URL('/home', request.url));
   }
 
   // If user is not authenticated and tries to access protected route, redirect to signin
