@@ -17,6 +17,7 @@ export default function LandingPage() {
   const bentoRef = useRef<HTMLDivElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const navRef = useRef<HTMLElement>(null);
   const scrollChevronRef = useRef<HTMLDivElement>(null);
   const marqueeWrapRef = useRef<HTMLDivElement>(null);
   const marqueeTrackRef = useRef<HTMLDivElement>(null);
@@ -227,6 +228,46 @@ export default function LandingPage() {
     });
   });
 
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: MAGNETIC NAV HOVER (GSAP)
+  // Elements with [data-magnetic] gravitate toward cursor.
+  // Strength 0.28 — noticeable but not disorienting.
+  // contextSafe ensures handlers no-op after unmount.
+  // hover:hover gate — touch devices unaffected.
+  // ──────────────────────────────────────────────────────────
+  useGSAP((_, contextSafe) => {
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference) and (hover: hover)', () => {
+      const magneticEls = gsap.utils.toArray<HTMLElement>('[data-magnetic]');
+      const cleanups: Array<() => void> = [];
+
+      magneticEls.forEach((el) => {
+        const xTo = gsap.quickTo(el, 'x', { duration: 0.4, ease: 'power3.out' });
+        const yTo = gsap.quickTo(el, 'y', { duration: 0.4, ease: 'power3.out' });
+
+        const onMove = contextSafe!((e: MouseEvent) => {
+          const rect = el.getBoundingClientRect();
+          const cx = rect.left + rect.width  / 2;
+          const cy = rect.top  + rect.height / 2;
+          xTo((e.clientX - cx) * 0.28);
+          yTo((e.clientY - cy) * 0.28);
+        });
+
+        const onLeave = contextSafe!(() => { xTo(0); yTo(0); });
+
+        el.addEventListener('mousemove', onMove);
+        el.addEventListener('mouseleave', onLeave);
+        cleanups.push(() => {
+          el.removeEventListener('mousemove', onMove);
+          el.removeEventListener('mouseleave', onLeave);
+        });
+      });
+
+      return () => cleanups.forEach((fn) => fn());
+    });
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300 font-sans">
       
@@ -234,7 +275,7 @@ export default function LandingPage() {
           DEVELOPMENT NAVIGATOR: TOP NAVIGATION BAR
           Contains: Logo, desktop menu links, language selector, sign-in / get-started CTAs
           ────────────────────────────────────────────────────────── */}
-      <nav className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
+      <nav ref={navRef} className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-[75px]">
             {/* Logo */}
@@ -307,6 +348,7 @@ export default function LandingPage() {
                 {t('nav_signin')}
               </a>
               <a
+                data-magnetic
                 href="/sign#signup"
                 className="text-sm font-semibold text-white bg-primary-500 px-5 py-2.5 rounded-full hover:bg-primary-600 transition-all shadow-apple hover:shadow-lg transform active:scale-98"
               >
