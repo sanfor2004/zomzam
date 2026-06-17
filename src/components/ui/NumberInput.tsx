@@ -51,8 +51,27 @@ const ACCENTS = {
 } as const;
 
 const SIZES = {
-  sm: { input: 'h-11 text-sm rounded-xl', pad: 'pr-11', padPrefix: 'pl-8', pad0: 'pl-3.5' },
-  lg: { input: 'h-12 text-xl font-black rounded-2xl', pad: 'pr-12', padPrefix: 'pl-14', pad0: 'pl-4' },
+  sm: {
+    input: 'h-11 text-sm rounded-xl',
+    /** 6px gap + 28px stepper (w-7) + 6px right inset — same 6px rhythm on every side. */
+    pad: 'pr-10',
+    padPrefix: 'pl-9',
+    pad0: 'pl-3.5',
+    /** Prefix matches the field's own text size/weight for a cohesive look. */
+    prefix: 'left-3.5 text-sm font-bold',
+    stepper: 'w-7',
+    stepperIcon: 'w-3 h-3',
+  },
+  lg: {
+    input: 'h-12 text-xl font-black rounded-2xl',
+    /** 6px gap + 32px stepper (w-8) + 6px right inset — same 6px rhythm on every side. */
+    pad: 'pr-11',
+    padPrefix: 'pl-16',
+    pad0: 'pl-4',
+    prefix: 'left-4 text-xl font-black',
+    stepper: 'w-8',
+    stepperIcon: 'w-3.5 h-3.5',
+  },
 } as const;
 
 export function NumberInput({
@@ -95,8 +114,8 @@ export function NumberInput({
       {prefix != null && (
         <span
           className={cn(
-            'absolute top-1/2 -translate-y-1/2 font-bold text-slate-400 pointer-events-none select-none',
-            size === 'lg' ? 'left-4 text-xs' : 'left-3.5 text-xs',
+            'absolute top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none select-none',
+            sizeCls.prefix,
           )}
         >
           {prefix}
@@ -130,7 +149,12 @@ export function NumberInput({
       />
 
       {/* Stacked up/down stepper */}
-      <div className="absolute right-1.5 top-1.5 bottom-1.5 w-7 flex flex-col rounded-lg overflow-hidden border border-slate-700/50 bg-slate-800/40 divide-y divide-slate-700/50">
+      <div
+        className={cn(
+          'absolute right-1.5 top-1.5 bottom-1.5 flex flex-col rounded-lg overflow-hidden border border-slate-700/50 bg-slate-800/40 divide-y divide-slate-700/50',
+          sizeCls.stepper,
+        )}
+      >
         <button
           type="button"
           tabIndex={-1}
@@ -142,7 +166,7 @@ export function NumberInput({
             accentCls.hover,
           )}
         >
-          <ChevronUp className="w-3 h-3" strokeWidth={2.5} />
+          <ChevronUp className={sizeCls.stepperIcon} strokeWidth={2.5} />
         </button>
         <button
           type="button"
@@ -155,7 +179,7 @@ export function NumberInput({
             accentCls.hover,
           )}
         >
-          <ChevronDown className="w-3 h-3" strokeWidth={2.5} />
+          <ChevronDown className={sizeCls.stepperIcon} strokeWidth={2.5} />
         </button>
       </div>
     </div>
