@@ -7,7 +7,8 @@
     "dev:clean": "npx kill-port 3000 && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:sync": "npx tsx scripts/db-sync.ts"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",

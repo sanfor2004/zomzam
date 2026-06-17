@@ -1,3 +1,11 @@
+/** EGP-relative exchange rates. 1 unit of each currency in EGP. */
+export const EXCHANGE_RATES_TO_EGP: Record<string, number> = {
+  EGP: 1.0,
+  USD: 48.5,
+  EUR: 52.0,
+  GBP: 61.0,
+};
+
 /**
  * Safely merges and filters CSS class names for dynamic rendering.
  * Pure JavaScript implementation similar to clsx.

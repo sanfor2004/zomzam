@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query, queryOne, execute } from '@/lib/db';
+import { DEFAULT_AVATAR } from '@/lib/models/user';
 
 let tablesReady = false;
 async function ensureTables() {
@@ -54,7 +55,7 @@ function sanitizeHtml(html: string): string {
 }
 
 function normalizeAvatar(row: any) {
-  return { ...row, avatar: row.avatar || '/Assets/Img/default-avatar.png' };
+  return { ...row, avatar: row.avatar || DEFAULT_AVATAR };
 }
 
 export async function POST(request: NextRequest) {
@@ -179,7 +180,6 @@ export async function GET(request: NextRequest) {
     if (action === 'feed') {
       const params: any[] = [user.id, user.id, user.id, user.id, user.id, user.id];
       if (beforeId > 0) params.push(beforeId);
-      params.push(limit);
 
       const posts = await query(
         `SELECT p.id, p.user_id, p.content_html, p.created_at,
@@ -199,7 +199,7 @@ export async function GET(request: NextRequest) {
          )
          ${beforeId > 0 ? 'AND p.id < ?' : ''}
          ORDER BY p.created_at DESC
-         LIMIT ?`,
+         LIMIT ${limit}`,
         params
       );
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { execute, query } from '@/lib/db';
+import { query } from '@/lib/db';
+import { markAllNotificationsRead } from '@/lib/models/user';
 
 /**
  * GET /api/notifications
@@ -53,10 +54,7 @@ export async function POST(request: NextRequest) {
 
   if (action === 'mark_read') {
     try {
-      await execute(
-        `UPDATE notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0`,
-        [user.id]
-      );
+      await markAllNotificationsRead(user.id);
       return NextResponse.json({ success: true, message: 'All notifications marked as read' });
     } catch (error: any) {
       console.error('Notifications mark_read error:', error);

@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { verifyToken, comparePassword } from '@/lib/auth';
 import { getUserById } from '@/lib/models/user';
-import { execute } from '@/lib/db';
+import { execute, queryOne } from '@/lib/db';
 import sharp from 'sharp';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+
+function deleteAvatarFile(avatarPath: string | null | undefined) {
+  if (avatarPath && !avatarPath.includes('default-avatar.png')) {
+    const fullPath = path.join(process.cwd(), 'public', avatarPath);
+    if (fs.existsSync(fullPath)) {
+      fs.unlinkSync(fullPath);
+    }
+  }
+}
 
 export async function POST(request: NextRequest) {
   const session = request.cookies.get('ZOMZAM_SESSION')?.value;
@@ -69,12 +78,7 @@ export async function POST(request: NextRequest) {
     let avatarPath: string | null = null;
 
     if (removeAvatar) {
-      if (oldAvatar && !oldAvatar.includes('default-avatar.png')) {
-        const fullOldPath = path.join(process.cwd(), 'public', oldAvatar);
-        if (fs.existsSync(fullOldPath)) {
-          fs.unlinkSync(fullOldPath);
-        }
-      }
+      deleteAvatarFile(oldAvatar);
       avatarPath = '';
     } else if (avatarFile && avatarFile.size > 0) {
       // Validate File Size
@@ -119,12 +123,7 @@ export async function POST(request: NextRequest) {
         avatarPath = `/Assets/Uploads/avatars/${filename}`;
 
         // Remove old avatar
-        if (oldAvatar && !oldAvatar.includes('default-avatar.png')) {
-          const fullOldPath = path.join(process.cwd(), 'public', oldAvatar);
-          if (fs.existsSync(fullOldPath)) {
-            fs.unlinkSync(fullOldPath);
-          }
-        }
+        deleteAvatarFile(oldAvatar);
       } catch (err: any) {
         console.error('Image processing failed:', err);
         return NextResponse.json({ success: false, message: 'Failed to process image file.' }, { status: 500 });
@@ -195,25 +194,22 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, message: 'Current password is required to delete account' }, { status: 400 });
     }
 
-    // Verify password before deletion
-    const bcrypt = await import('bcryptjs');
-    const currentUser = await import('@/lib/models/user').then((m) => m.getUserById(user.id));
-    if (!currentUser || !currentUser.password) {
+    // Verify password before deletion — getUserById omits password, so query directly
+    const currentUser = await queryOne<{ password: string; avatar: string | null }>(
+      'SELECT password, avatar FROM users WHERE id = ? LIMIT 1',
+      [user.id]
+    );
+    if (!currentUser) {
       return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
     }
 
-    const passwordValid = await bcrypt.compare(password, currentUser.password);
+    const passwordValid = await comparePassword(password, currentUser.password);
     if (!passwordValid) {
       return NextResponse.json({ success: false, message: 'Incorrect password. Account deletion aborted.' }, { status: 403 });
     }
 
     // Remove avatar file from disk if it exists and is not the default
-    if (currentUser.avatar && !currentUser.avatar.includes('default-avatar.png')) {
-      const fullPath = path.join(process.cwd(), 'public', currentUser.avatar);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
-    }
+    deleteAvatarFile(currentUser.avatar);
 
     // Delete the user — ON DELETE CASCADE handles all child tables
     await execute('DELETE FROM users WHERE id = ?', [user.id]);

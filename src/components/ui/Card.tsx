@@ -19,7 +19,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple relative overflow-hidden transition-all duration-300${className}`}
+      className={`bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple relative overflow-hidden transition-all duration-300 ${className}`}
     >
       {/* Glow Effect */}
       <div className="absolute top-0 right-0 w-40 h-40 bg-primary-500/5 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none"></div>

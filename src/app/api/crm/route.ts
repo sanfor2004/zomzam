@@ -152,8 +152,9 @@ export async function POST(request: NextRequest) {
       case 'update_lead': {
         const id = parseInt(body.id || 0);
         const data = body.data || {};
-        const keys = Object.keys(data).filter(key => key !== 'id' && key !== 'user_id' && key !== 'created_at');
-        
+        const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'status', 'source', 'industry', 'notes', 'rating', 'review_count']);
+        const keys = Object.keys(data).filter(key => ALLOWED_LEAD_COLUMNS.has(key));
+
         if (keys.length === 0) {
           return NextResponse.json({ success: true });
         }

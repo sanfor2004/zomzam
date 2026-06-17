@@ -39,7 +39,8 @@ export async function query<T = any>(sql: string, params?: any[]): Promise<T[]> 
 }
 
 /**
- * Execute a query that returns a single row
+ * Execute a query that returns a single row, or null if no row matches.
+ * Throws on DB errors — null means "not found", never "something went wrong".
  */
 export async function queryOne<T = any>(sql: string, params?: any[]): Promise<T | null> {
   try {
@@ -48,7 +49,7 @@ export async function queryOne<T = any>(sql: string, params?: any[]): Promise<T 
     return results.length > 0 ? results[0] : null;
   } catch (error: any) {
     console.error('Database queryOne error:', error);
-    return null; // Suppress fatal DB exceptions cleanly like PHP model
+    throw new Error(`DB Query Failed: ${error.message}`);
   }
 }
 

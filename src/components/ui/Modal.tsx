@@ -72,7 +72,7 @@ export function Modal({
         ref={modalRef}
         role="dialog"
         aria-modal="true"
-        className={`w-full max-w-md bg-[#1A1D24] rounded-3xl p-8 shadow-2xl border${borderClasses}animate-in scale-100 opacity-100 transition-all duration-300${className}`}
+        className={`w-full max-w-md bg-[#1A1D24] rounded-3xl p-8 shadow-2xl border ${borderClasses} animate-in scale-100 opacity-100 transition-all duration-300 ${className}`}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-4 mb-6">

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query, queryOne, execute } from '@/lib/db';
-import { execute as dbExecute } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   const session = request.cookies.get('ZOMZAM_SESSION')?.value;
@@ -9,6 +8,22 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Syncs a completed task's project to 'delivered' when the task title follows the
+  // "ProjectName: Production Delivery & Launch" convention used by the CRM flow.
+  async function syncProjectDeliveryIfApplicable(taskId: number) {
+    const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [taskId, user.id]);
+    if (task && task.title.includes('Production Delivery & Launch')) {
+      const parts = task.title.split(':');
+      if (parts.length > 1) {
+        const projectName = parts[0].trim();
+        await execute(
+          `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
+          [user.id, projectName]
+        );
+      }
+    }
   }
 
   try {
@@ -98,24 +113,13 @@ export async function POST(request: NextRequest) {
       case 'complete_task': {
         const id = parseInt(body.id || 0);
         const actual = body.actual_duration !== undefined ? parseInt(body.actual_duration) : null;
-        
-        const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [id, user.id]);
-        
+
         await execute(
           `UPDATE time_tasks SET status='completed', completed_at=CURRENT_TIMESTAMP, actual_duration=? WHERE id = ? AND user_id = ?`,
           [actual, id, user.id]
         );
 
-        if (task && task.title.includes('Production Delivery & Launch')) {
-          const parts = task.title.split(':');
-          if (parts.length > 1) {
-            const projectName = parts[0].trim();
-            await execute(
-              `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
-              [user.id, projectName]
-            );
-          }
-        }
+        await syncProjectDeliveryIfApplicable(id);
 
         return NextResponse.json({ success: true });
       }
@@ -151,17 +155,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (status === 'completed') {
-          const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [id, user.id]);
-          if (task && task.title.includes('Production Delivery & Launch')) {
-            const parts = task.title.split(':');
-            if (parts.length > 1) {
-              const projectName = parts[0].trim();
-              await execute(
-                `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
-                [user.id, projectName]
-              );
-            }
-          }
+          await syncProjectDeliveryIfApplicable(id);
         }
 
         return NextResponse.json({ success: true });

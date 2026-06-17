@@ -1,20 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query, queryOne } from '@/lib/db';
-
-const EXCHANGE_RATES: Record<string, number> = {
-  USD: 48.5,
-  EUR: 52.0,
-  GBP: 61.0,
-  EGP: 1.0,
-};
+import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 
 function convertToPrimary(amount: number, fromCurrency: string, primaryCurrency: string): number {
   if (fromCurrency === primaryCurrency) return amount;
-  const rateFrom = EXCHANGE_RATES[fromCurrency] || 1.0;
-  const amountEGP = amount * rateFrom;
-  const rateTo = EXCHANGE_RATES[primaryCurrency] || 1.0;
-  return amountEGP / rateTo;
+  const amountEGP = amount * (EXCHANGE_RATES_TO_EGP[fromCurrency] || 1.0);
+  return amountEGP / (EXCHANGE_RATES_TO_EGP[primaryCurrency] || 1.0);
 }
 
 export async function GET(request: NextRequest) {
@@ -212,7 +204,7 @@ export async function GET(request: NextRequest) {
       rates: {
         hourlyRateIncome: parseFloat(hourlyRateIncome.toFixed(2)),
         hourlyRateProjects: parseFloat(hourlyRateProjects.toFixed(2)),
-        exchangeRates: EXCHANGE_RATES,
+        exchangeRates: EXCHANGE_RATES_TO_EGP,
       }
     });
 

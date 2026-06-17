@@ -24,11 +24,21 @@ export interface UserRow {
   updated_at: string;
 }
 
-function normalizeAvatar(user: Partial<UserRow>) {
-  if (user && !user.avatar) {
-    user.avatar = '/Assets/Img/default-avatar.png';
-  }
-  return user;
+export const DEFAULT_AVATAR = '/Assets/Img/default-avatar.png';
+
+export function normalizeAvatar<T extends { avatar?: string | null }>(user: T): T {
+  return user.avatar ? user : { ...user, avatar: DEFAULT_AVATAR };
+}
+
+/**
+ * Returns online status fields from a DB-fetched last_seen timestamp.
+ * Exported so list endpoints can enrich joined user rows without re-querying.
+ */
+export function computeOnlineFields(lastSeen: string, isIdleFlag: number | boolean) {
+  const diff = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 1000);
+  const is_online = diff < 7;
+  const is_idle = !!isIdleFlag && is_online;
+  return { diff, is_online, is_idle };
 }
 
 export async function getUserById(userId: number): Promise<Partial<UserRow> | null> {
@@ -182,12 +192,10 @@ export async function getOnlineStatus(userId: number) {
       return { is_online: false, last_seen: null, is_idle: false, label: 'OFFLINE' };
     }
 
-    const lastSeenTime = new Date(row.last_seen).getTime();
-    const diff = Math.floor((Date.now() - lastSeenTime) / 1000);
-    const isOnline = diff < 7; // 7 seconds threshold
+    const { diff, is_online, is_idle } = computeOnlineFields(row.last_seen, row.is_idle);
 
     let label = 'ONLINE';
-    if (!isOnline) {
+    if (!is_online) {
       if (diff < 60) label = `${diff}S AGO`;
       else if (diff < 3600) label = `${Math.floor(diff / 60)}M AGO`;
       else if (diff < 86400) label = `${Math.floor(diff / 3600)}H AGO`;
@@ -195,8 +203,8 @@ export async function getOnlineStatus(userId: number) {
     }
 
     return {
-      is_online: isOnline,
-      is_idle: !!row.is_idle && isOnline,
+      is_online,
+      is_idle,
       last_seen: row.last_seen,
       label,
       diff,
@@ -232,8 +240,8 @@ export async function createNotification(userId: number, type: string, data: any
 export async function getNotifications(userId: number, limit: number = 20) {
   try {
     const rows = await query<any>(
-      `SELECT id, type, data, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?`,
-      [userId, limit]
+      `SELECT id, type, data, is_read, created_at FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ${Math.floor(limit)}`,
+      [userId]
     );
 
     return rows.map((r) => ({

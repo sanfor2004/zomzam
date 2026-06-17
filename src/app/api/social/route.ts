@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
-import { getUserById, createNotification, pushStreamOrder } from '@/lib/models/user';
+import { getUserById, createNotification, pushStreamOrder, computeOnlineFields, DEFAULT_AVATAR } from '@/lib/models/user';
 import { query, queryOne, execute } from '@/lib/db';
 
 function enrichOnline(f: any): any {
   if (!f.last_seen) {
     return { ...f, is_online: false, online_label: 'Offline' };
   }
-  const lastSeenTime = new Date(f.last_seen).getTime();
-  const diff = Math.floor((Date.now() - lastSeenTime) / 1000);
-  const isOnline = diff < 7;
-  const isIdle = !!f.is_idle && isOnline;
+  const { diff, is_online, is_idle } = computeOnlineFields(f.last_seen, f.is_idle);
 
   let online_label = 'Offline';
-  if (isOnline) {
-    online_label = isIdle ? 'Idle' : 'Online';
+  if (is_online) {
+    online_label = is_idle ? 'Idle' : 'Online';
   } else if (diff < 60) {
     online_label = `${diff}s ago`;
   } else if (diff < 3600) {
@@ -25,14 +22,11 @@ function enrichOnline(f: any): any {
     online_label = `${Math.floor(diff / 86400)}d ago`;
   }
 
-  return { ...f, is_online: isOnline, is_idle: isIdle, online_label };
+  return { ...f, is_online, is_idle, online_label };
 }
 
 function normalizeAvatar(f: any): any {
-  let avatar = f.avatar;
-  if (!avatar) {
-    avatar = '/Assets/Img/default-avatar.png';
-  }
+  const avatar = f.avatar || DEFAULT_AVATAR;
   let tags = [];
   if (f.tags) {
     if (typeof f.tags === 'string') {

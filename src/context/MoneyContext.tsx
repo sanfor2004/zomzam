@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 
 export interface Account {
   id: number;
@@ -122,10 +123,10 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     primary_currency: 'EGP',
     secondary_currency: 'USD',
   });
-  const [displayCurrency, setDisplayCurrencyState] = useState<'EGP' | 'USD' | 'EUR' | 'GBP'>('EGP');
+  const [displayCurrency, setDisplayCurrency] = useState<'EGP' | 'USD' | 'EUR' | 'GBP'>('EGP');
   const [isLoading, setIsLoading] = useState(true);
 
-  const exchangeRate = 48.5; // Static matching legacy, 1 USD = 48.5 EGP.
+  const exchangeRate = EXCHANGE_RATES_TO_EGP.USD; // 1 USD = X EGP
 
   const loadMoneyData = async () => {
     try {
@@ -146,7 +147,7 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
             primary_currency: data.user_settings.primary_currency,
             secondary_currency: data.user_settings.secondary_currency,
           });
-          setDisplayCurrencyState(data.user_settings.primary_currency);
+          setDisplayCurrency(data.user_settings.primary_currency);
         }
       }
     } catch (err) {
@@ -160,161 +161,50 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     loadMoneyData();
   }, []);
 
-  const addTransaction = async (data: any) => {
+  const postMoneyApi = async (payload: object): Promise<boolean> => {
     try {
       const res = await fetch('/api/money', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_transaction', ...data }),
+        body: JSON.stringify(payload),
       });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
+      const data = await res.json();
+      return data.success === true;
     } catch (err) {
-      console.error('Error adding transaction:', err);
+      console.error('Money API error:', err);
+      return false;
     }
-    return false;
   };
 
-  const deleteTransaction = async (id: number) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_transaction', id }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error deleting transaction:', err);
-    }
-    return false;
+  const mutateAndReload = async (payload: object): Promise<boolean> => {
+    const ok = await postMoneyApi(payload);
+    if (ok) await loadMoneyData();
+    return ok;
   };
 
-  const addAccount = async (data: any) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_account', ...data }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error adding account:', err);
-    }
-    return false;
-  };
-
-  const deleteAccount = async (id: number) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_account', id }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error deleting account:', err);
-    }
-    return false;
-  };
-
-  const addLend = async (data: any) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_lend', ...data }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error adding lend entry:', err);
-    }
-    return false;
-  };
-
-  const settleLend = async (id: number) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'settle_lend', id }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error settling lend entry:', err);
-    }
-    return false;
-  };
-
-  const deleteLend = async (id: number) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_lend', id }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error deleting lend entry:', err);
-    }
-    return false;
-  };
+  const addTransaction = (data: any) => mutateAndReload({ action: 'add_transaction', ...data });
+  const deleteTransaction = (id: number) => mutateAndReload({ action: 'delete_transaction', id });
+  const addAccount = (data: any) => mutateAndReload({ action: 'add_account', ...data });
+  const deleteAccount = (id: number) => mutateAndReload({ action: 'delete_account', id });
+  const addLend = (data: any) => mutateAndReload({ action: 'add_lend', ...data });
+  const settleLend = (id: number) => mutateAndReload({ action: 'settle_lend', id });
+  const deleteLend = (id: number) => mutateAndReload({ action: 'delete_lend', id });
 
   const updateSettings = async (primary: string, secondary: string) => {
-    try {
-      const res = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update_settings',
-          primary_currency: primary,
-          secondary_currency: secondary,
-        }),
+    const ok = await postMoneyApi({
+      action: 'update_settings',
+      primary_currency: primary,
+      secondary_currency: secondary,
+    });
+    if (ok) {
+      setSettings({
+        primary_currency: primary as any,
+        secondary_currency: secondary as any,
       });
-      const result = await res.json();
-      if (result.success) {
-        setSettings({
-          primary_currency: primary as any,
-          secondary_currency: secondary as any,
-        });
-        setDisplayCurrencyState(primary as any);
-        await loadMoneyData();
-        return true;
-      }
-    } catch (err) {
-      console.error('Error updating settings:', err);
+      setDisplayCurrency(primary as any);
+      await loadMoneyData();
     }
-    return false;
-  };
-
-  const setDisplayCurrency = (curr: 'EGP' | 'USD' | 'EUR' | 'GBP') => {
-    setDisplayCurrencyState(curr);
+    return ok;
   };
 
   // Convert and format amounts dynamically
@@ -324,16 +214,16 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     // Quick currency conversion: EGP <-> USD (using static exchangeRate)
     let converted = numericAmount;
     if (fromCurrency === 'USD' && displayCurrency === 'EGP') {
-      converted = numericAmount * exchangeRate;
+      converted = numericAmount * EXCHANGE_RATES_TO_EGP.USD;
     } else if (fromCurrency === 'EGP' && displayCurrency === 'USD') {
-      converted = numericAmount / exchangeRate;
+      converted = numericAmount / EXCHANGE_RATES_TO_EGP.USD;
     } else if (fromCurrency !== displayCurrency) {
       // Basic fallback conversion for EUR, GBP using approximate relative rates if needed,
       // but standard is EGP/USD. We will fall back to original for non-USD/EGP pairs
-      if (fromCurrency === 'EUR' && displayCurrency === 'EGP') converted = numericAmount * 52;
-      else if (fromCurrency === 'GBP' && displayCurrency === 'EGP') converted = numericAmount * 61;
-      else if (fromCurrency === 'EGP' && displayCurrency === 'EUR') converted = numericAmount / 52;
-      else if (fromCurrency === 'EGP' && displayCurrency === 'GBP') converted = numericAmount / 61;
+      if (fromCurrency === 'EUR' && displayCurrency === 'EGP') converted = numericAmount * EXCHANGE_RATES_TO_EGP.EUR;
+      else if (fromCurrency === 'GBP' && displayCurrency === 'EGP') converted = numericAmount * EXCHANGE_RATES_TO_EGP.GBP;
+      else if (fromCurrency === 'EGP' && displayCurrency === 'EUR') converted = numericAmount / EXCHANGE_RATES_TO_EGP.EUR;
+      else if (fromCurrency === 'EGP' && displayCurrency === 'GBP') converted = numericAmount / EXCHANGE_RATES_TO_EGP.GBP;
     }
 
     return new Intl.NumberFormat('en-US', {
