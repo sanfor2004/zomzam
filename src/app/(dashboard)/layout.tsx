@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { useTranslation } from '@/context/TranslationContext';
@@ -8,6 +8,7 @@ import { useStreamWaiter, StreamWaiterProvider } from '@/context/StreamWaiterCon
 import { MoneyProvider } from '@/context/MoneyContext';
 import { DropdownMenu } from '@/components/ui/Dropdown';
 import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
+import { gsap, useGSAP } from '@/lib/gsap';
 
 // Loaded client-side only — WebGL requires browser APIs
 const LiquidEther = dynamicImport(() => import('@/components/LiquidEther'), { ssr: false });
@@ -28,6 +29,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [bgReady, setBgReady] = useState(false);
+  const sidebarNavRef = useRef<HTMLElement>(null);
 
   // Defer the WebGL background until the browser is idle after first paint, so its
   // one-time shader compilation / GPU buffer allocation doesn't stall the initial
@@ -100,6 +102,32 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       return !prev;
     });
   };
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: SIDEBAR STAGGER ENTRANCE (GSAP)
+  // Nav items slide from x:-18 once currentUser resolves.
+  // dependencies:[!!currentUser] → fires exactly once on auth resolve,
+  // not on mobileMenuOpen, group-toggle, or notification re-renders.
+  // ──────────────────────────────────────────────────────────
+  useGSAP(() => {
+    const nav = sidebarNavRef.current;
+    if (!nav || !currentUser) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      const items = gsap.utils.toArray<HTMLElement>('button, a[href]', nav);
+      if (!items.length) return;
+
+      gsap.from(items, {
+        autoAlpha: 0,
+        x: -18,
+        duration: 0.42,
+        ease: 'power2.out',
+        stagger: { amount: 0.45, from: 'start' },
+      });
+    });
+  }, { scope: sidebarNavRef, dependencies: [!!currentUser] });
 
   // Visual config for the sidebar user-status indicator (dot, pill, glow, shine)
   const STATUS_CONFIG: Record<string, {
@@ -197,7 +225,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Sidebar surface — rounded bordered card begins at the nav bar */}
         <div className="flex-1 flex flex-col min-h-0 bg-surface-dark/90 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden">
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+        <nav ref={sidebarNavRef} className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {/* Home */}
           <button
             onClick={() => router.push('/home')}
