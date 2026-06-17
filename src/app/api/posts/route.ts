@@ -37,11 +37,11 @@ async function ensureTables() {
       INDEX idx_created_at (created_at ASC)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
-  // parent_id migration — safe to run every cold start
+  // parent_id migration — safe to run every cold start; catch swallows ER_DUP_FIELDNAME if already applied
   try {
-    await execute(`ALTER TABLE post_comments ADD COLUMN IF NOT EXISTS parent_id BIGINT UNSIGNED NULL DEFAULT NULL`);
-    await execute(`ALTER TABLE post_comments ADD INDEX IF NOT EXISTS idx_parent_id (parent_id)`);
-  } catch { /* already exists */ }
+    await execute(`ALTER TABLE post_comments ADD COLUMN parent_id BIGINT UNSIGNED NULL DEFAULT NULL`);
+    await execute(`ALTER TABLE post_comments ADD INDEX idx_parent_id (parent_id)`);
+  } catch { /* column/index already exists */ }
   tablesReady = true;
 }
 
