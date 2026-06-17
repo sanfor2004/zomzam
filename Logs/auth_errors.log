@@ -1,6 +1,0 @@
-[2026-05-13 03:00:32] Registration failed for test@gg.com: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0' for key 'PRIMARY'
-[2026-05-13 03:00:44] Registration failed for test@gg.com: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0' for key 'PRIMARY'
-[2026-05-13 03:12:48] Registration failed for testuser@zomzam.com: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0' for key 'PRIMARY'
-[2026-05-13 03:14:39] Registration failed for zenith1@zomzam.com: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0' for key 'PRIMARY'
-[2026-05-13 03:17:40] Registration failed for test2026@zomzam.com: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0' for key 'PRIMARY'
-[2026-05-13 03:18:55] Registration failed for newtest@zomzam.com: SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '0' for key 'PRIMARY'
