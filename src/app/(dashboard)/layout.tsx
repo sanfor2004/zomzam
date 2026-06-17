@@ -41,7 +41,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       const id = w.requestIdleCallback(() => setBgReady(true), { timeout: 1500 });
       return () => w.cancelIdleCallback?.(id);
     }
-    const t = setTimeout(() => setBgReady(true), 600);
+    const t = setTimeout(() => setBgReady(true), 1000);
     return () => clearTimeout(t);
   }, []);
 
@@ -160,7 +160,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
       <div
         aria-hidden="true"
         className="fixed inset-0 z-0 pointer-events-none"
-        style={{ opacity: 0.18 }}
+        style={{ opacity: bgReady ? 0.18 : 0, transition: 'opacity 600ms ease' }}
       >
         {bgReady && (
           <LiquidEther
