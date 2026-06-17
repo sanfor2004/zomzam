@@ -2,7 +2,7 @@
 'use client';
 
 import { useRef } from 'react';
-import { gsap, useGSAP } from '@/lib/gsap';
+import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 
 interface CountUpProps {
   value: number;
@@ -43,11 +43,14 @@ export function CountUp({
     // Normal: count up when the element scrolls into view.
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       const counter = { val: 0 };
+      // Resolve the scroll container (e.g. a nested <main>) so the trigger fires
+      // even when the page scrolls inside an element rather than the window.
+      const scroller = getScrollParent(el);
       gsap.to(counter, {
         val: value,
         duration,
         ease: 'power2.out',
-        scrollTrigger: { trigger: el, start: 'top 88%', once: true },
+        scrollTrigger: { trigger: el, scroller, start: 'top 88%', once: true },
         onUpdate: () => { el.textContent = format(counter.val); },
         onComplete: () => { el.textContent = format(value); },
       });
