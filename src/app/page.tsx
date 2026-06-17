@@ -16,6 +16,8 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const bentoRef = useRef<HTMLDivElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
+  const marqueeWrapRef = useRef<HTMLDivElement>(null);
+  const marqueeTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -80,6 +82,41 @@ export default function LandingPage() {
       // SplitText is reverted automatically when useGSAP cleans up the context.
     });
   }, { scope: bentoRef });
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: PARTNER MARQUEE MOTION (GSAP)
+  // Infinite -50% loop over two identical brand sets → seamless ticker; pauses on
+  // hover (listeners cleaned up in the handler). Gated behind matchMedia so
+  // reduced-motion users get a static strip with no tween.
+  // ──────────────────────────────────────────────────────────
+  useGSAP(() => {
+    const wrap = marqueeWrapRef.current;
+    const track = marqueeTrackRef.current;
+    if (!wrap || !track) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Two identical sets in the track, so -50% advances by exactly one set → seamless.
+      const loop = gsap.to(track, {
+        xPercent: -50,
+        duration: 24,
+        ease: 'none', // required for constant-speed, seam-free looping
+        repeat: -1,
+      });
+
+      const pause = () => loop.pause();
+      const resume = () => loop.play();
+      wrap.addEventListener('mouseenter', pause);
+      wrap.addEventListener('mouseleave', resume);
+
+      // Listeners are added in this handler, so remove them in its cleanup.
+      return () => {
+        wrap.removeEventListener('mouseenter', pause);
+        wrap.removeEventListener('mouseleave', resume);
+      };
+    });
+  }, { scope: marqueeWrapRef });
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300 font-sans">
@@ -365,14 +402,28 @@ export default function LandingPage() {
 
         </div>
 
-        {/* Corporate logo partner bar */}
-        <div id="features" className="max-w-7xl mx-auto w-full px-6 lg:px-8 py-12 mt-12 border-t border-slate-800/60">
-          <div className="flex flex-wrap items-center justify-center sm:justify-between gap-8 opacity-20 grayscale hover:opacity-55 transition-opacity">
-            <span className="font-black text-lg tracking-widest font-mono">ADIDAS</span>
-            <span className="font-black text-lg tracking-widest font-mono">NETFLIX</span>
-            <span className="font-black text-lg tracking-widest font-mono">AMAZON</span>
-            <span className="font-black text-lg tracking-widest font-mono">SPOTIFY</span>
-            <span className="font-black text-lg tracking-widest font-mono">MCDONALD'S</span>
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: PARTNER LOGO MARQUEE
+            Contains: GSAP-driven infinite brand ticker, edge fade masks, hover-pause
+            ────────────────────────────────────────────────────────── */}
+        <div id="features" className="max-w-7xl mx-auto w-full py-12 mt-12 border-t border-slate-800/60">
+          <p className="text-center text-[10px] font-black uppercase tracking-widest text-slate-600 mb-8">
+            Trusted by teams at
+          </p>
+          <div ref={marqueeWrapRef} className="marquee-wrapper">
+            <div ref={marqueeTrackRef} className="marquee-track">
+              {/* PLACEHOLDER BRANDS — replace with real partners/testimonials before public launch.
+                  Two identical sets so an xPercent:-50 shift loops seamlessly. */}
+              {['ADIDAS', 'NETFLIX', 'AMAZON', 'SPOTIFY', "MCDONALD'S", 'ADOBE', 'STRIPE',
+                'ADIDAS', 'NETFLIX', 'AMAZON', 'SPOTIFY', "MCDONALD'S", 'ADOBE', 'STRIPE'].map((name, i) => (
+                <span
+                  key={i}
+                  className="font-black text-base tracking-widest font-mono text-slate-700 hover:text-slate-400 transition-colors duration-200 px-10 flex-shrink-0 select-none"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 

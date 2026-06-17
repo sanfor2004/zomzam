@@ -113,6 +113,20 @@
   100% { opacity: 0; transform: scale(0.95); }
 }
 
+/* Partner marquee: motion is driven by GSAP (see page.tsx). This only provides
+   the overflow clip, the edge fade, and a compositor hint for the moving track. */
+.marquee-wrapper {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+
 /* ============================================================================
    Custom Utilities & Scrollbars
    ============================================================================ */
