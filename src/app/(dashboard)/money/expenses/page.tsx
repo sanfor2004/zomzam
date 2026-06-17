@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, Shield, Heart, PiggyBank, HelpCircle, ArrowLeft, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function ExpensesPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef);
   const router = useRouter();
   const {
     accounts,
@@ -81,7 +84,7 @@ export default function ExpensesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -96,7 +99,7 @@ export default function ExpensesPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Expense Tracking</h1>
+            <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Expense Tracking</h1>
             <p className="text-xs text-slate-400">Manage your spending habits and check limits.</p>
           </div>
         </div>
@@ -121,7 +124,7 @@ export default function ExpensesPage() {
           Contains: Empty state, per-transaction rows (category icon, description,
           account/date, amount, delete action)
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         {expenses.length === 0 ? (
           <p className="text-center py-20 text-slate-400 italic text-sm">No expenses found.</p>
         ) : (
@@ -129,6 +132,7 @@ export default function ExpensesPage() {
             {expenses.map((t) => (
               <div
                 key={t.id}
+                data-entrance="list-item"
                 className="flex items-center justify-between p-4 bg-slate-900/10 border border-slate-850/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
               >
                 <div className="flex items-center gap-4 min-w-0">

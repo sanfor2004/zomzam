@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, CheckCircle2, User, Calendar, DollarSign, AlertCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -8,6 +9,8 @@ import confetti from 'canvas-confetti';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function LendingDebtPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef);
   const router = useRouter();
   const {
     lendList,
@@ -100,7 +103,7 @@ export default function LendingDebtPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -115,7 +118,7 @@ export default function LendingDebtPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Lending & Debt</h1>
+            <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Lending & Debt</h1>
             <p className="text-xs text-slate-400">Track money you owe others or are owed by others.</p>
           </div>
         </div>
@@ -137,7 +140,7 @@ export default function LendingDebtPage() {
             Contains: Total receivable badge, active owe-me entries with
             settle/delete actions
             ────────────────────────────────────────────────────────── */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
+        <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
           <div>
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
               <h2 className="text-sm font-black text-slate-350 uppercase tracking-widest">
@@ -155,6 +158,7 @@ export default function LendingDebtPage() {
                 activeOweMe.map((item) => (
                   <div
                     key={item.id}
+                    data-entrance="list-item"
                     className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -206,7 +210,7 @@ export default function LendingDebtPage() {
             Contains: Total payable badge, active i-owe entries with
             settle/delete actions, debt-free empty state
             ────────────────────────────────────────────────────────── */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
+        <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[360px]">
           <div>
             <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
               <h2 className="text-sm font-black text-slate-350 uppercase tracking-widest">
@@ -227,6 +231,7 @@ export default function LendingDebtPage() {
                 activeIOwe.map((item) => (
                   <div
                     key={item.id}
+                    data-entrance="list-item"
                     className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-855/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -280,7 +285,7 @@ export default function LendingDebtPage() {
           Contains: Archived/settled entries (rendered only when any exist)
           ────────────────────────────────────────────────────────── */}
       {settledList.length > 0 && (
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-70">
+        <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple opacity-70">
           <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4 pb-3 border-b border-slate-850">
             Settle Logs
           </h2>
@@ -288,6 +293,7 @@ export default function LendingDebtPage() {
             {settledList.map((item) => (
               <div
                 key={item.id}
+                data-entrance="list-item"
                 className="flex items-center justify-between p-3.5 bg-slate-900/20 border border-slate-850/20 rounded-2xl"
               >
                 <div className="min-w-0">

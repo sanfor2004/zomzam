@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
 import { useRouter } from 'next/navigation';
 import { DollarSign, Settings, Plus, Minus, ArrowRight, X, TrendingUp, Shield, Heart, PiggyBank, Briefcase, ChevronRight, HelpCircle } from 'lucide-react';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function MoneyDashboardPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef);
   const router = useRouter();
   const {
     accounts,
@@ -155,7 +158,7 @@ export default function MoneyDashboardPage() {
   const savingsAngle = ((needsPercent + wantsPercent) / 100) * 360;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -163,7 +166,7 @@ export default function MoneyDashboardPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
             <span>Tracking your 60/20/20 rule progress.</span>
             <div className="flex items-center gap-1.5">
@@ -231,6 +234,7 @@ export default function MoneyDashboardPage() {
         {accounts.map((acc) => (
           <div
             key={acc.id}
+            data-entrance="card"
             className="bg-[#1A1D24] rounded-3xl p-6 border border-slate-800/60 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors pointer-events-none"></div>
@@ -269,7 +273,7 @@ export default function MoneyDashboardPage() {
             tip card, lending summary card
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
             <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Budget Allocation</h2>
 
             {/* SVG Donut Chart */}
@@ -362,7 +366,7 @@ export default function MoneyDashboardPage() {
           </div>
 
           {/* Quick Tip Card */}
-          <div className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-3xl p-6 text-white shadow-lg shadow-primary-500/10">
+          <div data-entrance="card" className="bg-gradient-to-br from-primary-500 to-primary-600 rounded-3xl p-6 text-white shadow-lg shadow-primary-500/10">
             <TrendingUp className="w-8 h-8 mb-4 opacity-70" />
             <h3 className="text-base font-bold mb-1">Financial Mastery</h3>
             <p className="text-xs text-primary-50 opacity-90 leading-relaxed">
@@ -371,7 +375,7 @@ export default function MoneyDashboardPage() {
           </div>
 
           {/* Debts Summary */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
             <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Lending Summary</h3>
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
@@ -399,7 +403,7 @@ export default function MoneyDashboardPage() {
             Expenses / Income footer nav buttons
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2">
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
+          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
                 <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
@@ -420,6 +424,7 @@ export default function MoneyDashboardPage() {
                   transactions.map((t) => (
                     <div
                       key={t.id}
+                      data-entrance="list-item"
                       className="flex items-center justify-between p-3 bg-slate-900/10 border border-slate-850/20 rounded-2xl group hover:border-slate-750 transition-all hover:shadow-apple-sm"
                     >
                       <div className="flex items-center gap-3 min-w-0">

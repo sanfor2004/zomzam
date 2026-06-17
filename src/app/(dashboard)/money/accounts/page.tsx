@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, Briefcase, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
 
 export default function BankAccountsPage() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(containerRef);
   const router = useRouter();
   const {
     accounts,
@@ -79,7 +82,7 @@ export default function BankAccountsPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -94,7 +97,7 @@ export default function BankAccountsPage() {
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Bank Accounts</h1>
+            <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Bank Accounts</h1>
             <p className="text-xs text-slate-400">Manage your connected wallets, cash reserves, and banks.</p>
           </div>
         </div>
@@ -117,6 +120,7 @@ export default function BankAccountsPage() {
         {accounts.map((acc) => (
           <div
             key={acc.id}
+            data-entrance="card"
             className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden flex flex-col justify-between min-h-[170px]"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors pointer-events-none"></div>
