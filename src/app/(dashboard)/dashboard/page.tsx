@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
 import { 
   User, 
@@ -23,7 +24,7 @@ import {
   Layers,
   Sparkles
 } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, CountUp } from '@/components/ui';
 
 interface DashboardData {
   success: boolean;
@@ -97,7 +98,9 @@ export default function DashboardPage() {
   const { t } = useTranslation();
   const router = useRouter();
   const cardRef = React.useRef<HTMLDivElement>(null);
-  
+  const pageRef = useRef<HTMLDivElement>(null);
+  const welcomeRef = useRef<HTMLDivElement>(null);
+
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,6 +135,74 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: DASHBOARD SECTION REVEALS (GSAP)
+  // Welcome banner rises on data load; HUD/pillar/detail groups stagger in on
+  // scroll; heatmap reveals row-by-row (7 elements, not 168 cells). All motion is
+  // gated behind matchMedia → reduced-motion users get the static, visible DOM.
+  // ──────────────────────────────────────────────────────────
+  useGSAP(() => {
+    const root = pageRef.current;
+    if (loading || !root) return; // wait until data has rendered the real DOM
+
+    // Dashboard content scrolls inside a nested <main overflow-y-auto>, not the
+    // window, so every ScrollTrigger must target that scroller or it never fires.
+    const scroller = getScrollParent(root);
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // Welcome banner: rises on load.
+      if (welcomeRef.current) {
+        gsap.from(welcomeRef.current, {
+          autoAlpha: 0, y: 44, duration: 0.65, ease: 'power3.out', delay: 0.05,
+        });
+      }
+
+      // Helper: hide a group, then stagger-reveal it on scroll.
+      const revealOnScroll = (selector: string, y: number, stagger: number) => {
+        const items = gsap.utils.toArray<HTMLElement>(selector, root);
+        if (!items.length) return;
+        gsap.set(items, { autoAlpha: 0, y });
+        ScrollTrigger.batch(items, {
+          scroller,
+          start: 'top 88%',
+          once: true,
+          onEnter: (batch) =>
+            gsap.to(batch, {
+              autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger, overwrite: true,
+            }),
+        });
+      };
+
+      revealOnScroll('[data-animate="hud-card"]', 28, 0.1);
+      revealOnScroll('[data-animate="pillar-card"]', 32, 0.12);
+      revealOnScroll('[data-animate="detail-col"]', 40, 0.14);
+
+      // Heatmap: reveal by ROW (7 elements), not by cell (168) — animating 168
+      // simultaneous tweens risks jank on low-end devices (performance guidance).
+      const rows = gsap.utils.toArray<HTMLElement>('[data-animate="heatmap-row"]', root);
+      if (rows.length) {
+        gsap.set(rows, { autoAlpha: 0, x: -20 });
+        ScrollTrigger.create({
+          trigger: rows[0],
+          scroller,
+          start: 'top 85%',
+          once: true,
+          onEnter: () =>
+            gsap.to(rows, {
+              autoAlpha: 1, x: 0, duration: 0.38, ease: 'power2.out', stagger: 0.06,
+            }),
+        });
+      }
+
+      // Data loaded asynchronously, so positions were computed against a shorter
+      // DOM — refresh once now that the real content height is in place (perf
+      // guidance: refresh only when layout actually changes, not on every frame).
+      ScrollTrigger.refresh();
+    });
+  }, { scope: pageRef, dependencies: [loading], revertOnUpdate: true });
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -280,18 +351,22 @@ export default function DashboardPage() {
 
   // Calculate Lead Conversion
   const activeLeads = crm.totalLeadsCount - (crm.leadsStatusMap.lost || 0);
-  const conversionRate = activeLeads > 0 
-    ? Math.round(((crm.leadsStatusMap.qualified || 0) / activeLeads) * 100) 
+  const conversionRate = activeLeads > 0
+    ? Math.round(((crm.leadsStatusMap.qualified || 0) / activeLeads) * 100)
     : 0;
 
+  // Maps an ISO currency code to a compact display glyph for the CountUp stats.
+  const currencySymbol = (c: string) =>
+    c === 'USD' ? '$' : c === 'EUR' ? '€' : c === 'GBP' ? '£' : 'E£';
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8 pb-12">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: WELCOME BANNER
           Contains: Freelancer profile identity, status badge, greeting
           ────────────────────────────────────────────────────────── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-570 to-primary-600 p-8 sm:p-10 text-white shadow-apple border border-primary-400/20">
+      <div ref={welcomeRef} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-570 to-primary-600 p-8 sm:p-10 text-white shadow-apple border border-primary-400/20">
         <div className="absolute top-0 right-0 -mt-4 -mr-4 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 right-1/4 mb-[-2rem] w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
         
@@ -304,7 +379,7 @@ export default function DashboardPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold text-primary-50">Operational Hub</span>
             </div>
-            <h2 className="text-3xl sm:text-4xl font-black tracking-tight font-display">
+            <h2 className="text-title font-black tracking-tight font-display">
               Welcome back, {profile.username}!
             </h2>
             <p className="text-primary-50/90 text-sm sm:text-base max-w-xl font-medium">
@@ -337,7 +412,7 @@ export default function DashboardPage() {
               <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
                 <Sparkles className="w-3.5 h-3.5" /> Effective Hourly Rate HUD
               </span>
-              <h3 className="text-xl font-black text-white tracking-tight">
+              <h3 className="font-display text-headline font-black text-white tracking-tight">
                 Freelancer Efficiency Analyzer
               </h3>
             </div>
@@ -349,7 +424,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Hourly Rate Card */}
-            <div className="relative group bg-gradient-to-br from-primary-500/20 to-transparent border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-apple-sm transition-all duration-300">
+            <div data-animate="hud-card" className="relative group bg-gradient-to-br from-primary-500/20 to-transparent border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-apple-sm motion-safe:hover:-translate-y-0.5 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-primary-500">
                   Effective Income Rate
@@ -358,9 +433,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black tracking-tight text-white font-mono">
-                    {formatCurrency(rates.hourlyRateIncome, profile.primary_currency)}
-                  </span>
+                  <CountUp value={rates.hourlyRateIncome} prefix={currencySymbol(profile.primary_currency)} decimals={2} duration={1.4} className="text-4xl font-black tracking-tight text-white font-mono" />
                   <span className="text-xs font-semibold text-slate-400">/ hr</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2 font-medium">
@@ -370,7 +443,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Projected Contract Rate Card */}
-            <div className="relative group bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-700/60 hover:shadow-apple-sm transition-all duration-300">
+            <div data-animate="hud-card" className="relative group bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-700/60 hover:shadow-apple-sm motion-safe:hover:-translate-y-0.5 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Delivered Contract Rate
@@ -379,9 +452,7 @@ export default function DashboardPage() {
               </div>
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black tracking-tight text-white font-mono">
-                    {formatCurrency(rates.hourlyRateProjects, profile.primary_currency)}
-                  </span>
+                  <CountUp value={rates.hourlyRateProjects} prefix={currencySymbol(profile.primary_currency)} decimals={2} duration={1.4} className="text-4xl font-black tracking-tight text-white font-mono" />
                   <span className="text-xs font-semibold text-slate-400">/ hr</span>
                 </div>
                 <p className="text-[11px] text-slate-400 mt-2 font-medium">
@@ -391,7 +462,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Efficiency Overview Card */}
-            <div className="bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
+            <div data-animate="hud-card" className="bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Tracked Metrics
@@ -401,16 +472,12 @@ export default function DashboardPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="border-r border-slate-800/80 pr-2">
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Time</span>
-                  <span className="text-2xl font-black text-white font-mono">
-                    {time.completedHours}h
-                  </span>
+                  <CountUp value={time.completedHours} suffix="h" className="text-2xl font-black text-white font-mono" />
                   <span className="block text-[9px] text-slate-400 mt-0.5">({time.completedMinutes} mins)</span>
                 </div>
                 <div className="pl-2">
                   <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tasks Done</span>
-                  <span className="text-2xl font-black text-white font-mono">
-                    {time.completedTasksCount}
-                  </span>
+                  <CountUp value={time.completedTasksCount} className="text-2xl font-black text-white font-mono" />
                   <span className="block text-[9px] text-slate-400 mt-0.5">in operational queue</span>
                 </div>
               </div>
@@ -430,7 +497,7 @@ export default function DashboardPage() {
             <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
               <Zap className="w-3.5 h-3.5" /> Hourly Activity Heatmap
             </span>
-            <h3 className="text-xl font-black text-white tracking-tight">
+            <h3 className="font-display text-headline font-black text-white tracking-tight">
               Productivity Pixel Grid
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -489,7 +556,7 @@ export default function DashboardPage() {
               const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
               return days.map((dayName, dayIdx) => (
-                <div key={dayName} className="flex items-center">
+                <div key={dayName} data-animate="heatmap-row" className="flex items-center">
                   {/* Day Label */}
                   <span className="w-10 text-[10px] font-bold text-slate-500 uppercase tracking-wider flex-shrink-0">
                     {dayName}
@@ -654,7 +721,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Time Pillar Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div data-animate="pillar-card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg motion-safe:hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-primary-500">
@@ -671,11 +738,11 @@ export default function DashboardPage() {
             <div className="space-y-2.5 pt-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">In Progress Tasks</span>
-                <span className="font-bold text-slate-200">{time.inProgressTasksCount}</span>
+                <CountUp value={time.inProgressTasksCount} className="font-bold text-slate-200" />
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Pending Backlog</span>
-                <span className="font-bold text-slate-200">{time.pendingTasksCount}</span>
+                <CountUp value={time.pendingTasksCount} className="font-bold text-slate-200" />
               </div>
             </div>
           </div>
@@ -688,7 +755,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Money Pillar Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div data-animate="pillar-card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg motion-safe:hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -705,11 +772,11 @@ export default function DashboardPage() {
             <div className="space-y-2.5 pt-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Total Income</span>
-                <span className="font-bold text-emerald-500">{formatCurrency(money.totalIncomePrimary, profile.primary_currency)}</span>
+                <CountUp value={money.totalIncomePrimary} prefix={currencySymbol(profile.primary_currency)} decimals={2} className="font-bold text-emerald-500" />
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Total Expenses</span>
-                <span className="font-bold text-rose-500">{formatCurrency(money.totalExpensePrimary, profile.primary_currency)}</span>
+                <CountUp value={money.totalExpensePrimary} prefix={currencySymbol(profile.primary_currency)} decimals={2} className="font-bold text-rose-500" />
               </div>
             </div>
           </div>
@@ -722,7 +789,7 @@ export default function DashboardPage() {
         </div>
 
         {/* CRM Pillar Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div data-animate="pillar-card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg motion-safe:hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
@@ -739,11 +806,11 @@ export default function DashboardPage() {
             <div className="space-y-2.5 pt-2">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Active Pipeline Leads</span>
-                <span className="font-bold text-slate-200">{activeLeads}</span>
+                <CountUp value={activeLeads} className="font-bold text-slate-200" />
               </div>
               <div className="flex justify-between items-center text-xs">
                 <span className="text-slate-400">Conversion Rate</span>
-                <span className="font-bold text-violet-500">{conversionRate}%</span>
+                <CountUp value={conversionRate} suffix="%" className="font-bold text-violet-500" />
               </div>
             </div>
           </div>
@@ -764,7 +831,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         
         {/* Time Tasks Deep Dive */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
+        <div data-animate="detail-col" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="font-black text-lg text-white tracking-tight flex items-center gap-2">
               <Layers className="w-5 h-5 text-primary-500" /> Recent Task Backlog
@@ -822,7 +889,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Financial Accounts & CRM Projects */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
+        <div data-animate="detail-col" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="font-black text-lg text-white tracking-tight flex items-center gap-2">
               <Briefcase className="w-5 h-5 text-amber-500" /> CRM Project Revenue

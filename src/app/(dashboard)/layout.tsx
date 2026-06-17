@@ -27,6 +27,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const [crmGroupOpen, setCrmGroupOpen] = useState(false);
   const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [bgReady, setBgReady] = useState(false);
+
+  // Defer the WebGL background until the browser is idle after first paint, so its
+  // one-time shader compilation / GPU buffer allocation doesn't stall the initial
+  // content render (and the dashboard entrance animations) on load.
+  useEffect(() => {
+    const w = window as typeof window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (typeof w.requestIdleCallback === 'function') {
+      const id = w.requestIdleCallback(() => setBgReady(true), { timeout: 1500 });
+      return () => w.cancelIdleCallback?.(id);
+    }
+    const t = setTimeout(() => setBgReady(true), 600);
+    return () => clearTimeout(t);
+  }, []);
 
   // Auto-expand the nav section corresponding to current route on load
   useEffect(() => {
@@ -145,21 +162,23 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         className="fixed inset-0 z-0 pointer-events-none"
         style={{ opacity: 0.18 }}
       >
-        <LiquidEther
-          colors={BACKGROUND_COLORS}
-          mouseForce={18}
-          cursorSize={120}
-          resolution={0.35}
-          autoDemo={true}
-          autoSpeed={0.28}
-          autoIntensity={2.0}
-          autoResumeDelay={3000}
-          autoRampDuration={1.2}
-          takeoverDuration={0.3}
-          isBounce={false}
-          isViscous={false}
-          BFECC={true}
-        />
+        {bgReady && (
+          <LiquidEther
+            colors={BACKGROUND_COLORS}
+            mouseForce={18}
+            cursorSize={120}
+            resolution={0.35}
+            autoDemo={true}
+            autoSpeed={0.28}
+            autoIntensity={2.0}
+            autoResumeDelay={3000}
+            autoRampDuration={1.2}
+            takeoverDuration={0.3}
+            isBounce={false}
+            isViscous={false}
+            BFECC={true}
+          />
+        )}
       </div>
 
       {/* ──────────────────────────────────────────────────────────

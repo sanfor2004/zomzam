@@ -10,17 +10,22 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
+  // Capture the now-narrowed id in a non-nullable const: TypeScript does not carry
+  // the `if (!user)` narrowing into the nested closure below (it can't prove when a
+  // closure runs), so referencing `user.id` there would re-widen to possibly-null.
+  const userId = user.id;
+
   // Syncs a completed task's project to 'delivered' when the task title follows the
   // "ProjectName: Production Delivery & Launch" convention used by the CRM flow.
   async function syncProjectDeliveryIfApplicable(taskId: number) {
-    const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [taskId, user.id]);
+    const task = await queryOne(`SELECT title FROM time_tasks WHERE id = ? AND user_id = ?`, [taskId, userId]);
     if (task && task.title.includes('Production Delivery & Launch')) {
       const parts = task.title.split(':');
       if (parts.length > 1) {
         const projectName = parts[0].trim();
         await execute(
           `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
-          [user.id, projectName]
+          [userId, projectName]
         );
       }
     }
