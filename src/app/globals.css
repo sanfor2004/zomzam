@@ -75,6 +75,29 @@
   --animate-out: fadeOut 0.3s ease-in;
 }
 
+/* ----------------------------------------------------------------
+   Dark-mode elevation override.
+   The @theme shadows above use rgba(0,0,0,*) (black), which is nearly
+   invisible on the dark #1A1D24 card surfaces. In dark mode we deepen
+   the drop and add a top-edge highlight (light-from-above) so depth
+   reads as real elevation, while keeping a clear rest -> hover delta
+   (shadow-apple -> shadow-apple-lg) so the card lift is perceptible.
+   ---------------------------------------------------------------- */
+.dark {
+  --shadow-apple-sm:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
+    0 1px 2px rgba(0, 0, 0, 0.40),
+    0 3px 10px -2px rgba(0, 0, 0, 0.45);
+  --shadow-apple:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
+    0 1px 2px rgba(0, 0, 0, 0.40),
+    0 5px 14px -3px rgba(0, 0, 0, 0.48);
+  --shadow-apple-lg:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.50),
+    0 16px 38px -8px rgba(0, 0, 0, 0.60);
+}
+
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }

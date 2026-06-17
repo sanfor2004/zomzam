@@ -349,7 +349,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             
             {/* Hourly Rate Card */}
-            <div className="relative group bg-gradient-to-br from-primary-500/20 to-transparent border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-apple-sm transition-all duration-300">
+            <div className="relative group bg-gradient-to-br from-primary-500/20 to-transparent border border-slate-800 rounded-2xl p-6 flex flex-col justify-between hover:border-primary-500/40 hover:shadow-apple-sm motion-safe:hover:-translate-y-0.5 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-primary-500">
                   Effective Income Rate
@@ -370,7 +370,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Projected Contract Rate Card */}
-            <div className="relative group bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-700/60 hover:shadow-apple-sm transition-all duration-300">
+            <div className="relative group bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-6 flex flex-col justify-between hover:border-slate-700/60 hover:shadow-apple-sm motion-safe:hover:-translate-y-0.5 transition-all duration-300">
               <div className="flex items-center justify-between mb-4">
                 <span className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Delivered Contract Rate
@@ -654,7 +654,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
         {/* Time Pillar Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg motion-safe:hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-primary-500">
@@ -688,7 +688,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Money Pillar Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg motion-safe:hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -722,7 +722,7 @@ export default function DashboardPage() {
         </div>
 
         {/* CRM Pillar Card */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between group">
+        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg motion-safe:hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between group">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center text-violet-500">
