@@ -273,13 +273,13 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
                       <div className="flex items-center justify-between pt-3 mt-3 border-t border-slate-800/60">
                         <span className="text-[10px] font-bold text-slate-600">ID #{lead.id}</span>
                         
-                        <button
+                        <Button variant="unstyled"
                           onClick={() => onOpenDetails(lead)}
                           className="text-xs font-black text-[#EE5712] hover:text-[#ff7d44] hover:underline flex items-center gap-1 transition-all cursor-pointer"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
                           Outreach
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))

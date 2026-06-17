@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import { useRef, useEffect, useState } from 'react';
 import { useMapsLibrary } from '@vis.gl/react-google-maps';
@@ -49,13 +50,13 @@ export const MapAutocomplete = ({ onPlaceSelect, disabled, value, onChange, onGe
         placeholder={disabled ? "Configure Maps API Key to search" : "e.g. Downtown Los Angeles"}
       />
       {onGetPin && !disabled && (
-        <button
+        <Button variant="unstyled"
           type="button"
           onClick={onGetPin}
           className="absolute right-1.5 px-2.5 py-1 bg-[#EE5712]/10 hover:bg-[#EE5712]/20 text-[#EE5712] border border-[#EE5712]/25 text-[9px] font-extrabold uppercase rounded-lg tracking-wider transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
         >
           Get pin
-        </button>
+        </Button>
       )}
     </div>
   );

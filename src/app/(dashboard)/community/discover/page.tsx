@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -135,7 +136,7 @@ export default function DiscoverPage() {
                     key={usr.id}
                     className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-850/50 transition-colors"
                   >
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => router.push(`/u/${usr.username}`)}
                       className="flex items-center gap-3 text-left group min-w-0 flex-1"
                     >
@@ -152,16 +153,16 @@ export default function DiscoverPage() {
                           {usr.first_name ? `${usr.first_name} ${usr.last_name || ''}` : 'View profile'}
                         </p>
                       </div>
-                    </button>
+                    </Button>
 
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => executeSocialAction('friend_request', usr.id)}
                         className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
                         title="Add Friend"
                       >
                         <UserPlus className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -197,12 +198,12 @@ export default function DiscoverPage() {
                       className="w-11 h-11 rounded-xl object-cover border border-slate-850 flex-shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => router.push(`/u/${usr.username}`)}
                         className="font-bold text-sm text-white hover:text-primary-500 transition-colors truncate"
                       >
                         {usr.username}
-                      </button>
+                      </Button>
                       <p className="text-[10px] text-slate-400 mt-0.5 truncate">
                         {usr.friend_count || 0} mutual connections
                       </p>
@@ -225,19 +226,19 @@ export default function DiscoverPage() {
                   )}
 
                   <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-850">
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => executeSocialAction('friend_request', usr.id)}
                       className="flex-grow h-10 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1 shadow-sm"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
                       Add Friend
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="unstyled"
                       onClick={() => executeSocialAction('follow', usr.id)}
                       className="h-10 px-4 bg-slate-900/30 text-slate-350 hover:bg-slate-100 border border-slate-800 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
                     >
                       Follow
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))

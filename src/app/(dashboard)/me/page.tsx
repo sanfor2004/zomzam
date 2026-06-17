@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -264,14 +265,14 @@ export default function MyProfilePage() {
                 alt="Profile photo"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
-              <button
+              <Button variant="unstyled"
                 type="button"
                 onClick={triggerFileSelect}
                 className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition-opacity duration-200 cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider"
               >
                 <Upload className="w-5 h-5" />
                 <span>{t('profile_avatar_change')}</span>
-              </button>
+              </Button>
             </div>
 
             {/* Hidden Input file */}
@@ -285,23 +286,23 @@ export default function MyProfilePage() {
 
             {/* Photo Action Buttons */}
             <div className="flex gap-2 w-full justify-center">
-              <button
+              <Button variant="unstyled"
                 type="button"
                 onClick={triggerFileSelect}
                 className="px-3.5 py-2 bg-slate-800/40 border border-slate-800/50 hover:bg-slate-850 rounded-xl text-xs font-semibold transition-all cursor-pointer text-slate-350"
               >
                 {t('profile_avatar_change')}
-              </button>
+              </Button>
               
               {((currentAvatarUrl && !removeAvatar) || avatarPreview) && (
-                <button
+                <Button variant="unstyled"
                   type="button"
                   onClick={handleRemoveAvatar}
                   className="p-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/10 rounded-xl text-red-500 transition-all cursor-pointer"
                   title={t('profile_avatar_remove')}
                 >
                   <Trash2 className="w-4 h-4" />
-                </button>
+                </Button>
               )}
             </div>
 
@@ -426,13 +427,13 @@ export default function MyProfilePage() {
                         className="inline-flex items-center gap-1 px-3 py-1 bg-primary-500/10 border border-primary-500/20 text-primary-500 font-bold text-xs rounded-xl"
                       >
                         <span>#{tag}</span>
-                        <button
+                        <Button variant="unstyled"
                           type="button"
                           onClick={() => handleRemoveTag(idx)}
                           className="hover:text-red-500 transition-colors cursor-pointer"
                         >
                           <X className="w-3.5 h-3.5" />
-                        </button>
+                        </Button>
                       </span>
                     ))
                   )}
@@ -447,14 +448,14 @@ export default function MyProfilePage() {
                     placeholder="Type a tag (e.g. typescript) and press Enter or comma"
                     className="flex-grow h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={addTagButton}
                     className="h-11 px-4 bg-slate-800 hover:bg-slate-750 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-1 cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
                     Add
-                  </button>
+                  </Button>
                 </div>
 
                 <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">
@@ -462,7 +463,7 @@ export default function MyProfilePage() {
                 </p>
               </div>
 
-              <button
+              <Button variant="unstyled"
                 type="submit"
                 disabled={isSaving}
                 className="w-full h-11 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all hover:shadow-md active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
@@ -473,7 +474,7 @@ export default function MyProfilePage() {
                   <Sparkles className="w-4 h-4" />
                 )}
                 {t('profile_save')}
-              </button>
+              </Button>
 
             </form>
           </div>

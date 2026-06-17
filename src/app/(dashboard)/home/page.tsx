@@ -7,6 +7,7 @@ import {
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2, Share2,
   UserPlus, Check, Users,
 } from 'lucide-react';
+import { Button, AudienceSwitch, type PostVisibility } from '@/components/ui';
 
 interface CurrentUser {
   username: string;
@@ -44,6 +45,7 @@ interface Post {
   last_name: string | null;
   avatar: string;
   content_html: string;
+  visibility?: PostVisibility;
   created_at: string;
   like_count: number;
   comment_count: number;
@@ -123,6 +125,7 @@ export default function HomePage() {
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [postingLoading, setPostingLoading] = useState(false);
+  const [visibility, setVisibility] = useState<PostVisibility>('friends');
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingFeedRef = useRef(false);
 
@@ -469,7 +472,7 @@ export default function HomePage() {
       const res = await fetch('/api/posts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', content_html }),
+        body: JSON.stringify({ action: 'create', content_html, visibility }),
       });
       const data = await res.json();
       if (data.success) {
@@ -503,8 +506,14 @@ export default function HomePage() {
             ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
 
-          {/* Composer */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: POST COMPOSER
+              Contains: Row 1 (avatar + editor + char counter),
+                        Row 2 (text settings toolbar + audience switch + Post button)
+              ────────────────────────────────────────────────────────── */}
           <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+
+            {/* Row 1 — avatar, text area, character amount */}
             <div className="flex gap-3">
               <img
                 src={currentUser?.avatar || '/Assets/Img/default-avatar.png'}
@@ -544,64 +553,69 @@ export default function HomePage() {
                   `}</style>
                 </div>
 
-                {/* Toolbar */}
-                <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-800/60">
-                  <div className="flex items-center gap-1">
-                    <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
-                      <Bold className="w-4 h-4" />
-                    </ToolbarButton>
-                    <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
-                      <Italic className="w-4 h-4" />
-                    </ToolbarButton>
-                    <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
-                      <Underline className="w-4 h-4" />
-                    </ToolbarButton>
-                    <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
-                      <List className="w-4 h-4" />
-                    </ToolbarButton>
-                    <span className="w-px h-5 bg-slate-800 mx-1" />
-                    <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
-                      <AtSign className="w-4 h-4" />
-                    </ToolbarButton>
-                    <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
-                      <Hash className="w-4 h-4" />
-                    </ToolbarButton>
-                    <ToolbarButton label="Emoji (soon)" onClick={() => {}} disabled>
-                      <Smile className="w-4 h-4" />
-                    </ToolbarButton>
-                    <ToolbarButton label="Photo (soon)" onClick={() => {}} disabled>
-                      <ImageIcon className="w-4 h-4" />
-                    </ToolbarButton>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {/* Character counter — amber near limit, rose when over */}
-                    <span
-                      aria-live="polite"
-                      title={`${MAX_POST_CHARS - charCount} characters remaining`}
-                      className={`text-[11px] font-bold tabular-nums transition-colors ${
-                        charCount > MAX_POST_CHARS
-                          ? 'text-rose-500'
-                          : charCount >= MAX_POST_CHARS * 0.9
-                          ? 'text-amber-400'
-                          : 'text-slate-600'
-                      }`}
-                    >
-                      {charCount}/{MAX_POST_CHARS}
-                    </span>
-
-                    <button
-                      onClick={handlePost}
-                      disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
-                      className="px-5 py-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-primary-500/10 active:scale-[0.98] flex items-center gap-2"
-                    >
-                      {postingLoading
-                        ? <Loader2 className="w-4 h-4 animate-spin" />
-                        : <Send className="w-4 h-4" />}
-                      Post
-                    </button>
-                  </div>
+                {/* Character counter — amber near limit, rose when over */}
+                <div className="flex justify-end mt-2">
+                  <span
+                    aria-live="polite"
+                    title={`${MAX_POST_CHARS - charCount} characters remaining`}
+                    className={`text-[11px] font-bold tabular-nums transition-colors ${
+                      charCount > MAX_POST_CHARS
+                        ? 'text-rose-500'
+                        : charCount >= MAX_POST_CHARS * 0.9
+                        ? 'text-amber-400'
+                        : 'text-slate-600'
+                    }`}
+                  >
+                    {charCount}/{MAX_POST_CHARS}
+                  </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Row 2 — text settings (left) + audience switch & Post button (right) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
+              {/* Text settings */}
+              <div className="flex items-center gap-1">
+                <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
+                  <Bold className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
+                  <Italic className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
+                  <Underline className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
+                  <List className="w-4 h-4" />
+                </ToolbarButton>
+                <span className="w-px h-5 bg-slate-800 mx-1" />
+                <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
+                  <AtSign className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
+                  <Hash className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton label="Emoji (soon)" onClick={() => {}} disabled>
+                  <Smile className="w-4 h-4" />
+                </ToolbarButton>
+                <ToolbarButton label="Photo (soon)" onClick={() => {}} disabled>
+                  <ImageIcon className="w-4 h-4" />
+                </ToolbarButton>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Audience switch — friends / public (exclusive hidden in composer) */}
+                <AudienceSwitch value={visibility} onChange={setVisibility} />
+
+                <Button
+                  onClick={handlePost}
+                  disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
+                  loading={postingLoading}
+                  leftIcon={!postingLoading && <Send className="w-4 h-4" />}
+                  className="disabled:opacity-40"
+                >
+                  Post
+                </Button>
               </div>
             </div>
 
@@ -638,8 +652,9 @@ export default function HomePage() {
                   {triggerType === '@' ? (
                     suggestions.length > 0 ? (
                       suggestions.map((u, idx) => (
-                        <button
+                        <Button
                           key={u.id}
+                          variant="unstyled"
                           role="option"
                           aria-selected={idx === selectedIndex}
                           onMouseEnter={() => setSelectedIndex(idx)}
@@ -668,7 +683,7 @@ export default function HomePage() {
                             </span>
                             <span className="block text-[10px] text-slate-500 truncate">@{u.username}</span>
                           </span>
-                        </button>
+                        </Button>
                       ))
                     ) : (
                       <div className="flex flex-col items-center gap-1.5 px-3 py-6 text-center">
@@ -678,7 +693,8 @@ export default function HomePage() {
                       </div>
                     )
                   ) : query ? (
-                    <button
+                    <Button
+                      variant="unstyled"
                       role="option"
                       aria-selected
                       onClick={() => insertPill('#')}
@@ -692,7 +708,7 @@ export default function HomePage() {
                         <span className="block text-xs font-bold text-sky-400 truncate">#{query}</span>
                       </span>
                       <kbd className="flex-shrink-0 text-[9px] font-bold text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded">↵</kbd>
-                    </button>
+                    </Button>
                   ) : (
                     <div className="flex flex-col items-center gap-1.5 px-3 py-6 text-center">
                       <Hash className="w-5 h-5 text-slate-700" />
@@ -863,7 +879,8 @@ export default function HomePage() {
                         </Link>
                         <p className="text-[10px] text-slate-600 truncate">@{u.username}</p>
                       </div>
-                      <button
+                      <Button
+                        variant="unstyled"
                         onClick={() => handleAddFriend(u.id)}
                         disabled={sentRequests.has(u.id)}
                         title={sentRequests.has(u.id) ? 'Request sent' : 'Add friend'}
@@ -876,7 +893,7 @@ export default function HomePage() {
                         {sentRequests.has(u.id)
                           ? <><Check className="w-3 h-3" /> Sent</>
                           : <><UserPlus className="w-3 h-3" /> Add</>}
-                      </button>
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -1005,7 +1022,8 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
             <span className="text-xs text-slate-500">@{post.username}</span>
             <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
             {isOwn && (
-              <button
+              <Button
+                variant="unstyled"
                 onClick={handleDelete}
                 onBlur={() => setConfirmDelete(false)}
                 disabled={deleting}
@@ -1018,7 +1036,7 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
               >
                 {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
                 {confirmDelete && <span>Confirm?</span>}
-              </button>
+              </Button>
             )}
           </div>
           <div
@@ -1030,7 +1048,8 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
 
       {/* Action bar */}
       <div className="flex items-center gap-5 mt-4 pt-3 border-t border-slate-800/40">
-        <button
+        <Button
+          variant="unstyled"
           onClick={toggleLike}
           className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
             liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
@@ -1038,9 +1057,10 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
         >
           <Heart className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
           {likeCount > 0 && <span>{likeCount}</span>}
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="unstyled"
           onClick={toggleComments}
           className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
             commentsOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
@@ -1048,9 +1068,10 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
         >
           <MessageCircle className="w-4 h-4" />
           {commentCount > 0 && <span>{commentCount}</span>}
-        </button>
+        </Button>
 
-        <button
+        <Button
+          variant="unstyled"
           onClick={handleShare}
           className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ml-auto ${
             shareCopied ? 'text-emerald-400' : 'text-slate-500 hover:text-emerald-400'
@@ -1058,7 +1079,7 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
         >
           <Share2 className="w-4 h-4" />
           {shareCopied && <span>Copied!</span>}
-        </button>
+        </Button>
       </div>
 
       {/* Comments section */}
@@ -1084,15 +1105,17 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
               maxLength={1000}
               className="flex-1 bg-[#111318] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
             />
-            <button
+            <Button
+              variant="primary"
+              size="none"
               onClick={submitTopComment}
               disabled={!commentText.trim() || submittingComment}
-              className="p-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors flex-shrink-0"
+              className="p-2 disabled:opacity-40 flex-shrink-0"
             >
               {submittingComment
                 ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
                 : <Send className="w-3.5 h-3.5 text-white" />}
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -1136,14 +1159,15 @@ function CommentRow({
             <span className="text-xs font-bold text-white">{name}</span>
             <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
             {depth < 2 && (
-              <button
+              <Button
+                variant="unstyled"
                 onClick={() => setReplyOpen((p) => !p)}
                 className={`text-[10px] font-semibold transition-colors ml-auto ${
                   replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
                 }`}
               >
                 Reply
-              </button>
+              </Button>
             )}
           </div>
           <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
@@ -1162,15 +1186,18 @@ function CommentRow({
             maxLength={1000}
             className="flex-1 bg-[#111318] rounded-xl px-3 py-1.5 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
           />
-          <button
+          <Button
+            variant="primary"
+            size="none"
+            shape="lg"
             onClick={submitReply}
             disabled={!replyText.trim() || submitting}
-            className="p-1.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors flex-shrink-0"
+            className="p-1.5 disabled:opacity-40 flex-shrink-0"
           >
             {submitting
               ? <Loader2 className="w-3 h-3 text-white animate-spin" />
               : <Send className="w-3 h-3 text-white" />}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -1197,8 +1224,8 @@ function ToolbarButton({
   active?: boolean;
 }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="unstyled"
       title={label}
       aria-label={label}
       aria-pressed={active}
@@ -1212,6 +1239,6 @@ function ToolbarButton({
       }`}
     >
       {children}
-    </button>
+    </Button>
   );
 }

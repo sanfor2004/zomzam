@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -234,12 +235,12 @@ export default function DailyTrackerPage() {
             <p className="text-xs text-slate-400 mt-1.5 max-w-sm mx-auto">
               Start a focus session or check tasks on the Task Board to build your record of accomplishment.
             </p>
-            <button
+            <Button variant="unstyled"
               onClick={() => router.push('/time/execution')}
               className="mt-5 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-primary-500/10 uppercase tracking-wider"
             >
               Start Focusing
-            </button>
+            </Button>
           </div>
         ) : (
           <div className="space-y-4">

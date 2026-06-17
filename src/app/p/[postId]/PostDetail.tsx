@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -186,7 +187,7 @@ export default function PostDetail({
 
         {/* Action bar */}
         <div className="flex items-center gap-6 mt-6 pt-5 border-t border-slate-800/40">
-          <button
+          <Button variant="unstyled"
             onClick={toggleLike}
             className={`flex items-center gap-2 text-sm font-semibold transition-all active:scale-95 ${
               liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
@@ -197,7 +198,7 @@ export default function PostDetail({
               {likeCount > 0 ? likeCount : ''}{' '}
               {likeCount === 1 ? 'Like' : likeCount > 1 ? 'Likes' : 'Like'}
             </span>
-          </button>
+          </Button>
 
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-500">
             <MessageCircle className="w-[18px] h-[18px]" />
@@ -206,7 +207,7 @@ export default function PostDetail({
             </span>
           </div>
 
-          <button
+          <Button variant="unstyled"
             onClick={handleShare}
             className={`flex items-center gap-2 text-sm font-semibold transition-colors ml-auto ${
               shareCopied ? 'text-emerald-400' : 'text-slate-500 hover:text-emerald-400'
@@ -214,7 +215,7 @@ export default function PostDetail({
           >
             {shareCopied ? <Check className="w-[18px] h-[18px]" /> : <Share2 className="w-[18px] h-[18px]" />}
             {shareCopied ? 'Copied!' : 'Share'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -242,7 +243,7 @@ export default function PostDetail({
             maxLength={1000}
             className="flex-1 bg-[#111318] rounded-xl px-4 py-2.5 text-sm text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          <button
+          <Button variant="unstyled"
             onClick={viewerId ? submitTopComment : () => { window.location.href = '/sign'; }}
             disabled={viewerId ? (!commentText.trim() || submitting) : false}
             className="px-4 py-2.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl transition-colors flex-shrink-0 flex items-center gap-2 text-sm font-bold text-white"
@@ -251,7 +252,7 @@ export default function PostDetail({
               ? <Loader2 className="w-4 h-4 animate-spin" />
               : <Send className="w-4 h-4" />}
             {!viewerId && 'Sign in'}
-          </button>
+          </Button>
         </div>
 
         {/* Comment tree */}
@@ -312,7 +313,7 @@ function CommentRow({
             </Link>
             <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
             {depth < 2 && (
-              <button
+              <Button variant="unstyled"
                 onClick={() =>
                   viewerId ? setReplyOpen((p) => !p) : (window.location.href = '/sign')
                 }
@@ -321,7 +322,7 @@ function CommentRow({
                 }`}
               >
                 Reply
-              </button>
+              </Button>
             )}
           </div>
           <p className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
@@ -341,7 +342,7 @@ function CommentRow({
             maxLength={1000}
             className="flex-1 bg-[#111318] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
           />
-          <button
+          <Button variant="unstyled"
             onClick={submitReply}
             disabled={!replyText.trim() || submitting}
             className="p-2 bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors flex-shrink-0"
@@ -349,7 +350,7 @@ function CommentRow({
             {submitting
               ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
               : <Send className="w-3.5 h-3.5 text-white" />}
-          </button>
+          </Button>
         </div>
       )}
 

@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -199,56 +200,56 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
           {/* Home */}
-          <button
+          <Button variant="unstyled"
             onClick={() => router.push('/home')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/home')}`}
           >
             <Home className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_home') || 'Home'}</span>
-          </button>
+          </Button>
 
           {/* Time Management Group */}
           <div className="space-y-1">
-            <button
+            <Button variant="unstyled"
               onClick={() => setTimeGroupOpen(!timeGroupOpen)}
               className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
             >
               <span>{t('nav_time')}</span>
               <Clock className="w-4 h-4 text-slate-400" />
-            </button>
+            </Button>
             {timeGroupOpen && (
               <div id="timeGroup" className="block pr-3 py-1">
                 <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => router.push('/time/execution')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/execution')}`}
                   >
                     Pomodoro Timer
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/time/tasks')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/tasks')}`}
                   >
                     Task Board
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/time/planning')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/planning')}`}
                   >
                     Dream Planning
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/time/ideas')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/ideas')}`}
                   >
                     Idea Capture
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/time/tracker')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/tracker')}`}
                   >
                     Daily Tracker
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -256,46 +257,46 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
           {/* Money Management Group */}
           <div className="space-y-1">
-            <button
+            <Button variant="unstyled"
               onClick={() => setMoneyGroupOpen(!moneyGroupOpen)}
               className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
             >
               <span>{t('nav_money')}</span>
               <DollarSign className="w-4 h-4 text-slate-400" />
-            </button>
+            </Button>
             {moneyGroupOpen && (
               <div id="moneyGroup" className="block pr-3 py-1">
                 <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => router.push('/money/dashboard')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/dashboard')}`}
                   >
                     Overview
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/money/expenses')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/expenses')}`}
                   >
                     Expenses
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/money/income')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/income')}`}
                   >
                     Income
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/money/accounts')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/accounts')}`}
                   >
                     Accounts
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/money/lend')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/lend')}`}
                   >
                     Lending
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -309,116 +310,116 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               ──────────────────────────────────────────────────────────
           {/* CRM Management Group * /}
           <div className="space-y-1">
-            <button
+            <Button variant="unstyled"
               onClick={() => setCrmGroupOpen(!crmGroupOpen)}
               className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
             >
               <span>{t('nav_crm')}</span>
               <Briefcase className="w-4 h-4 text-slate-400" />
-            </button>
+            </Button>
             {crmGroupOpen && (
               <div id="crmGroup" className="block pr-3 py-1">
                 <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => router.push('/crm')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm')}`}
                   >
                     CRM Dashboard
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/crm/leads')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/leads')}`}
                   >
                     Lead Vault
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/crm/pipeline')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/pipeline')}`}
                   >
                     Kanban Pipeline
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/crm/contacts')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/contacts')}`}
                   >
                     Client Profiles
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/crm/outreach')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/outreach')}`}
                   >
                     Outreach AI
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/crm/projects')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/projects')}`}
                   >
                     Projects Hub
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
 
           {/* Dashboard * /}
-          <button
+          <Button variant="unstyled"
             onClick={() => router.push('/dashboard')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/dashboard')}`}
           >
             <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_dashboard')}</span>
-          </button>
+          </Button>
               ────────────────────────────────────────────────────────── */}
 
           {/* Community Group */}
           <div className="space-y-1">
-            <button
+            <Button variant="unstyled"
               onClick={() => setCommunityGroupOpen(!communityGroupOpen)}
               className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors cursor-pointer"
             >
               <span>{t('nav_community') || 'Community'}</span>
               <Users className="w-4 h-4 text-slate-400" />
-            </button>
+            </Button>
             {communityGroupOpen && (
               <div id="communityGroup" className="block pr-3 py-1">
                 <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => router.push('/community/friends')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/friends')}`}
                   >
                     Friends Grid
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/community/discover')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/discover')}`}
                   >
                     Discover People
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/community/requests')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/requests')}`}
                   >
                     Friend Requests
-                  </button>
-                  <button
+                  </Button>
+                  <Button variant="unstyled"
                     onClick={() => router.push('/community/following')}
                     className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/following')}`}
                   >
                     Connections & Follows
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
           </div>
 
           {/* Settings */}
-          <button
+          <Button variant="unstyled"
             onClick={() => router.push('/settings')}
             className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/settings')}`}
           >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_settings')}</span>
-          </button>
+          </Button>
         </nav>
 
         {/* User Mini Profile */}
@@ -431,7 +432,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
           <div className="p-4 relative z-10">
             <div className="flex items-center justify-between gap-3 px-3">
-              <button
+              <Button variant="unstyled"
                 onClick={() => router.push('/me')}
                 className="flex items-center gap-3 text-left group flex-grow min-w-0"
               >
@@ -455,14 +456,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                   </p>
                   <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
                 </div>
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={handleLogout}
                 className="text-slate-400 hover:text-red-500 transition-colors"
                 title={t('nav_logout')}
               >
                 <LogOut className="w-4 h-4" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -477,12 +478,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             ────────────────────────────────────────────────────────── */}
         <header className="h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-6 z-40">
           <div className="flex items-center gap-4">
-            <button
+            <Button variant="unstyled"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl"
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+            </Button>
             <h2 className="text-sm font-bold text-slate-400 hidden sm:block">
               {pathname === '/dashboard' ? 'Welcome Back' : 'Zomzam Workspace'}
             </h2>
@@ -495,7 +496,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             onClose={() => setNotifDropdownOpen(false)}
             align="right"
             trigger={
-              <button
+              <Button variant="unstyled"
                 onClick={handleNotificationToggle}
                 className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
                 aria-expanded={notifDropdownOpen}
@@ -506,7 +507,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 {notificationsCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full animate-pulse shadow-md shadow-primary-500/50"></span>
                 )}
-              </button>
+              </Button>
             }
           >
             <div className="py-3">
@@ -565,7 +566,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
         <div className="md:hidden fixed inset-0 top-[75px] bg-slate-900/50 backdrop-blur-sm z-30">
           <div className="w-64 bg-surface-dark h-full border-r border-slate-800 p-6 flex flex-col space-y-4">
             {/* TEMPORARILY DISABLED: Dashboard Home — parked for later work
-            <button
+            <Button variant="unstyled"
               onClick={() => {
                 router.push('/dashboard');
                 setMobileMenuOpen(false);
@@ -573,11 +574,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               className="w-full text-left block py-2.5 text-sm font-semibold text-slate-300"
             >
               Dashboard Home
-            </button>
+            </Button>
             */}
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Time Suite</p>
-              <button
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/time/execution');
                   setMobileMenuOpen(false);
@@ -585,8 +586,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Pomodoro Focus
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/time/tasks');
                   setMobileMenuOpen(false);
@@ -594,11 +595,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Task Board
-              </button>
+              </Button>
             </div>
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Money Suite</p>
-              <button
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/money/dashboard');
                   setMobileMenuOpen(false);
@@ -606,12 +607,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Ledger Overview
-              </button>
+              </Button>
             </div>
             {/* TEMPORARILY DISABLED: CRM Suite — parked for later work
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('nav_crm')}</p>
-              <button
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/crm');
                   setMobileMenuOpen(false);
@@ -619,8 +620,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 CRM Dashboard
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/crm/leads');
                   setMobileMenuOpen(false);
@@ -628,8 +629,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Lead Vault
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/crm/pipeline');
                   setMobileMenuOpen(false);
@@ -637,8 +638,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Kanban Pipeline
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/crm/contacts');
                   setMobileMenuOpen(false);
@@ -646,8 +647,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Client Profiles
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/crm/outreach');
                   setMobileMenuOpen(false);
@@ -655,8 +656,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Outreach AI
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/crm/projects');
                   setMobileMenuOpen(false);
@@ -664,12 +665,12 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Projects Hub
-              </button>
+              </Button>
             </div>
             */}
             <div className="space-y-1">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Community</p>
-              <button
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/community/friends');
                   setMobileMenuOpen(false);
@@ -677,8 +678,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Friends Grid
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/community/discover');
                   setMobileMenuOpen(false);
@@ -686,8 +687,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Discover People
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/community/requests');
                   setMobileMenuOpen(false);
@@ -695,8 +696,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Friend Requests
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => {
                   router.push('/community/following');
                   setMobileMenuOpen(false);
@@ -704,9 +705,9 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
               >
                 Connections & Follows
-              </button>
+              </Button>
             </div>
-            <button
+            <Button variant="unstyled"
               onClick={() => {
                 router.push('/settings');
                 setMobileMenuOpen(false);
@@ -714,13 +715,13 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               className="w-full text-left block py-2.5 text-sm font-semibold text-slate-300"
             >
               Settings
-            </button>
-            <button
+            </Button>
+            <Button variant="unstyled"
               onClick={handleLogout}
               className="w-full text-left block py-2.5 text-sm font-semibold text-red-500"
             >
               Sign Out
-            </button>
+            </Button>
           </div>
         </div>
       )}

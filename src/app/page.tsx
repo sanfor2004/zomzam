@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap, useGSAP, ScrollTrigger, SplitText } from '@/lib/gsap';
@@ -156,7 +157,7 @@ export default function LandingPage() {
                   onClose={() => setLangOpen(false)}
                   align="right"
                   trigger={
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => setLangOpen(!langOpen)}
                       className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary-500 transition-colors py-2 px-3 rounded-xl hover:bg-slate-800"
                       aria-expanded={langOpen}
@@ -164,7 +165,7 @@ export default function LandingPage() {
                     >
                       <Globe className="w-4 h-4" />
                       <span className="uppercase">{language}</span>
-                    </button>
+                    </Button>
                   }
                 >
                   {[

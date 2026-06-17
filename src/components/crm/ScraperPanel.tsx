@@ -468,12 +468,12 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
               <div className="space-y-2.5 flex-1 overflow-y-auto pr-1 border-t border-slate-800/60 pt-3 select-none custom-scrollbar">
                 <div className="flex justify-between items-center pb-1">
                   <h4 className="text-[9px] font-extrabold text-gray-500 uppercase tracking-wider">Scanned Places ({shops.length})</h4>
-                  <button 
+                  <Button variant="unstyled" 
                     onClick={() => setShops([])} 
                     className="text-[9px] text-slate-400 hover:text-[#EE5712] font-extrabold transition-all cursor-pointer"
                   >
                     Clear Results
-                  </button>
+                  </Button>
                 </div>
                 
                 <div className="space-y-2">
@@ -677,12 +677,12 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                   <h4 className="text-xs font-black text-white leading-tight mt-1 truncate">{infoCardShop.displayName?.text}</h4>
                   <p className="text-[10px] text-slate-400 line-clamp-2 mt-0.5 leading-normal">{infoCardShop.formattedAddress}</p>
                 </div>
-                <button 
+                <Button variant="unstyled" 
                   onClick={() => setInfoCardShop(null)}
                   className="p-1 rounded-lg text-slate-500 hover:text-white transition-all text-xs font-bold leading-none -mt-1 cursor-pointer"
                 >
                   ✕
-                </button>
+                </Button>
               </div>
 
               <div className="grid grid-cols-2 gap-2 mt-3.5 pt-3.5 border-t border-slate-800/60">

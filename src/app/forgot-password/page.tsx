@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -183,13 +184,13 @@ function ForgotPasswordContent() {
                 />
               </div>
               <div className="pt-2">
-                <button
+                <Button variant="unstyled"
                   type="submit"
                   disabled={loading}
                   className="w-full py-4 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Send Reset Link'}
-                </button>
+                </Button>
               </div>
             </form>
           )}
@@ -203,12 +204,12 @@ function ForgotPasswordContent() {
               <p className="text-sm text-slate-400">
                 Check your inbox at <span className="font-bold text-white">{email}</span> for the reset link.
               </p>
-              <button
+              <Button variant="unstyled"
                 onClick={() => { setRequestSent(false); setEmail(''); setMessage(null); }}
                 className="text-xs text-primary-500 hover:text-primary-600 font-semibold underline underline-offset-2"
               >
                 Try a different email
-              </button>
+              </Button>
             </div>
           )}
 
@@ -230,13 +231,13 @@ function ForgotPasswordContent() {
                     placeholder="••••••••"
                     className="w-full px-5 py-3.5 pr-12 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                   />
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowNew(!showNew)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
                 <p className="text-[10px] text-slate-400 mt-1.5">Must be at least 8 characters</p>
               </div>
@@ -256,24 +257,24 @@ function ForgotPasswordContent() {
                     placeholder="••••••••"
                     className="w-full px-5 py-3.5 pr-12 bg-[#0f1115] border border-slate-800 rounded-xl text-white placeholder-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all outline-none"
                   />
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
               <div className="pt-2">
-                <button
+                <Button variant="unstyled"
                   type="submit"
                   disabled={loading}
                   className="w-full py-4 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Password'}
-                </button>
+                </Button>
               </div>
             </form>
           )}

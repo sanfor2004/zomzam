@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -443,7 +444,7 @@ export default function IdeaCapturePage() {
               const isTask = item._tagType === 'task';
               const title = isTask ? item.title : item.content;
               return (
-                <button
+                <Button variant="unstyled"
                   key={`${item._tagType}-${item.id}`}
                   onClick={() => insertTagPill(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
@@ -461,7 +462,7 @@ export default function IdeaCapturePage() {
                   }`}>
                     {isTask ? 'Task' : 'Plan'}
                   </span>
-                </button>
+                </Button>
               );
             })}
           </div>
@@ -530,20 +531,20 @@ export default function IdeaCapturePage() {
 
               <div className="flex items-center gap-2">
                 {editingIdeaId && (
-                  <button
+                  <Button variant="unstyled"
                     onClick={handleCancelEdit}
                     className="px-4 py-2 text-xs font-black uppercase tracking-wider text-slate-400 hover:text-slate-600 transition-colors"
                   >
                     Cancel
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button variant="unstyled"
                   onClick={handleSubmitIdea}
                   className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-[0.98] flex items-center gap-2"
                 >
                   {editingIdeaId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4 stroke-[3]" />}
                   {editingIdeaId ? 'Update Idea' : 'Capture Idea'}
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -601,32 +602,32 @@ export default function IdeaCapturePage() {
                   >
                     {/* Action Buttons */}
                     <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => handleEditIdea(idea)}
                         title="Edit Idea"
                         className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
                       >
                         <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="unstyled"
                         onClick={() => handleDeleteIdea(idea.id)}
                         title="Delete Idea"
                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </Button>
                     </div>
 
                     {/* Body */}
                     {renderFormattedBody(visibleText)}
 
                     {isTruncated && (
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => toggleExpand(idea.id)}
                         className="mt-2 text-xs font-bold text-emerald-500 hover:text-emerald-600 transition-colors underline underline-offset-2"
                       >
                         {isExpanded ? 'Show less' : 'Read more'}
-                      </button>
+                      </Button>
                     )}
 
                     {/* Metadata Footer */}

@@ -6,6 +6,7 @@ import { useTranslation } from '@/context/TranslationContext';
 import { Globe, ArrowLeft, ArrowRight } from 'lucide-react';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import { Alert } from '@/components/ui/Alert';
+import { Button } from '@/components/ui';
 
 function SignPageContent() {
   const { t, language, setLanguage } = useTranslation();
@@ -124,7 +125,7 @@ function SignPageContent() {
               onClose={() => setLangOpen(false)}
               align="right"
               trigger={
-                <button
+                <Button variant="unstyled"
                   onClick={() => setLangOpen(!langOpen)}
                   className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-primary-500 bg-[#1A1D24] border border-slate-800 py-2.5 px-4 rounded-full shadow-sm"
                   type="button"
@@ -132,7 +133,7 @@ function SignPageContent() {
                 >
                   <Globe className="w-4 h-4" />
                   <span className="uppercase">{language}</span>
-                </button>
+                </Button>
               }
             >
               {[
@@ -183,7 +184,7 @@ function SignPageContent() {
 
           {/* Tabs */}
           <div className="flex p-1 bg-[#0f1115] rounded-2xl mb-8">
-            <button
+            <Button variant="unstyled"
               onClick={() => handleTabChange('signin')}
               className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all${
                 activeTab === 'signin'
@@ -192,8 +193,8 @@ function SignPageContent() {
               }`}
             >
               Sign In
-            </button>
-            <button
+            </Button>
+            <Button variant="unstyled"
               onClick={() => handleTabChange('signup')}
               className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all${
                 activeTab === 'signup'
@@ -202,7 +203,7 @@ function SignPageContent() {
               }`}
             >
               Create Account
-            </button>
+            </Button>
           </div>
 
           {/* Status Message */}
@@ -276,14 +277,14 @@ function SignPageContent() {
             </div>
 
             <div className="pt-2">
-              <button
+              <Button variant="unstyled"
                 type="submit"
                 disabled={loading}
                 className="w-full py-4 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all shadow-md hover:shadow-lg active:scale-[0.98] flex justify-center items-center gap-2 disabled:opacity-50"
               >
                 {loading ? 'Please wait...' : activeTab === 'signin' ? t('auth_signin') : t('auth_signup')}
                 {!loading && <ArrowRight className="w-5 h-5" />}
-              </button>
+              </Button>
             </div>
 
             {activeTab === 'signup' && (

@@ -551,15 +551,15 @@ export default function PomodoroPage() {
           {/* Controls Box */}
           <div className="flex flex-col items-center gap-6 w-full">
             <div className="flex items-center gap-4">
-              <button
+              <Button variant="unstyled"
                 onClick={resetTimer}
                 title="Reset Session"
                 className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95"
               >
                 <RotateCcw className="w-5 h-5" />
-              </button>
+              </Button>
 
-              <button
+              <Button variant="unstyled"
                 onClick={isRunning ? pauseTimer : startTimer}
                 title={isRunning ? 'Pause Session' : 'Start Session'}
                 aria-label={isRunning ? 'Pause Session' : 'Start Session'}
@@ -570,25 +570,25 @@ export default function PomodoroPage() {
                 }`}
               >
                 {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8" fill="currentColor" />}
-              </button>
+              </Button>
 
-              <button
+              <Button variant="unstyled"
                 onClick={skipTask}
                 disabled={pendingTasks.length < 2}
                 title="Skip Task"
                 className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <SkipForward className="w-5 h-5" />
-              </button>
+              </Button>
             </div>
 
             {isBreak && (
-              <button
+              <Button variant="unstyled"
                 onClick={skipBreak}
                 className="px-5 py-2 text-xs font-black uppercase tracking-widest bg-primary-950/20 text-primary-500 hover:bg-primary-900/30 rounded-full border border-primary-900/30 transition-colors"
               >
                 Skip Break
-              </button>
+              </Button>
             )}
 
             {/* Adjuster Inputs */}
@@ -598,21 +598,21 @@ export default function PomodoroPage() {
               <div className="flex-1 flex flex-col gap-1.5">
                 <span className="text-slate-400 font-medium">Focus duration</span>
                 <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => adjustFocus(-5)}
                     className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
                   >
                     -
-                  </button>
+                  </Button>
                   <span className="flex-1 text-center font-bold text-slate-200">
                     {Math.floor(duration / 60)}m
                   </span>
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => adjustFocus(5)}
                     className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
                   >
                     +
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -620,21 +620,21 @@ export default function PomodoroPage() {
               <div className="flex-1 flex flex-col gap-1.5">
                 <span className="text-slate-400 font-medium">Break duration</span>
                 <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => adjustBreak(-5)}
                     className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
                   >
                     -
-                  </button>
+                  </Button>
                   <span className="flex-1 text-center font-bold text-slate-200">
                     {Math.floor(breakDuration / 60)}m
                   </span>
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => adjustBreak(5)}
                     className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
                   >
                     +
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -738,7 +738,7 @@ export default function PomodoroPage() {
 
           {/* Quick Actions Shortcuts */}
           <div className="grid grid-cols-2 gap-4">
-            <button
+            <Button variant="unstyled"
               onClick={() => router.push('/time/tasks')}
               className="flex items-center gap-3 bg-[#1A1D24] border border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-amber-400/40 hover:shadow-apple transition-all group"
             >
@@ -749,9 +749,9 @@ export default function PomodoroPage() {
                 <span className="block text-xs font-bold text-slate-300">Manage Tasks</span>
                 <span className="block text-[10px] text-slate-400 truncate">Go to task board</span>
               </div>
-            </button>
+            </Button>
 
-            <button
+            <Button variant="unstyled"
               onClick={() => router.push('/time/ideas')}
               className="flex items-center gap-3 bg-[#1A1D24] border border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-emerald-400/40 hover:shadow-apple transition-all group"
             >
@@ -762,7 +762,7 @@ export default function PomodoroPage() {
                 <span className="block text-xs font-bold text-slate-300">Capture Idea</span>
                 <span className="block text-[10px] text-slate-400 truncate">Go to idea capture</span>
               </div>
-            </button>
+            </Button>
           </div>
 
         </div>

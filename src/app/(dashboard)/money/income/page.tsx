@@ -89,12 +89,12 @@ export default function IncomePage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button variant="unstyled"
             onClick={() => router.push('/money/dashboard')}
             className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Income Tracking</h1>
             <p className="text-xs text-slate-400">Manage your salary, bonuses, and earnings.</p>
@@ -149,13 +149,13 @@ export default function IncomePage() {
                   <p className="text-sm font-black text-emerald-500">
                     +{formatAmount(t.amount, t.currency)}
                   </p>
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => deleteTransaction(t.id)}
                     className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
                     title="Delete Entry"
                   >
                     <Trash2 className="w-4 h-4" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

@@ -465,7 +465,7 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
 
           {/* Campaign Selectors */}
           <div className="flex gap-2.5 p-1 bg-slate-900/30 border border-slate-800 rounded-xl">
-            <button
+            <Button variant="unstyled"
               onClick={() => setEmailCampaignType("audit")}
               className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer${
                 emailCampaignType === "audit" 
@@ -474,8 +474,8 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
               }`}
             >
               Design Audit
-            </button>
-            <button
+            </Button>
+            <Button variant="unstyled"
               onClick={() => setEmailCampaignType("collaboration")}
               className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer${
                 emailCampaignType === "collaboration" 
@@ -484,8 +484,8 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
               }`}
             >
               CRM Funnel
-            </button>
-            <button
+            </Button>
+            <Button variant="unstyled"
               onClick={() => setEmailCampaignType("custom")}
               className={`flex-1 text-xs font-bold py-2 rounded-lg transition-all cursor-pointer${
                 emailCampaignType === "custom" 
@@ -494,7 +494,7 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
               }`}
             >
               Elevator Brief
-            </button>
+            </Button>
           </div>
 
           <Button
@@ -518,13 +518,13 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
           {/* Generated Output */}
           {generatedEmail && (
             <div className="relative rounded-xl border border-white/5 bg-white/[0.005] p-4.5 font-mono text-[11px] leading-relaxed text-slate-350 space-y-2 select-all animate-in fade-in duration-200 shadow-inner">
-              <button
+              <Button variant="unstyled"
                 onClick={handleCopyEmail}
                 className="absolute top-3 right-3 p-2 rounded-lg bg-white/5 hover:bg-slate-250 border border-white/15 text-slate-400 transition-all flex items-center gap-1 cursor-pointer font-sans"
               >
                 {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                 <span>{copied ? 'Copied' : 'Copy'}</span>
-              </button>
+              </Button>
               <div className="whitespace-pre-line pr-10">{generatedEmail}</div>
             </div>
           )}

@@ -112,7 +112,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
             open={isDropdownOpen}
             onClose={() => setIsDropdownOpen(false)}
             trigger={
-              <button
+              <Button variant="unstyled"
                 type="button"
                 disabled={isUpdating}
                 onClick={() => setIsDropdownOpen(prev => !prev)}
@@ -122,13 +122,13 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
                 )}
               >
                 <span>{statusConfigs[status].label.toUpperCase()}</span>
-              </button>
+              </Button>
             }
             align="right"
             dropdownClassName="min-w-[130px] p-1.5 space-y-0.5 bg-white dark:bg-[#1f232d] border border-slate-100 dark:border-slate-800 shadow-apple"
           >
             {statusOptions.map(opt => (
-              <button
+              <Button variant="unstyled"
                 key={opt.value}
                 type="button"
                 onClick={() => {
@@ -144,7 +144,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
               >
                 <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", opt.indicatorColor)} />
                 <span>{opt.label}</span>
-              </button>
+              </Button>
             ))}
           </DropdownMenu>
         </div>

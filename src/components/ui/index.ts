@@ -1,5 +1,6 @@
 export * from './Alert';
 export * from './Button';
+export * from './AudienceSwitch';
 export * from './Switch';
 export * from './Badge';
 export * from './Card';

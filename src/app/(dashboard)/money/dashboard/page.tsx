@@ -382,13 +382,13 @@ export default function MoneyDashboardPage() {
                 <span className="text-xs font-bold text-slate-450">I Owe People</span>
                 <span className="text-xs font-black text-rose-500">{formatAmount(stats.lend.i_owe || 0)}</span>
               </div>
-              <button
+              <Button variant="unstyled"
                 onClick={() => router.push('/money/lend')}
                 className="w-full h-9 bg-slate-900/30 text-[9px] font-black uppercase text-slate-450 tracking-widest hover:text-primary-500 hover:bg-slate-850 rounded-xl transition-all border border-slate-850 flex items-center justify-center gap-1.5"
               >
                 Manage All
                 <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -405,12 +405,12 @@ export default function MoneyDashboardPage() {
                 <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
                   Recent Transactions
                 </h2>
-                <button
+                <Button variant="unstyled"
                   onClick={() => router.push('/money/expenses')}
                   className="text-xs font-bold text-primary-500 hover:text-primary-600 transition-colors"
                 >
                   View Expenses
-                </button>
+                </Button>
               </div>
 
               <div className="space-y-2.5 max-h-[500px] overflow-y-auto pr-1">
@@ -440,12 +440,12 @@ export default function MoneyDashboardPage() {
                         <p className={`text-xs font-black${t.type === 'income' ? 'text-emerald-500' : 'text-white'}`}>
                           {t.type === 'income' ? '+' : '-'}{formatAmount(t.amount, t.currency)}
                         </p>
-                        <button
+                        <Button variant="unstyled"
                           onClick={() => deleteTransaction(t.id)}
                           className="opacity-0 group-hover:opacity-100 text-[9px] font-black uppercase text-rose-500 hover:underline transition-all"
                         >
                           Delete
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))
@@ -454,18 +454,18 @@ export default function MoneyDashboardPage() {
             </div>
 
             <div className="mt-8 pt-4 border-t border-slate-850 flex items-center gap-3">
-              <button
+              <Button variant="unstyled"
                 onClick={() => router.push('/money/expenses')}
                 className="flex-1 h-10 bg-slate-900/30 text-xs font-bold text-slate-350 hover:bg-slate-800 border border-slate-850 rounded-xl transition-all uppercase tracking-wider"
               >
                 Expenses
-              </button>
-              <button
+              </Button>
+              <Button variant="unstyled"
                 onClick={() => router.push('/money/income')}
                 className="flex-1 h-10 bg-slate-900/30 text-xs font-bold text-slate-350 hover:bg-slate-800 border border-slate-850 rounded-xl transition-all uppercase tracking-wider"
               >
                 Income
-              </button>
+              </Button>
             </div>
           </div>
         </div>

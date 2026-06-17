@@ -42,6 +42,12 @@ async function ensureTables() {
     await execute(`ALTER TABLE post_comments ADD COLUMN parent_id BIGINT UNSIGNED NULL DEFAULT NULL`);
     await execute(`ALTER TABLE post_comments ADD INDEX idx_parent_id (parent_id)`);
   } catch { /* column/index already exists */ }
+  // visibility migration — audience scope for each post (friends | public | exclusive)
+  try {
+    await execute(
+      `ALTER TABLE posts ADD COLUMN visibility ENUM('friends','public','exclusive') NOT NULL DEFAULT 'friends'`
+    );
+  } catch { /* column already exists */ }
   tablesReady = true;
 }
 
@@ -74,13 +80,15 @@ export async function POST(request: NextRequest) {
       if (!raw) return NextResponse.json({ success: false, message: 'Content required' }, { status: 400 });
 
       const content_html = sanitizeHtml(raw);
+      const allowedVisibility = ['friends', 'public', 'exclusive'];
+      const visibility = allowedVisibility.includes(body.visibility) ? body.visibility : 'friends';
       const result = await execute(
-        `INSERT INTO posts (user_id, content_html) VALUES (?, ?)`,
-        [user.id, content_html]
+        `INSERT INTO posts (user_id, content_html, visibility) VALUES (?, ?, ?)`,
+        [user.id, content_html, visibility]
       );
 
       const post = await queryOne(
-        `SELECT p.id, p.user_id, p.content_html, p.created_at,
+        `SELECT p.id, p.user_id, p.content_html, p.visibility, p.created_at,
                 u.username, u.first_name, u.last_name, u.avatar,
                 0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
          FROM posts p JOIN users u ON u.id = p.user_id
@@ -182,7 +190,7 @@ export async function GET(request: NextRequest) {
       if (beforeId > 0) params.push(beforeId);
 
       const posts = await query(
-        `SELECT p.id, p.user_id, p.content_html, p.created_at,
+        `SELECT p.id, p.user_id, p.content_html, p.visibility, p.created_at,
                 u.username, u.first_name, u.last_name, u.avatar,
                 (SELECT COUNT(*) FROM post_likes   WHERE post_id = p.id) AS like_count,
                 (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,

@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -284,25 +285,25 @@ export default function DreamPlanningPage() {
                       onDragStart={(e) => handleDragStart(e, h.id)}
                       className="group flex items-start gap-2.5 p-3 rounded-2xl bg-slate-900/30 border border-slate-850/50 transition-all hover:border-slate-700 cursor-grab active:cursor-grabbing hover:shadow-apple-sm"
                     >
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => handleCompleteGoal(h.id, type)}
                         title="Complete Goal"
                         className="mt-0.5 w-4 h-4 rounded border border-slate-700 hover:border-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors flex-shrink-0"
                       >
                         <Check className="w-2.5 h-2.5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </button>
+                      </Button>
 
                       <p className="flex-1 text-sm text-slate-200 leading-tight">
                         {h.content}
                       </p>
 
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => handleDeleteHorizon(h.id, type)}
                         title="Delete Goal"
                         className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity flex-shrink-0 p-0.5 rounded"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </Button>
                     </div>
                   ))
                 )}
@@ -318,13 +319,13 @@ export default function DreamPlanningPage() {
                   onKeyDown={(e) => e.key === 'Enter' && handleAddGoal(type)}
                   className="w-full px-4 h-10 text-xs bg-slate-900/30 border border-slate-850 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 transition-all"
                 />
-                <button
+                <Button variant="unstyled"
                   onClick={() => handleAddGoal(type)}
                   className={`w-full${colColor}text-white text-xs font-black uppercase tracking-wider h-10 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1`}
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Add Goal
-                </button>
+                </Button>
               </div>
 
             </div>
@@ -372,12 +373,12 @@ export default function DreamPlanningPage() {
                     {h.type} goal
                   </span>
                 </div>
-                <button
+                <Button variant="unstyled"
                   onClick={() => handleDeleteHorizon(h.id, h.type, true)}
                   className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-0.5 rounded flex-shrink-0"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                </Button>
               </div>
             ))}
           </div>

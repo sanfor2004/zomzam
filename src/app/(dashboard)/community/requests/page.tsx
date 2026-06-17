@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -139,7 +140,7 @@ export default function RequestsPage() {
                     key={usr.id}
                     className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-850/50 transition-colors"
                   >
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => router.push(`/u/${usr.username}`)}
                       className="flex items-center gap-3 text-left group min-w-0 flex-1"
                     >
@@ -156,16 +157,16 @@ export default function RequestsPage() {
                           {usr.first_name ? `${usr.first_name} ${usr.last_name || ''}` : 'View profile'}
                         </p>
                       </div>
-                    </button>
+                    </Button>
 
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => executeSocialAction('friend_request', usr.id)}
                         className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
                         title="Add Friend"
                       >
                         <UserPlus className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -205,29 +206,29 @@ export default function RequestsPage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <img src={r.avatar} alt="" className="w-9 h-9 rounded-xl object-cover" />
                           <div className="min-w-0">
-                            <button
+                            <Button variant="unstyled"
                               onClick={() => router.push(`/u/${r.username}`)}
                               className="text-xs font-bold text-white hover:underline truncate"
                             >
                               {r.username}
-                            </button>
+                            </Button>
                             <span className="block text-[9px] text-slate-400 font-semibold uppercase mt-0.5">Friend request received</span>
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          <button
+                          <Button variant="unstyled"
                             onClick={() => executeSocialAction('friend_accept', r.id)}
                             className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors shadow-sm"
                           >
                             Accept
-                          </button>
-                          <button
+                          </Button>
+                          <Button variant="unstyled"
                             onClick={() => executeSocialAction('friend_decline', r.id)}
                             className="px-3 py-1.5 bg-slate-900/65 text-slate-500 hover:text-rose-500 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors border border-slate-800"
                           >
                             Decline
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))
@@ -254,22 +255,22 @@ export default function RequestsPage() {
                         <div className="flex items-center gap-3 min-w-0">
                           <img src={r.avatar} alt="" className="w-9 h-9 rounded-xl object-cover" />
                           <div className="min-w-0">
-                            <button
+                            <Button variant="unstyled"
                               onClick={() => router.push(`/u/${r.username}`)}
                               className="text-xs font-bold text-white hover:underline truncate"
                             >
                               {r.username}
-                            </button>
+                            </Button>
                             <span className="block text-[9px] text-slate-400 font-semibold uppercase mt-0.5">Waiting for acceptance</span>
                           </div>
                         </div>
 
-                        <button
+                        <Button variant="unstyled"
                           onClick={() => executeSocialAction('friend_cancel', r.id)}
                           className="px-3 py-1.5 bg-slate-900/40 hover:bg-rose-500/10 text-slate-500 hover:text-rose-500 border border-slate-800 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     ))
                   )}

@@ -108,12 +108,12 @@ export default function LendingDebtPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button variant="unstyled"
             onClick={() => router.push('/money/dashboard')}
             className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Lending & Debt</h1>
             <p className="text-xs text-slate-400">Track money you owe others or are owed by others.</p>
@@ -178,20 +178,20 @@ export default function LendingDebtPage() {
                       </p>
                       
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
+                        <Button variant="unstyled"
                           onClick={() => handleSettle(item.id)}
                           className="p-1 text-slate-450 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
                           title="Settle Debt"
                         >
                           <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button variant="unstyled"
                           onClick={() => handleDelete(item.id)}
                           className="p-1 text-slate-450 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                           title="Delete Entry"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -250,20 +250,20 @@ export default function LendingDebtPage() {
                       </p>
                       
                       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
+                        <Button variant="unstyled"
                           onClick={() => handleSettle(item.id)}
                           className="p-1 text-slate-450 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-lg transition-all"
                           title="Settle Debt"
                         >
                           <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button variant="unstyled"
                           onClick={() => handleDelete(item.id)}
                           className="p-1 text-slate-450 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                           title="Delete Entry"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -302,13 +302,13 @@ export default function LendingDebtPage() {
                   <p className="text-xs font-bold text-slate-400 line-through">
                     {formatAmount(item.amount, item.currency)}
                   </p>
-                  <button
+                  <Button variant="unstyled"
                     onClick={() => handleDelete(item.id)}
                     className="p-1 text-slate-300 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                     title="Delete Record"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

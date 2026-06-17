@@ -602,13 +602,13 @@ export default function SettingsPage() {
                       placeholder="sk-ant-..."
                       className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                     />
-                    <button
+                    <Button variant="unstyled"
                       type="button"
                       onClick={() => setShowClaudeKey(!showClaudeKey)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                     >
                       {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </div>
                   <span className="text-[10px] text-slate-400 block leading-normal">
                     Used to generate customized cold outreach copy via Claude API. Stored securely on your local database.
@@ -628,13 +628,13 @@ export default function SettingsPage() {
                       placeholder="AIzaSy..."
                       className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                     />
-                    <button
+                    <Button variant="unstyled"
                       type="button"
                       onClick={() => setShowMapsKey(!showMapsKey)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                     >
                       {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </div>
                   <span className="text-[10px] text-slate-400 block leading-normal">
                     Required for the Live Map Scanner and Place autocomplete. Ensure <strong>Maps JavaScript API</strong> and <strong>Places API (New)</strong> are enabled in Google Cloud Console.
@@ -793,13 +793,13 @@ export default function SettingsPage() {
                       placeholder="secret_..."
                       className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                     />
-                    <button
+                    <Button variant="unstyled"
                       type="button"
                       onClick={() => setShowNotionKey(!showNotionKey)}
                       className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                     >
                       {showNotionKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    </Button>
                   </div>
                   <span className="text-[10px] text-slate-400 block leading-normal">
                     Create an internal integration in Notion and paste the secret token here.
@@ -920,13 +920,13 @@ export default function SettingsPage() {
                     required
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowCurrentPass(!showCurrentPass)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                   >
                     {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -943,13 +943,13 @@ export default function SettingsPage() {
                     required
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowNewPass(!showNewPass)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                   >
                     {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -966,13 +966,13 @@ export default function SettingsPage() {
                     required
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
                   />
-                  <button
+                  <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowConfirmPass(!showConfirmPass)}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
                   >
                     {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -1081,13 +1081,13 @@ export default function SettingsPage() {
               className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-red-900/40 rounded-xl text-sm focus:outline-none focus:border-red-500 transition-all text-white"
               autoFocus
             />
-            <button
+            <Button variant="unstyled"
               type="button"
               onClick={() => setShowDeletePass(!showDeletePass)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
             >
               {showDeletePass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
+            </Button>
           </div>
         </div>
       </Modal>

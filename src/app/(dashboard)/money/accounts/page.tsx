@@ -87,12 +87,12 @@ export default function BankAccountsPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <button
+          <Button variant="unstyled"
             onClick={() => router.push('/money/dashboard')}
             className="p-2 hover:bg-slate-800 rounded-xl transition-colors text-slate-400 hover:text-white"
           >
             <ArrowLeft className="w-5 h-5" />
-          </button>
+          </Button>
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">Bank Accounts</h1>
             <p className="text-xs text-slate-400">Manage your connected wallets, cash reserves, and banks.</p>
@@ -126,13 +126,13 @@ export default function BankAccountsPage() {
                 <div className="w-10 h-10 rounded-xl bg-primary-950/20 flex items-center justify-center text-primary-500">
                   {getAccountIcon(acc.type)}
                 </div>
-                <button
+                <Button variant="unstyled"
                   onClick={() => handleDelete(acc.id)}
                   className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                   title="Delete Account"
                 >
                   <Trash2 className="w-4.5 h-4.5" />
-                </button>
+                </Button>
               </div>
 
               <div className="mt-4">

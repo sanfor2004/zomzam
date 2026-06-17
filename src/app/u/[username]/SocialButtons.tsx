@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,13 +26,13 @@ export default function SocialButtons({
 
   if (!viewerId) {
     return (
-      <button
+      <Button variant="unstyled"
         onClick={() => router.push('/sign')}
         className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl px-6 py-3 shadow-md shadow-primary-500/20 transition-all text-xs uppercase tracking-wider cursor-pointer"
       >
         <UserPlus className="w-4 h-4" />
         Sign in to Connect
-      </button>
+      </Button>
     );
   }
 
@@ -77,50 +78,50 @@ export default function SocialButtons({
       <div className="flex flex-col sm:flex-row gap-3">
         {/* Friend Connection Button */}
         {status === 'none' && (
-          <button
+          <Button variant="unstyled"
             onClick={() => handleAction('friend_request')}
             disabled={loading}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98]"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             Add Friend
-          </button>
+          </Button>
         )}
 
         {status === 'friend_pending_out' && (
-          <button
+          <Button variant="unstyled"
             onClick={() => handleAction('friend_cancel')}
             disabled={loading}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-200 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98]"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
             Cancel Request
-          </button>
+          </Button>
         )}
 
         {status === 'friend_pending_in' && (
           <div className="flex gap-2 flex-grow sm:flex-grow-0">
-            <button
+            <Button variant="unstyled"
               onClick={() => handleAction('friend_accept')}
               disabled={loading}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-400 text-white font-bold rounded-xl px-5 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md active:scale-[0.98]"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
               Accept
-            </button>
-            <button
+            </Button>
+            <Button variant="unstyled"
               onClick={() => handleAction('friend_decline')}
               disabled={loading}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 disabled:opacity-50 text-red-500 font-bold rounded-xl px-5 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98]"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
               Decline
-            </button>
+            </Button>
           </div>
         )}
 
         {status === 'friends' && (
-          <button
+          <Button variant="unstyled"
             onClick={() => handleAction('unfriend')}
             disabled={loading}
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-red-500/10 hover:text-red-500 border border-emerald-500/20 hover:border-red-500/20 text-emerald-500 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] group"
@@ -135,12 +136,12 @@ export default function SocialButtons({
             )}
             <span className="group-hover:hidden">Friends</span>
             <span className="hidden group-hover:inline">Unfriend</span>
-          </button>
+          </Button>
         )}
 
         {/* Follow Button */}
         {status !== 'blocked_by_me' && status !== 'blocked_by_them' && (
-          <button
+          <Button variant="unstyled"
             onClick={() => handleAction(isFollowing ? 'unfollow' : 'follow')}
             disabled={loading}
             className={`flex-1 sm:flex-none flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] border${
@@ -157,7 +158,7 @@ export default function SocialButtons({
               <Heart className="w-4 h-4" />
             )}
             {isFollowing ? 'Unfollow' : 'Follow'}
-          </button>
+          </Button>
         )}
       </div>
 

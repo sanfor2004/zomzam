@@ -251,7 +251,7 @@ export default function LeadsPage() {
 
           {/* View Toggles */}
           <div className="flex items-center p-1 bg-slate-900/40 border border-slate-800 rounded-xl shrink-0">
-            <button
+            <Button variant="unstyled"
               onClick={() => setViewMode("grid")}
               className={`p-1.5 rounded-lg transition-all cursor-pointer${
                 viewMode === "grid" 
@@ -260,8 +260,8 @@ export default function LeadsPage() {
               }`}
             >
               <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
+            </Button>
+            <Button variant="unstyled"
               onClick={() => setViewMode("table")}
               className={`p-1.5 rounded-lg transition-all cursor-pointer${
                 viewMode === "table" 
@@ -270,7 +270,7 @@ export default function LeadsPage() {
               }`}
             >
               <List className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
 
         </div>

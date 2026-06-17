@@ -308,12 +308,12 @@ export default function TaskBoardPage() {
             <AlertCircle className="w-4 h-4 text-amber-500" />
             <span>Task &quot;{undoTask.title}&quot; deleted.</span>
           </div>
-          <button
+          <Button variant="unstyled"
             onClick={handleUndoDelete}
             className="text-xs font-black uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
           >
             Undo
-          </button>
+          </Button>
         </div>
       )}
 
@@ -431,27 +431,27 @@ export default function TaskBoardPage() {
                     </div>
 
                     <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => handleCompleteTask(task.id)}
                         title="Mark Complete"
                         className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-colors"
                       >
                         <Check className="w-4 h-4 stroke-[3]" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="unstyled"
                         onClick={() => openEditModal(task)}
                         title="Edit Task"
                         className="p-2 text-slate-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-xl transition-colors"
                       >
                         <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button variant="unstyled"
                         onClick={() => handleDeleteTask(task.id)}
                         title="Delete Task"
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -490,13 +490,13 @@ export default function TaskBoardPage() {
                         Completed: {task.actual_duration || task.duration_block} mins
                       </span>
                     </div>
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => handleRestoreTask(task.id)}
                       title="Restore Task"
                       className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-xl transition-colors"
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </div>

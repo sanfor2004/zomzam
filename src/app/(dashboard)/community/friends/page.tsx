@@ -1,4 +1,5 @@
 'use client';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -135,7 +136,7 @@ export default function FriendsPage() {
                     key={usr.id}
                     className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-850/50 transition-colors"
                   >
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => router.push(`/u/${usr.username}`)}
                       className="flex items-center gap-3 text-left group min-w-0 flex-1"
                     >
@@ -152,16 +153,16 @@ export default function FriendsPage() {
                           {usr.first_name ? `${usr.first_name} ${usr.last_name || ''}` : 'View profile'}
                         </p>
                       </div>
-                    </button>
+                    </Button>
 
                     <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      <button
+                      <Button variant="unstyled"
                         onClick={() => executeSocialAction('friend_request', usr.id)}
                         className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
                         title="Add Friend"
                       >
                         <UserPlus className="w-4 h-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))
@@ -186,12 +187,12 @@ export default function FriendsPage() {
               <div className="col-span-full bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-16 text-center shadow-apple text-slate-400">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-25" />
                 <p className="text-sm font-semibold">Your friend circle is currently empty.</p>
-                <button
+                <Button variant="unstyled"
                   onClick={() => router.push('/community/discover')}
                   className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-xl text-xs font-bold hover:bg-primary-600 transition-colors shadow-sm"
                 >
                   Discover People
-                </button>
+                </Button>
               </div>
             ) : (
               friends.map((f) => (
@@ -215,12 +216,12 @@ export default function FriendsPage() {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
-                        <button
+                        <Button variant="unstyled"
                           onClick={() => router.push(`/u/${f.username}`)}
                           className="font-bold text-sm text-white hover:text-primary-500 transition-colors truncate"
                         >
                           {f.username}
-                        </button>
+                        </Button>
                         <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">
                           {f.online_label}
                         </span>
@@ -242,19 +243,19 @@ export default function FriendsPage() {
                   )}
 
                   <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-850 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
+                    <Button variant="unstyled"
                       onClick={() => executeSocialAction('unfriend', f.id)}
                       className="flex-1 py-2 bg-slate-900/30 text-rose-500 hover:bg-rose-500/10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors border border-transparent hover:border-rose-500/20"
                     >
                       Unfriend
-                    </button>
-                    <button
+                    </Button>
+                    <Button variant="unstyled"
                       onClick={() => executeSocialAction('block', f.id)}
                       className="p-2 text-slate-450 hover:text-white rounded-xl hover:bg-slate-900/30 transition-all"
                       title="Block User"
                     >
                       <ShieldAlert className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))
