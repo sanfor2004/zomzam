@@ -17,6 +17,7 @@ export default function LandingPage() {
   const bentoRef = useRef<HTMLDivElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
+  const scrollChevronRef = useRef<HTMLDivElement>(null);
   const marqueeWrapRef = useRef<HTMLDivElement>(null);
   const marqueeTrackRef = useRef<HTMLDivElement>(null);
 
@@ -142,6 +143,89 @@ export default function LandingPage() {
       };
     });
   }, { scope: marqueeWrapRef });
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: BENTO 3D MAGNETIC TILT (GSAP)
+  // transformPerspective per card → independent tilt planes.
+  // quickTo reuses one tween per property per card (no GC per mousemove).
+  // contextSafe → handlers no-op after unmount/matchMedia revert.
+  // ──────────────────────────────────────────────────────────
+  useGSAP((_, contextSafe) => {
+    const root = bentoRef.current;
+    if (!root) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference) and (hover: hover)', () => {
+      const cards = gsap.utils.toArray<HTMLElement>('[data-animate="bento-card"]', root);
+      gsap.set(cards, { transformPerspective: 900 });
+
+      const cleanups: Array<() => void> = [];
+
+      cards.forEach((card) => {
+        const xTo = gsap.quickTo(card, 'rotationY', { duration: 0.35, ease: 'power2.out' });
+        const yTo = gsap.quickTo(card, 'rotationX', { duration: 0.35, ease: 'power2.out' });
+        const sTo = gsap.quickTo(card, 'scale',     { duration: 0.35, ease: 'power2.out' });
+
+        const onMove = contextSafe!((e: MouseEvent) => {
+          const rect = card.getBoundingClientRect();
+          const cx = rect.left + rect.width  / 2;
+          const cy = rect.top  + rect.height / 2;
+          xTo(((e.clientX - cx) / rect.width)  *  10);
+          yTo(((e.clientY - cy) / rect.height) * -10);
+          sTo(1.025);
+        });
+
+        const onLeave = contextSafe!(() => { xTo(0); yTo(0); sTo(1); });
+
+        card.addEventListener('mousemove', onMove);
+        card.addEventListener('mouseleave', onLeave);
+        cleanups.push(() => {
+          card.removeEventListener('mousemove', onMove);
+          card.removeEventListener('mouseleave', onLeave);
+        });
+      });
+
+      return () => cleanups.forEach((fn) => fn());
+    });
+  }, { scope: bentoRef });
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: SCROLL PARALLAX + SCROLL CHEVRON (GSAP)
+  // Hero headline drifts upward faster than scroll — cinematic depth.
+  // Chevron bounces infinitely — killed automatically on unmount by useGSAP.
+  // ──────────────────────────────────────────────────────────
+  useGSAP(() => {
+    const title   = heroTitleRef.current;
+    const bento   = bentoRef.current;
+    const chevron = scrollChevronRef.current;
+    if (!title || !bento) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.to(title, {
+        y: -60,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: bento,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.2,
+        },
+      });
+
+      if (chevron) {
+        gsap.to(chevron, {
+          y: 8,
+          repeat: -1,
+          yoyo: true,
+          duration: 0.7,
+          ease: 'power1.inOut',
+        });
+      }
+    });
+  });
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300 font-sans">
@@ -270,7 +354,7 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-4 pt-6 relative z-10">
               <a
                 href="/sign#signup"
-                className="flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-primary-500/15 hover:shadow-lg hover:shadow-primary-500/20 active:scale-98"
+                className="flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-primary-500/15 hover:shadow-lg hover:shadow-primary-500/20 active:scale-98 breathing"
               >
                 {t('nav_get_started')}
                 <ArrowRight className="w-4 h-4" />
@@ -282,6 +366,20 @@ export default function LandingPage() {
                 {t('nav_signin')}
               </a>
             </div>
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: SCROLL INDICATOR
+              Contains: Animated chevron, bounced by GSAP infinite loop
+              ────────────────────────────────────────────────────────── */}
+          <div
+            ref={scrollChevronRef}
+            aria-hidden="true"
+            className="col-span-full flex justify-center mt-2 mb-0 text-slate-500"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
 
           {/* Card 2: Interactive Goal / Silk background card (Spans 4 columns) */}
