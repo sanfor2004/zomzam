@@ -6,18 +6,19 @@ import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
+import { Observer } from 'gsap/Observer';
+import { Flip } from 'gsap/Flip';
+import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 
 if (typeof window !== 'undefined') {
-  gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
+  gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText, Observer, Flip, ScrambleTextPlugin);
 }
 
 /**
  * Walks up from `el` to find the nearest scrollable ancestor, for use as
- * ScrollTrigger's `scroller`. Returns `undefined` (→ the window, ScrollTrigger's
- * default) when nothing scrolls between `el` and the root. This is required
- * because some shells (e.g. the dashboard layout) scroll content inside a nested
- * `<main overflow-y-auto>` instead of the window — without it, ScrollTrigger
- * listens to a scroller that never moves and entrance reveals never fire.
+ * ScrollTrigger's `scroller`. Returns `undefined` (→ window default) when
+ * nothing scrolls between `el` and the root. Required for the dashboard's
+ * nested-scroll shell.
  */
 export function getScrollParent(el: HTMLElement | null): HTMLElement | undefined {
   let node = el?.parentElement ?? null;
@@ -31,4 +32,4 @@ export function getScrollParent(el: HTMLElement | null): HTMLElement | undefined
   return undefined;
 }
 
-export { gsap, useGSAP, ScrollTrigger, SplitText };
+export { gsap, useGSAP, ScrollTrigger, SplitText, Observer, Flip, ScrambleTextPlugin };

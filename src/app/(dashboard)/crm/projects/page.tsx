@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   FolderKanban, 
   Loader2, 
@@ -10,10 +10,14 @@ import {
   ClipboardList
 } from "lucide-react";
 import { Button, Badge, Card, Select } from "@/components/ui";
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchProjects = async () => {
     try {
@@ -70,7 +74,7 @@ export default function ProjectsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div ref={pageRef} className="space-y-6">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -78,7 +82,7 @@ export default function ProjectsPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <FolderKanban className="h-6 w-6 text-[#EE5712]" />
             Projects Workspace
           </h1>
@@ -110,7 +114,7 @@ export default function ProjectsPage() {
             });
 
             return (
-              <Card key={project.id} className="bg-[#1A1D24] border border-slate-800/60 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between hover:border-[#EE5712]/30 transition-all duration-300 shadow-apple">
+              <Card key={project.id} data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between hover:border-[#EE5712]/30 transition-all duration-300 shadow-apple">
                 <div className="space-y-4">
                   {/* Top Header */}
                   <div className="flex justify-between items-start gap-4">

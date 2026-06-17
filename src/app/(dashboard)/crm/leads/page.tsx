@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Search, 
   SlidersHorizontal, 
@@ -16,11 +16,15 @@ import { Button, Badge, Modal, Select } from "@/components/ui";
 import { LeadCard } from "@/components/crm/LeadCard";
 import { LeadDetailsModal } from "@/components/crm/LeadDetailsModal";
 import { cn } from "@/lib/utils";
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
+
   const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
   const [searchTerm, setSearchTerm] = useState("");
   const [industryFilter, setIndustryFilter] = useState("all");
@@ -176,7 +180,7 @@ export default function LeadsPage() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div ref={pageRef} className="space-y-6">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -184,7 +188,7 @@ export default function LeadsPage() {
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+          <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <Database className="h-6 w-6 text-[#EE5712]" />
             Lead Vault Directory
           </h1>
@@ -204,7 +208,7 @@ export default function LeadsPage() {
           DEVELOPMENT NAVIGATOR: FILTER & VIEW CONTROL BAR
           Contains: Search input, industry filter, status filter, grid/table view toggles
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
         
         {/* Search Input */}
         <div className="relative w-full md:max-w-sm">
@@ -281,7 +285,7 @@ export default function LeadsPage() {
           DEVELOPMENT NAVIGATOR: SELECTION & BATCH ACTION STRIP
           Contains: Vault/filtered/selected counters, Select-All toggle, batch Delete
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
           <span className="text-slate-400">
             Vault Directory: <strong className="text-white">{leads.length}</strong> leads
@@ -345,13 +349,14 @@ export default function LeadsPage() {
       ) : viewMode === "grid" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredLeads.map((lead) => (
-            <LeadCard 
-              key={lead.id} 
-              lead={lead} 
-              onOpenDetails={(l) => setSelectedLead(l)} 
-              isSelected={selectedLeadIds.includes(lead.id)}
-              onSelectChange={() => handleToggleSelect(lead.id)}
-            />
+            <div key={lead.id} data-entrance="list-item">
+              <LeadCard
+                lead={lead}
+                onOpenDetails={(l) => setSelectedLead(l)}
+                isSelected={selectedLeadIds.includes(lead.id)}
+                onSelectChange={() => handleToggleSelect(lead.id)}
+              />
+            </div>
           ))}
         </div>
       ) : (
@@ -376,8 +381,9 @@ export default function LeadsPage() {
             </thead>
             <tbody className="divide-y divide-slate-800/40 font-medium text-slate-300">
               {filteredLeads.map((lead) => (
-                <tr 
-                  key={lead.id} 
+                <tr
+                  key={lead.id}
+                  data-entrance="list-item"
                   className={cn(
                     "hover:bg-white/[0.01] transition-all border-b border-slate-800/40 last:border-b-0",
                     selectedLeadIds.includes(lead.id) && "bg-white/[0.015]"

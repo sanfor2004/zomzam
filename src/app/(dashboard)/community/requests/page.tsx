@@ -1,10 +1,11 @@
 'use client';
 import { Button } from '@/components/ui';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus } from 'lucide-react';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface SocialUser {
   id: number;
@@ -32,6 +33,8 @@ export default function RequestsPage() {
   const [searchResults, setSearchResults] = useState<SocialUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(true);
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [loading]);
 
   const fetchRequests = async () => {
     setLoading(true);
@@ -99,7 +102,7 @@ export default function RequestsPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -111,7 +114,7 @@ export default function RequestsPage() {
             <Users className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
             <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
           </div>
         </div>
@@ -189,7 +192,7 @@ export default function RequestsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Incoming Requests */}
-            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px]">
+            <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px] card-lift">
               <div>
                 <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                   Incoming Requests ({incomingRequests.length})
@@ -238,7 +241,7 @@ export default function RequestsPage() {
             </div>
 
             {/* Outgoing Requests */}
-            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px]">
+            <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px] card-lift">
               <div>
                 <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                   Outgoing Requests ({outgoingRequests.length})

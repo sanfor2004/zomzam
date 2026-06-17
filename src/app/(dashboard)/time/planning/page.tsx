@@ -1,11 +1,12 @@
 'use client';
 import { Button } from '@/components/ui';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Target, Calendar, Award, Plus, Trash2, Archive, Check, MoveRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface Horizon {
   id: number;
@@ -28,6 +29,9 @@ export default function DreamPlanningPage() {
   }>({ week: [], month: [], year: [] });
   const [archived, setArchived] = useState<Horizon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const pageRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [isLoading]);
 
   // Drag over states
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -220,7 +224,7 @@ export default function DreamPlanningPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in duration-500">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
@@ -231,7 +235,7 @@ export default function DreamPlanningPage() {
           <Target className="w-5 h-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-white">Dream Planning</h1>
+          <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Dream Planning</h1>
           <p className="text-xs text-slate-400">Build your vision across Week · Month · Year</p>
         </div>
       </div>
@@ -253,6 +257,7 @@ export default function DreamPlanningPage() {
           return (
             <div
               key={type}
+              data-entrance="card"
               onDragOver={(e) => handleDragOver(e, type)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, type)}
@@ -338,7 +343,7 @@ export default function DreamPlanningPage() {
           DEVELOPMENT NAVIGATOR: ARCHIVED GOALS
           Contains: Completed / archived goals list
           ────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-850">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-slate-900/40 text-slate-500 flex items-center justify-center border border-slate-850">

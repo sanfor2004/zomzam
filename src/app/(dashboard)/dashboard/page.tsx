@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
+import { gsap, useGSAP, ScrollTrigger, SplitText, getScrollParent } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
 import { 
   User, 
@@ -100,6 +100,8 @@ export default function DashboardPage() {
   const cardRef = React.useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const welcomeRef = useRef<HTMLDivElement>(null);
+  const welcomeTitleRef = useRef<HTMLHeadingElement>(null);
+  const heatmapRef = useRef<HTMLDivElement>(null);
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -153,11 +155,27 @@ export default function DashboardPage() {
     const mm = gsap.matchMedia();
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      // Welcome banner: rises on load (no ScrollTrigger — runs immediately).
-      if (welcomeRef.current) {
-        gsap.from(welcomeRef.current, {
-          autoAlpha: 0, y: 44, duration: 0.65, ease: 'power3.out', delay: 0.05,
+      // Welcome banner: rises on load, then title chars spring up.
+      if (welcomeRef.current && welcomeTitleRef.current) {
+        const welcomeSplit = SplitText.create(welcomeTitleRef.current, {
+          type: 'chars,words',
+          mask: 'chars',
+          aria: 'auto',
         });
+
+        const welcomeTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+        welcomeTl
+          .from(welcomeRef.current, { autoAlpha: 0, y: 28, duration: 0.5 })
+          .from(
+            welcomeSplit.chars,
+            {
+              yPercent: 110,
+              duration: 0.42,
+              stagger: { amount: 0.38, from: 'start' },
+              ease: 'back.out(1.4)',
+            },
+            '-=0.2'
+          );
       }
 
       // Collect all targets first — querySelectorAll has no layout cost.
@@ -181,7 +199,12 @@ export default function DashboardPage() {
         ScrollTrigger.batch(hudCards, {
           scroller, start: 'top 88%', once: true,
           onEnter: (batch) => gsap.to(batch, {
-            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.1, overwrite: true,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: { amount: 0.35, from: 'center' },
+            overwrite: true,
           }),
         });
       }
@@ -201,7 +224,12 @@ export default function DashboardPage() {
         ScrollTrigger.batch(pillarCards, {
           scroller, start: 'top 88%', once: true,
           onEnter: (batch) => gsap.to(batch, {
-            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.12, overwrite: true,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: { amount: 0.4, from: 'center' },
+            overwrite: true,
           }),
         });
       }
@@ -210,7 +238,12 @@ export default function DashboardPage() {
         ScrollTrigger.batch(detailCols, {
           scroller, start: 'top 88%', once: true,
           onEnter: (batch) => gsap.to(batch, {
-            autoAlpha: 1, y: 0, duration: 0.55, ease: 'power3.out', stagger: 0.14, overwrite: true,
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'back.out(1.3)',
+            stagger: { amount: 0.42, from: 'center' },
+            overwrite: true,
           }),
         });
       }
@@ -221,6 +254,61 @@ export default function DashboardPage() {
       requestAnimationFrame(() => ScrollTrigger.refresh());
     });
   }, { scope: pageRef, dependencies: [loading], revertOnUpdate: true });
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: HEATMAP RIPPLE (GSAP)
+  // Event delegation: mouseover bubbles from any cell to heatmapRef.
+  // distribute({ grid:[7,24] }) maps 2D grid distance → scale value.
+  // overwrite:'auto' gracefully kills only scale mid-tween on fast moves.
+  // ──────────────────────────────────────────────────────────
+  useGSAP((_, contextSafe) => {
+    const heatmap = heatmapRef.current;
+    if (loading || !heatmap) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference) and (hover: hover)', () => {
+      const cells = gsap.utils.toArray<HTMLElement>('[data-heatmap-cell]', heatmap);
+      if (!cells.length) return;
+
+      const rippleIn = contextSafe!((e: MouseEvent) => {
+        const target = (e.target as Element).closest<HTMLElement>('[data-heatmap-cell]');
+        if (!target) return;
+        const flatIdx = parseInt(target.dataset.heatmapCell ?? '-1', 10);
+        if (flatIdx < 0 || flatIdx >= cells.length) return;
+
+        gsap.to(cells, {
+          scale: gsap.utils.distribute({
+            base: 1,
+            amount: 0.32,
+            from: flatIdx,
+            ease: 'power2.out',
+            grid: [7, 24],
+          }),
+          duration: 0.18,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      });
+
+      const rippleOut = contextSafe!(() => {
+        gsap.to(cells, {
+          scale: 1,
+          duration: 0.28,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+      });
+
+      heatmap.addEventListener('mouseover', rippleIn);
+      heatmap.addEventListener('mouseleave', rippleOut);
+
+      return () => {
+        heatmap.removeEventListener('mouseover', rippleIn);
+        heatmap.removeEventListener('mouseleave', rippleOut);
+      };
+    });
+  }, { scope: pageRef, dependencies: [loading] });
 
   const formatCurrency = (amount: number, currency: string) => {
     return new Intl.NumberFormat('en-US', {
@@ -397,7 +485,7 @@ export default function DashboardPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-xs font-semibold text-primary-50">Operational Hub</span>
             </div>
-            <h2 className="text-title font-black tracking-tight font-display">
+            <h2 ref={welcomeTitleRef} className="text-title font-black tracking-tight font-display">
               Welcome back, {profile.username}!
             </h2>
             <p className="text-primary-50/90 text-sm sm:text-base max-w-xl font-medium">
@@ -548,7 +636,7 @@ export default function DashboardPage() {
 
         {/* Heatmap Grid Wrapper */}
         <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800">
-          <div className="min-w-[480px] flex flex-col gap-[2px]">
+          <div ref={heatmapRef} className="min-w-[480px] flex flex-col gap-[2px]">
             {/* Hour Labels Header (X-Axis) */}
             <div className="flex items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-10 h-5 mb-1">
               <div className="flex-1 grid" style={{ gridTemplateColumns: 'repeat(24, 1fr)', gap: '2px' }}>
@@ -588,6 +676,7 @@ export default function DashboardPage() {
                       return (
                         <div
                           key={hourIdx}
+                          data-heatmap-cell={String(dayIdx * 24 + hourIdx)}
                           className={`w-full aspect-square rounded-[2px] transition-all duration-150 cursor-pointer${getColorForCount(count)}`}
                           onMouseEnter={(e) => {
                             const rect = e.currentTarget.getBoundingClientRect();

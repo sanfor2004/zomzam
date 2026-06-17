@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, X, AlertCircle, Database } from 'lucide-react';
 import { Button, Select, Modal, Alert } from '@/components/ui';
+import { gsap } from '@/lib/gsap';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 
 interface Task {
   id: number;
@@ -36,6 +38,10 @@ export default function TaskBoardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [horizons, setHorizons] = useState<Horizon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  const pageRef  = useRef<HTMLDivElement>(null);
+  const tasksRef = useRef<HTMLDivElement>(null);
+  usePageEntrance(pageRef, [isLoading]);
 
   // Notion sync states
   const [isSyncing, setIsSyncing] = useState(false);
@@ -147,6 +153,30 @@ export default function TaskBoardPage() {
     }
   };
 
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: TASK COMPLETION FLASH (GSAP)
+  // Row does a brief scale flash: 1 → 1.08 → 1 on completion.
+  // ──────────────────────────────────────────────────────────
+  const flashTaskCompletion = (taskId: number) => {
+    const row = tasksRef.current?.querySelector<HTMLElement>(`[data-task-id="${taskId}"]`);
+    if (!row) return;
+    const mm = gsap.matchMedia();
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo(
+        row,
+        { scale: 1 },
+        {
+          scale: 1.08,
+          duration: 0.18,
+          ease: 'power2.out',
+          yoyo: true,
+          repeat: 1,
+          onComplete: () => gsap.set(row, { scale: 1 }),
+        }
+      );
+    });
+  };
+
   // Complete Task
   const handleCompleteTask = async (id: number) => {
     try {
@@ -157,6 +187,7 @@ export default function TaskBoardPage() {
       });
       const data = await res.json();
       if (data.success) {
+        flashTaskCompletion(id);
         setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' as const, completed_at: new Date().toISOString() } : t));
       }
     } catch (err) {
@@ -296,7 +327,7 @@ export default function TaskBoardPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in">
+    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: UNDO TOAST
@@ -327,7 +358,7 @@ export default function TaskBoardPage() {
             <LayoutDashboard className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-white">Task Board</h1>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Task Board</h1>
             <p className="text-xs text-slate-400">Prioritize, time-block, and link to your dreams.</p>
           </div>
         </div>
@@ -405,10 +436,12 @@ export default function TaskBoardPage() {
                 <p className="text-xs text-slate-500 mt-1">Create one using the form on the right.</p>
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
+              <div ref={tasksRef} className="space-y-2.5 max-h-[520px] overflow-y-auto pr-1">
                 {activeTasks.map((task) => (
                   <div
                     key={task.id}
+                    data-entrance="list-item"
+                    data-task-id={String(task.id)}
                     className="flex items-center justify-between p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl transition-all hover:shadow-apple-sm hover:border-slate-800 group"
                   >
                     <div className="flex items-center gap-3 min-w-0">

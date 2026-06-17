@@ -17,6 +17,9 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const bentoRef = useRef<HTMLDivElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
+  const descRef = useRef<HTMLParagraphElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const scrollChevronRef = useRef<HTMLDivElement>(null);
   const marqueeWrapRef = useRef<HTMLDivElement>(null);
   const marqueeTrackRef = useRef<HTMLDivElement>(null);
 
@@ -43,10 +46,11 @@ export default function LandingPage() {
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       // --- Page-load timeline: headline reveal + first two cards ---
       const split = SplitText.create(title, {
-        type: 'words',
-        mask: 'words', // wraps each word in an overflow-clip mask for a wipe reveal
+        type: 'chars,words',
+        mask: 'chars',
         ignore: '.hero-cta-arrow',
-        wordsClass: 'hero-word',
+        charsClass: 'hero-char',
+        aria: 'auto',
       });
 
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -58,10 +62,33 @@ export default function LandingPage() {
       );
 
       tl.from(
-        split.words,
-        { yPercent: 110, duration: 0.6, stagger: 0.07 }, // slide up from behind the mask
+        split.chars,
+        {
+          yPercent: 110,
+          rotationZ: () => gsap.utils.random(-6, 6),
+          duration: 0.5,
+          stagger: { amount: 0.65, from: 'center' },
+          ease: 'back.out(1.5)',
+        },
         0.2
       );
+
+      if (descRef.current) {
+        tl.to(
+          descRef.current,
+          {
+            duration: 1.4,
+            scrambleText: {
+              text: '{original}',
+              chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+              revealDelay: 0.3,
+              speed: 0.4,
+            },
+            ease: 'none',
+          },
+          '>-0.2'
+        );
+      }
 
       // --- Scroll batch: remaining five cards ---
       const rest = cards.slice(2);
@@ -119,6 +146,129 @@ export default function LandingPage() {
     });
   }, { scope: marqueeWrapRef });
 
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: BENTO 3D MAGNETIC TILT (GSAP)
+  // transformPerspective per card → independent tilt planes.
+  // quickTo reuses one tween per property per card (no GC per mousemove).
+  // contextSafe → handlers no-op after unmount/matchMedia revert.
+  // ──────────────────────────────────────────────────────────
+  useGSAP((_, contextSafe) => {
+    const root = bentoRef.current;
+    if (!root) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference) and (hover: hover)', () => {
+      const cards = gsap.utils.toArray<HTMLElement>('[data-animate="bento-card"]', root);
+      gsap.set(cards, { transformPerspective: 900 });
+
+      const cleanups: Array<() => void> = [];
+
+      cards.forEach((card) => {
+        const xTo = gsap.quickTo(card, 'rotationY', { duration: 0.35, ease: 'power2.out' });
+        const yTo = gsap.quickTo(card, 'rotationX', { duration: 0.35, ease: 'power2.out' });
+        const sTo = gsap.quickTo(card, 'scale',     { duration: 0.35, ease: 'power2.out' });
+
+        const onMove = contextSafe!((e: MouseEvent) => {
+          const rect = card.getBoundingClientRect();
+          const cx = rect.left + rect.width  / 2;
+          const cy = rect.top  + rect.height / 2;
+          xTo(((e.clientX - cx) / rect.width)  *  10);
+          yTo(((e.clientY - cy) / rect.height) * -10);
+          sTo(1.025);
+        });
+
+        const onLeave = contextSafe!(() => { xTo(0); yTo(0); sTo(1); });
+
+        card.addEventListener('mousemove', onMove);
+        card.addEventListener('mouseleave', onLeave);
+        cleanups.push(() => {
+          card.removeEventListener('mousemove', onMove);
+          card.removeEventListener('mouseleave', onLeave);
+        });
+      });
+
+      return () => cleanups.forEach((fn) => fn());
+    });
+  }, { scope: bentoRef });
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: SCROLL PARALLAX + SCROLL CHEVRON (GSAP)
+  // Hero headline drifts upward faster than scroll — cinematic depth.
+  // Chevron bounces infinitely — killed automatically on unmount by useGSAP.
+  // ──────────────────────────────────────────────────────────
+  useGSAP(() => {
+    const title   = heroTitleRef.current;
+    const bento   = bentoRef.current;
+    const chevron = scrollChevronRef.current;
+    if (!title || !bento) return;
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.to(title, {
+        y: -60,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: bento,
+          start: 'top top',
+          end: 'bottom top',
+          scrub: 1.2,
+        },
+      });
+
+      if (chevron) {
+        gsap.to(chevron, {
+          y: 8,
+          repeat: -1,
+          yoyo: true,
+          duration: 0.7,
+          ease: 'power1.inOut',
+        });
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: MAGNETIC NAV HOVER (GSAP)
+  // Elements with [data-magnetic] gravitate toward cursor.
+  // Strength 0.28 — noticeable but not disorienting.
+  // contextSafe ensures handlers no-op after unmount.
+  // hover:hover gate — touch devices unaffected.
+  // ──────────────────────────────────────────────────────────
+  useGSAP((_, contextSafe) => {
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference) and (hover: hover)', () => {
+      const magneticEls = gsap.utils.toArray<HTMLElement>('[data-magnetic]');
+      const cleanups: Array<() => void> = [];
+
+      magneticEls.forEach((el) => {
+        const xTo = gsap.quickTo(el, 'x', { duration: 0.4, ease: 'power3.out' });
+        const yTo = gsap.quickTo(el, 'y', { duration: 0.4, ease: 'power3.out' });
+
+        const onMove = contextSafe!((e: MouseEvent) => {
+          const rect = el.getBoundingClientRect();
+          const cx = rect.left + rect.width  / 2;
+          const cy = rect.top  + rect.height / 2;
+          xTo((e.clientX - cx) * 0.28);
+          yTo((e.clientY - cy) * 0.28);
+        });
+
+        const onLeave = contextSafe!(() => { xTo(0); yTo(0); });
+
+        el.addEventListener('mousemove', onMove);
+        el.addEventListener('mouseleave', onLeave);
+        cleanups.push(() => {
+          el.removeEventListener('mousemove', onMove);
+          el.removeEventListener('mouseleave', onLeave);
+        });
+      });
+
+      return () => cleanups.forEach((fn) => fn());
+    });
+  });
+
   return (
     <div className="min-h-screen flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300 font-sans">
       
@@ -126,7 +276,7 @@ export default function LandingPage() {
           DEVELOPMENT NAVIGATOR: TOP NAVIGATION BAR
           Contains: Logo, desktop menu links, language selector, sign-in / get-started CTAs
           ────────────────────────────────────────────────────────── */}
-      <nav className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
+      <nav ref={navRef} className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between h-[75px]">
             {/* Logo */}
@@ -199,6 +349,7 @@ export default function LandingPage() {
                 {t('nav_signin')}
               </a>
               <a
+                data-magnetic
                 href="/sign#signup"
                 className="text-sm font-semibold text-white bg-primary-500 px-5 py-2.5 rounded-full hover:bg-primary-600 transition-all shadow-apple hover:shadow-lg transform active:scale-98"
               >
@@ -238,7 +389,7 @@ export default function LandingPage() {
                   <ArrowDown className="w-4 h-4" />
                 </a>
               </h1>
-              <p className="text-base text-slate-400 leading-relaxed max-w-xl">
+              <p ref={descRef} className="text-base text-slate-400 leading-relaxed max-w-xl">
                 {t('description')}
               </p>
             </div>
@@ -246,7 +397,7 @@ export default function LandingPage() {
             <div className="flex flex-wrap gap-4 pt-6 relative z-10">
               <a
                 href="/sign#signup"
-                className="flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-primary-500/15 hover:shadow-lg hover:shadow-primary-500/20 active:scale-98"
+                className="flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-primary-500/15 hover:shadow-lg hover:shadow-primary-500/20 active:scale-98 breathing"
               >
                 {t('nav_get_started')}
                 <ArrowRight className="w-4 h-4" />
@@ -258,6 +409,20 @@ export default function LandingPage() {
                 {t('nav_signin')}
               </a>
             </div>
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: SCROLL INDICATOR
+              Contains: Animated chevron, bounced by GSAP infinite loop
+              ────────────────────────────────────────────────────────── */}
+          <div
+            ref={scrollChevronRef}
+            aria-hidden="true"
+            className="col-span-full flex justify-center mt-2 mb-0 text-slate-500"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
 
           {/* Card 2: Interactive Goal / Silk background card (Spans 4 columns) */}
