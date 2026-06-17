@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { gsap, useGSAP, ScrollTrigger, SplitText } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
 import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, ArrowDown, Activity, DollarSign, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
@@ -13,11 +14,72 @@ export default function LandingPage() {
   const { t, language, setLanguage } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const bentoRef = useRef<HTMLDivElement>(null);
+  const heroTitleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     setMounted(true);
     document.documentElement.classList.add('dark');
   }, []);
+
+  // ──────────────────────────────────────────────────────────
+  // DEVELOPMENT NAVIGATOR: HERO + BENTO LOAD CHOREOGRAPHY (GSAP)
+  // Headline SplitText mask reveal + first two cards rise on load (one timeline);
+  // remaining five cards reveal on scroll via ScrollTrigger.batch. All motion is
+  // gated behind matchMedia → reduced-motion users get the static, visible DOM.
+  // ──────────────────────────────────────────────────────────
+  useGSAP(() => {
+    const root = bentoRef.current;
+    const title = heroTitleRef.current;
+    if (!root || !title) return;
+
+    const cards = gsap.utils.toArray<HTMLElement>('[data-animate="bento-card"]', root);
+
+    const mm = gsap.matchMedia();
+
+    mm.add('(prefers-reduced-motion: no-preference)', () => {
+      // --- Page-load timeline: headline reveal + first two cards ---
+      const split = SplitText.create(title, {
+        type: 'words',
+        mask: 'words', // wraps each word in an overflow-clip mask for a wipe reveal
+        ignore: '.hero-cta-arrow',
+        wordsClass: 'hero-word',
+      });
+
+      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
+
+      tl.from(
+        cards.slice(0, 2),
+        { autoAlpha: 0, y: 52, duration: 0.75, stagger: 0.13 },
+        0.1
+      );
+
+      tl.from(
+        split.words,
+        { yPercent: 110, duration: 0.6, stagger: 0.07 }, // slide up from behind the mask
+        0.2
+      );
+
+      // --- Scroll batch: remaining five cards ---
+      const rest = cards.slice(2);
+      gsap.set(rest, { autoAlpha: 0, y: 52 });
+      ScrollTrigger.batch(rest, {
+        start: 'top 88%',
+        once: true,
+        onEnter: (batch) =>
+          gsap.to(batch, {
+            autoAlpha: 1,
+            y: 0,
+            duration: 0.6,
+            ease: 'power3.out',
+            stagger: 0.1,
+            overwrite: true,
+          }),
+      });
+
+      // SplitText is reverted automatically when useGSAP cleans up the context.
+    });
+  }, { scope: bentoRef });
 
   return (
     <div className="min-h-screen flex flex-col bg-surface-dark text-slate-100 transition-colors duration-300 font-sans">
@@ -117,10 +179,10 @@ export default function LandingPage() {
       <main id="hero" className="flex-grow pt-32 pb-20 px-6 max-w-7xl mx-auto w-full flex flex-col justify-center gap-6">
         
         {/* Bento Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mt-4">
+        <div ref={bentoRef} className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mt-4">
           
           {/* Card 1: Heading/Hero description (Spans 8 columns, medium height) */}
-          <div className="lg:col-span-8 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 sm:p-10 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group">
+          <div data-animate="bento-card" className="lg:col-span-8 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 sm:p-10 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group will-change-transform">
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary-500/10 transition-colors"></div>
             
             <div className="space-y-6">
@@ -128,13 +190,13 @@ export default function LandingPage() {
                 <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 Zenith-Tier Platform
               </span>
-              <h1 className="font-display text-title md:text-display font-black text-white tracking-tight leading-[1.05]">
+              <h1 ref={heroTitleRef} className="font-display text-title md:text-display font-black text-white tracking-tight leading-[1.05]">
                 Master Your{' '}
                 <span className="inline-block px-5 py-1 bg-primary-500/20 text-primary-500 rounded-full font-black border border-primary-500/10 mx-1 align-middle text-[0.8em]">
                   Time
                 </span>{' '}
                 & Capital
-                <a href="#features" className="inline-flex items-center justify-center w-9 h-9 border border-slate-800 rounded-full text-slate-500 hover:text-white hover:border-slate-700 transition-colors ml-3 align-middle cursor-pointer">
+                <a href="#features" className="hero-cta-arrow inline-flex items-center justify-center w-9 h-9 border border-slate-800 rounded-full text-slate-500 hover:text-white hover:border-slate-700 transition-colors ml-3 align-middle cursor-pointer">
                   <ArrowDown className="w-4 h-4" />
                 </a>
               </h1>
@@ -161,7 +223,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 2: Interactive Goal / Silk background card (Spans 4 columns) */}
-          <div className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group will-change-transform">
             {/* Silk background inside card */}
             <div className="absolute inset-0 z-0">
               <Silk speed={3} scale={1.3} color="#EE5712" noiseIntensity={0.8} />
@@ -186,7 +248,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 3: Large Canvas Card with Silk Background & floating service card (Spans 8 columns) */}
-          <div className="lg:col-span-8 bg-slate-900 border border-slate-800/80 rounded-[2rem] overflow-hidden shadow-apple min-h-[460px] relative flex flex-col justify-end p-6 sm:p-8">
+          <div data-animate="bento-card" className="lg:col-span-8 bg-slate-900 border border-slate-800/80 rounded-[2rem] overflow-hidden shadow-apple min-h-[460px] relative flex flex-col justify-end p-6 sm:p-8 will-change-transform">
             
             {/* Large primary Silk background */}
             <div className="absolute inset-0 z-0">
@@ -220,7 +282,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 4: Team/Active community list (Spans 4 columns) */}
-          <div className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[460px] relative overflow-hidden group">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[460px] relative overflow-hidden group will-change-transform">
             <div className="space-y-6">
               <div className="w-10 h-10 bg-primary-500/10 text-primary-500 rounded-2xl flex items-center justify-center">
                 <Users className="w-5 h-5" />
@@ -254,7 +316,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 5: 5+ Native tools (Spans 4 columns, Primary colored) */}
-          <div className="lg:col-span-4 bg-primary-500 text-white rounded-[2rem] p-8 flex flex-col justify-between shadow-lg shadow-primary-500/15 relative overflow-hidden group">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-primary-500 text-white rounded-[2rem] p-8 flex flex-col justify-between shadow-lg shadow-primary-500/15 relative overflow-hidden group will-change-transform">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-8 -mt-8 blur-xl pointer-events-none"></div>
             
             <div className="space-y-4">
@@ -268,7 +330,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 6: Security-First metadata (Spans 4 columns, dark themed) */}
-          <div className="lg:col-span-4 bg-slate-950 text-white border border-slate-900 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple relative overflow-hidden">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-slate-950 text-white border border-slate-900 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple relative overflow-hidden will-change-transform">
             <div className="absolute bottom-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full blur-2xl pointer-events-none"></div>
             
             <div className="space-y-4">
@@ -289,7 +351,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 7: Real-Time Engine specs (Spans 4 columns) */}
-          <div className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[220px]">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[220px] will-change-transform">
             <div className="space-y-4">
               <div className="w-8 h-8 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center font-bold">
                 ✦
