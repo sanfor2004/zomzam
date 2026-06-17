@@ -124,12 +124,13 @@ export default function LandingPage() {
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary-500/10 transition-colors"></div>
             
             <div className="space-y-6">
-              <span className="inline-block px-3 py-1 bg-primary-500/10 text-primary-500 rounded-full text-xs font-bold uppercase tracking-wider">
+              <span className="inline-flex items-center gap-2 text-primary-500 font-mono text-[0.7rem] font-bold uppercase tracking-[0.2em]">
+                <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
                 Zenith-Tier Platform
               </span>
-              <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+              <h1 className="font-display text-title md:text-display font-black text-white tracking-tight leading-[1.05]">
                 Master Your{' '}
-                <span className="inline-block px-5 py-1 bg-primary-500/20 text-primary-500 rounded-full font-black border border-primary-500/10 mx-1 align-middle text-2xl sm:text-4xl">
+                <span className="inline-block px-5 py-1 bg-primary-500/20 text-primary-500 rounded-full font-black border border-primary-500/10 mx-1 align-middle text-[0.8em]">
                   Time
                 </span>{' '}
                 & Capital
