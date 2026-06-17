@@ -16,6 +16,7 @@ export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
   const bentoRef = useRef<HTMLDivElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
+  const descRef = useRef<HTMLParagraphElement>(null);
   const marqueeWrapRef = useRef<HTMLDivElement>(null);
   const marqueeTrackRef = useRef<HTMLDivElement>(null);
 
@@ -42,10 +43,11 @@ export default function LandingPage() {
     mm.add('(prefers-reduced-motion: no-preference)', () => {
       // --- Page-load timeline: headline reveal + first two cards ---
       const split = SplitText.create(title, {
-        type: 'words',
-        mask: 'words', // wraps each word in an overflow-clip mask for a wipe reveal
+        type: 'chars,words',
+        mask: 'chars',
         ignore: '.hero-cta-arrow',
-        wordsClass: 'hero-word',
+        charsClass: 'hero-char',
+        aria: 'auto',
       });
 
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -57,10 +59,33 @@ export default function LandingPage() {
       );
 
       tl.from(
-        split.words,
-        { yPercent: 110, duration: 0.6, stagger: 0.07 }, // slide up from behind the mask
+        split.chars,
+        {
+          yPercent: 110,
+          rotationZ: () => gsap.utils.random(-6, 6),
+          duration: 0.5,
+          stagger: { amount: 0.65, from: 'center' },
+          ease: 'back.out(1.5)',
+        },
         0.2
       );
+
+      if (descRef.current) {
+        tl.to(
+          descRef.current,
+          {
+            duration: 1.4,
+            scrambleText: {
+              text: '{original}',
+              chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+              revealDelay: 0.3,
+              speed: 0.4,
+            },
+            ease: 'none',
+          },
+          '>-0.2'
+        );
+      }
 
       // --- Scroll batch: remaining five cards ---
       const rest = cards.slice(2);
@@ -237,7 +262,7 @@ export default function LandingPage() {
                   <ArrowDown className="w-4 h-4" />
                 </a>
               </h1>
-              <p className="text-base text-slate-400 leading-relaxed max-w-xl">
+              <p ref={descRef} className="text-base text-slate-400 leading-relaxed max-w-xl">
                 {t('description')}
               </p>
             </div>
