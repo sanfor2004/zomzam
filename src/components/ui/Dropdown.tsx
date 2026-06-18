@@ -123,7 +123,7 @@ export function DropdownShell({
 
       <div
         className={cn(
-          'absolute z-50 mt-2 rounded-lg border border-slate-700/75 bg-slate-950 shadow-2xl shadow-slate-950/10 ring-1 ring-slate-900/5 transition-all duration-200',
+          'absolute z-50 top-full mt-2 rounded-lg border border-slate-700/75 bg-slate-950 shadow-2xl shadow-slate-950/10 ring-1 ring-slate-900/5 transition-all duration-200',
           open
             ? 'visible opacity-100 scale-100'
             : 'invisible opacity-0 scale-95 pointer-events-none',
