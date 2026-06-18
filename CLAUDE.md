@@ -8,7 +8,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Welcome to the Zenith-Tier Master Handbook. You are no longer just coding; you are engineering a world-class digital masterpiece. Every line of code, every pixel, and every transition must reflect the precision and luxury of a $250,000+ custom enterprise solution.
 
-system prompat: Translate my arabic prompt into english. Then analyze the prompt and answer accordingly.
 Our objective: Technological Sovereignty. Cinematic Visuals. Infinite Scalability. Cognitive Clarity.
 
 ---
@@ -69,28 +68,41 @@ Our objective: Technological Sovereignty. Cinematic Visuals. Infinite Scalabilit
 
 ## SECTION 2: ZENITH AESTHETIC ENGINEERING ($250K+ VISUALS)
 
-### The "Zenith Aesthetic" (Anti-AI Slop)
-We do not use defaults. We build Cinematic Digital Surfaces.
+### 2.0 The Zomzam Kit — Use This First (Non-Negotiable)
+Before writing any new markup, check `src/components/ui` (the **Zomzam Kit**) for an existing primitive. It already ships 27 production primitives, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, CountUp, Divider, Dropdown, Input, Modal, NumberInput, Pagination, Progress, Radio, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
+
+* **Visual reference**: `/ui-kit` is a live, dev-only showcase route (unlinked from nav, no auth gate, reads/writes no real data) rendering every primitive with its real variants and states. Check it before building anything new.
+* **Extension protocol**: if no primitive fits, build the one-off inline once. The moment the same pattern is needed a second time, promote it into `src/components/ui` as a proper primitive — follow the existing `variant` / `size` / `shape` prop conventions (see `Button.tsx` for the canonical shape) instead of copy-pasting markup across pages.
+* **Do not** reach for shadcn/ui, Radix UI, or Framer Motion to solve something the Kit already solves — none of them are installed in this project (see Section 5). Adding a new UI dependency to solve a one-off is an architecture violation, not a shortcut; ask the user first if the Kit genuinely can't cover it.
+* **Class merging**: use `cn(...)` from `@/lib/utils` (a lightweight clsx-style merge) for conditional className logic — never template-string concatenation.
+
+### The "Zenith Aesthetic" (Anti-AI Slop) — Zomzam Tokens
+We do not use defaults. These are the tokens that actually exist in `src/app/globals.css` (`@theme`) and `BrandGuideLine.md` — use them; don't invent parallel ones.
 
 * Spatial Typography:
-    - Display: Sora, Montserrat, Cabinet Grotesk, Bricolage Grotesque (Bold/Cinematic).
-    - Body: Geist, Outfit, Inter Variable (Professional/Crisp).
-    - Mono: JetBrains Mono, Fira Code (Elite Technical).
+    - `--font-sans` / `--font-display`: Inter (display currently aliases body — swap in Sora / Cabinet Grotesk / Bricolage Grotesque there if a hero headline needs more cinematic weight).
+    - `--font-mono`: JetBrains Mono, Fira Code.
+    - Fluid type scale (`clamp()`-based, no breakpoint jumps): `--text-display`, `--text-title`, `--text-headline`, `--text-body`, `--text-footnote`. Use the matching Tailwind utilities (`text-display`, `text-title`, …) — never hardcode a `font-size`.
+* Color:
+    - Primary: `--color-primary-500: #EE5712` ("Zomzam Orange"), full 50–900 ramp.
+    - Surfaces: `--color-surface-light`, `--color-surface-dark` (`#111318`), `--color-surface-hover`.
+    - Intermediate slate/rose/emerald/purple shades (`slate-250` … `slate-855`, `rose-450/550`, `emerald-450/550/650`, `purple-650`) are patched into the theme because the default Tailwind scale has visible gaps in this app's dark mode — use them instead of reaching for an undefined shade.
 * Dimensional Depth:
-    - Glassmorphism 2.0: Use backdrop-filter: blur(20px) saturate(180%); with multi-layered rgba backgrounds.
-    - Shadow Physics: Use Layered Shadows (4-6 layers) to create organic, realistic depth. No harsh black outlines.
-    - Gradients: Use Mesh Gradients and Masked Linear Fades. No basic 2-color linear-gradients.
+    - Glassmorphism: `.glass-nav` / `.glass-header` utility classes (`backdrop-filter: blur(16px)`, layered rgba, subtle noise-texture overlay).
+    - Shadow Physics: `--shadow-apple-sm` / `--shadow-apple` / `--shadow-apple-lg`, each redefined inside `.dark` with an inset top-edge highlight instead of plain black so elevation reads correctly on dark surfaces. Use the `.card-lift` utility for the standard hover-elevate interaction (translateY -3px + deeper shadow).
 * Motion Grammar (The 60FPS Soul):
-    - Cinematic Transitions: Use cubic-bezier(0.4, 0, 0.2, 1) for all transforms.
-    - Staggered Reveals: Use GSAP or CSS animation-delay to create a "waterfall" effect on page load.
-    - Micro-interactions: 150ms hover transitions. Shimmer loading states for all async data.
+    - Cinematic Transitions: `cubic-bezier(0.4, 0, 0.2, 1)` for all transforms — already the default on `.card-lift`, `.hover-underline`, and focus rings.
+    - Staggered Reveals: don't hand-roll `animation-delay`. Call the existing `usePageEntrance(pageRef, deps)` hook (`src/hooks/usePageEntrance.ts`): put `ref={pageRef}` on the page root, `data-entrance="title"` on the `<h1>`/`<h2>` (SplitText char-mask reveal), `data-entrance="card"` on section wrappers, `data-entrance="list-item"` on list rows. It's already wrapped in `gsap.matchMedia('(prefers-reduced-motion: no-preference)')` — never bypass that guard.
+    - GSAP is centralized in `src/lib/gsap.ts` (registers `ScrollTrigger`, `SplitText`, `Observer`, `Flip`, `ScrambleTextPlugin` exactly once, guarded to the browser). Import `gsap`/`useGSAP` from there, never from the `gsap` package directly, or plugins double-register across Fast Refresh.
+    - Micro-interactions: 150ms hover transitions. Reward bursts use `canvas-confetti` (see `time/execution`, `time/planning`, `money/lend`) — reuse that, don't add a second confetti lib. Shimmer loading states for async data.
+    - Ambient 3D/SVG backgrounds: `Silk.tsx` (`@react-three/fiber`) on the landing page, `LiquidEther.jsx` (raw `three`) on the dashboard shell, `OrbitRings.tsx` (pure SVG + CSS `@keyframes`, zero JS cost) on `/sign`. All are loaded via `next/dynamic({ ssr: false })` and deferred with `requestIdleCallback` so first paint and entrance animations never stall on shader compilation — follow this pattern for any new WebGL surface.
 
 ### The Zenith Design Audit (STOP & VALIDATE)
 Before any UI work, conduct this $250K consultation:
 1. Strategic Vision: What is the 5-second "Wow" moment? Who is the VIP user?
 2. Architecture: Sidebar vs TopNav? Is the information hierarchy perfect?
 3. Typography Scale: Is it modular? Are we using clamp() for fluid scaling?
-4. Framework Selection: Tailwind + shadcn/ui + Framer Motion (The Holy Trinity).
+4. Framework Selection: Tailwind CSS v4 + the Zomzam Kit (`src/components/ui`) + GSAP (The Real Trinity — see Section 2.0).
 5. Color Psychology: Is the palette harmonious? Dark-mode must feel OLED-optimized.
 6. Performance Budget: Lighthouse score MUST be 100/100. LCP < 1.2s.
 7. Motion Design: Do we have entry/exit animations? Is it fluid?
@@ -123,7 +135,7 @@ To reach $250K+ value, the UI must not just look good—it must be cognitively i
 
 ## SECTION 4: ZENITH BRAND & DESIGN GUIDE PROTOCOL
 
-For every project, a Zenith-Tier Brand Guide (BrandGuideLine.md) is mandatory. It must define:
+For every project, a Zenith-Tier Brand Guide (BrandGuideLine.md) is mandatory. **It already exists at the repo root** — read it before any UI work. Keep it in sync with `src/app/globals.css`'s `@theme` block when either one changes; they must never drift apart. It must define:
 
 1. Cognitive Persona: The user's technical level and mental model targets.
 2. Aesthetic North Star: The "Vibe" (e.g., "Brutalist Steel," "Cyberpunk Glass," "Minimalist Apple").
@@ -136,16 +148,22 @@ For every project, a Zenith-Tier Brand Guide (BrandGuideLine.md) is mandatory. I
 
 ---
 
-## SECTION 5: THE ELITE STACK (ZENITH SELECTION)
+## SECTION 5: THE ELITE STACK (AS ACTUALLY SHIPPED)
 
-| Category | The $250K Gold Standard |
+This table reflects what's installed in `package.json` right now — verify before assuming a library exists. If a task seems to need something not listed here, ask the user before adding a new dependency (Phase 1: Dependency Mastery — prune bloat, don't add it).
+
+| Category | What this repo actually uses |
 | :--- | :--- |
-| Styling | Tailwind CSS + Radix UI + Custom Utility Tokens |
-| Animation | Motion (React), GSAP (Cinematic Timelines), ScrollTrigger |
-| Icons | Lucide Icons (Customized), Phosphor (Duotone) |
-| Data Viz | Recharts (Customized), D3.js (Bespoke), Tremor (Premium) |
-| Forms | React Hook Form + Zod (Strict Validation) |
-| 3D/Next-Gen | Three.js + React Three Fiber + Spline (Spatial UI) |
+| Styling | Tailwind CSS v4 (CSS-first `@theme` tokens in `globals.css`) + the Zomzam Kit (`src/components/ui`, 27 primitives) — **no Radix UI or shadcn/ui installed** |
+| Animation | GSAP + `@gsap/react` (`useGSAP`, `ScrollTrigger`, `SplitText`, `Observer`, `Flip`, `ScrambleTextPlugin`), centralized in `src/lib/gsap.ts` + `canvas-confetti` for reward bursts — **no Framer Motion / Motion installed** |
+| Icons | Lucide React (`lucide-react`) |
+| 3D / Ambient | `three` + `@react-three/fiber` (`Silk.tsx`, `LiquidEther.jsx` shader backgrounds) — **no Spline or drei installed** |
+| Forms | Controlled component state + the Kit's `Input` / `NumberInput` / `Textarea` / `Dropdown` / `Checkbox` / `Radio` / `Switch` primitives — **no React Hook Form / Zod installed**; validate at the API route boundary |
+| Data Viz | None installed (no Recharts / D3 / Tremor) — dashboards compose `Progress`, `CountUp`, and bespoke SVG (see the heatmap in `dashboard/page.tsx`) from the Kit. Only add a charting lib when a feature genuinely can't be built from the Kit, and ask first |
+| Maps | `@vis.gl/react-google-maps` (CRM Map Leads Scraper) |
+| Auth | `jose` (Edge-compatible, used in `src/proxy.ts`) + `jsonwebtoken` (Node routes) + `bcryptjs` |
+| Database | `mysql2/promise` |
+| Images | `sharp` (avatar processing in `api/profile`) |
 
 ---
 

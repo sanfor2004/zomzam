@@ -41,9 +41,12 @@ The platform is divided into three major suites:
 * **Projects Hub** (`/crm/projects`): Delivery tracking for won client contracts, mapping development milestones (`Planning`, `Design`, `Feedback Review`, `Production Delivered`) to automated task-completion indicators.
 
 ### 4. 🌐 Preferences & Social Integration (Platform Core)
+* **Home Feed** (`/home`): A post composer (with `@mention` autocomplete popover) and a real-time feed of posts from the user's network, with like/comment/delete actions. Individual posts expand to a permalink view at `/p/[postId]`.
 * **System Preferences** (`/settings`): Refactored to use unified UI selects for timezone adjustment (with live clock previews), multi-language configuration, and primary/secondary currency selections.
 * **Vanity Public Profiles** (`/u/[username]`): Public profile directories featuring real-time presence indicators (Online, Away, Offline) synchronized dynamically via Server-Sent Events (SSE) based on user mouse movements and idle timers.
-* **Social Connections** (`/community`): A member directory showing user availability, network contacts, and follows.
+* **Social Connections** (`/community`): A member directory showing user availability, network contacts, follows, friend requests, and discovery suggestions.
+* **Notifications**: A heartbeat-synced notification stream (likes, comments, friend requests) with read/unread state, surfaced in the dashboard topbar.
+* **Account Recovery** (`/forgot-password`): Token-based password reset flow, independent of the authenticated session.
 * **Strict Security Guardrails**: Dynamic JWT edge middleware routing checks, cryptographically secure Bcrypt password hashing, and zero leak logs.
 
 ---
@@ -56,11 +59,16 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | :--- | :--- | :--- |
 | **Framework** | **Next.js 16.2 (App Router)** | SSR & Server Components for SEO and fast loading; Edge Route Handlers for high concurrency. |
 | **UI Library** | **React 19** | Leverage Server Components, improved concurrent rendering, and native element hooks. |
-| **Styling** | **Tailwind CSS v4 & Vanilla CSS** | Modern CSS variables, Tailwind engine for atomic utility styling, custom HSL palettes. |
+| **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 27 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
+| **Styling** | **Tailwind CSS v4** (`@theme` CSS-first tokens) | Modern CSS variables, Tailwind engine for atomic utility styling, custom HSL/Zomzam-Orange palettes defined directly in `globals.css`. |
 | **Database** | **MySQL (via `mysql2/promise`)** | High performance, transaction safety, and sub-millisecond query execution on structured schemas. |
-| **Security** | **Jose JWT (Edge) & BcryptJS** | Edge-runtime compatible token signing/validation; high-rounds bcrypt salt for password protection. |
+| **Security** | **Jose JWT (Edge), jsonwebtoken (Node) & BcryptJS** | Edge-runtime compatible token signing/validation for `proxy.ts`; Node-side `jsonwebtoken` for API routes; high-rounds bcrypt salt for password protection. |
 | **Streaming** | **Server-Sent Events (SSE)** | Low-overhead server-push pipe for real-time presence sync without the overhead of WebSockets. |
-| **Animation** | **GSAP (GreenSock) & Confetti** | 60FPS UI choreography and rewarding micro-interactions on task completions. |
+| **Animation** | **GSAP + `@gsap/react`** (centralized in `src/lib/gsap.ts`) | `ScrollTrigger`, `SplitText`, `Observer`, `Flip`, and `ScrambleTextPlugin` registered once; powers the shared `usePageEntrance` reveal hook. `canvas-confetti` handles reward bursts. No Framer Motion. |
+| **3D / Ambient Visuals** | **three.js + React Three Fiber** | Shader backgrounds (`Silk.tsx` on the landing page, `LiquidEther.jsx` on the dashboard shell), lazy-loaded client-side and deferred via `requestIdleCallback`. |
+| **Icons** | **Lucide React** | Consistent, tree-shakeable icon set across the Kit and every feature page. |
+| **Maps** | **`@vis.gl/react-google-maps`** | Powers the CRM Map Leads Scraper's Place Search interface. |
+| **Image Processing** | **`sharp`** | Server-side avatar resizing/optimization in `api/profile`. |
 
 ---
 
@@ -70,48 +78,130 @@ The Next.js codebase is structured to enforce **Atomic Separation of Concerns (S
 
 ```bash
 zomzam.com/
-├── scripts/                  # Database schema synchronizers and seeding scripts
-│   └── db-sync.ts            # Self-healing database migrator (seeding default accounts/categories)
+├── BrandGuideLine.md          # Zenith-Tier brand guide: color/type/depth/motion design tokens
+├── scripts/
+│   └── db-sync.ts             # Self-healing database migrator (creates/validates schema, seeds defaults)
 ├── src/
-│   ├── app/                  # Next.js App Router root
-│   │   ├── (dashboard)/      # Authenticated dashboard route group (shares layout wrapper)
-│   │   │   ├── community/    # Developer directory and profile cards (accessible at /community)
-│   │   │   ├── crm/          # CRM Dashboard, Lead Vault, Pipeline, Contacts, Outreach, Projects
-│   │   │   ├── dashboard/    # Primary user dashboard (accessible at /dashboard)
-│   │   │   ├── layout.tsx    # Central dashboard layout wrapper with navigation sidebar
-│   │   │   ├── me/           # Settings page for user profiles (accessible at /me)
-│   │   │   ├── money/        # Money account details, transactions, and lend tracking (accessible at /money/*)
-│   │   │   ├── settings/     # Security, primary currency, and system preferences (accessible at /settings)
-│   │   │   └── time/         # Time execution timers, planning boards, ideas, and tasks (accessible at /time/*)
-│   │   ├── api/              # Serverless API routes (Heartbeats, SSE Stream, Auth, Time, Money, CRM)
-│   │   │   ├── auth/         # Login, Registration, Password reset
-│   │   │   ├── crm/          # Leads, Scraper Jobs, Claude settings, qualification API
-│   │   │   ├── heartbeat/    # Out-of-band active state & notifications sync
-│   │   │   ├── money/        # Transactions, Accounts, and Lending API
-│   │   │   ├── profile/      # User info modifications & password updates
-│   │   │   ├── social/       # User connection graphs (Friendships, Follows)
-│   │   │   ├── stream/       # SSE (Server-Sent Events) streaming connection
-│   │   │   └── time/         # Pomodoro timers, Ideas, Tasks, and Planning horizons API
-│   │   ├── sign/             # Unified Sign In / Sign Up split-screen layout
-│   │   ├── u/                # Public vanity profiles (e.g., /u/username)
-│   │   ├── globals.css       # Core Tailwind configuration and global glassmorphism styles
-│   │   ├── layout.tsx        # Base HTML Shell, provider wrappers, and language direction controllers
-│   │   ├── page.tsx          # Marketing landing page with multi-language showcases
-│   │   └── providers.tsx     # Global context aggregation wrapper
+│   ├── app/                   # Next.js App Router root
+│   │   ├── (dashboard)/       # Authenticated dashboard route group (shares layout.tsx wrapper)
+│   │   │   ├── community/     # /community, /community/discover, /following, /friends, /requests
+│   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
+│   │   │   ├── dashboard/     # /dashboard — primary metrics dashboard
+│   │   │   ├── home/          # /home — social feed + post composer
+│   │   │   ├── me/            # /me — profile settings
+│   │   │   ├── money/         # /money/accounts, /dashboard, /expenses, /income, /lend
+│   │   │   ├── settings/      # /settings — timezone, language, currency preferences
+│   │   │   ├── time/          # /time/execution, /ideas, /planning, /tasks, /tracker
+│   │   │   └── layout.tsx     # Sidebar nav, topbar, notifications, presence, ambient WebGL background
+│   │   ├── api/                # Serverless API routes
+│   │   │   ├── auth/           # Login, registration, logout, session check, settings
+│   │   │   │   ├── forgot-password/  # Issue password-reset tokens
+│   │   │   │   └── reset-password/   # Consume a reset token, set new password
+│   │   │   ├── crm/            # Leads, scrape jobs, pipeline, contacts, projects, AI outreach, Notion sync settings
+│   │   │   ├── dashboard/      # Aggregated cross-suite metrics for /dashboard
+│   │   │   ├── heartbeat/      # Active/idle presence ping (every 25s or on mouse movement)
+│   │   │   ├── money/          # Accounts, transactions, lending ledger
+│   │   │   ├── notifications/  # Notification list + mark-as-read
+│   │   │   ├── notion/         # Notion integration settings + lead sync
+│   │   │   ├── posts/          # Feed, create/like/delete/comment on posts
+│   │   │   ├── profile/        # Profile field updates, avatar upload (sharp)
+│   │   │   │   └── change-password/  # Authenticated password change
+│   │   │   ├── shops/          # Google Places proxy (nearby business search, backs the CRM map scraper)
+│   │   │   ├── social/         # Friend requests, follows, blocks, discovery, search
+│   │   │   ├── stream/         # SSE streaming connection (presence + notification push)
+│   │   │   └── time/           # Pomodoro tasks, planning horizons, ideas
+│   │   ├── forgot-password/    # /forgot-password — public password recovery page
+│   │   ├── p/[postId]/         # /p/[id] — single post permalink view
+│   │   ├── sign/                # /sign — unified Sign In / Sign Up split-screen layout
+│   │   ├── u/[username]/       # /u/[username] — public vanity profile + live presence badge
+│   │   ├── ui-kit/              # /ui-kit — dev-only showcase of every src/components/ui primitive
+│   │   ├── globals.css         # Tailwind v4 @theme tokens, glassmorphism, shadow/motion utilities
+│   │   ├── layout.tsx           # Base HTML shell, provider wrappers, language/dir controller
+│   │   ├── page.tsx             # Marketing landing page (multi-language, Silk WebGL hero)
+│   │   └── providers.tsx        # Global context aggregation wrapper
 │   │
-│   ├── context/              # Client-Side Global State Contexts
-│   │   ├── MoneyContext.tsx  # Multi-currency balances, cash flows, and accounts context
-│   │   ├── StreamWaiterContext.tsx # Active SSE listener, idle triggers, and toasts
-│   │   └── TranslationContext.tsx # Dynamic multi-language dictionary (RTL support for Arabic/Hebrew)
+│   ├── components/
+│   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + index.ts barrel
+│   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
+│   │   ├── LiquidEther.jsx      # Raw three.js shader background (dashboard shell)
+│   │   └── Silk.tsx              # React Three Fiber shader background (landing page)
 │   │
-│   ├── lib/                  # Backend Shared Logic
-│   │   ├── auth.ts           # Token cryptography, verification, and hash parameters
-│   │   ├── db.ts             # Connection pools and transaction callbacks
-│   │   └── models/           # Database operations (user.ts, etc.)
+│   ├── context/                 # Client-side global state
+│   │   ├── MoneyContext.tsx           # Multi-currency balances, cash flows, accounts
+│   │   ├── StreamWaiterContext.tsx    # SSE listener, idle triggers, notification toasts
+│   │   └── TranslationContext.tsx     # Multi-language dictionary + RTL (Arabic/Hebrew) direction control
 │   │
-│   └── proxy.ts               # Global routing guard validating JWT cookies on Edge
-└── .env                      # Workspace environment definitions (Git-ignored)
+│   ├── hooks/
+│   │   └── usePageEntrance.ts   # Shared GSAP page-entrance reveal (title/card/list-item stagger)
+│   │
+│   ├── lib/
+│   │   ├── auth.ts              # Token signing/verification, password hashing
+│   │   ├── db.ts                # MySQL connection pool + transaction helpers
+│   │   ├── gsap.ts               # Single source of truth for GSAP + plugin registration
+│   │   ├── notion.ts             # Notion API client for CRM lead sync
+│   │   ├── utils.ts              # cn() class merger, currency conversion rates
+│   │   └── models/
+│   │       └── user.ts          # User table queries
+│   │
+│   └── proxy.ts                  # Edge routing guard validating the ZOMZAM_SESSION JWT cookie
+└── .env                          # Workspace environment definitions (Git-ignored)
 ```
+
+---
+
+## 🗺️ Complete Site Map
+
+### Pages
+
+| Route | Access | Purpose |
+| :--- | :--- | :--- |
+| `/` | Public | Marketing landing page (multi-language, Silk WebGL hero cards). |
+| `/sign` | Public (redirects away if logged in) | Unified Sign In / Sign Up split-screen, OrbitRings ambient background. |
+| `/forgot-password` | Public | Request a password-reset token. |
+| `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed, right sidebar. |
+| `/p/[postId]` | Protected | Permalink view for a single post (deep-linkable from the feed). |
+| `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
+| `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |
+| `/time/tasks` | Protected | Task checklist manager (priority, duration blocks, undoable deletes). |
+| `/time/planning` | Protected | Drag-and-drop Dream Planning Board (Week / Month / Year horizons). |
+| `/time/ideas` | Protected | Idea Vault quick-capture scratchpad. |
+| `/time/tracker` | Protected | Historical focus-session analytics (metric cards + activity list). |
+| `/money/dashboard` | Protected | Net-worth aggregation, multi-currency conversion, income/expense split. |
+| `/money/accounts` | Protected | Manage cash, bank, and card entities. |
+| `/money/income` / `/money/expenses` | Protected | Categorized transaction ledgers (50/30/20 rule). |
+| `/money/lend` | Protected | Lending & debt tracker (`owe_me` / `i_owe`), confetti on settlement. |
+| `/crm` | Protected | CRM dashboard + Map Leads Scraper (Google Places proxy). |
+| `/crm/leads` | Protected | Lead Vault directory — search, filter, status, batch delete. |
+| `/crm/pipeline` | Protected | Kanban deal pipeline; qualifying a lead bridges to Money + Time suites. |
+| `/crm/contacts` | Protected | Standardized client contact directory. |
+| `/crm/outreach` | Protected | AI-assisted cold email writer (Claude Sonnet, template fallback). |
+| `/crm/projects` | Protected | Delivery tracker mapped to milestone stages. |
+| `/community` | Protected | Member directory: `/discover`, `/following`, `/friends`, `/requests`. |
+| `/me` | Protected | Profile settings — avatar upload, bio, tags. |
+| `/settings` | Protected | Timezone, language, primary/secondary currency preferences. |
+| `/u/[username]` | Public | Vanity public profile with real-time presence badge. |
+| `/ui-kit` | Dev-only, unlinked | Live showcase of every `src/components/ui` primitive. |
+
+> Route protection is enforced centrally in `src/proxy.ts` — see the **Authentication & Session Proxy** section below.
+
+### API Endpoints (`src/app/api/**/route.ts`)
+
+| Endpoint | Key actions | Purpose |
+| :--- | :--- | :--- |
+| `/api/auth` | `register`, `login`, `logout`, `check`, `update_settings` | Session lifecycle and account settings. |
+| `/api/auth/forgot-password` / `/reset-password` | — | Token-based password recovery, outside the session. |
+| `/api/profile` / `/api/profile/change-password` | — | Profile field updates, avatar upload (`sharp`), authenticated password change. |
+| `/api/dashboard` | — | Aggregates Time/Money metrics for the primary dashboard. |
+| `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
+| `/api/money` | `get_initial_data`, `add/delete_transaction`, `add/delete_account`, `add/settle/delete_lend` | Accounts, transactions, lending ledger. |
+| `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
+| `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
+| `/api/notion` | `sync`, `update_settings` | Notion integration for CRM lead sync. |
+| `/api/posts` | `feed`, `comments`, `create`, `like`, `delete`, `comment` | Home feed CRUD + engagement. |
+| `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
+| `/api/notifications` | `mark_read` | Notification list + read-state. |
+| `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
+| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders. |
 
 ---
 
@@ -276,6 +366,17 @@ When the final development task (containing the phrase `Production Delivery & La
 
 ---
 
+## 🧩 The Zomzam Kit (UI Component Library)
+
+Zomzam ships its own component library at `src/components/ui` instead of depending on shadcn/ui, Radix UI, or Framer Motion — every interaction primitive is owned, styled with the project's Tailwind v4 tokens, and free of third-party UI churn.
+
+* **27 primitives**, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, CountUp, Divider, Dropdown, Input, Modal, NumberInput, Pagination, Progress, Radio, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
+* **Live showcase** at [`/ui-kit`](file:///c:/www/zomzam.com/src/app/ui-kit/page.tsx) — a dev-only route (unlinked from navigation, no auth gate) rendering every primitive with its real variants, sizes, and states. Nothing on that page reads or writes live data.
+* **Shared motion**: `src/hooks/usePageEntrance.ts` drives the standard page-load reveal (title mask, staggered card/list entrances) via GSAP, respecting `prefers-reduced-motion` automatically. GSAP itself is centralized in `src/lib/gsap.ts` so plugins register exactly once.
+* **Extension rule**: if the Kit doesn't have what a feature needs, build it once inline — then promote it into `src/components/ui` the moment a second page needs the same pattern, following the existing `variant`/`size`/`shape` prop conventions (see `Button.tsx`).
+
+---
+
 ## 🌐 Dynamic Localization & RTL Support
 
 Internationalization (i18n) is managed natively without heavy packages:
@@ -307,5 +408,7 @@ To maintain Zenith-Tier code standards, please follow these guidelines:
    Always use parameterized prepared statements in DB queries. Never concatenate SQL parameters.
 4. **Clean up Resources**:
    When writing React hooks, always return cleanup functions to clear background intervals, SSE listeners, or DOM event listeners.
+5. **Use the Kit First**:
+   Check `src/components/ui` (and the `/ui-kit` showcase) before writing new markup or reaching for an external UI/animation library — see [The Zomzam Kit](#-the-zomzam-kit-ui-component-library) above.
 
 Let's build something extraordinary! 🚀
