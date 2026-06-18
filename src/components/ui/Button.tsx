@@ -43,6 +43,7 @@ export type ButtonSize =
 export type ButtonShape =
   | 'rounded'   // rounded-xl (default)
   | 'lg'        // rounded-lg
+  | 'xs'        // rounded (4px)
   | '2xl'       // rounded-2xl
   | 'pill'      // rounded-full (text)
   | 'circle'    // rounded-full (pair with an icon size)
@@ -158,6 +159,7 @@ function isScaledSize(size: ButtonSize): size is keyof typeof SCALED_SIZES {
 const SHAPES: Record<ButtonShape, string> = {
   rounded: 'rounded-xl',
   lg: 'rounded-lg',
+  xs: 'rounded',
   '2xl': 'rounded-2xl',
   pill: 'rounded-full',
   circle: 'rounded-full',

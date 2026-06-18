@@ -608,7 +608,8 @@ export default function HomePage() {
                 <AudienceSwitch value={visibility} onChange={setVisibility} />
 
                 <Button
-                  size="sm"
+                  size="xs"
+                  shape="xs"
                   onClick={handlePost}
                   disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
                   loading={postingLoading}
