@@ -202,8 +202,8 @@ export default function DashboardPage() {
             autoAlpha: 1,
             y: 0,
             duration: 0.6,
-            ease: 'back.out(1.3)',
-            stagger: { amount: 0.35, from: 'center' },
+            ease: 'power3.out',
+            stagger: { amount: 0.35, from: 'start' },
             overwrite: true,
           }),
         });
@@ -227,8 +227,8 @@ export default function DashboardPage() {
             autoAlpha: 1,
             y: 0,
             duration: 0.6,
-            ease: 'back.out(1.3)',
-            stagger: { amount: 0.4, from: 'center' },
+            ease: 'power3.out',
+            stagger: { amount: 0.4, from: 'start' },
             overwrite: true,
           }),
         });
@@ -241,8 +241,8 @@ export default function DashboardPage() {
             autoAlpha: 1,
             y: 0,
             duration: 0.6,
-            ease: 'back.out(1.3)',
-            stagger: { amount: 0.42, from: 'center' },
+            ease: 'power3.out',
+            stagger: { amount: 0.42, from: 'start' },
             overwrite: true,
           }),
         });
@@ -463,7 +463,7 @@ export default function DashboardPage() {
 
   // Maps an ISO currency code to a compact display glyph for the CountUp stats.
   const currencySymbol = (c: string) =>
-    c === 'USD' ? '$' : c === 'EUR' ? '€' : c === 'GBP' ? '£' : 'E£';
+    c === 'USD' ? '$' : c === 'EUR' ? '€' : c === 'GBP' ? '£' : c;
 
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8 pb-12">
@@ -636,7 +636,7 @@ export default function DashboardPage() {
 
         {/* Heatmap Grid Wrapper */}
         <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-800">
-          <div ref={heatmapRef} className="min-w-[480px] flex flex-col gap-[2px]">
+          <div ref={heatmapRef} className="min-w-[480px] flex flex-col gap-[2px] overflow-hidden">
             {/* Hour Labels Header (X-Axis) */}
             <div className="flex items-center text-[9px] font-bold text-slate-400 uppercase tracking-widest pl-10 h-5 mb-1">
               <div className="flex-1 grid" style={{ gridTemplateColumns: 'repeat(24, 1fr)', gap: '2px' }}>

@@ -518,3 +518,32 @@ html[dir="rtl"] #communityGroup > div {
 .dot-pulse {
   animation: dot-pulse 1.8s ease-in-out infinite;
 }
+
+/* ── Orbit rings — sign page ambient background ── */
+@keyframes orbit-cw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes orbit-ccw {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+.ring-orbit-cw,
+.ring-orbit-ccw {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.ring-orbit-cw  { animation-name: orbit-cw; }
+.ring-orbit-ccw { animation-name: orbit-ccw; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ring-orbit-cw,
+  .ring-orbit-ccw {
+    animation-play-state: paused;
+  }
+}

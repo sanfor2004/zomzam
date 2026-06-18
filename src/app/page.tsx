@@ -74,16 +74,17 @@ export default function LandingPage() {
       );
 
       if (descRef.current) {
+        const descSplit = SplitText.create(descRef.current, {
+          type: 'chars',
+          aria: 'auto',
+        });
+        gsap.set(descSplit.chars, { autoAlpha: 0 });
         tl.to(
-          descRef.current,
+          descSplit.chars,
           {
-            duration: 1.4,
-            scrambleText: {
-              text: '{original}',
-              chars: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
-              revealDelay: 0.3,
-              speed: 0.4,
-            },
+            autoAlpha: 1,
+            duration: 0.01,
+            stagger: 0.03,
             ease: 'none',
           },
           '>-0.2'
@@ -411,20 +412,6 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: SCROLL INDICATOR
-              Contains: Animated chevron, bounced by GSAP infinite loop
-              ────────────────────────────────────────────────────────── */}
-          <div
-            ref={scrollChevronRef}
-            aria-hidden="true"
-            className="col-span-full flex justify-center mt-2 mb-0 text-slate-500"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-
           {/* Card 2: Interactive Goal / Silk background card (Spans 4 columns) */}
           <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group will-change-transform">
             {/* Silk background inside card */}
@@ -448,6 +435,20 @@ export default function LandingPage() {
               <span>Goal Tracking 60/20/20</span>
               <span className="text-primary-500">Active</span>
             </div>
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: SCROLL INDICATOR
+              Contains: Animated chevron, bounced by GSAP infinite loop
+              ────────────────────────────────────────────────────────── */}
+          <div
+            ref={scrollChevronRef}
+            aria-hidden="true"
+            className="col-span-full flex justify-center mt-2 mb-0 text-slate-500"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
           </div>
 
           {/* Card 3: Large Canvas Card with Silk Background & floating service card (Spans 8 columns) */}
