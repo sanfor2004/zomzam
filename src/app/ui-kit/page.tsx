@@ -329,10 +329,20 @@ export default function UiKitPage() {
         </Section>
 
         {/* Tabs */}
-        <Section title="Tabs">
+        <Section title="Tabs" description="Same TabItem[] data, three header styles — pick the one that matches the surrounding density.">
           <div className="space-y-8">
-            <Tabs items={tabItems} variant="underline" />
-            <Tabs items={tabItems} variant="pill" />
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">variant=&quot;underline&quot;</p>
+              <Tabs items={tabItems} variant="underline" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">variant=&quot;pill&quot;</p>
+              <Tabs items={tabItems} variant="pill" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">variant=&quot;segmented&quot;</p>
+              <Tabs items={tabItems} variant="segmented" className="max-w-md" />
+            </div>
           </div>
         </Section>
 

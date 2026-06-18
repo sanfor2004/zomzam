@@ -17,6 +17,7 @@ export * from './NumberInput';
 export * from './Pagination';
 export * from './Progress';
 export * from './Radio';
+export * from './SegmentedSwitch';
 export * from './Skeleton';
 export * from './Slider';
 export * from './Spinner';

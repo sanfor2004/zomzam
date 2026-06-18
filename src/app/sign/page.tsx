@@ -10,7 +10,7 @@ import {
 import OrbitRings from '@/components/ui/OrbitRings';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import { Alert } from '@/components/ui/Alert';
-import { Button, Input, Divider } from '@/components/ui';
+import { Button, Input, Divider, SegmentedSwitch } from '@/components/ui';
 import { gsap, useGSAP, SplitText } from '@/lib/gsap';
 
 function SignPageContent() {
@@ -19,6 +19,10 @@ function SignPageContent() {
   const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<'signin' | 'signup'>('signin');
+  // Drives the SegmentedSwitch indicator only — updates instantly on click
+  // (<100ms feedback) while `activeTab` (the form content) is intentionally
+  // delayed until the fields finish fading out, see animateTabSwitch below.
+  const [pillTab, setPillTab] = useState<'signin' | 'signup'>('signin');
   const [mounted, setMounted] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -35,13 +39,13 @@ function SignPageContent() {
   const cardRef         = useRef<HTMLDivElement>(null);
   const headingRef      = useRef<HTMLHeadingElement>(null);
   const formFieldsRef   = useRef<HTMLDivElement>(null);
-  const tabIndicatorRef = useRef<HTMLDivElement>(null);
   const alertRef        = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMounted(true);
     if (window.location.hash === '#signup') {
       setActiveTab('signup');
+      setPillTab('signup');
     }
     document.documentElement.classList.add('dark');
   }, []);
@@ -56,12 +60,6 @@ function SignPageContent() {
   const { contextSafe } = useGSAP(
     () => {
       if (!mounted) return;
-
-      const indicator = tabIndicatorRef.current;
-      if (indicator) {
-        gsap.set(indicator, { x: activeTab === 'signup' ? indicator.offsetWidth : 0 });
-      }
-
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
       const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
@@ -93,26 +91,24 @@ function SignPageContent() {
 
   // ──────────────────────────────────────────────────────────
   // DEVELOPMENT NAVIGATOR: TAB SWITCH ANIMATION (GSAP)
-  // Pill slides + fields fade-exit → state update → fields fade-in.
+  // Pill slides (instant, via pillTab → SegmentedSwitch's own CSS
+  // transition) while fields fade-exit → state update → fade-in.
   // window.matchMedia used directly (not gsap.matchMedia) to avoid
   // leaking uncleaned matchMedia instances inside contextSafe.
   // ──────────────────────────────────────────────────────────
   const animateTabSwitch = contextSafe((newTab: 'signin' | 'signup') => {
-    const indicator = tabIndicatorRef.current;
-    const fields    = formFieldsRef.current;
-    if (!indicator || !fields) return;
+    const fields = formFieldsRef.current;
+    if (!fields) return;
 
-    const targetX = newTab === 'signup' ? indicator.offsetWidth : 0;
+    setPillTab(newTab);
 
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      gsap.set(indicator, { x: targetX });
       setActiveTab(newTab);
       setMessage(null);
       return;
     }
 
     const tl = gsap.timeline();
-    tl.to(indicator, { x: targetX, duration: 0.35, ease: 'power3.inOut' }, 0);
     tl.to(fields, { autoAlpha: 0, y: -8, duration: 0.18, ease: 'power2.in' }, 0);
     tl.call(() => { setActiveTab(newTab); setMessage(null); });
     // 50 ms gap lets React flush the DOM update before animating in
@@ -257,7 +253,7 @@ function SignPageContent() {
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AUTH CARD
           Contains: logo + wordmark, heading (SplitText target),
-          subtext, tab switcher (GSAP sliding pill), alert slot,
+          subtext, tab switcher (SegmentedSwitch), alert slot,
           social login grid, Divider OR, form fields (GSAP stagger),
           submit button, terms copy (signup only)
           Orange inset underlight in box-shadow = signature detail.
@@ -295,31 +291,16 @@ function SignPageContent() {
             </p>
           </div>
 
-          {/* Tab switcher — GSAP sliding pill indicator */}
-          <div className="relative flex p-1 bg-[#060709] rounded-2xl border border-white/[0.04]">
-            <div
-              ref={tabIndicatorRef}
-              className="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-[#1a1d25] rounded-xl shadow-apple pointer-events-none"
-            />
-            <Button
-              variant="unstyled"
-              onClick={() => handleTabChange('signin')}
-              className={`relative z-10 flex-1 py-2.5 text-[13px] font-bold rounded-xl transition-colors duration-200 ${
-                activeTab === 'signin' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Sign in
-            </Button>
-            <Button
-              variant="unstyled"
-              onClick={() => handleTabChange('signup')}
-              className={`relative z-10 flex-1 py-2.5 text-[13px] font-bold rounded-xl transition-colors duration-200 ${
-                activeTab === 'signup' ? 'text-white' : 'text-slate-500 hover:text-slate-300'
-              }`}
-            >
-              Create account
-            </Button>
-          </div>
+          {/* Tab switcher — Kit SegmentedSwitch, driven by pillTab for instant feedback */}
+          <SegmentedSwitch
+            ariaLabel="Choose sign in or create account"
+            value={pillTab}
+            onChange={(tab) => handleTabChange(tab as 'signin' | 'signup')}
+            options={[
+              { value: 'signin', label: 'Sign in' },
+              { value: 'signup', label: 'Create account' },
+            ]}
+          />
 
           {/* Alert — GSAP animates entrance via alertRef */}
           {message && (

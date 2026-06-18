@@ -2,13 +2,18 @@
 
 import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { SegmentedSwitch } from './SegmentedSwitch';
 
 /* ──────────────────────────────────────────────────────────
     DEVELOPMENT NAVIGATOR: TABS
-    Contains: tab list (underline/pill variant), active panel
+    Contains: tab list (underline/pill/segmented variant), active panel
     ──────────────────────────────────────────────────────────
     Controlled via `value`/`onChange`, or self-managed via
-    `defaultValue` when those are omitted. */
+    `defaultValue` when those are omitted. `segmented` delegates its
+    header to SegmentedSwitch (shared sliding indicator, full-width)
+    instead of the per-button fill underline/pill use — reach for it
+    when tabs should read as one fixed-width control, not a row of
+    buttons. */
 
 export interface TabItem {
   value: string;
@@ -23,7 +28,7 @@ export interface TabsProps {
   value?: string;
   onChange?: (value: string) => void;
   defaultValue?: string;
-  variant?: 'underline' | 'pill';
+  variant?: 'underline' | 'pill' | 'segmented';
   className?: string;
 }
 
@@ -36,6 +41,31 @@ export function Tabs({ items, value, onChange, defaultValue, variant = 'underlin
     if (onChange) onChange(next);
     else setInternal(next);
   };
+
+  if (variant === 'segmented') {
+    return (
+      <div className={cn('w-full', className)}>
+        <SegmentedSwitch
+          ariaLabel="Tabs"
+          value={active}
+          onChange={setActive}
+          options={items.map((item) => ({
+            value: item.value,
+            disabled: item.disabled,
+            label: (
+              <span className="inline-flex items-center gap-1.5 justify-center">
+                {item.icon}
+                {item.label}
+              </span>
+            ),
+          }))}
+        />
+        <div role="tabpanel" className="pt-5">
+          {activeItem?.content}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('w-full', className)}>
