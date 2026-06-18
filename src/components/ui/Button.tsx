@@ -72,6 +72,18 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
   children?: React.ReactNode;
 }
 
+/* ──────────────────────────────────────────────────────────
+    DEVELOPMENT NAVIGATOR: BUTTON SIZE SCALE
+    Contains: flat sizes (xs, icon variants, none), and the
+    pixel-precise scaled sizes (sm/md/lg/xl)
+    ──────────────────────────────────────────────────────────
+    sm/md/lg follow the "Button size (with icon)" spec: height,
+    font, and gap come from the spec 1:1. Padding is icon-aware —
+    the edge next to an icon gets the smaller value, the edge next
+    to plain text gets the larger one, matching the spec's asymmetry.
+    xl extrapolates the same pattern (unused in the app today, kept
+    for scale completeness in the ui-kit showcase). */
+
 const VARIANTS: Record<Exclude<ButtonVariant, 'unstyled'>, string> = {
   primary:
     'bg-primary-500 hover:bg-primary-600 text-white shadow-md shadow-primary-500/10 hover:shadow-lg hover:shadow-primary-500/20 focus-visible:ring-primary-500/50',
@@ -97,17 +109,51 @@ const VARIANTS: Record<Exclude<ButtonVariant, 'unstyled'>, string> = {
     'bg-transparent text-primary-500 hover:text-primary-400 underline-offset-4 hover:underline focus-visible:ring-primary-500/40',
 };
 
-const SIZES: Record<ButtonSize, string> = {
-  xs: 'px-3 py-1.5 text-[11px] font-bold',
-  sm: 'px-4 py-2 text-xs font-bold',
-  md: 'px-5 py-2.5 text-sm font-semibold',
-  lg: 'px-6 py-3 text-sm font-bold',
-  xl: 'px-7 py-3.5 text-base font-bold',
+const FLAT_SIZES: Record<'xs' | 'icon' | 'icon-sm' | 'icon-lg' | 'none', string> = {
+  xs: 'px-3 py-1.5 text-[11px] font-bold gap-1.5',
   icon: 'w-10 h-10 p-0',
   'icon-sm': 'w-8 h-8 p-0',
   'icon-lg': 'w-11 h-11 p-0',
   none: '',
 };
+
+const SCALED_SIZES: Record<
+  'sm' | 'md' | 'lg' | 'xl',
+  { base: string; padNone: string; padLeft: string; padRight: string; padBoth: string }
+> = {
+  sm: {
+    base: 'h-9 text-sm font-bold gap-1.5',
+    padNone: 'px-4',
+    padLeft: 'pl-3 pr-4',
+    padRight: 'pl-4 pr-3',
+    padBoth: 'px-3',
+  },
+  md: {
+    base: 'h-10 text-base font-semibold gap-2',
+    padNone: 'px-5',
+    padLeft: 'pl-4 pr-5',
+    padRight: 'pl-5 pr-4',
+    padBoth: 'px-4',
+  },
+  lg: {
+    base: 'h-14 text-lg font-bold gap-2',
+    padNone: 'px-6',
+    padLeft: 'pl-5 pr-6',
+    padRight: 'pl-6 pr-5',
+    padBoth: 'px-5',
+  },
+  xl: {
+    base: 'h-16 text-xl font-bold gap-2.5',
+    padNone: 'px-7',
+    padLeft: 'pl-6 pr-7',
+    padRight: 'pl-7 pr-6',
+    padBoth: 'px-6',
+  },
+};
+
+function isScaledSize(size: ButtonSize): size is keyof typeof SCALED_SIZES {
+  return size === 'sm' || size === 'md' || size === 'lg' || size === 'xl';
+}
 
 const SHAPES: Record<ButtonShape, string> = {
   rounded: 'rounded-xl',
@@ -119,7 +165,7 @@ const SHAPES: Record<ButtonShape, string> = {
 };
 
 const BASE =
-  'inline-flex items-center justify-center gap-2 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
+  'inline-flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
 
 export const Button = React.forwardRef<HTMLButtonElement & HTMLAnchorElement, ButtonProps>(
   (
@@ -144,13 +190,28 @@ export const Button = React.forwardRef<HTMLButtonElement & HTMLAnchorElement, Bu
   ) => {
     const isUnstyled = variant === 'unstyled';
 
+    const hasLeftIcon = Boolean(leftIcon) || loading;
+    const hasRightIcon = Boolean(rightIcon);
+
+    const sizeClasses = isScaledSize(size)
+      ? `${SCALED_SIZES[size].base} ${
+          hasLeftIcon && hasRightIcon
+            ? SCALED_SIZES[size].padBoth
+            : hasLeftIcon
+              ? SCALED_SIZES[size].padLeft
+              : hasRightIcon
+                ? SCALED_SIZES[size].padRight
+                : SCALED_SIZES[size].padNone
+        }`
+      : FLAT_SIZES[size];
+
     // `unstyled` is a pure passthrough — caller's className is the whole skin.
     const combinedClasses = isUnstyled
       ? `${fullWidth ? 'w-full ' : ''}${className}`
       : [
           BASE,
           VARIANTS[variant],
-          SIZES[size],
+          sizeClasses,
           SHAPES[shape],
           uppercase ? 'uppercase tracking-wider' : '',
           fullWidth ? 'w-full' : '',
