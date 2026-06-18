@@ -9,6 +9,7 @@ import {
   Badge,
   Breadcrumb,
   Button,
+  Calendar,
   Card,
   Checkbox,
   CountUp,
@@ -133,6 +134,9 @@ export default function UiKitPage() {
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
+
+  // Calendar
+  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
 
   return (
     <div className="min-h-screen bg-surface-dark">
@@ -456,6 +460,16 @@ export default function UiKitPage() {
           <ToastProvider>
             <ToastDemo />
           </ToastProvider>
+        </Section>
+
+        {/* Calendar */}
+        <Section title="Calendar" description="Single-month date picker grid — built for future use, not wired to anything yet.">
+          <div className="flex flex-wrap items-start gap-6">
+            <Calendar value={selectedDate} onChange={setSelectedDate} />
+            <p className="text-sm text-slate-400 pt-1">
+              {selectedDate ? selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) : 'No date selected'}
+            </p>
+          </div>
         </Section>
       </div>
     </div>
