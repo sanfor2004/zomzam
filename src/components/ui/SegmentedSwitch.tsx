@@ -64,7 +64,7 @@ export function SegmentedSwitch({
             disabled={disabled || option.disabled}
             onClick={() => onChange(option.value)}
             className={cn(
-              'relative z-10 flex-1 py-2.5 text-[13px] font-bold rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
+              'relative z-10 flex-1 inline-flex items-center justify-center py-2.5 text-[13px] font-bold rounded-xl transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed',
               isActive ? 'text-white' : 'text-slate-500 hover:text-slate-300',
             )}
           >
