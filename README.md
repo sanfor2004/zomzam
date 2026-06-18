@@ -109,7 +109,7 @@ zomzam.com/
 │   │   ├── db.ts             # Connection pools and transaction callbacks
 │   │   └── models/           # Database operations (user.ts, etc.)
 │   │
-│   └── middleware.ts         # Global routing guard validating JWT cookies on Edge
+│   └── proxy.ts               # Global routing guard validating JWT cookies on Edge
 └── .env                      # Workspace environment definitions (Git-ignored)
 ```
 
@@ -159,14 +159,14 @@ Open [http://localhost:3000](http://localhost:3000) in your web browser.
 
 ---
 
-## 🔒 Authentication & Session Middleware
+## 🔒 Authentication & Session Proxy
 
 Zomzam implements a **Trust-Zero API Architecture** to protect private user workspaces:
 
 ```mermaid
 sequenceDiagram
     participant User as Client Browser
-    participant MW as NextJS Middleware (Edge)
+    participant MW as NextJS Proxy (Edge)
     participant Route as App Route / Page
     participant DB as MySQL DB
 
@@ -184,7 +184,7 @@ sequenceDiagram
 
 ### Authentication Core Code:
 * **Token Verification**: [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) signs and verifies user credentials.
-* **Routing Guard**: [middleware.ts](file:///c:/www/zomzam.com/src/middleware.ts) dynamically matches paths (e.g., `/dashboard`, `/time`, `/money`, `/settings`) and intercepts unauthenticated requests. It uses the edge-optimized library `jose` to verify tokens cleanly without triggering Node-only environment crashes.
+* **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) dynamically matches paths (e.g., `/dashboard`, `/time`, `/money`, `/settings`) and intercepts unauthenticated requests. It uses the edge-optimized library `jose` to verify tokens cleanly without triggering Node-only environment crashes.
 
 ---
 
