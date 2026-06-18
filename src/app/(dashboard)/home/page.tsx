@@ -7,7 +7,7 @@ import {
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2, Share2,
   UserPlus, Check, Users,
 } from 'lucide-react';
-import { Button, AudienceSwitch, type PostVisibility } from '@/components/ui';
+import { Button, AudienceSwitch, Tooltip, type PostVisibility } from '@/components/ui';
 
 interface CurrentUser {
   username: string;
@@ -608,10 +608,11 @@ export default function HomePage() {
                 <AudienceSwitch value={visibility} onChange={setVisibility} />
 
                 <Button
+                  size="sm"
                   onClick={handlePost}
                   disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
                   loading={postingLoading}
-                  leftIcon={!postingLoading && <Send className="w-4 h-4" />}
+                  leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
                   className="disabled:opacity-40"
                 >
                   Post
@@ -1224,21 +1225,22 @@ function ToolbarButton({
   active?: boolean;
 }) {
   return (
-    <Button
-      variant="unstyled"
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      onMouseDown={(e) => e.preventDefault()}
-      onClick={onClick}
-      disabled={disabled}
-      className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 ${
-        active
-          ? 'text-primary-500 bg-primary-500/15'
-          : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-      }`}
-    >
-      {children}
-    </Button>
+    <Tooltip content={label} position="bottom">
+      <Button
+        variant="unstyled"
+        aria-label={label}
+        aria-pressed={active}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={onClick}
+        disabled={disabled}
+        className={`p-2 rounded-lg transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 ${
+          active
+            ? 'text-primary-500 bg-primary-500/15'
+            : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+        }`}
+      >
+        {children}
+      </Button>
+    </Tooltip>
   );
 }
