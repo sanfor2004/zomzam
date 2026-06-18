@@ -4,7 +4,7 @@ import { Button } from '@/components/ui';
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap, useGSAP, ScrollTrigger, SplitText } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
-import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, ArrowDown, Activity, DollarSign, Clock } from 'lucide-react';
+import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, Activity, DollarSign, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
 
@@ -75,7 +75,7 @@ export default function LandingPage() {
 
       if (descRef.current) {
         const descSplit = SplitText.create(descRef.current, {
-          type: 'chars',
+          type: 'words,chars',
           aria: 'auto',
         });
         gsap.set(descSplit.chars, { autoAlpha: 0 });
@@ -86,6 +86,8 @@ export default function LandingPage() {
             duration: 0.01,
             stagger: 0.03,
             ease: 'none',
+            // Revert after animation so char spans don't cause mid-word line breaks
+            onComplete: () => descSplit.revert(),
           },
           '>-0.2'
         );
@@ -386,9 +388,6 @@ export default function LandingPage() {
                   Time
                 </span>{' '}
                 & Capital
-                <a href="#features" className="hero-cta-arrow inline-flex items-center justify-center w-9 h-9 border border-slate-800 rounded-full text-slate-500 hover:text-white hover:border-slate-700 transition-colors ml-3 align-middle cursor-pointer">
-                  <ArrowDown className="w-4 h-4" />
-                </a>
               </h1>
               <p ref={descRef} className="text-base text-slate-400 leading-relaxed max-w-xl">
                 {t('description')}
