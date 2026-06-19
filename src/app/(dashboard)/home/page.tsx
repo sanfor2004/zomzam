@@ -1479,6 +1479,34 @@ function CommentRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const commentCardRef = useRef<HTMLDivElement>(null);
+  const replyPreviewRef = useRef<HTMLDivElement>(null);
+  const [isCommentHovered, setIsCommentHovered] = useState(false);
+  const [visibleReplies, setVisibleReplies] = useState(REPLIES_PAGE_SIZE);
+  const replyCount = comment.replies?.length ?? 0;
+
+  useGSAP(() => {
+    const preview = replyPreviewRef.current;
+    const card = commentCardRef.current;
+    if (!preview || !card || depth !== 0) return;
+
+    const cardH = card.offsetHeight;
+
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      if (isCommentHovered && replyCount > 0) {
+        gsap.fromTo(preview,
+          { y: -cardH, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.45, ease: 'back.out(1.7)' }
+        );
+      } else {
+        gsap.to(preview, { y: -cardH, opacity: 0, duration: 0.25, ease: 'power3.in' });
+      }
+    });
+    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
+      if (preview) gsap.set(preview, { opacity: isCommentHovered && replyCount > 0 ? 1 : 0, y: 0 });
+    });
+  }, { dependencies: [isCommentHovered, replyCount], scope: commentCardRef });
+
   const submitReply = async () => {
     if (!replyText.trim() || submitting) return;
     setSubmitting(true);
@@ -1510,111 +1538,145 @@ function CommentRow({
 
   return (
     <div className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-3' : ''}>
-      <div className="flex gap-2">
-        <img
-          src={comment.avatar}
-          alt=""
-          className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
-        />
-        <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-bold text-white">{name}</span>
-            <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
-            <div className="ml-auto flex items-center gap-3">
-              <Tooltip content={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote'}>
-                <Button
-                  variant="unstyled"
-                  onClick={() => onVote(comment.id)}
-                  aria-label={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote comment'}
-                  className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
-                    comment.upvoted_by_me ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
-                  }`}
-                >
-                  <ArrowBigUp className="w-3.5 h-3.5" fill={comment.upvoted_by_me ? 'currentColor' : 'none'} />
-                  {comment.upvote_count > 0 && <span>{comment.upvote_count}</span>}
-                </Button>
-              </Tooltip>
-              {depth < 2 && (
-                <Button
-                  variant="unstyled"
-                  onClick={() => setReplyOpen((p) => !p)}
-                  className={`text-[10px] font-semibold transition-colors ${
-                    replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
-                  }`}
-                >
-                  Reply
-                </Button>
-              )}
-              {isMine && (
-                <Dropdown
-                  mode="menu"
-                  open={menuOpen}
-                  onClose={() => setMenuOpen(false)}
-                  align="right"
-                  dropdownClassName="min-w-[10rem] p-1.5 space-y-0.5"
-                  trigger={
-                    <Button
-                      variant="unstyled"
-                      onClick={() => setMenuOpen((p) => !p)}
-                      aria-label="Comment options"
-                      aria-haspopup="menu"
-                      aria-expanded={menuOpen}
-                      className="flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                    >
-                      <MoreHorizontal className="w-3.5 h-3.5" />
-                    </Button>
-                  }
-                >
-                  <DropdownItem leading={<Pencil className="w-4 h-4" />} onClick={startEdit}>
-                    Edit
-                  </DropdownItem>
-                  <DropdownItem
-                    leading={<Trash2 className="w-4 h-4" />}
-                    onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
-                    className="text-rose-400 hover:bg-rose-500/10"
+
+      {/* Hover context for depth=0 comments */}
+      <div
+        className="relative"
+        style={{ zIndex: isCommentHovered && depth === 0 ? 5 : 0, isolation: depth === 0 ? 'isolate' : undefined }}
+        onMouseEnter={depth === 0 ? () => setIsCommentHovered(true) : undefined}
+        onMouseLeave={depth === 0 ? () => setIsCommentHovered(false) : undefined}
+      >
+        {/* Silhouette layers (depth=0 only) */}
+        {depth === 0 && (() => {
+          const layerCount = Math.min(replyCount, 2);
+          if (layerCount === 0) return null;
+          return [...REPLY_LAYER_CONFIGS].slice(0, layerCount).reverse().map((cfg, i) => (
+            <div
+              key={i}
+              aria-hidden
+              className="absolute inset-0 rounded-2xl bg-white/[0.02] border border-white/[0.04] pointer-events-none"
+              style={{
+                transform: `translateY(${cfg.translateY}px) scale(${cfg.scale})`,
+                opacity: cfg.opacity,
+                filter: `blur(${cfg.blur}px)`,
+                zIndex: 0,
+              }}
+            />
+          ));
+        })()}
+
+        {/* Comment card */}
+        <div className="relative z-[1] flex gap-2">
+          <img
+            src={comment.avatar}
+            alt=""
+            className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
+          />
+          <div ref={commentCardRef} className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-bold text-white">{name}</span>
+              <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
+              <div className="ml-auto flex items-center gap-3">
+                <Tooltip content={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote'}>
+                  <Button
+                    variant="unstyled"
+                    onClick={() => onVote(comment.id)}
+                    aria-label={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote comment'}
+                    className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
+                      comment.upvoted_by_me ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
+                    }`}
                   >
-                    Delete
-                  </DropdownItem>
-                </Dropdown>
-              )}
-            </div>
-          </div>
-          {editing ? (
-            <div className="mt-1.5">
-              <textarea
-                autoFocus
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
-                  if (e.key === 'Escape') { setEditing(false); }
-                }}
-                rows={2}
-                maxLength={1000}
-                className="w-full bg-[#0E1015] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors resize-none"
-              />
-              <div className="flex items-center gap-2 mt-1.5">
-                <Button
-                  variant="primary"
-                  size="xs"
-                  onClick={saveEdit}
-                  loading={savingEdit}
-                  disabled={!editText.trim() || editText.trim() === comment.content}
-                >
-                  Save
-                </Button>
-                <Button variant="ghost" size="xs" onClick={() => setEditing(false)} disabled={savingEdit}>
-                  Cancel
-                </Button>
+                    <ArrowBigUp className="w-3.5 h-3.5" fill={comment.upvoted_by_me ? 'currentColor' : 'none'} />
+                    {comment.upvote_count > 0 && <span>{comment.upvote_count}</span>}
+                  </Button>
+                </Tooltip>
+                {depth < 2 && (
+                  <Button
+                    variant="unstyled"
+                    onClick={() => setReplyOpen((p) => !p)}
+                    className={`text-[10px] font-semibold transition-colors ${
+                      replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
+                    }`}
+                  >
+                    Reply
+                  </Button>
+                )}
+                {isMine && (
+                  <Dropdown
+                    mode="menu"
+                    open={menuOpen}
+                    onClose={() => setMenuOpen(false)}
+                    align="right"
+                    dropdownClassName="min-w-[10rem] p-1.5 space-y-0.5"
+                    trigger={
+                      <Button
+                        variant="unstyled"
+                        onClick={() => setMenuOpen((p) => !p)}
+                        aria-label="Comment options"
+                        aria-haspopup="menu"
+                        aria-expanded={menuOpen}
+                        className="flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </Button>
+                    }
+                  >
+                    <DropdownItem leading={<Pencil className="w-4 h-4" />} onClick={startEdit}>Edit</DropdownItem>
+                    <DropdownItem
+                      leading={<Trash2 className="w-4 h-4" />}
+                      onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                      className="text-rose-400 hover:bg-rose-500/10"
+                    >
+                      Delete
+                    </DropdownItem>
+                  </Dropdown>
+                )}
               </div>
             </div>
-          ) : (
-            <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
-          )}
+            {editing ? (
+              <div className="mt-1.5">
+                <textarea
+                  autoFocus
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                    if (e.key === 'Escape') { setEditing(false); }
+                  }}
+                  rows={2}
+                  maxLength={1000}
+                  className="w-full bg-[#0E1015] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors resize-none"
+                />
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Button variant="primary" size="xs" onClick={saveEdit} loading={savingEdit} disabled={!editText.trim() || editText.trim() === comment.content}>Save</Button>
+                  <Button variant="ghost" size="xs" onClick={() => setEditing(false)} disabled={savingEdit}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
+            )}
+          </div>
         </div>
+
+        {/* Reply preview push-down (depth=0, has replies, not in reply-input mode) */}
+        {depth === 0 && replyCount > 0 && comment.replies && !replyOpen && (
+          <div
+            ref={replyPreviewRef}
+            className="absolute left-0 right-0 z-[1] ml-9 rounded-xl border border-white/[0.05] bg-white/[0.02] backdrop-blur-sm px-3 py-2"
+            style={{ top: 'calc(100% + 3px)', opacity: 0, pointerEvents: 'none' }}
+            aria-hidden
+          >
+            <div className="flex items-center gap-1.5">
+              <img src={comment.replies[0].avatar} alt="" className="w-5 h-5 rounded-md object-cover border border-slate-800 flex-shrink-0" />
+              <span className="text-[10px] font-bold text-slate-300 truncate">{displayName(comment.replies[0])}</span>
+              <span className="text-[10px] text-slate-600 ml-auto">{relativeTime(comment.replies[0].created_at)}</span>
+            </div>
+            <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1 break-words">{comment.replies[0].content}</p>
+          </div>
+        )}
       </div>
 
-      {/* Inline reply input */}
+      {/* Reply input */}
       {replyOpen && (
         <div className="flex gap-2 mt-2 ml-9">
           <input
@@ -1626,25 +1688,16 @@ function CommentRow({
             maxLength={1000}
             className="flex-1 bg-[#111318] rounded-xl px-3 py-1.5 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
           />
-          <Button
-            variant="primary"
-            size="none"
-            shape="lg"
-            onClick={submitReply}
-            disabled={!replyText.trim() || submitting}
-            className="p-1.5 disabled:opacity-40 flex-shrink-0"
-          >
-            {submitting
-              ? <Loader2 className="w-3 h-3 text-white animate-spin" />
-              : <Send className="w-3 h-3 text-white" />}
+          <Button variant="primary" size="none" shape="lg" onClick={submitReply} disabled={!replyText.trim() || submitting} className="p-1.5 disabled:opacity-40 flex-shrink-0">
+            {submitting ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <Send className="w-3 h-3 text-white" />}
           </Button>
         </div>
       )}
 
-      {/* Nested replies */}
+      {/* Nested replies — paginated */}
       {comment.replies && comment.replies.length > 0 && (
         <div className="mt-2 space-y-2">
-          {comment.replies.map((reply) => (
+          {comment.replies.slice(0, visibleReplies).map((reply) => (
             <CommentRow
               key={reply.id}
               comment={reply}
@@ -1656,10 +1709,18 @@ function CommentRow({
               depth={depth + 1}
             />
           ))}
+          {comment.replies.length > visibleReplies && (
+            <Button
+              variant="unstyled"
+              onClick={() => setVisibleReplies((v) => v + REPLIES_PAGE_SIZE)}
+              className="ml-9 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
+            >
+              Show {Math.min(REPLIES_PAGE_SIZE, comment.replies.length - visibleReplies)} more replies
+            </Button>
+          )}
         </div>
       )}
 
-      {/* Delete confirmation */}
       <ConfirmDialog
         isOpen={confirmDelete}
         onClose={() => setConfirmDelete(false)}
@@ -1668,8 +1729,8 @@ function CommentRow({
         title="Delete this comment?"
         description={
           comment.replies && comment.replies.length > 0
-            ? 'This also removes all replies underneath it. This can’t be undone.'
-            : 'This permanently removes your comment. This can’t be undone.'
+            ? 'This also removes all replies underneath it. This can\'t be undone.'
+            : 'This permanently removes your comment. This can\'t be undone.'
         }
         confirmLabel="Delete"
       />
