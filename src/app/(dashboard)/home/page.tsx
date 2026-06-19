@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
+import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Bold, Italic, Underline, List, Smile, Image as ImageIcon,
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2,
@@ -160,6 +161,9 @@ export default function HomePage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingFeedRef = useRef(false);
   const composerCardRef = useRef<HTMLDivElement>(null);
+  const feedRef = useRef<HTMLDivElement>(null);
+  // pageRef reuses containerRef (same DOM node, usePageEntrance uses it as animation scope)
+  usePageEntrance(containerRef, [posts.length]);
 
   // ── Data bootstrap ──────────────────────────────────────────
   useEffect(() => {
@@ -239,6 +243,25 @@ export default function HomePage() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [posts, hasMore, loadFeed]);
+
+  useGSAP(() => {
+    if (initialLoading || posts.length === 0) return;
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.from('.post-item', {
+        y: 20,
+        opacity: 0,
+        stagger: 0.07,
+        ease: 'power2.out',
+        duration: 0.4,
+        scrollTrigger: {
+          trigger: '.post-item',
+          start: 'top 88%',
+          toggleActions: 'play none none none',
+          scroller: getScrollParent(feedRef.current ?? null),
+        },
+      });
+    });
+  }, { scope: feedRef, dependencies: [initialLoading] });
 
   // ── Sync which formats are active at the caret/selection ────
   const FORMAT_COMMANDS = ['bold', 'italic', 'underline', 'insertUnorderedList'];
@@ -539,7 +562,7 @@ export default function HomePage() {
             DEVELOPMENT NAVIGATOR: MAIN FEED COLUMN
             Contains: Composer card, post feed with infinite scroll
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2 space-y-4">
+        <div ref={feedRef} className="lg:col-span-2 space-y-4">
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: POST COMPOSER
