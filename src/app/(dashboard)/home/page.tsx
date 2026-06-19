@@ -1386,8 +1386,65 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
         </div>
       )}
 
-      {/* ─── Expanded comments section (Task 7) ─── */}
-      {/* PLACEHOLDER — filled in Task 7 */}
+      {/* ─── Expanded comments section ─── */}
+      {commentsOpen && (
+        <div className="mt-3 space-y-3 px-1">
+          {loadingComments ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
+            </div>
+          ) : tree.length === 0 ? (
+            <p className="text-xs text-slate-600 text-center py-2">No comments yet — be the first!</p>
+          ) : (
+            <>
+              {tree.slice(0, visibleComments).map((c) => (
+                <CommentRow
+                  key={c.id}
+                  comment={c}
+                  onReply={addComment}
+                  onVote={voteComment}
+                  onEdit={editComment}
+                  onCommentDelete={deleteComment}
+                  viewerUsername={viewerUsername}
+                  depth={0}
+                />
+              ))}
+              {tree.length > visibleComments && (
+                <Button
+                  variant="unstyled"
+                  onClick={() => setVisibleComments((v) => v + COMMENTS_PAGE_SIZE)}
+                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1.5"
+                >
+                  Show {Math.min(COMMENTS_PAGE_SIZE, tree.length - visibleComments)} more comments
+                </Button>
+              )}
+            </>
+          )}
+
+          {/* Comment input */}
+          <div className="flex gap-2 pt-1">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTopComment(); } }}
+              placeholder="Write a comment…"
+              maxLength={1000}
+              className="flex-1 bg-white/[0.03] rounded-xl px-3 py-2 text-xs text-slate-200 border border-white/[0.06] outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
+            />
+            <Button
+              variant="primary"
+              size="none"
+              onClick={submitTopComment}
+              disabled={!commentText.trim() || submittingComment}
+              className="p-2 disabled:opacity-40 flex-shrink-0"
+            >
+              {submittingComment
+                ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                : <Send className="w-3.5 h-3.5 text-white" />}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
