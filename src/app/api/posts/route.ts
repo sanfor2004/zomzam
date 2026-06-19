@@ -377,6 +377,34 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, comments: normalizedComments });
     }
 
+    // ── Top 2 comments for hover preview ─────────────────────────
+    if (action === 'top_comments') {
+      const post_id = parseInt(searchParams.get('post_id') || '0');
+      if (!post_id) return NextResponse.json({ success: false, message: 'post_id required' }, { status: 400 });
+
+      const comments = await query(
+        `SELECT c.id, c.post_id, c.parent_id, c.content, c.created_at,
+                u.username, u.first_name, u.last_name, u.avatar,
+                (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id) AS upvote_count,
+                (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id AND user_id = ?) AS upvoted_by_me
+         FROM post_comments c
+         JOIN users u ON u.id = c.user_id
+         WHERE c.post_id = ? AND c.parent_id IS NULL
+         ORDER BY upvote_count DESC, c.created_at ASC
+         LIMIT 2`,
+        [user.id, post_id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        comments: comments.map((c: any) => ({
+          ...normalizeAvatar(c),
+          upvote_count: parseInt(c.upvote_count || 0),
+          upvoted_by_me: parseInt(c.upvoted_by_me || 0) > 0,
+        })),
+      });
+    }
+
     return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
   } catch (error: any) {
     console.error('Posts GET error:', error);
