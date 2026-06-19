@@ -116,7 +116,19 @@ function displayName(u: { first_name: string | null; last_name: string | null; u
 const MAX_POST_CHARS = 500;
 
 // How many top-level comments to reveal before the "Load more" button.
-const COMMENTS_PAGE_SIZE = 5;
+const COMMENTS_PAGE_SIZE = 6;
+const REPLIES_PAGE_SIZE = 4;
+
+const POST_LAYER_CONFIGS = [
+  { translateY: 4,  scale: 0.97, opacity: 0.35, blur: 1 },
+  { translateY: 8,  scale: 0.94, opacity: 0.20, blur: 2 },
+  { translateY: 12, scale: 0.91, opacity: 0.10, blur: 3 },
+] as const;
+
+const REPLY_LAYER_CONFIGS = [
+  { translateY: 3, scale: 0.97, opacity: 0.30, blur: 1 },
+  { translateY: 6, scale: 0.94, opacity: 0.18, blur: 2 },
+] as const;
 
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -974,6 +986,15 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
   const [submittingComment, setSubmittingComment] = useState(false);
   const [visibleComments, setVisibleComments] = useState(COMMENTS_PAGE_SIZE);
 
+  const cardRef = useRef<HTMLDivElement>(null);
+  const heartIconRef = useRef<SVGSVGElement>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
+  useEffect(() => {
+    setIsTouchDevice(window.matchMedia('(hover: none)').matches);
+  }, []);
+
   // Throws on failure so the DeleteButton keeps its confirm dialog open.
   const handleDelete = async () => {
     const res = await fetch('/api/posts', {
@@ -997,6 +1018,20 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
       });
     } catch { /* non-blocking */ }
   };
+
+  const handleLike = () => {
+    toggleLike();
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      if (!heartIconRef.current) return;
+      const tl = gsap.timeline();
+      tl.to(heartIconRef.current, { scale: 1.5, duration: 0.12, ease: 'power2.out' })
+        .to(heartIconRef.current, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
+    });
+  };
+
+  // Temporary stubs — replaced with full implementations in Task 6.
+  const handleCardMouseEnter = () => setIsHovered(true);
+  const handleCardMouseLeave = () => setIsHovered(false);
 
   const toggleComments = async () => {
     const opening = !commentsOpen;
@@ -1110,139 +1145,93 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
   const tree = buildTree(comments);
 
   return (
-    <div id={`post-${post.id}`} className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
-      {/* Header + content */}
-      <div className="flex gap-3">
-        <Link href={`/u/${post.username}`} className="flex-shrink-0">
-          <img
-            src={post.avatar}
-            alt={name}
-            className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
-          />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <Link
-              href={`/u/${post.username}`}
-              className="text-sm font-bold text-white hover:text-primary-400 hover:underline transition-colors"
-            >
-              {name}
-            </Link>
-            <Link href={`/u/${post.username}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-              @{post.username}
-            </Link>
-            <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
-            {isOwn && (
-              <DeleteButton
-                onConfirm={handleDelete}
-                tooltip="Delete post"
-                ariaLabel="Delete post"
-              />
-            )}
-          </div>
-          <div
-            className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
-            dangerouslySetInnerHTML={{ __html: post.content_html }}
-          />
-        </div>
-      </div>
+    <div
+      id={`post-${post.id}`}
+      data-entrance="card"
+      className="post-item relative"
+      style={{ zIndex: isHovered ? 10 : 0, isolation: 'isolate' }}
+      onClick={isTouchDevice ? () => {
+        if (isHovered) { setIsHovered(false); }
+        else { setIsHovered(true); }
+      } : undefined}
+      onMouseEnter={!isTouchDevice ? handleCardMouseEnter : undefined}
+      onMouseLeave={!isTouchDevice ? handleCardMouseLeave : undefined}
+    >
+      {/* ─── Silhouette layers (Task 4) ─── */}
+      {/* PLACEHOLDER — filled in Task 4 */}
 
-      {/* Action bar */}
-      <div className="flex items-center gap-5 mt-4 pt-3 border-t border-slate-800/40">
-        <Tooltip content={liked ? 'Unlike' : 'Like'}>
-          <Button
-            variant="unstyled"
-            onClick={toggleLike}
-            aria-label={liked ? 'Unlike post' : 'Like post'}
-            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-              liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
-            }`}
-          >
-            <Heart className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
-            {likeCount > 0 && <span>{likeCount}</span>}
-          </Button>
-        </Tooltip>
-
-        <Tooltip content={commentsOpen ? 'Hide comments' : 'Comment'}>
-          <Button
-            variant="unstyled"
-            onClick={toggleComments}
-            aria-label={commentsOpen ? 'Hide comments' : 'Comment on post'}
-            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-              commentsOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
-            }`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            {commentCount > 0 && <span>{commentCount}</span>}
-          </Button>
-        </Tooltip>
-
-        <ShareButton
-          url={`/p/${post.id}`}
-          shareTitle={`${name} on Zomzam`}
-          className="ml-auto"
+      {/* ─── Main glass card ─── */}
+      <div
+        ref={cardRef}
+        className="relative z-[1] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg transition-transform duration-300 ease-out"
+        style={{ transform: isHovered ? 'translateY(-4px)' : 'translateY(0)' }}
+      >
+        {/* Top-edge highlight */}
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
         />
-      </div>
 
-      {/* Comments section */}
-      {commentsOpen && (
-        <div className="mt-4 space-y-3">
-          {loadingComments ? (
-            <div className="flex justify-center py-3">
-              <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
-            </div>
-          ) : tree.length === 0 ? (
-            <p className="text-xs text-slate-600 text-center py-2">No comments yet — be the first!</p>
-          ) : (
-            <>
-              {tree.slice(0, visibleComments).map((c) => (
-                <CommentRow
-                  key={c.id}
-                  comment={c}
-                  onReply={addComment}
-                  onVote={voteComment}
-                  onEdit={editComment}
-                  onCommentDelete={deleteComment}
-                  viewerUsername={viewerUsername}
-                  depth={0}
-                />
-              ))}
-              {tree.length > visibleComments && (
-                <Button
-                  variant="unstyled"
-                  onClick={() => setVisibleComments((v) => v + COMMENTS_PAGE_SIZE)}
-                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1.5"
+        <div className="p-5">
+          {/* ── Header + content (unchanged from original) ── */}
+          <div className="flex gap-3">
+            <Link href={`/u/${post.username}`} className="flex-shrink-0">
+              <img
+                src={post.avatar}
+                alt={name}
+                className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
+              />
+            </Link>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <Link
+                  href={`/u/${post.username}`}
+                  className="text-sm font-bold text-white hover:text-primary-400 hover:underline transition-colors"
                 >
-                  Load {Math.min(COMMENTS_PAGE_SIZE, tree.length - visibleComments)} more {tree.length - visibleComments === 1 ? 'comment' : 'comments'}
-                </Button>
-              )}
-            </>
-          )}
+                  {name}
+                </Link>
+                <Link href={`/u/${post.username}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                  @{post.username}
+                </Link>
+                <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
+                {isOwn && (
+                  <DeleteButton onConfirm={handleDelete} tooltip="Delete post" ariaLabel="Delete post" />
+                )}
+              </div>
+              <div
+                className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                dangerouslySetInnerHTML={{ __html: post.content_html }}
+              />
+            </div>
+          </div>
 
-          {/* Top-level comment input */}
-          <div className="flex gap-2 pt-1">
-            <input
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTopComment(); } }}
-              placeholder="Write a comment…"
-              maxLength={1000}
-              className="flex-1 bg-[#111318] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
-            />
-            <Button
-              variant="primary"
-              size="none"
-              onClick={submitTopComment}
-              disabled={!commentText.trim() || submittingComment}
-              className="p-2 disabled:opacity-40 flex-shrink-0"
-            >
-              {submittingComment
-                ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                : <Send className="w-3.5 h-3.5 text-white" />}
-            </Button>
+          {/* ── Always-visible like strip ── */}
+          <div className="flex items-center mt-4 pt-3 border-t border-white/[0.06]">
+            <Tooltip content={liked ? 'Unlike' : 'Like'}>
+              <Button
+                variant="unstyled"
+                onClick={handleLike}
+                aria-label={liked ? 'Unlike post' : 'Like post'}
+                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                  liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
+                }`}
+              >
+                <Heart ref={heartIconRef} className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
+                {likeCount > 0 && <span>{likeCount}</span>}
+              </Button>
+            </Tooltip>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ─── Hover pill (Task 5) ─── */}
+      {/* PLACEHOLDER — filled in Task 5 */}
+
+      {/* ─── Comment push-down previews (Task 6) ─── */}
+      {/* PLACEHOLDER — filled in Task 6 */}
+
+      {/* ─── Expanded comments section (Task 7) ─── */}
+      {/* PLACEHOLDER — filled in Task 7 */}
     </div>
   );
 }
