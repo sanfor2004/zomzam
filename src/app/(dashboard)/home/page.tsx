@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
+import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
 import {
   Bold, Italic, Underline, List, Smile, Image as ImageIcon,
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2,
@@ -146,6 +147,7 @@ export default function HomePage() {
   const [visibility, setVisibility] = useState<PostVisibility>('friends');
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingFeedRef = useRef(false);
+  const composerCardRef = useRef<HTMLDivElement>(null);
 
   // ── Data bootstrap ──────────────────────────────────────────
   useEffect(() => {
@@ -532,7 +534,33 @@ export default function HomePage() {
               Contains: Row 1 (avatar + editor + char counter),
                         Row 2 (text settings toolbar + audience switch + Post button)
               ────────────────────────────────────────────────────────── */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+          <div
+            ref={composerCardRef}
+            className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl p-5 shadow-apple-lg"
+            onFocusCapture={() => {
+              gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+                gsap.to(composerCardRef.current, {
+                  boxShadow: '0 0 40px rgba(238,87,18,0.12), 0 25px 50px rgba(0,0,0,0.5)',
+                  duration: 0.4,
+                  ease: 'power2.out',
+                });
+              });
+            }}
+            onBlurCapture={() => {
+              gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+                gsap.to(composerCardRef.current, {
+                  boxShadow: '0 0 0px rgba(238,87,18,0), 0 25px 50px rgba(0,0,0,0.5)',
+                  duration: 0.3,
+                  ease: 'power2.in',
+                });
+              });
+            }}
+          >
+            {/* Top-edge highlight */}
+            <div
+              aria-hidden
+              className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+            />
 
             {/* Row 1 — avatar, text area, character amount */}
             <div className="flex gap-3">
