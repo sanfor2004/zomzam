@@ -79,5 +79,5 @@ export function usePageEntrance(
         });
       }
     });
-  }, { scope: pageRef, dependencies: deps });
+  }, { scope: pageRef, dependencies: [...deps] });
 }
