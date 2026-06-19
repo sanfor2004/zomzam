@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 
 export interface ModalProps {
@@ -12,6 +13,8 @@ export interface ModalProps {
   footer?: React.ReactNode;
   className?: string;
   variant?: 'default' | 'danger';
+  /** Show the top-right close (X) button. Default: true. */
+  showClose?: boolean;
 }
 
 export function Modal({
@@ -23,8 +26,12 @@ export function Modal({
   footer,
   className = '',
   variant = 'default',
+  showClose = true,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  // Portals need the DOM — gate on mount so SSR/first render stays clean.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Lock body scroll when modal is open
   useEffect(() => {
@@ -51,7 +58,7 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -63,10 +70,12 @@ export function Modal({
     ? 'border-red-200 dark:border-red-900/40'
     : 'border-slate-100 dark:border-slate-800/60';
 
-  return (
+  const showHeader = title || description || showClose;
+
+  const overlay = (
     <div
       onClick={handleBackdropClick}
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
     >
       <div
         ref={modalRef}
@@ -75,28 +84,32 @@ export function Modal({
         className={`w-full max-w-md bg-[#1A1D24] rounded-3xl p-8 shadow-2xl border ${borderClasses} animate-in scale-100 opacity-100 transition-all duration-300 ${className}`}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 mb-6">
-          <div className="flex-1 min-w-0">
-            {title && (
-              <h3 className="text-lg font-black text-white tracking-tight leading-snug">
-                {title}
-              </h3>
-            )}
-            {description && (
-              <p className="text-xs text-slate-400 mt-1">{description}</p>
+        {showHeader && (
+          <div className="flex items-start justify-between gap-4 mb-6">
+            <div className="flex-1 min-w-0">
+              {title && (
+                <h3 className="text-lg font-black text-white tracking-tight leading-snug">
+                  {title}
+                </h3>
+              )}
+              {description && (
+                <p className="text-xs text-slate-400 mt-1">{description}</p>
+              )}
+            </div>
+            {showClose && (
+              <button
+                onClick={onClose}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors focus:outline-none"
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors focus:outline-none"
-            aria-label="Close dialog"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+        )}
 
         {/* Content */}
-        <div className="text-sm text-slate-350 leading-relaxed mb-6">
+        <div className="text-sm text-slate-350 leading-relaxed">
           {children}
         </div>
 
@@ -109,4 +122,8 @@ export function Modal({
       </div>
     </div>
   );
+
+  // Portal to <body> so a transformed ancestor (e.g. .card-lift) can't trap the
+  // fixed overlay inside its containing block.
+  return createPortal(overlay, document.body);
 }

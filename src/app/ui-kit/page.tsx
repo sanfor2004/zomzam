@@ -12,7 +12,9 @@ import {
   Calendar,
   Card,
   Checkbox,
+  ConfirmDialog,
   CountUp,
+  DeleteButton,
   Divider,
   Dropdown,
   Input,
@@ -21,6 +23,7 @@ import {
   Pagination,
   Progress,
   RadioGroup,
+  ShareButton,
   Skeleton,
   Slider,
   Spinner,
@@ -134,6 +137,10 @@ export default function UiKitPage() {
 
   // Modal
   const [modalOpen, setModalOpen] = useState(false);
+
+  // ConfirmDialog
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmLoading, setConfirmLoading] = useState(false);
 
   // Calendar
   const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
@@ -463,6 +470,42 @@ export default function UiKitPage() {
           >
             Marwa Hassan and all associated activity will be permanently removed from the pipeline.
           </Modal>
+        </Section>
+
+        {/* ConfirmDialog */}
+        <Section title="Confirm Dialog" description="A focused yes/no built on Modal — for destructive or irreversible actions. Refuses to dismiss while loading.">
+          <div className="flex flex-wrap gap-3">
+            <Button variant="danger" onClick={() => setConfirmOpen(true)}>Confirm an action</Button>
+          </div>
+          <ConfirmDialog
+            isOpen={confirmOpen}
+            loading={confirmLoading}
+            onClose={() => setConfirmOpen(false)}
+            onConfirm={() => {
+              setConfirmLoading(true);
+              // Simulate an async delete so the loading state is visible.
+              setTimeout(() => { setConfirmLoading(false); setConfirmOpen(false); }, 1200);
+            }}
+            title="Delete this lead?"
+            description="This permanently removes Marwa Hassan and all associated activity. This can't be undone."
+            confirmLabel="Delete"
+          />
+        </Section>
+
+        {/* DeleteButton */}
+        <Section title="Delete Button" description="A trash trigger that confirms inline — first click expands to 'Confirm?', second click runs the action, clicking away cancels. No modal.">
+          <div className="flex items-center gap-4">
+            <DeleteButton
+              onConfirm={() => new Promise((resolve) => setTimeout(resolve, 1200))}
+              tooltip="Delete item"
+            />
+            <span className="text-sm text-slate-400">← click once to expand, again to confirm</span>
+          </div>
+        </Section>
+
+        {/* ShareButton */}
+        <Section title="Share Button" description="Native share sheet on mobile; copies the link with a 'Copied!' confirmation everywhere else.">
+          <ShareButton url="/ui-kit" shareTitle="Zomzam UI Kit" />
         </Section>
 
         {/* Toast */}
