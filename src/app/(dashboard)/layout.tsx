@@ -1,5 +1,5 @@
 'use client';
-import { Button } from '@/components/ui';
+import { Button, ToastProvider } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -761,7 +761,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <StreamWaiterProvider>
       <MoneyProvider>
-        <DashboardLayoutContent>{children}</DashboardLayoutContent>
+        <ToastProvider>
+          <DashboardLayoutContent>{children}</DashboardLayoutContent>
+        </ToastProvider>
       </MoneyProvider>
     </StreamWaiterProvider>
   );

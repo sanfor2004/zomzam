@@ -9,7 +9,7 @@ import {
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2,
   UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil,
 } from 'lucide-react';
-import { Button, AudienceSwitch, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, type PostVisibility } from '@/components/ui';
+import { Button, AudienceSwitch, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, ToastProvider, useToast, type PostVisibility } from '@/components/ui';
 
 interface CurrentUser {
   username: string;
@@ -122,6 +122,7 @@ const COMMENTS_PAGE_SIZE = 6;
 const REPLIES_PAGE_SIZE = 4;
 
 export default function HomePage() {
+  const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [friends, setFriends] = useState<MentionUser[]>([]);
   const [peopleSuggestions, setPeopleSuggestions] = useState<SuggestedUser[]>([]);
@@ -528,8 +529,13 @@ export default function HomePage() {
         setCharCount(0);
         setPopoverActive(false);
         setPosts((prev) => [data.post, ...prev]);
+        toast({ variant: 'success', title: 'Post shared', description: 'Your post is now live in the feed.' });
+      } else {
+        toast({ variant: 'error', title: "Couldn't post", description: 'Something went wrong. Please try again.' });
       }
-    } catch { /* non-blocking */ }
+    } catch {
+      toast({ variant: 'error', title: "Couldn't post", description: 'Something went wrong. Please try again.' });
+    }
     setPostingLoading(false);
   };
 
@@ -986,6 +992,7 @@ export default function HomePage() {
 // ── Post card ─────────────────────────────────────────────────
 function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn: boolean; viewerUsername?: string | null; onDelete: (id: number) => void }) {
   const name = displayName(post);
+  const { toast } = useToast();
 
   const [liked, setLiked] = useState(post.liked_by_me);
   const [likeCount, setLikeCount] = useState(post.like_count);
@@ -999,42 +1006,106 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
-  const pillRef = useRef<HTMLDivElement>(null);
+  const topStackRef = useRef<HTMLDivElement>(null);
+  const commentsWrapRef = useRef<HTMLDivElement>(null);
+  const commentsInnerRef = useRef<HTMLDivElement>(null);
+  const wasLoadingRef = useRef(false);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [postDeleting, setPostDeleting] = useState(false);
-  const [isHovered, setIsHovered] = useState(false);
-  const [isTouchDevice, setIsTouchDevice] = useState(false);
+  // Trails `commentsOpen`: stays true through the collapse tween so the close
+  // animation can play out before React unmounts the thread.
+  const [commentsMounted, setCommentsMounted] = useState(false);
 
   // Top-2 rated root comments ship inline with the feed payload (api/posts feed
-  // action) and render as always-visible static layers beneath the card — no
-  // hover, no per-card fetch. Hidden only while the full thread is expanded.
+  // action) and render as an always-visible static stack beneath the card — no
+  // hover, no per-card fetch. Animated out only while the full thread is open.
   const topComments = post.top_comments ?? [];
 
-  useEffect(() => {
-    setIsTouchDevice(window.matchMedia('(hover: none)').matches);
-  }, []);
-
+  // ── Comment reveal (accordion height + content fade) ──────────
+  // Sequenced against the static top-2 stack so the two never co-exist at full
+  // height (no mid-transition bulge): opening collapses the stack, then expands
+  // the thread; closing reverses. Height is the one layout-bound property we
+  // animate — justified because no transform can make sibling content reflow,
+  // and it's a one-shot, single-card interaction. `will-change` is scoped to the
+  // tween's lifetime, never left on. Reduced-motion users get an instant swap.
   useGSAP(() => {
-    if (!pillRef.current || isTouchDevice) return;
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      if (isHovered) {
-        gsap.to(pillRef.current, { y: 0, opacity: 1, duration: 0.2, ease: 'power2.out', pointerEvents: 'auto' });
+    const wrap = commentsWrapRef.current;
+    if (!wrap) return; // closed + unmounted — nothing to animate
+    const stack = topStackRef.current;
+    const inner = commentsInnerRef.current;
+    // Cancel any in-flight tweens so a fast open→close→open never overlaps.
+    gsap.killTweensOf([wrap, inner, stack].filter(Boolean) as Element[]);
+
+    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
+      if (commentsOpen) {
+        if (stack) gsap.set(stack, { height: 0, autoAlpha: 0 });
+        gsap.set(wrap, { height: 'auto' });
+        if (inner) gsap.set(inner, { autoAlpha: 1, y: 0 });
       } else {
-        gsap.to(pillRef.current, { y: 8, opacity: 0, duration: 0.15, ease: 'power2.in', pointerEvents: 'none' });
+        gsap.set(wrap, { height: 0 });
+        if (stack) gsap.set(stack, { height: 'auto', autoAlpha: 1 });
+        setCommentsMounted(false);
       }
     });
-    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
-      if (!pillRef.current) return;
-      pillRef.current.style.opacity = isHovered ? '1' : '0';
-      pillRef.current.style.pointerEvents = isHovered ? 'auto' : 'none';
-    });
-  }, { dependencies: [isHovered, isTouchDevice], scope: cardRef });
 
-  // Disarm the delete confirm whenever the pointer leaves the card, so an armed
-  // wedge never lingers ready for an accidental click on the next hover/tap.
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
+      if (commentsOpen) {
+        if (stack) tl.to(stack, { height: 0, autoAlpha: 0, duration: 0.18, ease: 'power2.in' });
+        tl.set(wrap, { willChange: 'height' })
+          .fromTo(wrap, { height: 0 }, { height: 'auto', duration: 0.3 });
+        if (inner) tl.fromTo(inner, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.26 }, '<0.04');
+        tl.set(wrap, { willChange: 'auto' });
+      } else {
+        tl.set(wrap, { willChange: 'height' });
+        if (inner) tl.to(inner, { autoAlpha: 0, y: 8, duration: 0.16, ease: 'power2.in' });
+        tl.to(wrap, { height: 0, duration: 0.24, ease: 'power2.in' }, inner ? '<0.04' : 0)
+          .set(wrap, { willChange: 'auto' });
+        if (stack) tl.fromTo(stack, { height: 0, autoAlpha: 0 }, { height: 'auto', autoAlpha: 1, duration: 0.22 });
+        tl.call(() => setCommentsMounted(false)); // unmount once fully collapsed
+      }
+    });
+  }, { dependencies: [commentsOpen], scope: cardRef });
+
+  // First open fetches comments async, so the thread expands to the loader's
+  // height first; when the real comments land we settle from that height to the
+  // content's. Subsequent opens already have the data, so this no-ops.
+  useGSAP(() => {
+    const wrap = commentsWrapRef.current;
+    const finishedLoading = wasLoadingRef.current && !loadingComments;
+    wasLoadingRef.current = loadingComments;
+    if (!wrap || !commentsOpen || !finishedLoading) return;
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.killTweensOf(wrap);
+      const fromHeight = wrap.offsetHeight; // loader height
+      gsap.set(wrap, { height: 'auto' });
+      const toHeight = wrap.offsetHeight;   // settled content height
+      gsap.fromTo(wrap, { height: fromHeight }, {
+        height: toHeight, duration: 0.28, willChange: 'height',
+        onComplete: () => gsap.set(wrap, { height: 'auto', willChange: 'auto' }),
+      });
+    });
+  }, { dependencies: [loadingComments], scope: cardRef });
+
+  // Disarm the armed delete wedge on outside-click or Escape — the cross-device
+  // replacement for the old pointer-leave disarm (touch never had a "leave").
+  // This card's own wedge is excluded so its second click can still confirm.
   useEffect(() => {
-    if (!isHovered) setDeleteConfirming(false);
-  }, [isHovered]);
+    if (!deleteConfirming) return;
+    const disarm = () => setDeleteConfirming(false);
+    const onPointerDown = (e: PointerEvent) => {
+      const wedge = (e.target as Element)?.closest?.('[data-delete-wedge]');
+      if (wedge && cardRef.current?.contains(wedge)) return;
+      disarm();
+    };
+    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') disarm(); };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [deleteConfirming]);
 
   // Throws on failure so the caller (handleWedgeDelete) can keep the confirm armed.
   const handleDelete = async () => {
@@ -1057,6 +1128,7 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     setPostDeleting(true);
     try {
       await handleDelete(); // on success the row unmounts via onDelete
+      toast({ variant: 'success', title: 'Post deleted', description: 'Your post has been removed from the feed.' });
     } catch {
       setDeleteConfirming(false);
     } finally {
@@ -1086,22 +1158,20 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     });
   };
 
-  // Hover now only governs the floating action pill — the comment layers are
-  // static and ship with the feed, so there's nothing to fetch on enter.
-  const handleCardMouseEnter = () => setIsHovered(true);
-  const handleCardMouseLeave = () => setIsHovered(false);
-
   const toggleComments = async () => {
     const opening = !commentsOpen;
     setCommentsOpen(opening);
-    if (opening && comments.length === 0) {
-      setLoadingComments(true);
-      try {
-        const res = await fetch(`/api/posts?action=comments&post_id=${post.id}`);
-        const data = await res.json();
-        if (data.success) setComments(data.comments);
-      } catch { /* non-blocking */ }
-      setLoadingComments(false);
+    if (opening) {
+      setCommentsMounted(true); // mount the thread so the open tween has a target
+      if (comments.length === 0) {
+        setLoadingComments(true);
+        try {
+          const res = await fetch(`/api/posts?action=comments&post_id=${post.id}`);
+          const data = await res.json();
+          if (data.success) setComments(data.comments);
+        } catch { /* non-blocking */ }
+        setLoadingComments(false);
+      }
     }
   };
 
@@ -1207,9 +1277,6 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
       id={`post-${post.id}`}
       data-entrance="card"
       className="post-item relative"
-      style={{ zIndex: isHovered ? 10 : 0, isolation: 'isolate' }}
-      onMouseEnter={!isTouchDevice ? handleCardMouseEnter : undefined}
-      onMouseLeave={!isTouchDevice ? handleCardMouseLeave : undefined}
     >
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST CARD — MAIN GLASS CARD
@@ -1272,49 +1339,53 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
           </div>
         </div>
 
-        {/* ─── Hover pill (Like · Comments · Share) — straddles the card's
-             bottom-right corner; hover-revealed on pointer devices, always-on
-             for touch. Lives inside the card so it paints above the comment
-             layers below. ─── */}
-        <div
-          ref={pillRef}
-          className="absolute z-[5] flex items-center gap-4 rounded-full border border-white/[0.08] bg-white/[0.06] px-4 py-2 backdrop-blur-xl shadow-apple"
-          style={{
-            right: '14px',
-            bottom: '-18px',
-            opacity: isTouchDevice ? 1 : 0,
-            pointerEvents: (isHovered || isTouchDevice) ? 'auto' : 'none',
-          }}
-          aria-hidden={!isHovered && !isTouchDevice}
-        >
-          <Tooltip content={liked ? 'Unlike' : 'Like'}>
-            <Button
-              variant="unstyled"
-              onClick={handleLike}
-              aria-label={liked ? 'Unlike post' : 'Like post'}
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                liked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'
-              }`}
-            >
-              <Heart ref={heartIconRef} className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
-              {likeCount > 0 && <span>{likeCount}</span>}
-            </Button>
-          </Tooltip>
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: POST ACTION BAR — ALWAYS-ON FOOTER
+            Contains: Like + Comments (left group), Share (right)
+            ──────────────────────────────────────────────────────────
+            Full-bleed solid shelf pinned to the card's base. Always
+            visible (no hover reveal): a real toolbar, not a floating
+            pill. Opaque `surface-dark` fill — no backdrop-blur, since a
+            blur behind an opaque layer is invisible work (perf). */}
+        <div className="relative flex items-center justify-between rounded-b-3xl border-t border-white/[0.07] bg-surface-dark px-4 py-2.5">
+          {/* Top-edge highlight — light from above on the solid shelf */}
+          <span
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          />
 
-          <Tooltip content={commentsOpen ? 'Hide comments' : 'View comments'}>
-            <Button
-              variant="unstyled"
-              onClick={toggleComments}
-              aria-label={commentsOpen ? 'Hide comments' : 'View comments on post'}
-              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                commentsOpen ? 'text-sky-400' : 'text-slate-400 hover:text-sky-400'
-              }`}
-            >
-              <MessageCircle className="w-4 h-4" />
-              {commentCount > 0 && <span>{commentCount}</span>}
-            </Button>
-          </Tooltip>
+          {/* Left group: Like + Comments */}
+          <div className="flex items-center gap-4">
+            <Tooltip content={liked ? 'Unlike' : 'Like'}>
+              <Button
+                variant="unstyled"
+                onClick={handleLike}
+                aria-label={liked ? 'Unlike post' : 'Like post'}
+                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                  liked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'
+                }`}
+              >
+                <Heart ref={heartIconRef} className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
+                {likeCount > 0 && <span>{likeCount}</span>}
+              </Button>
+            </Tooltip>
 
+            <Tooltip content={commentsOpen ? 'Hide comments' : 'View comments'}>
+              <Button
+                variant="unstyled"
+                onClick={toggleComments}
+                aria-label={commentsOpen ? 'Hide comments' : 'View comments on post'}
+                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                  commentsOpen ? 'text-sky-400' : 'text-slate-400 hover:text-sky-400'
+                }`}
+              >
+                <MessageCircle className="w-4 h-4" />
+                {commentCount > 0 && <span>{commentCount}</span>}
+              </Button>
+            </Tooltip>
+          </div>
+
+          {/* Right: Share */}
           <ShareButton
             url={`/p/${post.id}`}
             shareTitle={`${name} on Zomzam`}
@@ -1323,30 +1394,42 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
         </div>
       </div>
 
-      {/* ─── Static top-2 comment layers — always visible, "imported" as a
-           stepped/inset stack descending from the card. Hidden while the full
-           thread is expanded (it shows these same two ranked at its top). ─── */}
-      {topComments.length > 0 && !commentsOpen && (
-        <div className="relative z-[1] mt-2" aria-label="Top comments">
-          {topComments.slice(0, 2).map((c, i, arr) => (
-            <ThreadChild key={c.id} isLast={i === arr.length - 1}>
-              <CommentCard
-                comment={c}
-                actions={c.upvote_count > 0 ? (
-                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
-                    <ArrowBigUp className="w-3 h-3" fill="currentColor" />
-                    {c.upvote_count}
-                  </span>
-                ) : null}
-              />
-            </ThreadChild>
-          ))}
+      {/* ─── Static top-2 comment layers — "imported" as a stepped/inset stack
+           descending from the card. Always mounted (so GSAP can collapse/expand
+           its height); animated out while the full thread is open, which shows
+           these same two ranked at its top. overflow-hidden keeps the collapse
+           crisp; the pt-2 lives inside so the gap collapses with it. ─── */}
+      {topComments.length > 0 && (
+        <div ref={topStackRef} className="relative z-[1] overflow-hidden" aria-label="Top comments">
+          <div className="pt-2">
+            {topComments.slice(0, 2).map((c, i, arr) => (
+              <ThreadChild key={c.id} isLast={i === arr.length - 1}>
+                <CommentCard
+                  comment={c}
+                  actions={c.upvote_count > 0 ? (
+                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
+                      <ArrowBigUp className="w-3 h-3" fill="currentColor" />
+                      {c.upvote_count}
+                    </span>
+                  ) : null}
+                />
+              </ThreadChild>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* ─── Expanded comments section ─── */}
-      {commentsOpen && (
-        <div className="mt-3 px-1">
+      {/* ─── Expanded comments section — accordion wrapper animates height,
+           inner fades/slides up. Kept mounted via `commentsMounted` so the
+           collapse tween can finish before React unmounts the thread. ─── */}
+      {commentsMounted && (
+        <div
+          ref={commentsWrapRef}
+          className="overflow-hidden"
+          style={{ height: 0 }}
+          aria-hidden={!commentsOpen}
+        >
+          <div ref={commentsInnerRef} className="mt-3 px-1">
           {loadingComments ? (
             <div className="flex justify-center py-3">
               <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
@@ -1402,6 +1485,7 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
                 : <Send className="w-3.5 h-3.5 text-white" />}
             </Button>
           </div>
+          </div>
         </div>
       )}
     </div>
@@ -1446,6 +1530,7 @@ function OwnerWedge({
       {/* Delete — right wedge: first click arms (red fill + checkmark), second deletes */}
       <Button
         variant="unstyled"
+        data-delete-wedge
         onClick={onDelete}
         onBlur={onDisarm}
         disabled={postDeleting}
