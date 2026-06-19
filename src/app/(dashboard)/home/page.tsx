@@ -1157,8 +1157,24 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
       onMouseEnter={!isTouchDevice ? handleCardMouseEnter : undefined}
       onMouseLeave={!isTouchDevice ? handleCardMouseLeave : undefined}
     >
-      {/* ─── Silhouette layers (Task 4) ─── */}
-      {/* PLACEHOLDER — filled in Task 4 */}
+      {/* ─── Silhouette layers behind card ─── */}
+      {(() => {
+        const layerCount = Math.min(post.comment_count, 3);
+        if (layerCount === 0) return null;
+        return [...POST_LAYER_CONFIGS].slice(0, layerCount).reverse().map((cfg, i) => (
+          <div
+            key={i}
+            aria-hidden
+            className="absolute inset-0 rounded-3xl bg-white/[0.03] border border-white/[0.05] pointer-events-none"
+            style={{
+              transform: `translateY(${cfg.translateY}px) scale(${cfg.scale})`,
+              opacity: cfg.opacity,
+              filter: `blur(${cfg.blur}px)`,
+              zIndex: 0,
+            }}
+          />
+        ));
+      })()}
 
       {/* ─── Main glass card ─── */}
       <div
