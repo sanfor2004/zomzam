@@ -1327,25 +1327,26 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
            stepped/inset stack descending from the card. Hidden while the full
            thread is expanded (it shows these same two ranked at its top). ─── */}
       {topComments.length > 0 && !commentsOpen && (
-        <div className="relative z-[1] mt-2 space-y-2" aria-label="Top comments">
-          {topComments.slice(0, 2).map((c) => (
-            <CommentCard
-              key={c.id}
-              comment={c}
-              actions={c.upvote_count > 0 ? (
-                <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
-                  <ArrowBigUp className="w-3 h-3" fill="currentColor" />
-                  {c.upvote_count}
-                </span>
-              ) : null}
-            />
+        <div className="relative z-[1] mt-2" aria-label="Top comments">
+          {topComments.slice(0, 2).map((c, i, arr) => (
+            <ThreadChild key={c.id} isLast={i === arr.length - 1}>
+              <CommentCard
+                comment={c}
+                actions={c.upvote_count > 0 ? (
+                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
+                    <ArrowBigUp className="w-3 h-3" fill="currentColor" />
+                    {c.upvote_count}
+                  </span>
+                ) : null}
+              />
+            </ThreadChild>
           ))}
         </div>
       )}
 
       {/* ─── Expanded comments section ─── */}
       {commentsOpen && (
-        <div className="mt-3 space-y-3 px-1">
+        <div className="mt-3 px-1">
           {loadingComments ? (
             <div className="flex justify-center py-3">
               <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
@@ -1354,23 +1355,24 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
             <p className="text-xs text-slate-600 text-center py-2">No comments yet — be the first!</p>
           ) : (
             <>
-              {tree.slice(0, visibleComments).map((c) => (
-                <CommentRow
-                  key={c.id}
-                  comment={c}
-                  onReply={addComment}
-                  onVote={voteComment}
-                  onEdit={editComment}
-                  onCommentDelete={deleteComment}
-                  viewerUsername={viewerUsername}
-                  depth={0}
-                />
+              {tree.slice(0, visibleComments).map((c, i, arr) => (
+                <ThreadChild key={c.id} isLast={i === arr.length - 1}>
+                  <CommentRow
+                    comment={c}
+                    onReply={addComment}
+                    onVote={voteComment}
+                    onEdit={editComment}
+                    onCommentDelete={deleteComment}
+                    viewerUsername={viewerUsername}
+                    depth={0}
+                  />
+                </ThreadChild>
               ))}
               {tree.length > visibleComments && (
                 <Button
                   variant="unstyled"
                   onClick={() => setVisibleComments((v) => v + COMMENTS_PAGE_SIZE)}
-                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1.5"
+                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1.5 mt-1"
                 >
                   Show {Math.min(COMMENTS_PAGE_SIZE, tree.length - visibleComments)} more comments
                 </Button>
@@ -1379,7 +1381,7 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
           )}
 
           {/* Comment input */}
-          <div className="flex gap-2 pt-1">
+          <div className="flex gap-2 mt-3 pt-1">
             <input
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
@@ -1469,6 +1471,26 @@ function OwnerWedge({
         className="absolute top-0 right-0 w-px h-[60px] bg-white/10 pointer-events-none"
         style={{ transformOrigin: 'top', transform: 'rotate(45deg)' }}
       />
+    </div>
+  );
+}
+
+// ── Thread connector ──────────────────────────────────────────
+// Wraps a comment so a thin rail descends from the parent (post or comment)
+// with a short elbow into each child card. The rail runs full height for
+// every child except the last, where it stops at the elbow — giving a clean
+// branch that links a post to its comments and a comment to its replies.
+function ThreadChild({ isLast, children }: { isLast?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="relative pl-5 pb-2 last:pb-0">
+      {/* vertical rail */}
+      <span
+        aria-hidden
+        className={`absolute left-1.5 top-0 w-px bg-slate-800/60 ${isLast ? 'h-[18px]' : 'bottom-0'}`}
+      />
+      {/* elbow into the card */}
+      <span aria-hidden className="absolute left-1.5 top-[18px] h-px w-3 bg-slate-800/60" />
+      {children}
     </div>
   );
 }
@@ -1582,7 +1604,7 @@ function CommentRow({
   };
 
   return (
-    <div className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-3' : ''}>
+    <div>
 
       <CommentCard
         comment={comment}
@@ -1688,18 +1710,19 @@ function CommentRow({
       {/* Nested replies — one shows statically; the rest reveal on the toggle,
           mirroring the post's comment button. */}
       {replyCount > 0 && (
-        <div className="mt-2 space-y-2">
-          {shownReplies.map((reply) => (
-            <CommentRow
-              key={reply.id}
-              comment={reply}
-              onReply={onReply}
-              onVote={onVote}
-              onEdit={onEdit}
-              onCommentDelete={onCommentDelete}
-              viewerUsername={viewerUsername}
-              depth={depth + 1}
-            />
+        <div className="mt-2">
+          {shownReplies.map((reply, i, arr) => (
+            <ThreadChild key={reply.id} isLast={i === arr.length - 1}>
+              <CommentRow
+                comment={reply}
+                onReply={onReply}
+                onVote={onVote}
+                onEdit={onEdit}
+                onCommentDelete={onCommentDelete}
+                viewerUsername={viewerUsername}
+                depth={depth + 1}
+              />
+            </ThreadChild>
           ))}
 
           {/* View / hide the remaining replies */}
@@ -1708,7 +1731,7 @@ function CommentRow({
               variant="unstyled"
               onClick={() => setRepliesExpanded((v) => !v)}
               aria-expanded={repliesExpanded}
-              className="ml-9 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
+              className="ml-5 mt-1 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
             >
               {repliesExpanded
                 ? 'Hide replies'
@@ -1721,7 +1744,7 @@ function CommentRow({
             <Button
               variant="unstyled"
               onClick={() => setVisibleReplies((v) => v + REPLIES_PAGE_SIZE)}
-              className="ml-9 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
+              className="ml-5 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
             >
               Show {Math.min(REPLIES_PAGE_SIZE, replyCount - visibleReplies)} more replies
             </Button>
