@@ -9,7 +9,7 @@ import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
 import PublicUserStatus from './PublicUserStatus';
 import ProfileAnimationKit from './ProfileAnimationKit';
-import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, LogIn, Laptop, Globe } from 'lucide-react';
+import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, LogIn, Laptop, Globe, MessageCircle, Users } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -91,6 +91,52 @@ export default async function PublicProfilePage({ params }: PageProps) {
         initialIsFollowing = true;
       }
     }
+  }
+
+  // Viewer may see private (friends/exclusive) posts only on their own profile
+  // or when they're an accepted friend; otherwise just public ones.
+  const canSeePrivate = viewerId === profileUserId || initialStatus === 'friends';
+
+  // ── This user's posts (visibility-aware) ────────────────────
+  let posts: Array<{ id: number; content_html: string; visibility: string; created_at: string; like_count: number; comment_count: number }> = [];
+  try {
+    const rows = await query<any>(
+      `SELECT p.id, p.content_html, p.visibility, p.created_at,
+              (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
+              (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count
+       FROM posts p
+       WHERE p.user_id = ? AND (p.visibility = 'public' OR ? = 1)
+       ORDER BY p.created_at DESC
+       LIMIT 20`,
+      [profileUserId, canSeePrivate ? 1 : 0]
+    );
+    posts = rows.map((p) => ({
+      ...p,
+      like_count: parseInt(p.like_count || 0),
+      comment_count: parseInt(p.comment_count || 0),
+    }));
+  } catch { /* posts table may not exist yet */ }
+
+  // ── Mutual friends (viewer ∩ profile) ───────────────────────
+  let mutualFriends: Array<{ id: number; username: string; first_name: string | null; last_name: string | null; avatar: string | null }> = [];
+  let mutualCount = 0;
+  if (viewerId && viewerId !== profileUserId) {
+    // Inlined (viewerId/profileUserId are integers from the session/DB — no
+    // injection surface) to keep the self-referencing subquery readable.
+    const friendsOf = (id: number) =>
+      `SELECT IF(requester_id = ${id}, addressee_id, requester_id) FROM user_connections
+         WHERE (requester_id = ${id} OR addressee_id = ${id}) AND type = 'friend' AND status = 'accepted'`;
+    const mutualWhere = `u.id IN (${friendsOf(viewerId)}) AND u.id IN (${friendsOf(profileUserId)})`;
+    try {
+      const countRow = await query<{ c: number }>(`SELECT COUNT(*) AS c FROM users u WHERE ${mutualWhere}`);
+      mutualCount = countRow[0] ? Number(countRow[0].c) : 0;
+      if (mutualCount > 0) {
+        mutualFriends = await query<any>(
+          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar
+           FROM users u WHERE ${mutualWhere} ORDER BY u.username ASC LIMIT 8`
+        );
+      }
+    } catch { /* non-blocking */ }
   }
 
   // Parse tags JSON safely
@@ -247,6 +293,40 @@ export default async function PublicProfilePage({ params }: PageProps) {
             )}
           </div>
 
+          {/* Mutual Friends */}
+          {viewerId && viewerId !== profileUserId && mutualCount > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" />
+                {mutualCount} mutual friend{mutualCount === 1 ? '' : 's'}
+              </h3>
+              <div className="flex flex-wrap items-center gap-2.5">
+                {mutualFriends.map((f) => (
+                  <Link
+                    key={f.id}
+                    href={`/u/${f.username}`}
+                    data-entrance="list-item"
+                    className="flex items-center gap-2 bg-slate-900 border border-slate-800/80 rounded-xl pl-1.5 pr-3 py-1.5 hover:border-primary-500/30 transition-colors group"
+                  >
+                    <img
+                      src={f.avatar || '/Assets/Img/default-avatar.png'}
+                      alt=""
+                      className="w-7 h-7 rounded-lg object-cover border border-slate-800"
+                    />
+                    <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">
+                      {[f.first_name, f.last_name].filter(Boolean).join(' ') || f.username}
+                    </span>
+                  </Link>
+                ))}
+                {mutualCount > mutualFriends.length && (
+                  <span className="text-xs font-semibold text-slate-500">
+                    +{mutualCount - mutualFriends.length} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Social Interactions */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-850/60">
             {viewerId === profileUserId ? (
@@ -278,6 +358,54 @@ export default async function PublicProfilePage({ params }: PageProps) {
             )}
           </div>
 
+        </div>
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: PROFILE POSTS
+            Contains: this user's posts (public always; private only to friends/self)
+            ────────────────────────────────────────────────────────── */}
+        <div data-entrance="card" className="mt-6 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+              Posts{posts.length > 0 ? ` · ${posts.length}` : ''}
+            </h3>
+          </div>
+
+          {posts.length === 0 ? (
+            <p className="text-sm text-slate-400 italic">
+              {canSeePrivate
+                ? `@${profileUser.username} hasn't posted anything yet.`
+                : `No public posts from @${profileUser.username} yet.`}
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {posts.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/p/${p.id}`}
+                  data-entrance="list-item"
+                  className="block bg-[#111318] border border-slate-800/60 rounded-2xl p-4 hover:border-primary-500/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mb-2">
+                    <span>{new Date(p.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    {p.visibility !== 'public' && (
+                      <span className="px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[9px] uppercase tracking-wider">
+                        {p.visibility === 'friends' ? 'Friends' : 'Exclusive'}
+                      </span>
+                    )}
+                  </div>
+                  <div
+                    className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                    dangerouslySetInnerHTML={{ __html: p.content_html }}
+                  />
+                  <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
+                    <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {p.like_count}</span>
+                    <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {p.comment_count}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
 
         </ProfileAnimationKit>
