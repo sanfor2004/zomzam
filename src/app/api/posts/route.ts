@@ -37,17 +37,24 @@ async function ensureTables() {
       INDEX idx_created_at (created_at ASC)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
   `);
-  // parent_id migration — safe to run every cold start; catch swallows ER_DUP_FIELDNAME if already applied
-  try {
+  const dbName = process.env.DB_NAME || 'zomzam_db';
+  const hasParentId = await queryOne(
+    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='post_comments' AND COLUMN_NAME='parent_id'`,
+    [dbName]
+  );
+  if (!hasParentId) {
     await execute(`ALTER TABLE post_comments ADD COLUMN parent_id BIGINT UNSIGNED NULL DEFAULT NULL`);
     await execute(`ALTER TABLE post_comments ADD INDEX idx_parent_id (parent_id)`);
-  } catch { /* column/index already exists */ }
-  // visibility migration — audience scope for each post (friends | public | exclusive)
-  try {
+  }
+  const hasVisibility = await queryOne(
+    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='posts' AND COLUMN_NAME='visibility'`,
+    [dbName]
+  );
+  if (!hasVisibility) {
     await execute(
       `ALTER TABLE posts ADD COLUMN visibility ENUM('friends','public','exclusive') NOT NULL DEFAULT 'friends'`
     );
-  } catch { /* column already exists */ }
+  }
   tablesReady = true;
 }
 
