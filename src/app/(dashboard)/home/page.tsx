@@ -879,33 +879,31 @@ export default function HomePage() {
                   No friends yet — discover people below.
                 </p>
               ) : (
-                <div className="space-y-1">
+                <div className="flex flex-wrap gap-2 py-1">
                   {friends.slice(0, 7).map((f) => (
-                    <Link
-                      key={f.id}
-                      href={`/u/${f.username}`}
-                      className="flex items-center gap-3 px-2 py-2 rounded-2xl hover:bg-slate-800/50 transition-colors group"
-                    >
-                      <div className="relative flex-shrink-0">
+                    <Tooltip key={f.id} content={`${displayName(f)} · ${f.online_label || 'Offline'}`}>
+                      <Link href={`/u/${f.username}`} className="relative flex-shrink-0">
                         <img
                           src={f.avatar}
-                          alt=""
-                          className="w-8 h-8 rounded-xl object-cover border border-slate-800 group-hover:border-primary-500/30 transition-colors"
+                          alt={displayName(f)}
+                          className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/40 transition-colors"
                         />
                         <span
-                          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${
+                          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#111318] ${
                             f.is_online ? 'bg-emerald-500' : 'bg-slate-600'
                           }`}
                         />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-slate-200 truncate group-hover:text-white transition-colors">
-                          {displayName(f)}
-                        </p>
-                        <p className="text-[10px] text-slate-600 truncate">{f.online_label || 'Offline'}</p>
-                      </div>
-                    </Link>
+                      </Link>
+                    </Tooltip>
                   ))}
+                  {friends.length > 7 && (
+                    <Link
+                      href="/community/friends"
+                      className="w-10 h-10 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-center text-[10px] font-bold text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors flex-shrink-0"
+                    >
+                      +{friends.length - 7}
+                    </Link>
+                  )}
                 </div>
               )}
             </div>
