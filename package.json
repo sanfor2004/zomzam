@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:sync": "npx tsx scripts/db-sync.ts"
+    "db:sync": "npx tsx scripts/db-sync.ts",
+    "db:seed": "npx tsx scripts/seed-test-data.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
