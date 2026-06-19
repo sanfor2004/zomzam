@@ -52,6 +52,7 @@ interface Post {
   like_count: number;
   comment_count: number;
   liked_by_me: boolean;
+  top_comments?: Comment[];
 }
 
 interface Comment {
@@ -119,17 +120,6 @@ const MAX_POST_CHARS = 500;
 // How many top-level comments to reveal before the "Load more" button.
 const COMMENTS_PAGE_SIZE = 6;
 const REPLIES_PAGE_SIZE = 4;
-
-const POST_LAYER_CONFIGS = [
-  { translateY: 4,  scale: 0.97, opacity: 0.35, blur: 1 },
-  { translateY: 8,  scale: 0.94, opacity: 0.20, blur: 2 },
-  { translateY: 12, scale: 0.91, opacity: 0.10, blur: 3 },
-] as const;
-
-const REPLY_LAYER_CONFIGS = [
-  { translateY: 3, scale: 0.97, opacity: 0.30, blur: 1 },
-  { translateY: 6, scale: 0.94, opacity: 0.18, blur: 2 },
-] as const;
 
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -1010,16 +1000,15 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
-  const actionLayerRef = useRef<HTMLDivElement>(null);
-  const deleteLabelRef = useRef<HTMLSpanElement>(null);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [postDeleting, setPostDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
-  const [topComments, setTopComments] = useState<Comment[]>([]);
-  const [topCommentsLoaded, setTopCommentsLoaded] = useState(false);
-  const comment1Ref = useRef<HTMLDivElement>(null);
-  const comment2Ref = useRef<HTMLDivElement>(null);
+
+  // Top-2 rated root comments ship inline with the feed payload (api/posts feed
+  // action) and render as always-visible static layers beneath the card — no
+  // hover, no per-card fetch. Hidden only while the full thread is expanded.
+  const topComments = post.top_comments ?? [];
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(hover: none)').matches);
@@ -1041,82 +1030,13 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     });
   }, { dependencies: [isHovered, isTouchDevice], scope: cardRef });
 
-  useGSAP(() => {
-    const c1 = comment1Ref.current;
-    const c2 = comment2Ref.current;
-    const card = cardRef.current;
-    if (!card) return;
-
-    const cardH = card.offsetHeight;
-
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      if (isHovered && topComments.length > 0 && !commentsOpen) {
-        if (c1) {
-          gsap.fromTo(c1,
-            { y: -cardH, opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.7)', clearProps: 'none' }
-          );
-        }
-        if (c2 && topComments.length > 1) {
-          const c1H = c1?.offsetHeight ?? 64;
-          gsap.fromTo(c2,
-            { y: -(cardH + c1H + 8), opacity: 0 },
-            { y: 0, opacity: 1, duration: 0.5, delay: 0.06, ease: 'back.out(1.7)' }
-          );
-        }
-      } else {
-        if (c1) gsap.to(c1, { y: -(cardH), opacity: 0, duration: 0.28, ease: 'power3.in' });
-        if (c2) gsap.to(c2, { y: -(cardH), opacity: 0, duration: 0.25, delay: 0.03, ease: 'power3.in' });
-      }
-    });
-
-    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
-      const show = isHovered && topComments.length > 0 && !commentsOpen;
-      if (c1) gsap.set(c1, { opacity: show ? 1 : 0, y: 0 });
-      if (c2) gsap.set(c2, { opacity: show && topComments.length > 1 ? 1 : 0, y: 0 });
-    });
-  }, { dependencies: [isHovered, topComments, commentsOpen], scope: cardRef });
-
-  // ── Owner action layer (Edit / Delete) rising from behind the top edge ──
-  // Tucked fully behind the card (y = +height, hidden) at rest; on hover it
-  // rises to y:0 and peeks above the top edge. Same emerge-from-behind grammar
-  // as the comment-preview layers.
-  useGSAP(() => {
-    const layer = actionLayerRef.current;
-    if (!layer || !isOwn) return;
-    const h = layer.offsetHeight || 56;
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      if (isHovered) {
-        gsap.fromTo(layer,
-          { y: h, opacity: 0, xPercent: -50 },
-          { y: 0, opacity: 1, xPercent: -50, duration: 0.45, ease: 'back.out(1.7)', pointerEvents: 'auto' }
-        );
-      } else {
-        gsap.to(layer, { y: h, opacity: 0, xPercent: -50, duration: 0.25, ease: 'power3.in', pointerEvents: 'none' });
-      }
-    });
-    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
-      gsap.set(layer, { y: 0, opacity: isHovered ? 1 : 0, xPercent: -50, pointerEvents: isHovered ? 'auto' : 'none' });
-    });
-  }, { dependencies: [isHovered, isOwn], scope: cardRef });
-
-  // Disarm the delete confirm whenever the layer hides, so a re-hover never
-  // re-opens already armed for an accidental second click.
+  // Disarm the delete confirm whenever the pointer leaves the card, so an armed
+  // wedge never lingers ready for an accidental click on the next hover/tap.
   useEffect(() => {
     if (!isHovered) setDeleteConfirming(false);
   }, [isHovered]);
 
-  // Crossfade the Delete↔Confirm label so the swap glides instead of snapping.
-  // The button keeps a fixed min-width, so only the text fades — no reflow jump.
-  useGSAP(() => {
-    const label = deleteLabelRef.current;
-    if (!label) return;
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.fromTo(label, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' });
-    });
-  }, { dependencies: [deleteConfirming], scope: cardRef });
-
-  // Throws on failure so the caller (handleLayerDelete) can keep the confirm armed.
+  // Throws on failure so the caller (handleWedgeDelete) can keep the confirm armed.
   const handleDelete = async () => {
     const res = await fetch('/api/posts', {
       method: 'POST',
@@ -1128,11 +1048,11 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     onDelete(post.id);
   };
 
-  // Two-step inline confirm for the hover action layer: first click arms it
-  // ("Confirm?"), second runs the delete, blur/leave disarms. Mirrors the
-  // {@link DeleteButton} pattern used elsewhere, restyled for the layer's
-  // prominent red treatment.
-  const handleLayerDelete = async () => {
+  // Two-step inline confirm for the quarter-circle delete wedge: first click
+  // arms it (wedge fills red, trash icon → checkmark), the second runs the
+  // delete; pointer-leave/blur disarms. Icon-only — the colour+icon swap is the
+  // signifier (never colour alone, per HIG/accessibility).
+  const handleWedgeDelete = async () => {
     if (!deleteConfirming) { setDeleteConfirming(true); return; }
     setPostDeleting(true);
     try {
@@ -1166,24 +1086,10 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     });
   };
 
-  const handleCardMouseEnter = async () => {
-    setIsHovered(true);
-    if (post.comment_count === 0 || commentsOpen) return;
-    if (!topCommentsLoaded) {
-      try {
-        const res = await fetch(`/api/posts?action=top_comments&post_id=${post.id}`);
-        const data = await res.json();
-        if (data.success) {
-          setTopComments(data.comments);
-          setTopCommentsLoaded(true);
-        }
-      } catch { /* non-blocking */ }
-    }
-  };
-
-  const handleCardMouseLeave = () => {
-    setIsHovered(false);
-  };
+  // Hover now only governs the floating action pill — the comment layers are
+  // static and ship with the feed, so there's nothing to fetch on enter.
+  const handleCardMouseEnter = () => setIsHovered(true);
+  const handleCardMouseLeave = () => setIsHovered(false);
 
   const toggleComments = async () => {
     const opening = !commentsOpen;
@@ -1302,76 +1208,16 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
       data-entrance="card"
       className="post-item relative"
       style={{ zIndex: isHovered ? 10 : 0, isolation: 'isolate' }}
-      onClick={isTouchDevice ? () => {
-        if (isHovered) { setIsHovered(false); }
-        else { setIsHovered(true); }
-      } : undefined}
       onMouseEnter={!isTouchDevice ? handleCardMouseEnter : undefined}
       onMouseLeave={!isTouchDevice ? handleCardMouseLeave : undefined}
     >
-      {/* ─── Silhouette layers behind card ─── */}
-      {(() => {
-        const layerCount = Math.min(post.comment_count, 3);
-        if (layerCount === 0) return null;
-        return [...POST_LAYER_CONFIGS].slice(0, layerCount).reverse().map((cfg, i) => (
-          <div
-            key={i}
-            aria-hidden
-            className="absolute inset-0 rounded-3xl bg-white/[0.03] border border-white/[0.05] pointer-events-none"
-            style={{
-              transform: `translateY(${cfg.translateY}px) scale(${cfg.scale})`,
-              opacity: cfg.opacity,
-              filter: `blur(${cfg.blur}px)`,
-              zIndex: 0,
-            }}
-          />
-        ));
-      })()}
-
-      {/* ─── Owner action layer (Edit / Delete) — rises from behind top edge ─── */}
-      {isOwn && (
-        <div
-          ref={actionLayerRef}
-          className="absolute left-1/2 z-0 flex w-auto items-center gap-1.5 rounded-2xl rounded-b-none border border-b-0 border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-2.5 pt-3 pb-7"
-          style={{ bottom: 'calc(100% - 16px)', opacity: 0, pointerEvents: 'none' }}
-          aria-hidden={!isHovered}
-        >
-          <Button
-            variant="unstyled"
-            onClick={() => { /* placeholder — inline post editing ships in a later pass */ }}
-            title="Edit post (coming soon)"
-            aria-label="Edit post"
-            className="flex items-center gap-1.5 text-xs font-bold text-primary-500 bg-primary-500/15 hover:bg-primary-500/25 px-3 py-1.5 rounded-xl transition-colors"
-          >
-            <Pencil className="w-3.5 h-3.5" />
-            Edit
-          </Button>
-          <Button
-            variant="unstyled"
-            onClick={handleLayerDelete}
-            onBlur={() => setDeleteConfirming(false)}
-            disabled={postDeleting}
-            aria-label={deleteConfirming ? 'Confirm delete post' : 'Delete post'}
-            title={deleteConfirming ? 'Click again to confirm' : 'Delete post'}
-            className={`flex min-w-[104px] items-center justify-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 ${
-              deleteConfirming ? 'bg-red-700 hover:bg-red-600' : 'bg-red-600 hover:bg-red-500'
-            }`}
-          >
-            <span ref={deleteLabelRef} className="flex items-center gap-1.5">
-              {postDeleting
-                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                : <Trash2 className="w-3.5 h-3.5" />}
-              {deleteConfirming ? 'Confirm?' : 'Delete'}
-            </span>
-          </Button>
-        </div>
-      )}
-
-      {/* ─── Main glass card ─── */}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: POST CARD — MAIN GLASS CARD
+          Contains: owner quarter-circle (own posts), header, content
+          ────────────────────────────────────────────────────────── */}
       <div
         ref={cardRef}
-        className="relative z-[1] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg transition-transform duration-300 ease-out"
-        style={{ transform: isHovered ? 'translateY(-4px)' : 'translateY(0)' }}
+        className="relative z-[3] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg"
       >
         {/* Top-edge highlight */}
         <div
@@ -1379,8 +1225,18 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
           className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
         />
 
+        {/* ─── Owner quarter-circle: Edit (top wedge) + Delete (right wedge) ─── */}
+        {isOwn && (
+          <OwnerWedge
+            deleteConfirming={deleteConfirming}
+            postDeleting={postDeleting}
+            onDelete={handleWedgeDelete}
+            onDisarm={() => setDeleteConfirming(false)}
+          />
+        )}
+
         <div className="p-5">
-          {/* ── Header + content (unchanged from original) ── */}
+          {/* ── Header + content ── */}
           <div className="flex gap-3">
             <Link href={`/u/${post.username}`} className="flex-shrink-0">
               <img
@@ -1389,7 +1245,9 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
                 className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
               />
             </Link>
-            <div className="flex-1 min-w-0">
+            {/* On own posts the corner wedge occupies the top-right, so reserve
+                space (pr-12) and fold the timestamp inline beside the username. */}
+            <div className={`flex-1 min-w-0 ${isOwn ? 'pr-12' : ''}`}>
               <div className="flex items-baseline gap-2 flex-wrap">
                 <Link
                   href={`/u/${post.username}`}
@@ -1400,7 +1258,11 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
                 <Link href={`/u/${post.username}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
                   @{post.username}
                 </Link>
-                <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
+                {isOwn ? (
+                  <span className="text-xs text-slate-600 flex-shrink-0">· {relativeTime(post.created_at)}</span>
+                ) : (
+                  <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
+                )}
               </div>
               <div
                 className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
@@ -1408,100 +1270,89 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
               />
             </div>
           </div>
+        </div>
 
-          {/* ── Always-visible like strip ── */}
-          <div className="flex items-center mt-4 pt-3 border-t border-white/[0.06]">
-            <Tooltip content={liked ? 'Unlike' : 'Like'}>
-              <Button
-                variant="unstyled"
-                onClick={handleLike}
-                aria-label={liked ? 'Unlike post' : 'Like post'}
-                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                  liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
-                }`}
-              >
-                <Heart ref={heartIconRef} className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
-                {likeCount > 0 && <span>{likeCount}</span>}
-              </Button>
-            </Tooltip>
-          </div>
+        {/* ─── Hover pill (Like · Comments · Share) — straddles the card's
+             bottom-right corner; hover-revealed on pointer devices, always-on
+             for touch. Lives inside the card so it paints above the comment
+             layers below. ─── */}
+        <div
+          ref={pillRef}
+          className="absolute z-[5] flex items-center gap-4 rounded-full border border-white/[0.08] bg-white/[0.06] px-4 py-2 backdrop-blur-xl shadow-apple"
+          style={{
+            right: '14px',
+            bottom: '-18px',
+            opacity: isTouchDevice ? 1 : 0,
+            pointerEvents: (isHovered || isTouchDevice) ? 'auto' : 'none',
+          }}
+          aria-hidden={!isHovered && !isTouchDevice}
+        >
+          <Tooltip content={liked ? 'Unlike' : 'Like'}>
+            <Button
+              variant="unstyled"
+              onClick={handleLike}
+              aria-label={liked ? 'Unlike post' : 'Like post'}
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                liked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'
+              }`}
+            >
+              <Heart ref={heartIconRef} className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
+              {likeCount > 0 && <span>{likeCount}</span>}
+            </Button>
+          </Tooltip>
+
+          <Tooltip content={commentsOpen ? 'Hide comments' : 'View comments'}>
+            <Button
+              variant="unstyled"
+              onClick={toggleComments}
+              aria-label={commentsOpen ? 'Hide comments' : 'View comments on post'}
+              className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                commentsOpen ? 'text-sky-400' : 'text-slate-400 hover:text-sky-400'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {commentCount > 0 && <span>{commentCount}</span>}
+            </Button>
+          </Tooltip>
+
+          <ShareButton
+            url={`/p/${post.id}`}
+            shareTitle={`${name} on Zomzam`}
+            className="text-slate-400 hover:text-slate-200 transition-colors"
+          />
         </div>
       </div>
 
-      {/* ─── Hover pill ─── */}
-      <div
-        ref={pillRef}
-        className="absolute left-1/2 z-[3] flex items-center gap-4 rounded-full border border-white/[0.08] bg-white/[0.06] px-5 py-2.5 backdrop-blur-xl shadow-apple"
-        style={{
-          // Straddle the card's bottom edge (overlap ~18px up, ~18px down) so the
-          // cursor never crosses an empty gap between card and pill — otherwise the
-          // wrapper's onMouseLeave fires mid-travel and hides the pill before it's reachable.
-          top: 'calc(100% - 18px)',
-          transform: 'translateX(-50%) translateY(8px)',
-          opacity: isTouchDevice ? 1 : 0,
-          pointerEvents: (isHovered || isTouchDevice) ? 'auto' : 'none',
-        }}
-        aria-hidden={!isHovered && !isTouchDevice}
-      >
-        <Tooltip content={commentsOpen ? 'Hide comments' : 'View comments'}>
-          <Button
-            variant="unstyled"
-            onClick={toggleComments}
-            aria-label={commentsOpen ? 'Hide comments' : 'View comments on post'}
-            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-              commentsOpen ? 'text-sky-400' : 'text-slate-400 hover:text-sky-400'
-            }`}
-          >
-            <MessageCircle className="w-4 h-4" />
-            {commentCount > 0 && <span>{commentCount}</span>}
-          </Button>
-        </Tooltip>
-
-        <ShareButton
-          url={`/p/${post.id}`}
-          shareTitle={`${name} on Zomzam`}
-          className="text-slate-400 hover:text-slate-200 transition-colors"
-        />
-      </div>
-
-      {/* ─── Push-down comment previews ─── */}
+      {/* ─── Static top-2 comment layers — always visible, "imported" as a
+           stepped/inset stack descending from the card. Hidden while the full
+           thread is expanded (it shows these same two ranked at its top). ─── */}
       {topComments.length > 0 && !commentsOpen && (
-        <div
-          ref={comment1Ref}
-          className="absolute left-0 right-0 z-[2] rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-4 py-3"
-          style={{ top: 'calc(100% + 4px)', opacity: 0, pointerEvents: 'none' }}
-          aria-hidden
-        >
-          <div className="flex items-center gap-2">
-            <img
-              src={topComments[0].avatar}
-              alt=""
-              className="w-6 h-6 rounded-lg object-cover border border-slate-800 flex-shrink-0"
-            />
-            <span className="text-[11px] font-bold text-slate-200 truncate">{displayName(topComments[0])}</span>
-            <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">{relativeTime(topComments[0].created_at)}</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2 break-words">{topComments[0].content}</p>
-        </div>
-      )}
-
-      {topComments.length > 1 && !commentsOpen && (
-        <div
-          ref={comment2Ref}
-          className="absolute left-0 right-0 z-[2] rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-4 py-3"
-          style={{ top: 'calc(100% + 80px)', opacity: 0, pointerEvents: 'none' }}
-          aria-hidden
-        >
-          <div className="flex items-center gap-2">
-            <img
-              src={topComments[1].avatar}
-              alt=""
-              className="w-6 h-6 rounded-lg object-cover border border-slate-800 flex-shrink-0"
-            />
-            <span className="text-[11px] font-bold text-slate-200 truncate">{displayName(topComments[1])}</span>
-            <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">{relativeTime(topComments[1].created_at)}</span>
-          </div>
-          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2 break-words">{topComments[1].content}</p>
+        <div className="relative z-[1]" aria-label="Top comments">
+          {topComments.slice(0, 2).map((c, i) => (
+            <div
+              key={c.id}
+              className={`rounded-2xl border border-white/[0.06] backdrop-blur-sm px-4 py-3 ${
+                i === 0 ? 'mx-2 mt-1.5 bg-white/[0.035]' : 'mx-5 mt-1.5 bg-white/[0.025]'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <img
+                  src={c.avatar}
+                  alt=""
+                  className="w-6 h-6 rounded-lg object-cover border border-slate-800 flex-shrink-0"
+                />
+                <span className="text-[11px] font-bold text-slate-200 truncate">{displayName(c)}</span>
+                {c.upvote_count > 0 && (
+                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80 flex-shrink-0">
+                    <ArrowBigUp className="w-3 h-3" fill="currentColor" />
+                    {c.upvote_count}
+                  </span>
+                )}
+                <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">{relativeTime(c.created_at)}</span>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2 break-words">{c.content}</p>
+            </div>
+          ))}
         </div>
       )}
 
@@ -1568,6 +1419,73 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
   );
 }
 
+// ── Owner quarter-circle control ──────────────────────────────
+// A 90° corner wedge pinned to the card's top-right, split by a 45° bisector
+// into two icon-only buttons: Edit (upper wedge — placeholder) and Delete
+// (right wedge — two-step confirm). Static, no hover reveal. The quarter-disc
+// arc is approximated with clip-path polygons whose apex is the top-right
+// corner (the disc centre); the container's rounded-tr-3xl + overflow-hidden
+// makes the outer corner sit flush with the card.
+const WEDGE_EDIT_CLIP = 'polygon(100% 0, 0 0, 3.4% 25.9%, 13.4% 50%, 29.3% 70.7%)';
+const WEDGE_DELETE_CLIP = 'polygon(100% 0, 29.3% 70.7%, 50% 86.6%, 74.1% 96.6%, 100% 100%)';
+
+function OwnerWedge({
+  deleteConfirming,
+  postDeleting,
+  onDelete,
+  onDisarm,
+}: {
+  deleteConfirming: boolean;
+  postDeleting: boolean;
+  onDelete: () => void;
+  onDisarm: () => void;
+}) {
+  return (
+    <div className="absolute top-0 right-0 z-[4] w-[60px] h-[60px] rounded-tr-3xl overflow-hidden pointer-events-none">
+      {/* Edit — upper wedge (inline editing ships in a later pass) */}
+      <Button
+        variant="unstyled"
+        onClick={() => { /* placeholder — inline post editing ships in a later pass */ }}
+        title="Editing coming soon"
+        aria-label="Edit post (coming soon)"
+        className="group absolute inset-0 pointer-events-auto bg-white/[0.04] hover:bg-primary-500/20 transition-colors"
+        style={{ clipPath: WEDGE_EDIT_CLIP }}
+      >
+        <Pencil className="absolute right-[26px] top-[8px] w-3.5 h-3.5 text-slate-400 group-hover:text-primary-400 transition-colors" />
+      </Button>
+
+      {/* Delete — right wedge: first click arms (red fill + checkmark), second deletes */}
+      <Button
+        variant="unstyled"
+        onClick={onDelete}
+        onBlur={onDisarm}
+        disabled={postDeleting}
+        aria-label={deleteConfirming ? 'Confirm delete post' : 'Delete post'}
+        title={deleteConfirming ? 'Click again to confirm' : 'Delete post'}
+        className={`group absolute inset-0 pointer-events-auto transition-colors disabled:opacity-60 ${
+          deleteConfirming ? 'bg-red-600' : 'bg-white/[0.04] hover:bg-red-600/30'
+        }`}
+        style={{ clipPath: WEDGE_DELETE_CLIP }}
+      >
+        {postDeleting ? (
+          <Loader2 className="absolute right-[10px] top-[26px] w-3.5 h-3.5 text-white animate-spin" />
+        ) : deleteConfirming ? (
+          <Check className="absolute right-[10px] top-[26px] w-3.5 h-3.5 text-white" />
+        ) : (
+          <Trash2 className="absolute right-[10px] top-[26px] w-3.5 h-3.5 text-slate-400 group-hover:text-red-300 transition-colors" />
+        )}
+      </Button>
+
+      {/* 45° bisector hairline — signifies the two distinct halves */}
+      <span
+        aria-hidden
+        className="absolute top-0 right-0 w-px h-[60px] bg-white/10 pointer-events-none"
+        style={{ transformOrigin: 'top', transform: 'rotate(45deg)' }}
+      />
+    </div>
+  );
+}
+
 // ── Comment row (recursive — supports reply threads) ──────────
 function CommentRow({
   comment,
@@ -1598,33 +1516,13 @@ function CommentRow({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const commentCardRef = useRef<HTMLDivElement>(null);
-  const replyPreviewRef = useRef<HTMLDivElement>(null);
-  const [isCommentHovered, setIsCommentHovered] = useState(false);
+  // Replies mirror the post's comment toggle: one reply shows statically, the
+  // rest reveal on a "View replies" button — no hover, no push-down animation.
+  const [repliesExpanded, setRepliesExpanded] = useState(false);
   const [visibleReplies, setVisibleReplies] = useState(REPLIES_PAGE_SIZE);
-  const replyCount = comment.replies?.length ?? 0;
-
-  useGSAP(() => {
-    const preview = replyPreviewRef.current;
-    const card = commentCardRef.current;
-    if (!preview || !card || depth !== 0) return;
-
-    const cardH = card.offsetHeight;
-
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      if (isCommentHovered && replyCount > 0) {
-        gsap.fromTo(preview,
-          { y: -cardH, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.45, ease: 'back.out(1.7)' }
-        );
-      } else {
-        gsap.to(preview, { y: -cardH, opacity: 0, duration: 0.25, ease: 'power3.in' });
-      }
-    });
-    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
-      if (preview) gsap.set(preview, { opacity: isCommentHovered && replyCount > 0 ? 1 : 0, y: 0 });
-    });
-  }, { dependencies: [isCommentHovered, replyCount], scope: commentCardRef });
+  const replies = comment.replies ?? [];
+  const replyCount = replies.length;
+  const shownReplies = repliesExpanded ? replies.slice(0, visibleReplies) : replies.slice(0, 1);
 
   const submitReply = async () => {
     if (!replyText.trim() || submitting) return;
@@ -1658,40 +1556,15 @@ function CommentRow({
   return (
     <div className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-3' : ''}>
 
-      {/* Hover context for depth=0 comments */}
-      <div
-        className="relative"
-        style={{ zIndex: isCommentHovered && depth === 0 ? 5 : 0, isolation: depth === 0 ? 'isolate' : undefined }}
-        onMouseEnter={depth === 0 ? () => setIsCommentHovered(true) : undefined}
-        onMouseLeave={depth === 0 ? () => setIsCommentHovered(false) : undefined}
-      >
-        {/* Silhouette layers (depth=0 only) */}
-        {depth === 0 && (() => {
-          const layerCount = Math.min(replyCount, 2);
-          if (layerCount === 0) return null;
-          return [...REPLY_LAYER_CONFIGS].slice(0, layerCount).reverse().map((cfg, i) => (
-            <div
-              key={i}
-              aria-hidden
-              className="absolute inset-0 rounded-2xl bg-white/[0.02] border border-white/[0.04] pointer-events-none"
-              style={{
-                transform: `translateY(${cfg.translateY}px) scale(${cfg.scale})`,
-                opacity: cfg.opacity,
-                filter: `blur(${cfg.blur}px)`,
-                zIndex: 0,
-              }}
-            />
-          ));
-        })()}
-
+      <div>
         {/* Comment card */}
-        <div className="relative z-[1] flex gap-2">
+        <div className="flex gap-2">
           <img
             src={comment.avatar}
             alt=""
             className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
           />
-          <div ref={commentCardRef} className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
+          <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs font-bold text-white">{name}</span>
               <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
@@ -1776,23 +1649,6 @@ function CommentRow({
             )}
           </div>
         </div>
-
-        {/* Reply preview push-down (depth=0, has replies, not in reply-input mode) */}
-        {depth === 0 && replyCount > 0 && comment.replies && !replyOpen && (
-          <div
-            ref={replyPreviewRef}
-            className="absolute left-0 right-0 z-[1] ml-9 rounded-xl border border-white/[0.05] bg-white/[0.02] backdrop-blur-sm px-3 py-2"
-            style={{ top: 'calc(100% + 3px)', opacity: 0, pointerEvents: 'none' }}
-            aria-hidden
-          >
-            <div className="flex items-center gap-1.5">
-              <img src={comment.replies[0].avatar} alt="" className="w-5 h-5 rounded-md object-cover border border-slate-800 flex-shrink-0" />
-              <span className="text-[10px] font-bold text-slate-300 truncate">{displayName(comment.replies[0])}</span>
-              <span className="text-[10px] text-slate-600 ml-auto">{relativeTime(comment.replies[0].created_at)}</span>
-            </div>
-            <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1 break-words">{comment.replies[0].content}</p>
-          </div>
-        )}
       </div>
 
       {/* Reply input */}
@@ -1813,10 +1669,11 @@ function CommentRow({
         </div>
       )}
 
-      {/* Nested replies — paginated */}
-      {comment.replies && comment.replies.length > 0 && (
+      {/* Nested replies — one shows statically; the rest reveal on the toggle,
+          mirroring the post's comment button. */}
+      {replyCount > 0 && (
         <div className="mt-2 space-y-2">
-          {comment.replies.slice(0, visibleReplies).map((reply) => (
+          {shownReplies.map((reply) => (
             <CommentRow
               key={reply.id}
               comment={reply}
@@ -1828,13 +1685,29 @@ function CommentRow({
               depth={depth + 1}
             />
           ))}
-          {comment.replies.length > visibleReplies && (
+
+          {/* View / hide the remaining replies */}
+          {replyCount > 1 && (
+            <Button
+              variant="unstyled"
+              onClick={() => setRepliesExpanded((v) => !v)}
+              aria-expanded={repliesExpanded}
+              className="ml-9 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
+            >
+              {repliesExpanded
+                ? 'Hide replies'
+                : `View ${replyCount - 1} ${replyCount - 1 === 1 ? 'reply' : 'replies'}`}
+            </Button>
+          )}
+
+          {/* Pager within the expanded list, for long reply chains */}
+          {repliesExpanded && replyCount > visibleReplies && (
             <Button
               variant="unstyled"
               onClick={() => setVisibleReplies((v) => v + REPLIES_PAGE_SIZE)}
               className="ml-9 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
             >
-              Show {Math.min(REPLIES_PAGE_SIZE, comment.replies.length - visibleReplies)} more replies
+              Show {Math.min(REPLIES_PAGE_SIZE, replyCount - visibleReplies)} more replies
             </Button>
           )}
         </div>

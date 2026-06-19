@@ -340,8 +340,54 @@ export async function GET(request: NextRequest) {
           like_count: parseInt(rest.like_count || 0),
           comment_count: parseInt(rest.comment_count || 0),
           liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
+          top_comments: [] as any[],
         };
       });
+
+      // Embed the top-2 root comments per post so the feed paints its always-visible
+      // comment layers without a per-card waterfall. One windowed query over the
+      // whole page slice (rn <= 2), then grouped back onto each post in memory.
+      const pageIds = normalized.map((p) => p.id);
+      if (pageIds.length > 0) {
+        try {
+        const placeholders = pageIds.map(() => '?').join(',');
+        const topRows = await query(
+          `SELECT t.id, t.post_id, t.parent_id, t.content, t.created_at,
+                  t.username, t.first_name, t.last_name, t.avatar, t.upvote_count, t.upvoted_by_me
+           FROM (
+             SELECT c.id, c.post_id, c.parent_id, c.content, c.created_at,
+                    u.username, u.first_name, u.last_name, u.avatar,
+                    (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id) AS upvote_count,
+                    (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id AND user_id = ?) AS upvoted_by_me,
+                    ROW_NUMBER() OVER (
+                      PARTITION BY c.post_id
+                      ORDER BY (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id) DESC, c.created_at ASC
+                    ) AS rn
+             FROM post_comments c
+             JOIN users u ON u.id = c.user_id
+             WHERE c.post_id IN (${placeholders}) AND c.parent_id IS NULL
+           ) t
+           WHERE t.rn <= 2
+           ORDER BY t.post_id, t.rn`,
+          [user.id, ...pageIds]
+        );
+
+        const byPost = new Map<number, any[]>();
+        for (const row of topRows) {
+          const list = byPost.get(Number(row.post_id)) ?? [];
+          list.push({
+            ...normalizeAvatar(row),
+            upvote_count: parseInt(row.upvote_count || 0),
+            upvoted_by_me: parseInt(row.upvoted_by_me || 0) > 0,
+          });
+          byPost.set(Number(row.post_id), list);
+        }
+        for (const p of normalized) p.top_comments = byPost.get(Number(p.id)) ?? [];
+        } catch (e) {
+          // Non-fatal: the feed still renders without embedded comment previews.
+          console.error('feed top_comments embed failed:', e);
+        }
+      }
 
       return NextResponse.json({
         success: true,
