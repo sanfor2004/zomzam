@@ -988,12 +988,29 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(hover: none)').matches);
   }, []);
+
+  useGSAP(() => {
+    if (!pillRef.current || isTouchDevice) return;
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      if (isHovered) {
+        gsap.to(pillRef.current, { y: 0, opacity: 1, duration: 0.2, ease: 'power2.out', pointerEvents: 'auto' });
+      } else {
+        gsap.to(pillRef.current, { y: 8, opacity: 0, duration: 0.15, ease: 'power2.in', pointerEvents: 'none' });
+      }
+    });
+    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
+      if (!pillRef.current) return;
+      pillRef.current.style.opacity = isHovered ? '1' : '0';
+      pillRef.current.style.pointerEvents = isHovered ? 'auto' : 'none';
+    });
+  }, { dependencies: [isHovered, isTouchDevice], scope: cardRef });
 
   // Throws on failure so the DeleteButton keeps its confirm dialog open.
   const handleDelete = async () => {
@@ -1240,8 +1257,38 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
         </div>
       </div>
 
-      {/* ─── Hover pill (Task 5) ─── */}
-      {/* PLACEHOLDER — filled in Task 5 */}
+      {/* ─── Hover pill ─── */}
+      <div
+        ref={pillRef}
+        className="absolute left-1/2 z-[3] flex items-center gap-4 rounded-full border border-white/[0.08] bg-white/[0.06] px-5 py-2.5 backdrop-blur-xl shadow-apple"
+        style={{
+          top: 'calc(100% + 8px)',
+          transform: 'translateX(-50%) translateY(8px)',
+          opacity: isTouchDevice ? 1 : 0,
+          pointerEvents: (isHovered || isTouchDevice) ? 'auto' : 'none',
+        }}
+        aria-hidden={!isHovered && !isTouchDevice}
+      >
+        <Tooltip content={commentsOpen ? 'Hide comments' : 'View comments'}>
+          <Button
+            variant="unstyled"
+            onClick={toggleComments}
+            aria-label={commentsOpen ? 'Hide comments' : 'View comments on post'}
+            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+              commentsOpen ? 'text-sky-400' : 'text-slate-400 hover:text-sky-400'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+            {commentCount > 0 && <span>{commentCount}</span>}
+          </Button>
+        </Tooltip>
+
+        <ShareButton
+          url={`/p/${post.id}`}
+          shareTitle={`${name} on Zomzam`}
+          className="text-slate-400 hover:text-slate-200 transition-colors"
+        />
+      </div>
 
       {/* ─── Comment push-down previews (Task 6) ─── */}
       {/* PLACEHOLDER — filled in Task 6 */}
