@@ -9,7 +9,7 @@ import {
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2,
   UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil,
 } from 'lucide-react';
-import { Button, AudienceSwitch, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, DeleteButton, type PostVisibility } from '@/components/ui';
+import { Button, AudienceSwitch, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, type PostVisibility } from '@/components/ui';
 
 interface CurrentUser {
   username: string;
@@ -1010,6 +1010,10 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
+  const actionLayerRef = useRef<HTMLDivElement>(null);
+  const deleteLabelRef = useRef<HTMLSpanElement>(null);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [postDeleting, setPostDeleting] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
   const [topComments, setTopComments] = useState<Comment[]>([]);
@@ -1073,7 +1077,46 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     });
   }, { dependencies: [isHovered, topComments, commentsOpen], scope: cardRef });
 
-  // Throws on failure so the DeleteButton keeps its confirm dialog open.
+  // ── Owner action layer (Edit / Delete) rising from behind the top edge ──
+  // Tucked fully behind the card (y = +height, hidden) at rest; on hover it
+  // rises to y:0 and peeks above the top edge. Same emerge-from-behind grammar
+  // as the comment-preview layers.
+  useGSAP(() => {
+    const layer = actionLayerRef.current;
+    if (!layer || !isOwn) return;
+    const h = layer.offsetHeight || 56;
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      if (isHovered) {
+        gsap.fromTo(layer,
+          { y: h, opacity: 0, xPercent: -50 },
+          { y: 0, opacity: 1, xPercent: -50, duration: 0.45, ease: 'back.out(1.7)', pointerEvents: 'auto' }
+        );
+      } else {
+        gsap.to(layer, { y: h, opacity: 0, xPercent: -50, duration: 0.25, ease: 'power3.in', pointerEvents: 'none' });
+      }
+    });
+    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
+      gsap.set(layer, { y: 0, opacity: isHovered ? 1 : 0, xPercent: -50, pointerEvents: isHovered ? 'auto' : 'none' });
+    });
+  }, { dependencies: [isHovered, isOwn], scope: cardRef });
+
+  // Disarm the delete confirm whenever the layer hides, so a re-hover never
+  // re-opens already armed for an accidental second click.
+  useEffect(() => {
+    if (!isHovered) setDeleteConfirming(false);
+  }, [isHovered]);
+
+  // Crossfade the Delete↔Confirm label so the swap glides instead of snapping.
+  // The button keeps a fixed min-width, so only the text fades — no reflow jump.
+  useGSAP(() => {
+    const label = deleteLabelRef.current;
+    if (!label) return;
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      gsap.fromTo(label, { opacity: 0, y: 4 }, { opacity: 1, y: 0, duration: 0.2, ease: 'power2.out' });
+    });
+  }, { dependencies: [deleteConfirming], scope: cardRef });
+
+  // Throws on failure so the caller (handleLayerDelete) can keep the confirm armed.
   const handleDelete = async () => {
     const res = await fetch('/api/posts', {
       method: 'POST',
@@ -1083,6 +1126,22 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     const data = await res.json();
     if (!data.success) throw new Error(data.message || 'Failed to delete post');
     onDelete(post.id);
+  };
+
+  // Two-step inline confirm for the hover action layer: first click arms it
+  // ("Confirm?"), second runs the delete, blur/leave disarms. Mirrors the
+  // {@link DeleteButton} pattern used elsewhere, restyled for the layer's
+  // prominent red treatment.
+  const handleLayerDelete = async () => {
+    if (!deleteConfirming) { setDeleteConfirming(true); return; }
+    setPostDeleting(true);
+    try {
+      await handleDelete(); // on success the row unmounts via onDelete
+    } catch {
+      setDeleteConfirming(false);
+    } finally {
+      setPostDeleting(false);
+    }
   };
 
   const toggleLike = async () => {
@@ -1269,6 +1328,45 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
         ));
       })()}
 
+      {/* ─── Owner action layer (Edit / Delete) — rises from behind top edge ─── */}
+      {isOwn && (
+        <div
+          ref={actionLayerRef}
+          className="absolute left-1/2 z-0 flex w-auto items-center gap-1.5 rounded-2xl rounded-b-none border border-b-0 border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-2.5 pt-3 pb-7"
+          style={{ bottom: 'calc(100% - 16px)', opacity: 0, pointerEvents: 'none' }}
+          aria-hidden={!isHovered}
+        >
+          <Button
+            variant="unstyled"
+            onClick={() => { /* placeholder — inline post editing ships in a later pass */ }}
+            title="Edit post (coming soon)"
+            aria-label="Edit post"
+            className="flex items-center gap-1.5 text-xs font-bold text-primary-500 bg-primary-500/15 hover:bg-primary-500/25 px-3 py-1.5 rounded-xl transition-colors"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+            Edit
+          </Button>
+          <Button
+            variant="unstyled"
+            onClick={handleLayerDelete}
+            onBlur={() => setDeleteConfirming(false)}
+            disabled={postDeleting}
+            aria-label={deleteConfirming ? 'Confirm delete post' : 'Delete post'}
+            title={deleteConfirming ? 'Click again to confirm' : 'Delete post'}
+            className={`flex min-w-[104px] items-center justify-center gap-1.5 text-xs font-bold text-white px-3 py-1.5 rounded-xl transition-colors disabled:opacity-50 ${
+              deleteConfirming ? 'bg-red-700 hover:bg-red-600' : 'bg-red-600 hover:bg-red-500'
+            }`}
+          >
+            <span ref={deleteLabelRef} className="flex items-center gap-1.5">
+              {postDeleting
+                ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                : <Trash2 className="w-3.5 h-3.5" />}
+              {deleteConfirming ? 'Confirm?' : 'Delete'}
+            </span>
+          </Button>
+        </div>
+      )}
+
       {/* ─── Main glass card ─── */}
       <div
         ref={cardRef}
@@ -1303,9 +1401,6 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
                   @{post.username}
                 </Link>
                 <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
-                {isOwn && (
-                  <DeleteButton onConfirm={handleDelete} tooltip="Delete post" ariaLabel="Delete post" />
-                )}
               </div>
               <div
                 className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
@@ -1338,7 +1433,10 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
         ref={pillRef}
         className="absolute left-1/2 z-[3] flex items-center gap-4 rounded-full border border-white/[0.08] bg-white/[0.06] px-5 py-2.5 backdrop-blur-xl shadow-apple"
         style={{
-          top: 'calc(100% + 8px)',
+          // Straddle the card's bottom edge (overlap ~18px up, ~18px down) so the
+          // cursor never crosses an empty gap between card and pill — otherwise the
+          // wrapper's onMouseLeave fires mid-travel and hides the pill before it's reachable.
+          top: 'calc(100% - 18px)',
           transform: 'translateX(-50%) translateY(8px)',
           opacity: isTouchDevice ? 1 : 0,
           pointerEvents: (isHovered || isTouchDevice) ? 'auto' : 'none',
