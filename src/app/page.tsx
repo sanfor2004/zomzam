@@ -170,7 +170,8 @@ export default function LandingPage() {
       cards.forEach((card) => {
         const xTo = gsap.quickTo(card, 'rotationY', { duration: 0.35, ease: 'power2.out' });
         const yTo = gsap.quickTo(card, 'rotationX', { duration: 0.35, ease: 'power2.out' });
-        const sTo = gsap.quickTo(card, 'scale',     { duration: 0.35, ease: 'power2.out' });
+        const sxTo = gsap.quickTo(card, 'scaleX', { duration: 0.35, ease: 'power2.out' });
+        const syTo = gsap.quickTo(card, 'scaleY', { duration: 0.35, ease: 'power2.out' });
 
         const onMove = contextSafe!((e: MouseEvent) => {
           const rect = card.getBoundingClientRect();
@@ -178,10 +179,10 @@ export default function LandingPage() {
           const cy = rect.top  + rect.height / 2;
           xTo(((e.clientX - cx) / rect.width)  *  10);
           yTo(((e.clientY - cy) / rect.height) * -10);
-          sTo(1.025);
+          sxTo(1.025); syTo(1.025);
         });
 
-        const onLeave = contextSafe!(() => { xTo(0); yTo(0); sTo(1); });
+        const onLeave = contextSafe!(() => { xTo(0); yTo(0); sxTo(1); syTo(1); });
 
         card.addEventListener('mousemove', onMove);
         card.addEventListener('mouseleave', onLeave);
