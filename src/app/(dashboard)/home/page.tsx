@@ -1327,31 +1327,18 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
            stepped/inset stack descending from the card. Hidden while the full
            thread is expanded (it shows these same two ranked at its top). ─── */}
       {topComments.length > 0 && !commentsOpen && (
-        <div className="relative z-[1]" aria-label="Top comments">
-          {topComments.slice(0, 2).map((c, i) => (
-            <div
+        <div className="relative z-[1] mt-2 space-y-2" aria-label="Top comments">
+          {topComments.slice(0, 2).map((c) => (
+            <CommentCard
               key={c.id}
-              className={`rounded-2xl border border-white/[0.06] backdrop-blur-sm px-4 py-3 ${
-                i === 0 ? 'mx-2 mt-1.5 bg-white/[0.035]' : 'mx-5 mt-1.5 bg-white/[0.025]'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <img
-                  src={c.avatar}
-                  alt=""
-                  className="w-6 h-6 rounded-lg object-cover border border-slate-800 flex-shrink-0"
-                />
-                <span className="text-[11px] font-bold text-slate-200 truncate">{displayName(c)}</span>
-                {c.upvote_count > 0 && (
-                  <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80 flex-shrink-0">
-                    <ArrowBigUp className="w-3 h-3" fill="currentColor" />
-                    {c.upvote_count}
-                  </span>
-                )}
-                <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">{relativeTime(c.created_at)}</span>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2 break-words">{c.content}</p>
-            </div>
+              comment={c}
+              actions={c.upvote_count > 0 ? (
+                <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
+                  <ArrowBigUp className="w-3 h-3" fill="currentColor" />
+                  {c.upvote_count}
+                </span>
+              ) : null}
+            />
           ))}
         </div>
       )}
@@ -1486,6 +1473,47 @@ function OwnerWedge({
   );
 }
 
+// ── Uniform comment card ──────────────────────────────────────
+// One design for every comment in the feed — the static top-2 previews under a
+// post AND the rows in the expanded thread. Deliberately distinct from the post
+// card (solid dark surface, hairline border, tighter radius, no glass blur or
+// drop shadow) so a comment never reads as a post. Callers slot header controls
+// via `actions` and may override the body via `children` (e.g. an edit box).
+function CommentCard({
+  comment,
+  actions,
+  children,
+  className,
+}: {
+  comment: Comment;
+  actions?: React.ReactNode;
+  children?: React.ReactNode;
+  className?: string;
+}) {
+  const name = displayName(comment);
+  return (
+    <div className={`flex gap-2 ${className ?? ''}`}>
+      <img
+        src={comment.avatar}
+        alt=""
+        className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
+      />
+      <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl border border-white/[0.05] px-3 py-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs font-bold text-white truncate">{name}</span>
+          <span className="text-[10px] text-slate-600 flex-shrink-0">{relativeTime(comment.created_at)}</span>
+          {actions && <div className="ml-auto flex items-center gap-3">{actions}</div>}
+        </div>
+        {children ?? (
+          <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">
+            {comment.content}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ── Comment row (recursive — supports reply threads) ──────────
 function CommentRow({
   comment,
@@ -1556,100 +1584,88 @@ function CommentRow({
   return (
     <div className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-3' : ''}>
 
-      <div>
-        {/* Comment card */}
-        <div className="flex gap-2">
-          <img
-            src={comment.avatar}
-            alt=""
-            className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
-          />
-          <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-bold text-white">{name}</span>
-              <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
-              <div className="ml-auto flex items-center gap-3">
-                <Tooltip content={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote'}>
-                  <Button
-                    variant="unstyled"
-                    onClick={() => onVote(comment.id)}
-                    aria-label={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote comment'}
-                    className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
-                      comment.upvoted_by_me ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
-                    }`}
-                  >
-                    <ArrowBigUp className="w-3.5 h-3.5" fill={comment.upvoted_by_me ? 'currentColor' : 'none'} />
-                    {comment.upvote_count > 0 && <span>{comment.upvote_count}</span>}
-                  </Button>
-                </Tooltip>
-                {depth < 2 && (
-                  <Button
-                    variant="unstyled"
-                    onClick={() => setReplyOpen((p) => !p)}
-                    className={`text-[10px] font-semibold transition-colors ${
-                      replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
-                    }`}
-                  >
-                    Reply
-                  </Button>
-                )}
-                {isMine && (
-                  <Dropdown
-                    mode="menu"
-                    open={menuOpen}
-                    onClose={() => setMenuOpen(false)}
-                    align="right"
-                    dropdownClassName="min-w-[10rem] p-1.5 space-y-0.5"
-                    trigger={
-                      <Button
-                        variant="unstyled"
-                        onClick={() => setMenuOpen((p) => !p)}
-                        aria-label="Comment options"
-                        aria-haspopup="menu"
-                        aria-expanded={menuOpen}
-                        className="flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                      >
-                        <MoreHorizontal className="w-3.5 h-3.5" />
-                      </Button>
-                    }
-                  >
-                    <DropdownItem leading={<Pencil className="w-4 h-4" />} onClick={startEdit}>Edit</DropdownItem>
-                    <DropdownItem
-                      leading={<Trash2 className="w-4 h-4" />}
-                      onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
-                      className="text-rose-400 hover:bg-rose-500/10"
-                    >
-                      Delete
-                    </DropdownItem>
-                  </Dropdown>
-                )}
-              </div>
-            </div>
-            {editing ? (
-              <div className="mt-1.5">
-                <textarea
-                  autoFocus
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
-                    if (e.key === 'Escape') { setEditing(false); }
-                  }}
-                  rows={2}
-                  maxLength={1000}
-                  className="w-full bg-[#0E1015] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors resize-none"
-                />
-                <div className="flex items-center gap-2 mt-1.5">
-                  <Button variant="primary" size="xs" onClick={saveEdit} loading={savingEdit} disabled={!editText.trim() || editText.trim() === comment.content}>Save</Button>
-                  <Button variant="ghost" size="xs" onClick={() => setEditing(false)} disabled={savingEdit}>Cancel</Button>
-                </div>
-              </div>
-            ) : (
-              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
+      <CommentCard
+        comment={comment}
+        actions={
+          <>
+            <Tooltip content={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote'}>
+              <Button
+                variant="unstyled"
+                onClick={() => onVote(comment.id)}
+                aria-label={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote comment'}
+                className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
+                  comment.upvoted_by_me ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
+                }`}
+              >
+                <ArrowBigUp className="w-3.5 h-3.5" fill={comment.upvoted_by_me ? 'currentColor' : 'none'} />
+                {comment.upvote_count > 0 && <span>{comment.upvote_count}</span>}
+              </Button>
+            </Tooltip>
+            {depth < 2 && (
+              <Button
+                variant="unstyled"
+                onClick={() => setReplyOpen((p) => !p)}
+                className={`text-[10px] font-semibold transition-colors ${
+                  replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
+                }`}
+              >
+                Reply
+              </Button>
             )}
+            {isMine && (
+              <Dropdown
+                mode="menu"
+                open={menuOpen}
+                onClose={() => setMenuOpen(false)}
+                align="right"
+                dropdownClassName="min-w-[10rem] p-1.5 space-y-0.5"
+                trigger={
+                  <Button
+                    variant="unstyled"
+                    onClick={() => setMenuOpen((p) => !p)}
+                    aria-label="Comment options"
+                    aria-haspopup="menu"
+                    aria-expanded={menuOpen}
+                    className="flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                  >
+                    <MoreHorizontal className="w-3.5 h-3.5" />
+                  </Button>
+                }
+              >
+                <DropdownItem leading={<Pencil className="w-4 h-4" />} onClick={startEdit}>Edit</DropdownItem>
+                <DropdownItem
+                  leading={<Trash2 className="w-4 h-4" />}
+                  onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                  className="text-rose-400 hover:bg-rose-500/10"
+                >
+                  Delete
+                </DropdownItem>
+              </Dropdown>
+            )}
+          </>
+        }
+      >
+        {editing ? (
+          <div className="mt-1.5">
+            <textarea
+              autoFocus
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                if (e.key === 'Escape') { setEditing(false); }
+              }}
+              rows={2}
+              maxLength={1000}
+              className="w-full bg-[#0E1015] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors resize-none"
+            />
+            <div className="flex items-center gap-2 mt-1.5">
+              <Button variant="primary" size="xs" onClick={saveEdit} loading={savingEdit} disabled={!editText.trim() || editText.trim() === comment.content}>Save</Button>
+              <Button variant="ghost" size="xs" onClick={() => setEditing(false)} disabled={savingEdit}>Cancel</Button>
+            </div>
           </div>
-        </div>
-      </div>
+        ) : undefined}
+      </CommentCard>
 
       {/* Reply input */}
       {replyOpen && (
