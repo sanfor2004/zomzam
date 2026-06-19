@@ -991,6 +991,10 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
   const pillRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
+  const [topComments, setTopComments] = useState<Comment[]>([]);
+  const [topCommentsLoaded, setTopCommentsLoaded] = useState(false);
+  const comment1Ref = useRef<HTMLDivElement>(null);
+  const comment2Ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsTouchDevice(window.matchMedia('(hover: none)').matches);
@@ -1011,6 +1015,42 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
       pillRef.current.style.pointerEvents = isHovered ? 'auto' : 'none';
     });
   }, { dependencies: [isHovered, isTouchDevice], scope: cardRef });
+
+  useGSAP(() => {
+    const c1 = comment1Ref.current;
+    const c2 = comment2Ref.current;
+    const card = cardRef.current;
+    if (!card) return;
+
+    const cardH = card.offsetHeight;
+
+    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
+      if (isHovered && topComments.length > 0 && !commentsOpen) {
+        if (c1) {
+          gsap.fromTo(c1,
+            { y: -cardH, opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.5, ease: 'back.out(1.7)', clearProps: 'none' }
+          );
+        }
+        if (c2 && topComments.length > 1) {
+          const c1H = c1?.offsetHeight ?? 64;
+          gsap.fromTo(c2,
+            { y: -(cardH + c1H + 8), opacity: 0 },
+            { y: 0, opacity: 1, duration: 0.5, delay: 0.06, ease: 'back.out(1.7)' }
+          );
+        }
+      } else {
+        if (c1) gsap.to(c1, { y: -(cardH), opacity: 0, duration: 0.28, ease: 'power3.in' });
+        if (c2) gsap.to(c2, { y: -(cardH), opacity: 0, duration: 0.25, delay: 0.03, ease: 'power3.in' });
+      }
+    });
+
+    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
+      const show = isHovered && topComments.length > 0 && !commentsOpen;
+      if (c1) gsap.set(c1, { opacity: show ? 1 : 0, y: 0 });
+      if (c2) gsap.set(c2, { opacity: show && topComments.length > 1 ? 1 : 0, y: 0 });
+    });
+  }, { dependencies: [isHovered, topComments, commentsOpen], scope: cardRef });
 
   // Throws on failure so the DeleteButton keeps its confirm dialog open.
   const handleDelete = async () => {
@@ -1046,9 +1086,24 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
     });
   };
 
-  // Temporary stubs — replaced with full implementations in Task 6.
-  const handleCardMouseEnter = () => setIsHovered(true);
-  const handleCardMouseLeave = () => setIsHovered(false);
+  const handleCardMouseEnter = async () => {
+    setIsHovered(true);
+    if (post.comment_count === 0 || commentsOpen) return;
+    if (!topCommentsLoaded) {
+      try {
+        const res = await fetch(`/api/posts?action=top_comments&post_id=${post.id}`);
+        const data = await res.json();
+        if (data.success) {
+          setTopComments(data.comments);
+          setTopCommentsLoaded(true);
+        }
+      } catch { /* non-blocking */ }
+    }
+  };
+
+  const handleCardMouseLeave = () => {
+    setIsHovered(false);
+  };
 
   const toggleComments = async () => {
     const opening = !commentsOpen;
@@ -1290,8 +1345,46 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
         />
       </div>
 
-      {/* ─── Comment push-down previews (Task 6) ─── */}
-      {/* PLACEHOLDER — filled in Task 6 */}
+      {/* ─── Push-down comment previews ─── */}
+      {topComments.length > 0 && !commentsOpen && (
+        <div
+          ref={comment1Ref}
+          className="absolute left-0 right-0 z-[2] rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-4 py-3"
+          style={{ top: 'calc(100% + 4px)', opacity: 0, pointerEvents: 'none' }}
+          aria-hidden
+        >
+          <div className="flex items-center gap-2">
+            <img
+              src={topComments[0].avatar}
+              alt=""
+              className="w-6 h-6 rounded-lg object-cover border border-slate-800 flex-shrink-0"
+            />
+            <span className="text-[11px] font-bold text-slate-200 truncate">{displayName(topComments[0])}</span>
+            <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">{relativeTime(topComments[0].created_at)}</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2 break-words">{topComments[0].content}</p>
+        </div>
+      )}
+
+      {topComments.length > 1 && !commentsOpen && (
+        <div
+          ref={comment2Ref}
+          className="absolute left-0 right-0 z-[2] rounded-2xl border border-white/[0.06] bg-white/[0.03] backdrop-blur-sm px-4 py-3"
+          style={{ top: 'calc(100% + 80px)', opacity: 0, pointerEvents: 'none' }}
+          aria-hidden
+        >
+          <div className="flex items-center gap-2">
+            <img
+              src={topComments[1].avatar}
+              alt=""
+              className="w-6 h-6 rounded-lg object-cover border border-slate-800 flex-shrink-0"
+            />
+            <span className="text-[11px] font-bold text-slate-200 truncate">{displayName(topComments[1])}</span>
+            <span className="text-[10px] text-slate-600 ml-auto flex-shrink-0">{relativeTime(topComments[1].created_at)}</span>
+          </div>
+          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed line-clamp-2 break-words">{topComments[1].content}</p>
+        </div>
+      )}
 
       {/* ─── Expanded comments section (Task 7) ─── */}
       {/* PLACEHOLDER — filled in Task 7 */}
