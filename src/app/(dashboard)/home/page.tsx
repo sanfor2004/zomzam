@@ -4,10 +4,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Bold, Italic, Underline, List, Smile, Image as ImageIcon,
-  AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2, Share2,
-  UserPlus, Check, Users,
+  AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2,
+  UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil,
 } from 'lucide-react';
-import { Button, AudienceSwitch, Tooltip, type PostVisibility } from '@/components/ui';
+import { Button, AudienceSwitch, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, DeleteButton, type PostVisibility } from '@/components/ui';
 
 interface CurrentUser {
   username: string;
@@ -62,7 +62,22 @@ interface Comment {
   avatar: string;
   content: string;
   created_at: string;
+  upvote_count: number;
+  upvoted_by_me: boolean;
   replies?: Comment[];
+}
+
+// Highest-voted first; ties fall back to oldest-first so order stays stable.
+function byUpvotes(a: Comment, b: Comment): number {
+  return b.upvote_count - a.upvote_count
+    || new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+}
+
+// Sort a level and every nested reply level the same way (recursive).
+function sortByUpvotes(nodes: Comment[]): Comment[] {
+  nodes.sort(byUpvotes);
+  for (const n of nodes) if (n.replies?.length) sortByUpvotes(n.replies);
+  return nodes;
 }
 
 function buildTree(flat: Comment[]): Comment[] {
@@ -77,7 +92,7 @@ function buildTree(flat: Comment[]): Comment[] {
       roots.push(node);
     }
   }
-  return roots;
+  return sortByUpvotes(roots);
 }
 
 type Trigger = '@' | '#';
@@ -98,6 +113,9 @@ function displayName(u: { first_name: string | null; last_name: string | null; u
 // Maximum visible characters allowed per post. Mention (@) and tag (#) pills
 // count toward this via innerText, so the limit reflects what the reader sees.
 const MAX_POST_CHARS = 500;
+
+// How many top-level comments to reveal before the "Load more" button.
+const COMMENTS_PAGE_SIZE = 5;
 
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -168,16 +186,20 @@ export default function HomePage() {
   };
 
   // ── Feed loading ────────────────────────────────────────────
-  const loadFeed = useCallback(async (beforeId?: number) => {
+  const loadFeed = useCallback(async (offset = 0) => {
     if (loadingFeedRef.current) return;
     loadingFeedRef.current = true;
     setLoadingFeed(true);
     try {
-      const url = `/api/posts?action=feed${beforeId ? `&before_id=${beforeId}` : ''}`;
-      const res = await fetch(url);
+      const res = await fetch(`/api/posts?action=feed&offset=${offset}`);
       const data = await res.json();
       if (data.success) {
-        setPosts((prev) => beforeId ? [...prev, ...data.posts] : data.posts);
+        setPosts((prev) => {
+          if (!offset) return data.posts;
+          // Dedupe in case a locally-prepended post shifts the server offset.
+          const seen = new Set(prev.map((p: Post) => p.id));
+          return [...prev, ...data.posts.filter((p: Post) => !seen.has(p.id))];
+        });
         setHasMore(data.has_more);
       }
     } catch { /* non-blocking */ }
@@ -195,8 +217,7 @@ export default function HomePage() {
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting && hasMore && !loadingFeedRef.current) {
-          const last = posts[posts.length - 1];
-          if (last) loadFeed(last.id);
+          loadFeed(posts.length);
         }
       },
       { threshold: 0.1 }
@@ -537,7 +558,7 @@ export default function HomePage() {
                       color: #64748b;
                       pointer-events: none;
                     }
-                    div[contenteditable] :global(ul) {
+                    div[contenteditable] :global(ul) {flex items-center gap-1.5 text-xs font-semibold transition-colors text-slate-500 hover:text-emerald-400
                       list-style: disc;
                       padding-left: 1.5rem;
                       margin: 0.25rem 0;
@@ -608,13 +629,13 @@ export default function HomePage() {
                 <AudienceSwitch value={visibility} onChange={setVisibility} />
 
                 <Button
-                  size="xs"
-                  shape="xs"
+                  size="none"
+                  shape="rounded"
                   onClick={handlePost}
                   disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
                   loading={postingLoading}
                   leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
-                  className="disabled:opacity-40"
+                  className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
                 >
                   Post
                 </Button>
@@ -763,6 +784,7 @@ export default function HomePage() {
                   key={post.id}
                   post={post}
                   isOwn={currentUser?.username === post.username}
+                  viewerUsername={currentUser?.username ?? null}
                   onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
                 />
               ))}
@@ -911,7 +933,7 @@ export default function HomePage() {
 }
 
 // ── Post card ─────────────────────────────────────────────────
-function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDelete: (id: number) => void }) {
+function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn: boolean; viewerUsername?: string | null; onDelete: (id: number) => void }) {
   const name = displayName(post);
 
   const [liked, setLiked] = useState(post.liked_by_me);
@@ -922,24 +944,18 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
   const [loadingComments, setLoadingComments] = useState(false);
   const [commentText, setCommentText] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [shareCopied, setShareCopied] = useState(false);
+  const [visibleComments, setVisibleComments] = useState(COMMENTS_PAGE_SIZE);
 
+  // Throws on failure so the DeleteButton keeps its confirm dialog open.
   const handleDelete = async () => {
-    if (!confirmDelete) { setConfirmDelete(true); return; }
-    setDeleting(true);
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete', post_id: post.id }),
-      });
-      const data = await res.json();
-      if (data.success) onDelete(post.id);
-    } catch { /* non-blocking */ }
-    setDeleting(false);
-    setConfirmDelete(false);
+    const res = await fetch('/api/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', post_id: post.id }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Failed to delete post');
+    onDelete(post.id);
   };
 
   const toggleLike = async () => {
@@ -952,19 +968,6 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
         body: JSON.stringify({ action: 'like', post_id: post.id }),
       });
     } catch { /* non-blocking */ }
-  };
-
-  const handleShare = async () => {
-    const url = `${window.location.origin}/p/${post.id}`;
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: `${name} on Zomzam`, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setShareCopied(true);
-        setTimeout(() => setShareCopied(false), 2000);
-      }
-    } catch { /* cancelled */ }
   };
 
   const toggleComments = async () => {
@@ -993,6 +996,75 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
       if (data.success) {
         setComments((prev) => [...prev, data.comment]);
         setCommentCount((prev) => prev + 1);
+        // Keep a freshly posted top-level comment visible past the page limit.
+        if (!parentId) setVisibleComments((v) => v + 1);
+        return true;
+      }
+    } catch { /* non-blocking */ }
+    return false;
+  };
+
+  // Toggle an upvote on a comment. State lives here (not in CommentRow) so the
+  // tree re-sorts by vote count the moment a vote lands — that's the reordering.
+  const voteComment = async (commentId: number) => {
+    const target = comments.find((c) => c.id === commentId);
+    if (!target) return;
+    const nextUp = !target.upvoted_by_me;
+
+    const apply = (up: boolean) => setComments((prev) => prev.map((c) =>
+      c.id === commentId
+        ? { ...c, upvoted_by_me: up, upvote_count: c.upvote_count + (up ? 1 : -1) }
+        : c
+    ));
+
+    apply(nextUp); // optimistic
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'comment_vote', comment_id: commentId }),
+      });
+      const data = await res.json();
+      if (!data.success) apply(!nextUp); // revert on server rejection
+    } catch {
+      apply(!nextUp); // revert on network failure
+    }
+  };
+
+  // Edit a comment's text in place. Returns false so the row can stay in edit
+  // mode (keeping the user's draft) if the save fails.
+  const editComment = async (commentId: number, text: string): Promise<boolean> => {
+    const content = text.trim().slice(0, 1000);
+    if (!content) return false;
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'comment_edit', comment_id: commentId, content }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setComments((prev) => prev.map((c) => (c.id === commentId ? { ...c, content: data.content } : c)));
+        return true;
+      }
+    } catch { /* non-blocking */ }
+    return false;
+  };
+
+  // Delete a comment and its whole reply thread (the server returns every id it
+  // removed so the count and list stay in sync).
+  const deleteComment = async (commentId: number): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'comment_delete', comment_id: commentId }),
+      });
+      const data = await res.json();
+      if (data.success && Array.isArray(data.deleted_ids)) {
+        const removed = new Set<number>(data.deleted_ids.map((id: number) => Number(id)));
+        setComments((prev) => prev.filter((c) => !removed.has(c.id)));
+        setCommentCount((prev) => Math.max(0, prev - removed.size));
         return true;
       }
     } catch { /* non-blocking */ }
@@ -1013,32 +1085,31 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
     <div id={`post-${post.id}`} className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
       {/* Header + content */}
       <div className="flex gap-3">
-        <img
-          src={post.avatar}
-          alt=""
-          className="w-10 h-10 rounded-xl object-cover border border-slate-800 flex-shrink-0"
-        />
+        <Link href={`/u/${post.username}`} className="flex-shrink-0">
+          <img
+            src={post.avatar}
+            alt={name}
+            className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
+          />
+        </Link>
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="text-sm font-bold text-white">{name}</span>
-            <span className="text-xs text-slate-500">@{post.username}</span>
+            <Link
+              href={`/u/${post.username}`}
+              className="text-sm font-bold text-white hover:text-primary-400 hover:underline transition-colors"
+            >
+              {name}
+            </Link>
+            <Link href={`/u/${post.username}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+              @{post.username}
+            </Link>
             <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
             {isOwn && (
-              <Button
-                variant="unstyled"
-                onClick={handleDelete}
-                onBlur={() => setConfirmDelete(false)}
-                disabled={deleting}
-                title={confirmDelete ? 'Click again to confirm' : 'Delete post'}
-                className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-lg transition-colors disabled:opacity-40 ${
-                  confirmDelete
-                    ? 'text-rose-400 bg-rose-500/10'
-                    : 'text-slate-600 hover:text-rose-400 hover:bg-rose-500/10'
-                }`}
-              >
-                {deleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
-                {confirmDelete && <span>Confirm?</span>}
-              </Button>
+              <DeleteButton
+                onConfirm={handleDelete}
+                tooltip="Delete post"
+                ariaLabel="Delete post"
+              />
             )}
           </div>
           <div
@@ -1050,38 +1121,39 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
 
       {/* Action bar */}
       <div className="flex items-center gap-5 mt-4 pt-3 border-t border-slate-800/40">
-        <Button
-          variant="unstyled"
-          onClick={toggleLike}
-          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-            liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
-          }`}
-        >
-          <Heart className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
-          {likeCount > 0 && <span>{likeCount}</span>}
-        </Button>
+        <Tooltip content={liked ? 'Unlike' : 'Like'}>
+          <Button
+            variant="unstyled"
+            onClick={toggleLike}
+            aria-label={liked ? 'Unlike post' : 'Like post'}
+            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+              liked ? 'text-rose-500' : 'text-slate-500 hover:text-rose-400'
+            }`}
+          >
+            <Heart className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </Button>
+        </Tooltip>
 
-        <Button
-          variant="unstyled"
-          onClick={toggleComments}
-          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-            commentsOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
-          }`}
-        >
-          <MessageCircle className="w-4 h-4" />
-          {commentCount > 0 && <span>{commentCount}</span>}
-        </Button>
+        <Tooltip content={commentsOpen ? 'Hide comments' : 'Comment'}>
+          <Button
+            variant="unstyled"
+            onClick={toggleComments}
+            aria-label={commentsOpen ? 'Hide comments' : 'Comment on post'}
+            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+              commentsOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
+            }`}
+          >
+            <MessageCircle className="w-4 h-4" />
+            {commentCount > 0 && <span>{commentCount}</span>}
+          </Button>
+        </Tooltip>
 
-        <Button
-          variant="unstyled"
-          onClick={handleShare}
-          className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ml-auto ${
-            shareCopied ? 'text-emerald-400' : 'text-slate-500 hover:text-emerald-400'
-          }`}
-        >
-          <Share2 className="w-4 h-4" />
-          {shareCopied && <span>Copied!</span>}
-        </Button>
+        <ShareButton
+          url={`/p/${post.id}`}
+          shareTitle={`${name} on Zomzam`}
+          className="ml-auto"
+        />
       </div>
 
       {/* Comments section */}
@@ -1094,7 +1166,29 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
           ) : tree.length === 0 ? (
             <p className="text-xs text-slate-600 text-center py-2">No comments yet — be the first!</p>
           ) : (
-            tree.map((c) => <CommentRow key={c.id} comment={c} onReply={addComment} depth={0} />)
+            <>
+              {tree.slice(0, visibleComments).map((c) => (
+                <CommentRow
+                  key={c.id}
+                  comment={c}
+                  onReply={addComment}
+                  onVote={voteComment}
+                  onEdit={editComment}
+                  onCommentDelete={deleteComment}
+                  viewerUsername={viewerUsername}
+                  depth={0}
+                />
+              ))}
+              {tree.length > visibleComments && (
+                <Button
+                  variant="unstyled"
+                  onClick={() => setVisibleComments((v) => v + COMMENTS_PAGE_SIZE)}
+                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1.5"
+                >
+                  Load {Math.min(COMMENTS_PAGE_SIZE, tree.length - visibleComments)} more {tree.length - visibleComments === 1 ? 'comment' : 'comments'}
+                </Button>
+              )}
+            </>
           )}
 
           {/* Top-level comment input */}
@@ -1129,16 +1223,31 @@ function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDel
 function CommentRow({
   comment,
   onReply,
+  onVote,
+  onEdit,
+  onCommentDelete,
+  viewerUsername,
   depth,
 }: {
   comment: Comment;
   onReply: (text: string, parentId?: number) => Promise<boolean>;
+  onVote: (commentId: number) => void;
+  onEdit: (commentId: number, text: string) => Promise<boolean>;
+  onCommentDelete: (commentId: number) => Promise<boolean>;
+  viewerUsername?: string | null;
   depth: number;
 }) {
   const name = displayName(comment);
+  const isMine = !!viewerUsername && comment.username === viewerUsername;
   const [replyOpen, setReplyOpen] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.content);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const submitReply = async () => {
     if (!replyText.trim() || submitting) return;
@@ -1146,6 +1255,27 @@ function CommentRow({
     const ok = await onReply(replyText, comment.id);
     if (ok) { setReplyText(''); setReplyOpen(false); }
     setSubmitting(false);
+  };
+
+  const startEdit = () => {
+    setEditText(comment.content);
+    setEditing(true);
+    setMenuOpen(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editText.trim() || savingEdit) return;
+    setSavingEdit(true);
+    const ok = await onEdit(comment.id, editText);
+    if (ok) setEditing(false);
+    setSavingEdit(false);
+  };
+
+  const confirmAndDelete = async () => {
+    setDeleting(true);
+    const ok = await onCommentDelete(comment.id);
+    // On success the row unmounts; on failure, drop back out of the dialog.
+    if (!ok) { setDeleting(false); setConfirmDelete(false); }
   };
 
   return (
@@ -1157,22 +1287,100 @@ function CommentRow({
           className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
         />
         <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl px-3 py-2">
-          <div className="flex items-baseline gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-bold text-white">{name}</span>
             <span className="text-[10px] text-slate-600">{relativeTime(comment.created_at)}</span>
-            {depth < 2 && (
-              <Button
-                variant="unstyled"
-                onClick={() => setReplyOpen((p) => !p)}
-                className={`text-[10px] font-semibold transition-colors ml-auto ${
-                  replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
-                }`}
-              >
-                Reply
-              </Button>
-            )}
+            <div className="ml-auto flex items-center gap-3">
+              <Tooltip content={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote'}>
+                <Button
+                  variant="unstyled"
+                  onClick={() => onVote(comment.id)}
+                  aria-label={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote comment'}
+                  className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
+                    comment.upvoted_by_me ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
+                  }`}
+                >
+                  <ArrowBigUp className="w-3.5 h-3.5" fill={comment.upvoted_by_me ? 'currentColor' : 'none'} />
+                  {comment.upvote_count > 0 && <span>{comment.upvote_count}</span>}
+                </Button>
+              </Tooltip>
+              {depth < 2 && (
+                <Button
+                  variant="unstyled"
+                  onClick={() => setReplyOpen((p) => !p)}
+                  className={`text-[10px] font-semibold transition-colors ${
+                    replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
+                  }`}
+                >
+                  Reply
+                </Button>
+              )}
+              {isMine && (
+                <Dropdown
+                  mode="menu"
+                  open={menuOpen}
+                  onClose={() => setMenuOpen(false)}
+                  align="right"
+                  dropdownClassName="min-w-[10rem] p-1.5 space-y-0.5"
+                  trigger={
+                    <Button
+                      variant="unstyled"
+                      onClick={() => setMenuOpen((p) => !p)}
+                      aria-label="Comment options"
+                      aria-haspopup="menu"
+                      aria-expanded={menuOpen}
+                      className="flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      <MoreHorizontal className="w-3.5 h-3.5" />
+                    </Button>
+                  }
+                >
+                  <DropdownItem leading={<Pencil className="w-4 h-4" />} onClick={startEdit}>
+                    Edit
+                  </DropdownItem>
+                  <DropdownItem
+                    leading={<Trash2 className="w-4 h-4" />}
+                    onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
+                    className="text-rose-400 hover:bg-rose-500/10"
+                  >
+                    Delete
+                  </DropdownItem>
+                </Dropdown>
+              )}
+            </div>
           </div>
-          <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
+          {editing ? (
+            <div className="mt-1.5">
+              <textarea
+                autoFocus
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
+                  if (e.key === 'Escape') { setEditing(false); }
+                }}
+                rows={2}
+                maxLength={1000}
+                className="w-full bg-[#0E1015] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors resize-none"
+              />
+              <div className="flex items-center gap-2 mt-1.5">
+                <Button
+                  variant="primary"
+                  size="xs"
+                  onClick={saveEdit}
+                  loading={savingEdit}
+                  disabled={!editText.trim() || editText.trim() === comment.content}
+                >
+                  Save
+                </Button>
+                <Button variant="ghost" size="xs" onClick={() => setEditing(false)} disabled={savingEdit}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-300 mt-0.5 leading-relaxed break-words [overflow-wrap:anywhere]">{comment.content}</p>
+          )}
         </div>
       </div>
 
@@ -1207,10 +1415,34 @@ function CommentRow({
       {comment.replies && comment.replies.length > 0 && (
         <div className="mt-2 space-y-2">
           {comment.replies.map((reply) => (
-            <CommentRow key={reply.id} comment={reply} onReply={onReply} depth={depth + 1} />
+            <CommentRow
+              key={reply.id}
+              comment={reply}
+              onReply={onReply}
+              onVote={onVote}
+              onEdit={onEdit}
+              onCommentDelete={onCommentDelete}
+              viewerUsername={viewerUsername}
+              depth={depth + 1}
+            />
           ))}
         </div>
       )}
+
+      {/* Delete confirmation */}
+      <ConfirmDialog
+        isOpen={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={confirmAndDelete}
+        loading={deleting}
+        title="Delete this comment?"
+        description={
+          comment.replies && comment.replies.length > 0
+            ? 'This also removes all replies underneath it. This can’t be undone.'
+            : 'This permanently removes your comment. This can’t be undone.'
+        }
+        confirmLabel="Delete"
+      />
     </div>
   );
 }
