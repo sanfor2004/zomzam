@@ -320,11 +320,24 @@ When Zenith-Tier standards and Apple HIG principles align, apply both. When they
 
 ---
 
-## SECTION 8: DEVELOPMENT NAVIGATION & SECTION MARKERS (DOM COMMENT STANDARDS)
+## SECTION 9: README SYNC PROTOCOL (NON-NEGOTIABLE)
+
+`README.md` is the architecture map of record. Any change that alters what it documents must update it **in the same turn**, not as a follow-up:
+
+* New/removed routes (pages or `api/**/route.ts` endpoints) → update the Site Map and API Endpoints tables.
+* New/removed dependency, or a stack swap (e.g. a new animation/UI/data-viz lib) → update the Core Tech Stack table (Section 5 of this file governs whether the dependency is even allowed in the first place).
+* New top-level directory/file under `src/`, `scripts/`, or a new cross-suite data bridge → update the Repository Directory Structure tree and/or the Cross-Suite Data Bridges section.
+* Renamed/moved files referenced via `file:///` links in the README → fix the link, don't leave it dangling.
+
+If a change doesn't touch any of the above, the README does not need a touch — don't pad it with churn. When in doubt, diff the change against the README's existing sections before declaring the task done.
+
+---
+
+## SECTION 10: DEVELOPMENT NAVIGATION & SECTION MARKERS (DOM COMMENT STANDARDS)
 
 To ensure high observability, rapid code reviews, and frictionless developer communication, we enforce standard, uniform block comments for all major DOM sections and views in layouts, pages, and large components.
 
-### 8.1 The Comment Structure
+### 10.1 The Comment Structure
 Every major visual section in JSX/TSX/HTML must be preceded by a uniform **DEVELOPMENT NAVIGATOR** block comment. The block must clearly specify the section name and list its main contents or key actions.
 
 Standard JavaScript/TypeScript React (JSX) layout:
@@ -343,7 +356,7 @@ Standard HTML/Blade/PHP layout:
      ────────────────────────────────────────────────────────── -->
 ```
 
-### 8.2 Architectural Benefits
+### 10.2 Architectural Benefits
 1. **Zero-Cognitive Mentions**: Allows developers, QA testers, and AI agents to instantly mention and reference precise DOM regions (e.g. "look under `DEVELOPMENT NAVIGATOR: NOTION INTEGRATION SECTION`") without explaining absolute line numbers.
 2. **Standardized Scannability**: Large page files (500+ lines) become visually parsed instantly during scrolling.
 3. **Structured Debugging**: Facilitates grep searches for component entry points in complex layouts.

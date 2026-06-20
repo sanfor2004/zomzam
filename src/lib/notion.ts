@@ -37,19 +37,36 @@ export class NotionService {
   }
 
   /**
+   * Notion IDs are a 32-char hex string. Users commonly paste the full page/database
+   * URL (with workspace slug + query params) instead of the bare ID, which produces
+   * a malformed request path and Notion's "Invalid request URL" error. Pull the last
+   * 32 hex characters out of whatever was pasted and re-format as a dashed UUID.
+   */
+  private static normalizeId(raw: string): string {
+    const withoutQuery = raw.trim().split(/[?#]/)[0];
+    const hex = withoutQuery.replace(/[^a-f0-9]/gi, '');
+    const id = hex.slice(-32);
+    if (id.length !== 32) {
+      throw new Error(`Invalid Notion database/page ID or URL: "${raw}"`);
+    }
+    return `${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`;
+  }
+
+  /**
    * Queries a database in Notion and returns its pages
    */
   async queryDatabase(databaseId: string): Promise<any[]> {
+    const id = NotionService.normalizeId(databaseId);
     try {
       const response = await axios.post(
-        `https://api.notion.com/v1/databases/${databaseId}/query`,
+        `https://api.notion.com/v1/databases/${id}/query`,
         {},
         { headers: this.headers }
       );
       return response.data.results || [];
     } catch (error: any) {
-      console.error(`Error querying Notion database ${databaseId}:`, error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || `Failed to query Notion database ${databaseId}`);
+      console.error(`Error querying Notion database ${id}:`, error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || `Failed to query Notion database ${id}`);
     }
   }
 
@@ -57,11 +74,12 @@ export class NotionService {
    * Creates a page in a Notion database
    */
   async createPage(databaseId: string, properties: any): Promise<string> {
+    const id = NotionService.normalizeId(databaseId);
     try {
       const response = await axios.post(
         'https://api.notion.com/v1/pages',
         {
-          parent: { database_id: databaseId },
+          parent: { database_id: id },
           properties,
         },
         { headers: this.headers }
@@ -77,15 +95,16 @@ export class NotionService {
    * Updates an existing Notion page properties
    */
   async updatePage(pageId: string, properties: any): Promise<void> {
+    const id = NotionService.normalizeId(pageId);
     try {
       await axios.patch(
-        `https://api.notion.com/v1/pages/${pageId}`,
+        `https://api.notion.com/v1/pages/${id}`,
         { properties },
         { headers: this.headers }
       );
     } catch (error: any) {
-      console.error(`Error updating Notion page ${pageId}:`, error.response?.data || error.message);
-      throw new Error(error.response?.data?.message || `Failed to update Notion page ${pageId}`);
+      console.error(`Error updating Notion page ${id}:`, error.response?.data || error.message);
+      throw new Error(error.response?.data?.message || `Failed to update Notion page ${id}`);
     }
   }
 
