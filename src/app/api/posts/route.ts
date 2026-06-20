@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken } from '@/lib/auth';
 import { query, queryOne, execute } from '@/lib/db';
 import { DEFAULT_AVATAR } from '@/lib/models/user';
+import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
 
 let tablesReady = false;
 async function ensureTables() {
@@ -65,6 +66,13 @@ async function ensureTables() {
       `ALTER TABLE posts ADD COLUMN visibility ENUM('friends','public','exclusive') NOT NULL DEFAULT 'friends'`
     );
   }
+  const hasImagePath = await queryOne(
+    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='posts' AND COLUMN_NAME='image_path'`,
+    [dbName]
+  );
+  if (!hasImagePath) {
+    await execute(`ALTER TABLE posts ADD COLUMN image_path VARCHAR(255) NULL DEFAULT NULL`);
+  }
   tablesReady = true;
 }
 
@@ -110,24 +118,65 @@ export async function POST(request: NextRequest) {
 
   try {
     await ensureTables();
-    const body = await request.json().catch(() => ({}));
+
+    // Post creation arrives as multipart/form-data (it may carry an image File);
+    // every other action stays JSON. Parse the body once accordingly so it is
+    // never read twice.
+    const contentType = request.headers.get('content-type') || '';
+    const isMultipart = contentType.includes('multipart/form-data');
+    let imageFile: File | null = null;
+    let body;
+    if (isMultipart) {
+      const formData = await request.formData();
+      imageFile = formData.get('image') as File | null;
+      body = {
+        action: 'create',
+        content_html: formData.get('content_html'),
+        visibility: formData.get('visibility'),
+      };
+    } else {
+      body = await request.json().catch(() => ({}));
+    }
     const action = body.action || 'create';
 
     // ── Create post ─────────────────────────────────────────
     if (action === 'create') {
       const raw = (body.content_html || '').trim();
-      if (!raw) return NextResponse.json({ success: false, message: 'Content required' }, { status: 400 });
+      const hasImage = !!(imageFile && imageFile.size > 0);
+      // A post needs either text or an image — image-only posts are valid.
+      if (!raw && !hasImage) {
+        return NextResponse.json({ success: false, message: 'Content or image required' }, { status: 400 });
+      }
 
       const content_html = sanitizeHtml(raw);
       const allowedVisibility = ['friends', 'public', 'exclusive'];
       const visibility = allowedVisibility.includes(body.visibility) ? body.visibility : 'friends';
+
+      let image_path: string | null = null;
+      if (hasImage) {
+        try {
+          image_path = await processImageUpload(imageFile!, {
+            subdir: 'posts',
+            filenamePrefix: 'post',
+            maxBytes: 5 * 1024 * 1024,
+            maxDimension: 1600,
+            allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+          });
+        } catch (err) {
+          if (err instanceof ImageUploadError) {
+            return NextResponse.json({ success: false, message: err.message }, { status: 400 });
+          }
+          throw err;
+        }
+      }
+
       const result = await execute(
-        `INSERT INTO posts (user_id, content_html, visibility) VALUES (?, ?, ?)`,
-        [user.id, content_html, visibility]
+        `INSERT INTO posts (user_id, content_html, visibility, image_path) VALUES (?, ?, ?, ?)`,
+        [user.id, content_html, visibility, image_path]
       );
 
       const post = await queryOne(
-        `SELECT p.id, p.user_id, p.content_html, p.visibility, p.created_at,
+        `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility, p.created_at,
                 u.username, u.first_name, u.last_name, u.avatar,
                 0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
          FROM posts p JOIN users u ON u.id = p.user_id
@@ -221,8 +270,8 @@ export async function POST(request: NextRequest) {
       const post_id = parseInt(body.post_id || 0);
       if (!post_id) return NextResponse.json({ success: false, message: 'post_id required' }, { status: 400 });
 
-      const owned = await queryOne(
-        `SELECT id FROM posts WHERE id = ? AND user_id = ?`,
+      const owned = await queryOne<{ image_path: string | null }>(
+        `SELECT image_path FROM posts WHERE id = ? AND user_id = ?`,
         [post_id, user.id]
       );
       if (!owned) return NextResponse.json({ success: false, message: 'Not found or not yours' }, { status: 403 });
@@ -231,6 +280,9 @@ export async function POST(request: NextRequest) {
       await execute(`DELETE FROM post_likes    WHERE post_id = ?`, [post_id]);
       await execute(`DELETE FROM post_comments WHERE post_id = ?`, [post_id]);
       await execute(`DELETE FROM posts         WHERE id = ? AND user_id = ?`, [post_id, user.id]);
+
+      // Remove the orphaned image file from disk (mirrors avatar cleanup).
+      deleteUploadFile(owned.image_path);
 
       return NextResponse.json({ success: true });
     }
@@ -297,7 +349,7 @@ export async function GET(request: NextRequest) {
       const viewerTags = new Set(parseTagList(me?.tags));
 
       const candidates = await query(
-        `SELECT p.id, p.user_id, p.content_html, p.visibility, p.created_at,
+        `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility, p.created_at,
                 u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
                 (SELECT COUNT(*) FROM post_likes   WHERE post_id = p.id) AS like_count,
                 (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,

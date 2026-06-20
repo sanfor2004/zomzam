@@ -7,7 +7,7 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Bold, Italic, Underline, List, Smile, Image as ImageIcon,
   AtSign, Hash, Send, Loader2, Heart, MessageCircle, Trash2,
-  UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil,
+  UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil, X,
 } from 'lucide-react';
 import { Button, AudienceSwitch, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, ToastProvider, useToast, type PostVisibility } from '@/components/ui';
 
@@ -47,6 +47,7 @@ interface Post {
   last_name: string | null;
   avatar: string;
   content_html: string;
+  image_path?: string | null;
   visibility?: PostVisibility;
   created_at: string;
   like_count: number;
@@ -117,6 +118,22 @@ function displayName(u: { first_name: string | null; last_name: string | null; u
 // count toward this via innerText, so the limit reflects what the reader sees.
 const MAX_POST_CHARS = 500;
 
+// Post image attachment — mirrors the server allowlist/cap (api/posts) so the
+// user gets instant feedback; the server still re-validates (never trust client).
+const POST_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const POST_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const POST_IMAGE_ACCEPT = POST_IMAGE_TYPES.join(',');
+
+// Curated, dependency-free emoji palette grouped by intent. OS emoji input still
+// works for everything else — this is a quick-pick affordance, not a full keyboard.
+const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
+  { label: 'Smileys', emojis: ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🥳', '😇', '🙃', '😉', '😌', '😴', '🤔', '🫡', '🤫', '😬', '🙄', '😢', '😭', '😤', '😡', '🥺', '😱', '🤯', '🤗'] },
+  { label: 'Gestures', emojis: ['👍', '👎', '👏', '🙌', '🤝', '👌', '🤙', '✌️', '🤞', '🫶', '💪', '🙏', '👋', '🤟', '👊', '✊'] },
+  { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💖', '💗', '💘', '💝', '💯', '✨', '🔥', '⭐'] },
+  { label: 'Objects', emojis: ['🎉', '🎊', '🚀', '🏆', '🎯', '💡', '📌', '📈', '💰', '⏰', '☕', '🍕', '🎁', '📷', '🎵', '✅'] },
+  { label: 'Nature', emojis: ['🌟', '🌈', '☀️', '🌙', '⚡', '🌊', '🌸', '🌹', '🍀', '🐶', '🐱', '🦄', '🐝', '🦋', '🌍', '🌿'] },
+];
+
 // How many top-level comments to reveal before the "Load more" button.
 const COMMENTS_PAGE_SIZE = 6;
 const REPLIES_PAGE_SIZE = 4;
@@ -133,6 +150,13 @@ export default function HomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [charCount, setCharCount] = useState(0);
   const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+
+  // Emoji picker + image attachment
+  const [showEmoji, setShowEmoji] = useState(false);
+  const emojiGroupRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   // Autocomplete dropdown state
   const [popoverActive, setPopoverActive] = useState(false);
@@ -512,26 +536,74 @@ export default function HomePage() {
     updateCharCount();
   };
 
+  // ── Image attachment ────────────────────────────────────────
+  // Revoke the previous object URL whenever the preview changes or the page
+  // unmounts — the cleanup runs with the *old* value, so no URL leaks.
+  useEffect(() => {
+    return () => { if (imagePreview) URL.revokeObjectURL(imagePreview); };
+  }, [imagePreview]);
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // reset so re-picking the same file still fires onChange
+    if (!file) return;
+    if (!POST_IMAGE_TYPES.includes(file.type)) {
+      toast({ variant: 'error', title: 'Unsupported image', description: 'Use a JPG, PNG, or WebP image.' });
+      return;
+    }
+    if (file.size > POST_IMAGE_MAX_BYTES) {
+      toast({ variant: 'error', title: 'Image too large', description: 'Maximum image size is 5 MB.' });
+      return;
+    }
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file)); // effect revokes any prior URL
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+  };
+
+  // ── Emoji picker dismissal (outside-click / Escape) ─────────
+  useEffect(() => {
+    if (!showEmoji) return;
+    const onDown = (e: PointerEvent) => {
+      if (emojiGroupRef.current && !emojiGroupRef.current.contains(e.target as Node)) setShowEmoji(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setShowEmoji(false); };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [showEmoji]);
+
   // ── Post ────────────────────────────────────────────────────
   const handlePost = async () => {
-    if (!editorRef.current || charCount === 0 || charCount > MAX_POST_CHARS || postingLoading) return;
+    // A post is valid with text, an image, or both.
+    const canPost = charCount > 0 || !!imageFile;
+    if (!editorRef.current || !canPost || charCount > MAX_POST_CHARS || postingLoading) return;
     const content_html = editorRef.current.innerHTML;
     setPostingLoading(true);
     try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create', content_html, visibility }),
-      });
+      const formData = new FormData();
+      formData.append('content_html', content_html);
+      formData.append('visibility', visibility);
+      if (imageFile) formData.append('image', imageFile);
+      // No Content-Type header — the browser sets the multipart boundary itself.
+      const res = await fetch('/api/posts', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success) {
         editorRef.current.innerHTML = '';
         setCharCount(0);
         setPopoverActive(false);
+        setShowEmoji(false);
+        removeImage();
         setPosts((prev) => [data.post, ...prev]);
         toast({ variant: 'success', title: 'Post shared', description: 'Your post is now live in the feed.' });
       } else {
-        toast({ variant: 'error', title: "Couldn't post", description: 'Something went wrong. Please try again.' });
+        toast({ variant: 'error', title: "Couldn't post", description: data.message || 'Something went wrong. Please try again.' });
       }
     } catch {
       toast({ variant: 'error', title: "Couldn't post", description: 'Something went wrong. Please try again.' });
@@ -617,7 +689,7 @@ export default function HomePage() {
                       color: #64748b;
                       pointer-events: none;
                     }
-                    div[contenteditable] :global(ul) {flex items-center gap-1.5 text-xs font-semibold transition-colors text-slate-500 hover:text-emerald-400
+                    div[contenteditable] :global(ul) {
                       list-style: disc;
                       padding-left: 1.5rem;
                       margin: 0.25rem 0;
@@ -652,6 +724,29 @@ export default function HomePage() {
               </div>
             </div>
 
+            {/* ──────────────────────────────────────────────────────────
+                DEVELOPMENT NAVIGATOR: COMPOSER IMAGE PREVIEW
+                Contains: attached image thumbnail + remove (×) control
+                ────────────────────────────────────────────────────────── */}
+            {imagePreview && (
+              <div className="relative mt-3 inline-block">
+                <img
+                  src={imagePreview}
+                  alt="Attached preview"
+                  className="max-h-56 max-w-full rounded-2xl border border-white/[0.07] object-cover"
+                />
+                <Button
+                  variant="unstyled"
+                  onClick={removeImage}
+                  aria-label="Remove image"
+                  title="Remove image"
+                  className="absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-white backdrop-blur-sm hover:bg-black/80 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
             {/* Row 2 — text settings (left) + audience switch & Post button (right) */}
             <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
               {/* Text settings */}
@@ -675,12 +770,24 @@ export default function HomePage() {
                 <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
                   <Hash className="w-4 h-4" />
                 </ToolbarButton>
-                <ToolbarButton label="Emoji (soon)" onClick={() => {}} disabled>
-                  <Smile className="w-4 h-4" />
-                </ToolbarButton>
-                <ToolbarButton label="Photo (soon)" onClick={() => {}} disabled>
+                <div ref={emojiGroupRef} className="relative">
+                  <ToolbarButton label="Emoji" active={showEmoji} onClick={() => setShowEmoji((v) => !v)}>
+                    <Smile className="w-4 h-4" />
+                  </ToolbarButton>
+                  {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
+                </div>
+                <ToolbarButton label="Add a photo" onClick={() => fileInputRef.current?.click()}>
                   <ImageIcon className="w-4 h-4" />
                 </ToolbarButton>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept={POST_IMAGE_ACCEPT}
+                  onChange={handleImageSelect}
+                  className="hidden"
+                  aria-hidden
+                  tabIndex={-1}
+                />
               </div>
 
               <div className="flex items-center gap-3">
@@ -691,7 +798,7 @@ export default function HomePage() {
                   size="none"
                   shape="rounded"
                   onClick={handlePost}
-                  disabled={charCount === 0 || charCount > MAX_POST_CHARS || postingLoading}
+                  disabled={(charCount === 0 && !imageFile) || charCount > MAX_POST_CHARS || postingLoading}
                   loading={postingLoading}
                   leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
                   className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
@@ -1335,6 +1442,14 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
                 className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
               />
+              {post.image_path && (
+                <img
+                  src={post.image_path}
+                  alt=""
+                  loading="lazy"
+                  className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
+                />
+              )}
             </div>
           </div>
         </div>
@@ -1855,6 +1970,43 @@ function CommentRow({
 }
 
 // ── Toolbar button ────────────────────────────────────────────
+// ── Emoji quick-pick popover ──────────────────────────────────
+// Dependency-free palette anchored above the composer's emoji button. mousedown
+// is suppressed so clicking a glyph never blurs the editor — insertChar then
+// drops it at the live caret. Dismissal (outside-click / Escape) is owned by the
+// parent via emojiGroupRef.
+function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
+  return (
+    <div
+      role="dialog"
+      aria-label="Choose an emoji"
+      className="absolute bottom-full left-0 mb-2 z-50 w-72 max-h-72 overflow-y-auto rounded-2xl border border-slate-700/60 bg-[#1A1D24]/95 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/5 p-2 origin-bottom animate-in"
+    >
+      {EMOJI_GROUPS.map((group) => (
+        <div key={group.label} className="mb-1.5 last:mb-0">
+          <p className="px-1.5 py-1 text-[10px] font-black uppercase tracking-wider text-slate-500">
+            {group.label}
+          </p>
+          <div className="grid grid-cols-8 gap-0.5">
+            {group.emojis.map((emoji) => (
+              <Button
+                key={emoji}
+                variant="unstyled"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onPick(emoji)}
+                aria-label={`Insert ${emoji} emoji`}
+                className="flex items-center justify-center h-8 w-8 rounded-lg text-lg leading-none hover:bg-slate-800/70 transition-colors"
+              >
+                {emoji}
+              </Button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function ToolbarButton({
   children, onClick, label, disabled, active,
 }: {

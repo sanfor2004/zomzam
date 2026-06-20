@@ -2,19 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyToken, comparePassword } from '@/lib/auth';
 import { getUserById } from '@/lib/models/user';
 import { execute, queryOne } from '@/lib/db';
-import sharp from 'sharp';
-import fs from 'fs';
-import path from 'path';
-import crypto from 'crypto';
-
-function deleteAvatarFile(avatarPath: string | null | undefined) {
-  if (avatarPath && !avatarPath.includes('default-avatar.png')) {
-    const fullPath = path.join(process.cwd(), 'public', avatarPath);
-    if (fs.existsSync(fullPath)) {
-      fs.unlinkSync(fullPath);
-    }
-  }
-}
+import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
 
 export async function POST(request: NextRequest) {
   const session = request.cookies.get('ZOMZAM_SESSION')?.value;
@@ -78,53 +66,20 @@ export async function POST(request: NextRequest) {
     let avatarPath: string | null = null;
 
     if (removeAvatar) {
-      deleteAvatarFile(oldAvatar);
+      deleteUploadFile(oldAvatar);
       avatarPath = '';
     } else if (avatarFile && avatarFile.size > 0) {
-      // Validate File Size
-      if (avatarFile.size > 2 * 1024 * 1024) {
-        return NextResponse.json({ success: false, message: 'File too large. Max 2MB allowed.' }, { status: 400 });
-      }
-
-      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-      if (!allowedTypes.includes(avatarFile.type)) {
-        return NextResponse.json({ success: false, message: 'Invalid file type. Only JPG, PNG, GIF, and WEBP allowed.' }, { status: 400 });
-      }
-
-      // Convert file to buffer for processing
-      const arrayBuffer = await avatarFile.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      // Processing and re-encoding with sharp (metadata stripping + secure formats)
-      const uploadDir = path.join(process.cwd(), 'public', 'Assets', 'Uploads', 'avatars');
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
-      }
-
-      const fileExtension = avatarFile.type.split('/')[1];
-      const cryptRandom = crypto.randomBytes(16).toString('hex');
-      const filename = `avatar_${user.id}_${cryptRandom}.${fileExtension}`;
-      const targetPath = path.join(uploadDir, filename);
-
       try {
-        let sharpInstance = sharp(buffer);
-        
-        // Re-encode depending on file type, metadata is stripped by default unless .keepMetadata() is called
-        if (fileExtension === 'png') {
-          await sharpInstance.png({ compressionLevel: 8 }).toFile(targetPath);
-        } else if (fileExtension === 'webp') {
-          await sharpInstance.webp({ quality: 90 }).toFile(targetPath);
-        } else if (fileExtension === 'gif') {
-          await sharpInstance.gif().toFile(targetPath);
-        } else {
-          await sharpInstance.jpeg({ quality: 90 }).toFile(targetPath);
+        avatarPath = await processImageUpload(avatarFile, {
+          subdir: 'avatars',
+          filenamePrefix: `avatar_${user.id}`,
+        });
+        // Remove old avatar only once the new one is safely on disk
+        deleteUploadFile(oldAvatar);
+      } catch (err) {
+        if (err instanceof ImageUploadError) {
+          return NextResponse.json({ success: false, message: err.message }, { status: 400 });
         }
-
-        avatarPath = `/Assets/Uploads/avatars/${filename}`;
-
-        // Remove old avatar
-        deleteAvatarFile(oldAvatar);
-      } catch (err: any) {
         console.error('Image processing failed:', err);
         return NextResponse.json({ success: false, message: 'Failed to process image file.' }, { status: 500 });
       }
@@ -209,7 +164,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Remove avatar file from disk if it exists and is not the default
-    deleteAvatarFile(currentUser.avatar);
+    deleteUploadFile(currentUser.avatar);
 
     // Delete the user — ON DELETE CASCADE handles all child tables
     await execute('DELETE FROM users WHERE id = ?', [user.id]);
