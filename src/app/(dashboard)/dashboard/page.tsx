@@ -1031,8 +1031,8 @@ export default function DashboardPage() {
             {money.accounts.length === 0 ? (
               <p className="text-xs italic text-slate-400 py-2">No active financial accounts connected.</p>
             ) : (
-              money.accounts.map((acc, index) => (
-                <div key={index} className="flex justify-between items-center text-xs border-b border-dashed border-slate-800/80 pb-2 last:border-b-0">
+              money.accounts.map((acc) => (
+                <div key={acc.id} className="flex justify-between items-center text-xs border-b border-dashed border-slate-800/80 pb-2 last:border-b-0">
                   <span className="text-slate-400 font-medium">{acc.name}</span>
                   <span className="font-bold text-slate-200 font-mono">
                     {formatCurrency(parseFloat(acc.balance), acc.currency)}

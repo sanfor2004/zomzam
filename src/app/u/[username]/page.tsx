@@ -276,9 +276,9 @@ export default async function PublicProfilePage({ params }: PageProps) {
             </h3>
             {tags.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {tags.map((tag, idx) => (
+                {tags.map((tag) => (
                   <span
-                    key={idx}
+                    key={tag}
                     data-entrance="list-item"
                     className="px-3 py-1 bg-slate-900 border border-slate-800/80 text-slate-350 font-bold text-xs rounded-xl transition-colors hover:border-primary-500/30"
                   >
