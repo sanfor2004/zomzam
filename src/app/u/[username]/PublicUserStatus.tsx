@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { StreamWaiterProvider, useStreamWaiter } from '@/context/StreamWaiterContext';
+import { StreamWaiterProvider, usePresence } from '@/context/StreamWaiterContext';
 import { Badge } from '@/components/ui';
 
 interface PublicUserStatusProps {
@@ -16,7 +16,7 @@ interface PublicUserStatusProps {
 }
 
 function StatusIndicator({ userId, initialStatus }: PublicUserStatusProps) {
-  const { viewedUserStatus, setViewingUserId } = useStreamWaiter();
+  const { viewedUserStatus, setViewingUserId } = usePresence();
 
   useEffect(() => {
     // Set the user we are viewing in the context to fetch and stream updates

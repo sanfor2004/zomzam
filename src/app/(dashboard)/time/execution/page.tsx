@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { useStreamWaiter } from '@/context/StreamWaiterContext';
 import { Clock, RotateCcw, Play, Pause, SkipForward, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button, Select, Modal } from '@/components/ui';

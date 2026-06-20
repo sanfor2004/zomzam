@@ -5,7 +5,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
 import { useTranslation } from '@/context/TranslationContext';
-import { useStreamWaiter, StreamWaiterProvider } from '@/context/StreamWaiterContext';
+import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
 import { DropdownMenu } from '@/components/ui/Dropdown';
 import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
@@ -18,7 +18,8 @@ const BACKGROUND_COLORS = ['#EE5712', '#ff7340', '#C94A0D'];
 
 function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
   const { t } = useTranslation();
-  const { currentUserStatus, notificationsCount, notifications, markRead } = useStreamWaiter();
+  const { currentUserStatus } = usePresence();
+  const { notificationsCount, notifications, markRead } = useNotifications();
   const router = useRouter();
   const pathname = usePathname();
 

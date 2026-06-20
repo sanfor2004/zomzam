@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 
 export interface Account {
@@ -128,7 +128,7 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
 
   const exchangeRate = EXCHANGE_RATES_TO_EGP.USD; // 1 USD = X EGP
 
-  const loadMoneyData = async () => {
+  const loadMoneyData = useCallback(async () => {
     try {
       const res = await fetch('/api/money', {
         method: 'POST',
@@ -155,13 +155,13 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadMoneyData();
-  }, []);
+  }, [loadMoneyData]);
 
-  const postMoneyApi = async (payload: object): Promise<boolean> => {
+  const postMoneyApi = useCallback(async (payload: object): Promise<boolean> => {
     try {
       const res = await fetch('/api/money', {
         method: 'POST',
@@ -174,23 +174,23 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       console.error('Money API error:', err);
       return false;
     }
-  };
+  }, []);
 
-  const mutateAndReload = async (payload: object): Promise<boolean> => {
+  const mutateAndReload = useCallback(async (payload: object): Promise<boolean> => {
     const ok = await postMoneyApi(payload);
     if (ok) await loadMoneyData();
     return ok;
-  };
+  }, [postMoneyApi, loadMoneyData]);
 
-  const addTransaction = (data: any) => mutateAndReload({ action: 'add_transaction', ...data });
-  const deleteTransaction = (id: number) => mutateAndReload({ action: 'delete_transaction', id });
-  const addAccount = (data: any) => mutateAndReload({ action: 'add_account', ...data });
-  const deleteAccount = (id: number) => mutateAndReload({ action: 'delete_account', id });
-  const addLend = (data: any) => mutateAndReload({ action: 'add_lend', ...data });
-  const settleLend = (id: number) => mutateAndReload({ action: 'settle_lend', id });
-  const deleteLend = (id: number) => mutateAndReload({ action: 'delete_lend', id });
+  const addTransaction = useCallback((data: any) => mutateAndReload({ action: 'add_transaction', ...data }), [mutateAndReload]);
+  const deleteTransaction = useCallback((id: number) => mutateAndReload({ action: 'delete_transaction', id }), [mutateAndReload]);
+  const addAccount = useCallback((data: any) => mutateAndReload({ action: 'add_account', ...data }), [mutateAndReload]);
+  const deleteAccount = useCallback((id: number) => mutateAndReload({ action: 'delete_account', id }), [mutateAndReload]);
+  const addLend = useCallback((data: any) => mutateAndReload({ action: 'add_lend', ...data }), [mutateAndReload]);
+  const settleLend = useCallback((id: number) => mutateAndReload({ action: 'settle_lend', id }), [mutateAndReload]);
+  const deleteLend = useCallback((id: number) => mutateAndReload({ action: 'delete_lend', id }), [mutateAndReload]);
 
-  const updateSettings = async (primary: string, secondary: string) => {
+  const updateSettings = useCallback(async (primary: string, secondary: string) => {
     const ok = await postMoneyApi({
       action: 'update_settings',
       primary_currency: primary,
@@ -205,10 +205,10 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       await loadMoneyData();
     }
     return ok;
-  };
+  }, [postMoneyApi, loadMoneyData]);
 
   // Convert and format amounts dynamically
-  const formatAmount = (amount: number | string, fromCurrency = 'EGP') => {
+  const formatAmount = useCallback((amount: number | string, fromCurrency = 'EGP') => {
     const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
     
     // Quick currency conversion: EGP <-> USD (using static exchangeRate)
@@ -230,36 +230,55 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       style: 'currency',
       currency: displayCurrency,
     }).format(converted);
-  };
+  }, [displayCurrency]);
 
-  return (
-    <MoneyContext.Provider
-      value={{
-        accounts,
-        categories,
-        transactions,
-        lendList,
-        stats,
-        settings,
-        displayCurrency,
-        exchangeRate,
-        isLoading,
-        loadMoneyData,
-        addTransaction,
-        deleteTransaction,
-        addAccount,
-        deleteAccount,
-        addLend,
-        settleLend,
-        deleteLend,
-        updateSettings,
-        setDisplayCurrency,
-        formatAmount,
-      }}
-    >
-      {children}
-    </MoneyContext.Provider>
+  const value = useMemo<MoneyContextType>(
+    () => ({
+      accounts,
+      categories,
+      transactions,
+      lendList,
+      stats,
+      settings,
+      displayCurrency,
+      exchangeRate,
+      isLoading,
+      loadMoneyData,
+      addTransaction,
+      deleteTransaction,
+      addAccount,
+      deleteAccount,
+      addLend,
+      settleLend,
+      deleteLend,
+      updateSettings,
+      setDisplayCurrency,
+      formatAmount,
+    }),
+    [
+      accounts,
+      categories,
+      transactions,
+      lendList,
+      stats,
+      settings,
+      displayCurrency,
+      exchangeRate,
+      isLoading,
+      loadMoneyData,
+      addTransaction,
+      deleteTransaction,
+      addAccount,
+      deleteAccount,
+      addLend,
+      settleLend,
+      deleteLend,
+      updateSettings,
+      formatAmount,
+    ],
   );
+
+  return <MoneyContext.Provider value={value}>{children}</MoneyContext.Provider>;
 }
 
 export function useMoney() {

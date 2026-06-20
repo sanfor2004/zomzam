@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 type UserStatus = 'online' | 'away' | 'offline' | 'disconnected';
 
@@ -12,11 +12,24 @@ interface ViewedUserStatus {
   diff: number;
 }
 
-interface StreamWaiterContextType {
+// ──────────────────────────────────────────────────────────
+// Split into two contexts by update cadence so a consumer only re-renders for
+// the slice it actually reads:
+//   • Presence      — high-frequency idle/online + viewed-user status
+//   • Notifications — SSE-driven notification feed + unread count
+// A single provider owns all state and the stream/heartbeat effects; it just
+// exposes two independently-memoized value objects. This keeps an incoming
+// notification from re-rendering presence-only consumers (and vice versa).
+// ──────────────────────────────────────────────────────────
+
+interface PresenceContextType {
   currentUserStatus: UserStatus;
   viewedUserStatus: ViewedUserStatus | null;
   setViewingUserId: (id: number | null) => void;
   triggerStatusSync: () => Promise<void>;
+}
+
+interface NotificationsContextType {
   notificationsCount: number;
   setNotificationsCount: React.Dispatch<React.SetStateAction<number>>;
   notifications: any[];
@@ -24,7 +37,8 @@ interface StreamWaiterContextType {
   markRead: () => Promise<void>;
 }
 
-const StreamWaiterContext = createContext<StreamWaiterContextType | undefined>(undefined);
+const PresenceContext = createContext<PresenceContextType | undefined>(undefined);
+const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
 export function StreamWaiterProvider({ children }: { children: React.ReactNode }) {
   const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus>('disconnected');
@@ -34,12 +48,20 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
 
-  const loadNotifications = async () => {
+  // Mirror the latest mutable values into refs so the exposed callbacks can stay
+  // referentially stable (empty deps) while always reading current state — this
+  // is what lets the memoized context values keep stable identity.
+  const isIdleRef = useRef(isIdle);
+  const viewingUserIdRef = useRef(viewingUserId);
+  useEffect(() => { isIdleRef.current = isIdle; }, [isIdle]);
+  useEffect(() => { viewingUserIdRef.current = viewingUserId; }, [viewingUserId]);
+
+  const loadNotifications = useCallback(async () => {
     try {
       const res = await fetch('/api/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idle: isIdle ? 1 : 0 }),
+        body: JSON.stringify({ idle: isIdleRef.current ? 1 : 0 }),
       });
       const data = await res.json();
       if (data.success && data.data) {
@@ -49,9 +71,9 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
     } catch (err) {
       console.error('Failed to load notifications:', err);
     }
-  };
+  }, []);
 
-  const markRead = async () => {
+  const markRead = useCallback(async () => {
     try {
       await fetch('/api/notifications?action=mark_read', {
         method: 'POST',
@@ -61,21 +83,21 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
       setNotificationsCount(0);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch {}
-  };
+  }, []);
 
-  const triggerStatusSync = async () => {
+  const triggerStatusSync = useCallback(async () => {
     try {
       const res = await fetch('/api/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          idle: isIdle ? 1 : 0,
-          viewing_user_id: viewingUserId,
+          idle: isIdleRef.current ? 1 : 0,
+          viewing_user_id: viewingUserIdRef.current,
         }),
       });
       const json = await res.json();
       if (json.success && json.data) {
-        if (viewingUserId && json.data.user_status) {
+        if (viewingUserIdRef.current && json.data.user_status) {
           setViewedUserStatus(json.data.user_status);
         }
         if (json.data.notifications) {
@@ -86,7 +108,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
     } catch (e) {
       console.error('Status Sync Failed:', e);
     }
-  };
+  }, []);
 
   // Setup idle/active tracking
   useEffect(() => {
@@ -119,7 +141,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
   // Update status whenever idle status or viewed user changes
   useEffect(() => {
     triggerStatusSync();
-  }, [isIdle, viewingUserId]);
+  }, [isIdle, viewingUserId, triggerStatusSync]);
 
   // Establish SSE EventSource stream connection
   useEffect(() => {
@@ -157,7 +179,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
       eventSource.onerror = () => {
         if (!active) return;
         eventSource?.close();
-        
+
         // Reconnection logic
         if (reconnectAttempts < 15) {
           reconnectAttempts++;
@@ -177,38 +199,59 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
     };
   }, [viewingUserId]);
 
-  // Periodic heartbeat backup status pings every 25 seconds
+  // Periodic heartbeat backup status pings every 25 seconds. triggerStatusSync
+  // is stable, so the interval is created once rather than torn down/recreated
+  // on every idle/viewing-user change.
   useEffect(() => {
     const timer = setInterval(() => {
       triggerStatusSync();
     }, 25000);
 
     return () => clearInterval(timer);
-  }, [isIdle, viewingUserId]);
+  }, [triggerStatusSync]);
+
+  const presenceValue = useMemo<PresenceContextType>(
+    () => ({ currentUserStatus, viewedUserStatus, setViewingUserId, triggerStatusSync }),
+    [currentUserStatus, viewedUserStatus, triggerStatusSync],
+  );
+
+  const notificationsValue = useMemo<NotificationsContextType>(
+    () => ({ notificationsCount, setNotificationsCount, notifications, loadNotifications, markRead }),
+    [notificationsCount, notifications, loadNotifications, markRead],
+  );
 
   return (
-    <StreamWaiterContext.Provider
-      value={{
-        currentUserStatus,
-        viewedUserStatus,
-        setViewingUserId,
-        triggerStatusSync,
-        notificationsCount,
-        setNotificationsCount,
-        notifications,
-        loadNotifications,
-        markRead,
-      }}
-    >
-      {children}
-    </StreamWaiterContext.Provider>
+    <PresenceContext.Provider value={presenceValue}>
+      <NotificationsContext.Provider value={notificationsValue}>
+        {children}
+      </NotificationsContext.Provider>
+    </PresenceContext.Provider>
   );
 }
 
-export function useStreamWaiter() {
-  const context = useContext(StreamWaiterContext);
+/** Subscribe to high-frequency presence state (current + viewed user status). */
+export function usePresence() {
+  const context = useContext(PresenceContext);
   if (!context) {
-    throw new Error('useStreamWaiter must be used within a StreamWaiterProvider');
+    throw new Error('usePresence must be used within a StreamWaiterProvider');
   }
   return context;
+}
+
+/** Subscribe to the SSE-driven notification feed and unread count. */
+export function useNotifications() {
+  const context = useContext(NotificationsContext);
+  if (!context) {
+    throw new Error('useNotifications must be used within a StreamWaiterProvider');
+  }
+  return context;
+}
+
+/**
+ * @deprecated Combined accessor — subscribes to BOTH presence and notification
+ * contexts, so it re-renders on either change. Prefer the granular `usePresence`
+ * / `useNotifications` hooks so components only re-render for the slice they read.
+ */
+export function useStreamWaiter() {
+  return { ...usePresence(), ...useNotifications() };
 }
