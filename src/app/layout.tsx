@@ -6,7 +6,10 @@ import { Providers } from './providers';
 const inter = Inter({
   variable: '--font-sans',
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800', '900'],
+  // Dropped '300' (font-light) — unused across the app. Weights 400–900 cover
+  // every font-normal/medium/semibold/bold/extrabold/black class in use.
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
 });
 
 const jetbrainsMono = JetBrains_Mono({
