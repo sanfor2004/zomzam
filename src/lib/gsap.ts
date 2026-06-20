@@ -1,17 +1,21 @@
 // src/lib/gsap.ts
-// Single source of truth for GSAP. Importing this module registers every plugin
+// Single source of truth for GSAP. Importing this module registers our plugins
 // exactly once (guarded to the browser), so components never double-register
 // across Fast Refresh. Plugins are all free and bundled in the `gsap` package.
+//
+// Only the plugins actually used across the app are registered here:
+// ScrollTrigger (scroll reveals/parallax) and SplitText (char-mask headline
+// reveals via usePageEntrance). Observer, Flip and ScrambleTextPlugin were
+// registered previously but are not used anywhere — keeping them out trims the
+// shared GSAP chunk. Add one back here (and only here) the moment a feature
+// genuinely needs it.
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
-import { Observer } from 'gsap/Observer';
-import { Flip } from 'gsap/Flip';
-import { ScrambleTextPlugin } from 'gsap/ScrambleTextPlugin';
 
 if (typeof window !== 'undefined') {
-  gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText, Observer, Flip, ScrambleTextPlugin);
+  gsap.registerPlugin(useGSAP, ScrollTrigger, SplitText);
 }
 
 /**
@@ -32,4 +36,4 @@ export function getScrollParent(el: HTMLElement | null): HTMLElement | undefined
   return undefined;
 }
 
-export { gsap, useGSAP, ScrollTrigger, SplitText, Observer, Flip, ScrambleTextPlugin };
+export { gsap, useGSAP, ScrollTrigger, SplitText };
