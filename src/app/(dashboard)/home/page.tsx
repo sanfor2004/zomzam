@@ -8,10 +8,14 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Send, Loader2, Heart, MessageCircle, Trash2,
   UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil,
+  MessageSquarePlus, Search, MessagesSquare,
 } from 'lucide-react';
-import { Button, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, ToastProvider, useToast } from '@/components/ui';
+import { Button, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
 import { PostComposer } from './PostComposer';
-import { displayName, type CurrentUser, type MentionUser, type Comment, type Post } from './shared';
+import {
+  displayName, type CurrentUser, type MentionUser, type Comment, type Post,
+  type ConversationSummary, type ThreadMessage,
+} from './shared';
 
 interface SuggestedUser {
   id: number;
@@ -69,6 +73,17 @@ export default function HomePage() {
   const [friends, setFriends] = useState<MentionUser[]>([]);
   const [peopleSuggestions, setPeopleSuggestions] = useState<SuggestedUser[]>([]);
   const [sentRequests, setSentRequests] = useState<Set<number>>(new Set());
+
+  // ── Direct messages ─────────────────────────────────────────
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [messagesSearch, setMessagesSearch] = useState('');
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [activeThread, setActiveThread] = useState<{ otherUser: MentionUser; conversationId: number | null } | null>(null);
+  const [threadMessages, setThreadMessages] = useState<ThreadMessage[]>([]);
+  const [threadLoading, setThreadLoading] = useState(false);
+  const [threadText, setThreadText] = useState('');
+  const [threadSending, setThreadSending] = useState(false);
+  const threadEndRef = useRef<HTMLDivElement>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -131,6 +146,95 @@ export default function HomePage() {
         body: JSON.stringify({ action: 'friend_request', user_id: userId }),
       });
     } catch { /* non-blocking */ }
+  };
+
+  // ── Direct messages ──────────────────────────────────────────
+  const loadConversations = useCallback(async () => {
+    try {
+      const res = await fetch('/api/messages?action=list');
+      const data = await res.json();
+      if (data.success) setConversations(data.conversations || []);
+    } catch { /* non-blocking */ }
+  }, []);
+
+  useEffect(() => { loadConversations(); }, [loadConversations]);
+
+  // Live delivery: bump/reorder the list, and if the thread is already open,
+  // append in place and mark it read immediately instead of waiting on a poll.
+  useEffect(() => {
+    const onNewMessage = (e: Event) => {
+      const { conversation_id, message } = (e as CustomEvent).detail || {};
+      if (!conversation_id || !message) return;
+
+      setActiveThread((current) => {
+        if (current?.conversationId === conversation_id) {
+          setThreadMessages((prev) => [...prev, message]);
+          fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'mark_read', conversation_id }),
+          }).catch(() => {});
+        }
+        return current;
+      });
+
+      loadConversations();
+    };
+    window.addEventListener('zz-new-message', onNewMessage);
+    return () => window.removeEventListener('zz-new-message', onNewMessage);
+  }, [loadConversations]);
+
+  // Auto-scroll the open thread to the newest message.
+  useEffect(() => {
+    if (activeThread) threadEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [threadMessages, activeThread]);
+
+  const openThread = async (otherUser: MentionUser, knownConversationId: number | null = null) => {
+    setComposeOpen(false);
+    setActiveThread({ otherUser, conversationId: knownConversationId });
+    setThreadMessages([]);
+    setThreadLoading(true);
+    try {
+      const res = await fetch(`/api/messages?action=thread&user_id=${otherUser.id}`);
+      const data = await res.json();
+      if (data.success) {
+        setThreadMessages(data.messages || []);
+        setActiveThread((prev) => prev ? { ...prev, conversationId: data.conversation_id } : prev);
+        if (data.conversation_id) {
+          setConversations((prev) => prev.map((c) =>
+            c.conversation_id === data.conversation_id ? { ...c, unread_count: 0 } : c
+          ));
+        }
+      }
+    } catch { /* non-blocking */ }
+    setThreadLoading(false);
+  };
+
+  const closeThread = () => {
+    setActiveThread(null);
+    setThreadMessages([]);
+    setThreadText('');
+  };
+
+  const sendThreadMessage = async () => {
+    const content = threadText.trim();
+    if (!content || threadSending || !activeThread) return;
+    setThreadSending(true);
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'send', recipient_id: activeThread.otherUser.id, content }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setThreadMessages((prev) => [...prev, data.message]);
+        setActiveThread((prev) => prev ? { ...prev, conversationId: data.conversation_id } : prev);
+        setThreadText('');
+        loadConversations();
+      }
+    } catch { /* non-blocking */ }
+    setThreadSending(false);
   };
 
   // ── Feed loading ────────────────────────────────────────────
@@ -252,10 +356,111 @@ export default function HomePage() {
 
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR
-            Contains: My Friends list, People You May Know suggestions
+            Contains: Messages panel, My Friends list, Suggested For You
             ────────────────────────────────────────────────────────── */}
         <aside className="hidden lg:block self-start lg:sticky lg:top-0">
           <div className="space-y-4">
+
+            {/* ──────────────────────────────────────────────────────────
+                DEVELOPMENT NAVIGATOR: MESSAGES PANEL
+                Contains: header + compose button, search, conversation list
+                ────────────────────────────────────────────────────────── */}
+            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <MessagesSquare className="w-4 h-4 text-slate-400" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Messages
+                  </h3>
+                  {conversations.some((c) => c.unread_count > 0) && (
+                    <span className="text-[10px] font-bold bg-primary-500 text-white px-1.5 py-0.5 rounded-full">
+                      {conversations.reduce((sum, c) => sum + c.unread_count, 0)}
+                    </span>
+                  )}
+                </div>
+                <Tooltip content="New message">
+                  <Button
+                    variant="unstyled"
+                    onClick={() => setComposeOpen(true)}
+                    aria-label="New message"
+                    className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary-400 hover:bg-white/[0.04] transition-colors"
+                  >
+                    <MessageSquarePlus className="w-4 h-4" />
+                  </Button>
+                </Tooltip>
+              </div>
+
+              {conversations.length > 0 && (
+                <Input
+                  size="sm"
+                  value={messagesSearch}
+                  onChange={(e) => setMessagesSearch(e.target.value)}
+                  placeholder="Search messages..."
+                  leftIcon={<Search className="w-3.5 h-3.5" />}
+                  containerClassName="mb-3"
+                />
+              )}
+
+              {conversations.length === 0 ? (
+                <p className="text-xs text-slate-600 text-center py-4">
+                  No conversations yet — start one above.
+                </p>
+              ) : (
+                <div className="space-y-1 -mx-1.5">
+                  {conversations
+                    .filter((c) => {
+                      const q = messagesSearch.trim().toLowerCase();
+                      if (!q) return true;
+                      return displayName(c).toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
+                    })
+                    .map((c) => (
+                      <button
+                        key={c.conversation_id}
+                        onClick={() => openThread(
+                          { id: c.other_id, username: c.username, first_name: c.first_name, last_name: c.last_name, avatar: c.avatar, is_online: c.is_online, online_label: c.online_label },
+                          c.conversation_id,
+                        )}
+                        className="w-full flex items-center gap-3 text-left rounded-xl px-1.5 py-1.5 hover:bg-white/[0.03] transition-colors"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <Image
+                            src={c.avatar || '/Assets/Img/default-avatar.png'}
+                            alt={displayName(c)}
+                            width={36}
+                            height={36}
+                            className="w-9 h-9 rounded-xl object-cover border border-slate-800"
+                          />
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${
+                              c.is_online ? 'bg-emerald-500' : 'bg-slate-600'
+                            }`}
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className={`text-xs truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-300'}`}>
+                              {displayName(c)}
+                            </p>
+                            {c.last_message_at && (
+                              <span className="text-[10px] text-slate-600 flex-shrink-0">{relativeTime(c.last_message_at)}</span>
+                            )}
+                          </div>
+                          {c.last_message && (
+                            <p className={`text-[11px] truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
+                              {c.last_sender_id === currentUser?.id ? 'You: ' : ''}{c.last_message}
+                            </p>
+                          )}
+                        </div>
+                        {c.unread_count > 0 && (
+                          <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            {c.unread_count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
 
             {/* My Friends */}
             <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
@@ -315,18 +520,21 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* People You May Know */}
+            {/* ──────────────────────────────────────────────────────────
+                DEVELOPMENT NAVIGATOR: SUGGESTED FOR YOU
+                Contains: header + see-all link, suggested-user rows
+                ────────────────────────────────────────────────────────── */}
             {peopleSuggestions.length > 0 && (
               <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    People You May Know
+                    Suggested For You
                   </h3>
                   <Link
                     href="/community/discover"
                     className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
                   >
-                    See More
+                    See all
                   </Link>
                 </div>
 
@@ -375,6 +583,118 @@ export default function HomePage() {
         </aside>
 
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: MESSAGE THREAD MODAL
+          Contains: header (avatar/name/presence), bubble history, composer
+          ────────────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={!!activeThread}
+        onClose={closeThread}
+        title={activeThread ? displayName(activeThread.otherUser) : ''}
+        description={activeThread ? (activeThread.otherUser.online_label || 'Offline') : undefined}
+      >
+        <div className="flex flex-col h-[60vh] -mx-1">
+          <div className="flex-1 overflow-y-auto px-1 space-y-3 pb-2">
+            {threadLoading ? (
+              <div className="flex justify-center py-10">
+                <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+              </div>
+            ) : threadMessages.length === 0 ? (
+              <p className="text-xs text-slate-600 text-center py-10">
+                Say hello to {activeThread ? displayName(activeThread.otherUser) : 'them'} 👋
+              </p>
+            ) : (
+              threadMessages.map((m) => {
+                const isMine = m.sender_id === currentUser?.id;
+                return (
+                  <div key={m.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    <div
+                      className={`max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
+                        isMine
+                          ? 'bg-primary-500 text-white rounded-br-md'
+                          : 'bg-slate-800/70 text-slate-200 rounded-bl-md'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap break-words">{m.content}</p>
+                      <p className={`text-[10px] mt-1 ${isMine ? 'text-white/70' : 'text-slate-500'}`}>
+                        {relativeTime(m.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+            <div ref={threadEndRef} />
+          </div>
+
+          <div className="flex items-center gap-2 pt-3 border-t border-slate-800/60">
+            <Input
+              size="md"
+              value={threadText}
+              onChange={(e) => setThreadText(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendThreadMessage(); } }}
+              placeholder="Write a message..."
+              containerClassName="flex-1"
+              disabled={threadSending}
+            />
+            <Button
+              variant="unstyled"
+              onClick={sendThreadMessage}
+              disabled={!threadText.trim() || threadSending}
+              aria-label="Send"
+              className="flex-shrink-0 w-10 h-10 rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-default text-white flex items-center justify-center transition-colors"
+            >
+              {threadSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: COMPOSE MESSAGE MODAL
+          Contains: friend search/picker for starting a new thread
+          ────────────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={composeOpen}
+        onClose={() => setComposeOpen(false)}
+        title="New message"
+      >
+        <div className="space-y-1 max-h-[50vh] overflow-y-auto -mx-1">
+          {friends.length === 0 ? (
+            <p className="text-xs text-slate-600 text-center py-6">
+              Add some friends first — you can only message people you&apos;re connected with.
+            </p>
+          ) : (
+            friends.map((f) => (
+              <button
+                key={f.id}
+                onClick={() => openThread(f)}
+                className="w-full flex items-center gap-3 text-left rounded-xl px-1.5 py-2 hover:bg-white/[0.03] transition-colors"
+              >
+                <div className="relative flex-shrink-0">
+                  <Image
+                    src={f.avatar || '/Assets/Img/default-avatar.png'}
+                    alt={displayName(f)}
+                    width={36}
+                    height={36}
+                    className="w-9 h-9 rounded-xl object-cover border border-slate-800"
+                  />
+                  <span
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${
+                      f.is_online ? 'bg-emerald-500' : 'bg-slate-600'
+                    }`}
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-slate-200 truncate">{displayName(f)}</p>
+                  <p className="text-[10px] text-slate-600 truncate">@{f.username}</p>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }

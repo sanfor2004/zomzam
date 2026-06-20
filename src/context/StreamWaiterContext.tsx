@@ -172,6 +172,9 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
           } else if (order_name === 'social_update') {
             const customEvent = new CustomEvent('zz-social-update', { detail: params });
             window.dispatchEvent(customEvent);
+          } else if (order_name === 'new_message') {
+            const customEvent = new CustomEvent('zz-new-message', { detail: params });
+            window.dispatchEvent(customEvent);
           }
         } catch {}
       });

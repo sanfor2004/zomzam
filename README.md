@@ -200,6 +200,7 @@ zomzam.com/
 | `/api/posts` | `feed`, `comments`, `create`, `like`, `delete`, `comment` | Home feed CRUD + engagement. |
 | `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
+| `/api/messages` | `list`, `thread`, `send`, `mark_read` | 1:1 direct messages between friends, delivered live via `/api/stream`. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
 | `/api/stream` | — | SSE long-lived connection pushing presence + notification orders. |
 

@@ -162,6 +162,24 @@ const schema: Record<string, Record<string, string>> = {
     is_read: 'TINYINT(1) NOT NULL DEFAULT 0',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  conversations: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    // Canonical pair: user_one_id is always LEAST(a, b), user_two_id is always
+    // GREATEST(a, b) — so a 1:1 thread between two users has exactly one row
+    // regardless of who started it.
+    user_one_id: 'INT UNSIGNED NOT NULL',
+    user_two_id: 'INT UNSIGNED NOT NULL',
+    last_message_at: 'DATETIME NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  messages: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    conversation_id: 'INT UNSIGNED NOT NULL',
+    sender_id: 'INT UNSIGNED NOT NULL',
+    content: 'TEXT NOT NULL',
+    read_at: 'DATETIME NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   crm_leads: {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     user_id: 'INT UNSIGNED NOT NULL',
