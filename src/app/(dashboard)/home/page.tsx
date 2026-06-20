@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
@@ -173,6 +173,13 @@ export default function HomePage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [postingLoading, setPostingLoading] = useState(false);
   const [visibility, setVisibility] = useState<PostVisibility>('friends');
+
+  // Stable handler so memo(PostCard) isn't invalidated every render. setPosts is
+  // referentially stable, so this callback never needs to change.
+  const handleDeletePost = useCallback((id: number) => {
+    setPosts((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const loadingFeedRef = useRef(false);
   const composerCardRef = useRef<HTMLDivElement>(null);
@@ -951,7 +958,7 @@ export default function HomePage() {
                   post={post}
                   isOwn={currentUser?.username === post.username}
                   viewerUsername={currentUser?.username ?? null}
-                  onDelete={(id) => setPosts((prev) => prev.filter((p) => p.id !== id))}
+                  onDelete={handleDeletePost}
                 />
               ))}
 
@@ -1097,7 +1104,10 @@ export default function HomePage() {
 }
 
 // ── Post card ─────────────────────────────────────────────────
-function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn: boolean; viewerUsername?: string | null; onDelete: (id: number) => void }) {
+// memo'd so composer keystrokes (and other HomePage state churn) don't re-render
+// every mounted card — only cards whose own props actually change re-render.
+// Relies on `onDelete` being a stable useCallback in HomePage.
+const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn: boolean; viewerUsername?: string | null; onDelete: (id: number) => void }) {
   const name = displayName(post);
   const { toast } = useToast();
 
@@ -1605,7 +1615,7 @@ function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn
       )}
     </div>
   );
-}
+});
 
 // ── Owner quarter-circle control ──────────────────────────────
 // A 90° corner wedge pinned to the card's top-right, split by a 45° bisector
