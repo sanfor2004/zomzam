@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
@@ -147,9 +148,11 @@ export default function RequestsPage() {
                       onClick={() => router.push(`/u/${usr.username}`)}
                       className="flex items-center gap-3 text-left group min-w-0 flex-1"
                     >
-                      <img
-                        src={usr.avatar}
+                      <Image
+                        src={usr.avatar || '/Assets/Img/default-avatar.png'}
                         alt=""
+                        width={34}
+                        height={34}
                         className="w-8.5 h-8.5 rounded-full object-cover border border-slate-800 flex-shrink-0"
                       />
                       <div className="min-w-0">
@@ -207,7 +210,7 @@ export default function RequestsPage() {
                         className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-2xl"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <img src={r.avatar} alt="" className="w-9 h-9 rounded-xl object-cover" />
+                          <Image src={r.avatar || '/Assets/Img/default-avatar.png'} alt="" width={36} height={36} className="w-9 h-9 rounded-xl object-cover" />
                           <div className="min-w-0">
                             <Button variant="unstyled"
                               onClick={() => router.push(`/u/${r.username}`)}
@@ -256,7 +259,7 @@ export default function RequestsPage() {
                         className="flex items-center justify-between p-3.5 bg-slate-900/10 border border-slate-850/20 rounded-2xl"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <img src={r.avatar} alt="" className="w-9 h-9 rounded-xl object-cover" />
+                          <Image src={r.avatar || '/Assets/Img/default-avatar.png'} alt="" width={36} height={36} className="w-9 h-9 rounded-xl object-cover" />
                           <div className="min-w-0">
                             <Button variant="unstyled"
                               onClick={() => router.push(`/u/${r.username}`)}

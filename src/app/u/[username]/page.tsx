@@ -3,6 +3,7 @@ import { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { getUserByUsername, getOnlineStatus } from '@/lib/models/user';
 import { verifyToken } from '@/lib/auth';
 import { query } from '@/lib/db';
@@ -211,10 +212,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
               
               {/* Avatar Container */}
               <div className="relative w-28 h-28 rounded-3xl overflow-hidden border-2 border-slate-850 shadow-md bg-slate-900 flex-shrink-0">
-                <img
+                <Image
                   src={profileUser.avatar || '/Assets/Img/default-avatar.png'}
                   alt="Profile Avatar"
-                  className="w-full h-full object-cover"
+                  fill
+                  sizes="112px"
+                  className="object-cover"
                 />
               </div>
 
@@ -308,9 +311,11 @@ export default async function PublicProfilePage({ params }: PageProps) {
                     data-entrance="list-item"
                     className="flex items-center gap-2 bg-slate-900 border border-slate-800/80 rounded-xl pl-1.5 pr-3 py-1.5 hover:border-primary-500/30 transition-colors group"
                   >
-                    <img
+                    <Image
                       src={f.avatar || '/Assets/Img/default-avatar.png'}
                       alt=""
+                      width={28}
+                      height={28}
                       className="w-7 h-7 rounded-lg object-cover border border-slate-800"
                     />
                     <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">

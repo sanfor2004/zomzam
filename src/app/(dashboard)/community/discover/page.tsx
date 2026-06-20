@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, Sparkles } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
@@ -143,9 +144,11 @@ export default function DiscoverPage() {
                       onClick={() => router.push(`/u/${usr.username}`)}
                       className="flex items-center gap-3 text-left group min-w-0 flex-1"
                     >
-                      <img
-                        src={usr.avatar}
+                      <Image
+                        src={usr.avatar || '/Assets/Img/default-avatar.png'}
                         alt=""
+                        width={34}
+                        height={34}
                         className="w-8.5 h-8.5 rounded-full object-cover border border-slate-800 flex-shrink-0"
                       />
                       <div className="min-w-0">
@@ -196,9 +199,11 @@ export default function DiscoverPage() {
                   className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group flex flex-col justify-between card-lift"
                 >
                   <div className="flex items-start gap-4">
-                    <img
-                      src={usr.avatar}
+                    <Image
+                      src={usr.avatar || '/Assets/Img/default-avatar.png'}
                       alt=""
+                      width={44}
+                      height={44}
                       className="w-11 h-11 rounded-xl object-cover border border-slate-850 flex-shrink-0"
                     />
                     <div className="min-w-0 flex-1">

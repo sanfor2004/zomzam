@@ -4,6 +4,7 @@ import { Button, ToastProvider } from '@/components/ui';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import dynamicImport from 'next/dynamic';
+import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
@@ -467,9 +468,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
               >
                 {/* Avatar with live status dot anchored 2px outside the bottom-right of the frame */}
                 <div className="relative flex-shrink-0">
-                  <img
+                  <Image
                     src={currentUser.avatar || '/Assets/Img/default-avatar.png'}
                     alt="Avatar"
+                    width={36}
+                    height={36}
                     className="w-9 h-9 rounded-xl object-cover border border-slate-800"
                   />
                   <span className="absolute -bottom-0.5 -right-0.5 flex items-center justify-center w-3 h-3">
@@ -557,9 +560,11 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                       key={n.id}
                       className="px-4 py-3 hover:bg-slate-800/30 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 cursor-pointer"
                     >
-                      <img
+                      <Image
                         src={n.data?.from_avatar || '/Assets/Img/default-avatar.png'}
                         alt=""
+                        width={32}
+                        height={32}
                         className="w-8 h-8 rounded-full object-cover mt-0.5"
                       />
                       <div className="flex-1 min-w-0">

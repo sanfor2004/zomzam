@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
@@ -674,9 +675,11 @@ export default function HomePage() {
 
             {/* Row 1 — avatar, text area, character amount */}
             <div className="flex gap-3">
-              <img
+              <Image
                 src={currentUser?.avatar || '/Assets/Img/default-avatar.png'}
                 alt="You"
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-xl object-cover border border-slate-800 flex-shrink-0"
               />
 
@@ -862,9 +865,11 @@ export default function HomePage() {
                           }`}
                         >
                           <span className="relative flex-shrink-0">
-                            <img
-                              src={u.avatar}
+                            <Image
+                              src={u.avatar || '/Assets/Img/default-avatar.png'}
                               alt=""
+                              width={32}
+                              height={32}
                               className="w-8 h-8 rounded-lg object-cover border border-slate-800"
                             />
                             {u.is_online && (
@@ -1016,9 +1021,11 @@ export default function HomePage() {
                   {friends.slice(0, 7).map((f) => (
                     <Tooltip key={f.id} content={`${displayName(f)} · ${f.online_label || 'Offline'}`}>
                       <Link href={`/u/${f.username}`} className="relative flex-shrink-0">
-                        <img
-                          src={f.avatar}
+                        <Image
+                          src={f.avatar || '/Assets/Img/default-avatar.png'}
                           alt={displayName(f)}
+                          width={40}
+                          height={40}
                           className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/40 transition-colors"
                         />
                         <span
@@ -1060,9 +1067,11 @@ export default function HomePage() {
                   {peopleSuggestions.map((u) => (
                     <div key={u.id} className="flex items-center gap-3">
                       <Link href={`/u/${u.username}`} className="flex-shrink-0">
-                        <img
-                          src={u.avatar}
+                        <Image
+                          src={u.avatar || '/Assets/Img/default-avatar.png'}
                           alt=""
+                          width={36}
+                          height={36}
                           className="w-9 h-9 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
                         />
                       </Link>
@@ -1423,9 +1432,11 @@ const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete 
           {/* ── Header + content ── */}
           <div className="flex gap-3">
             <Link href={`/u/${post.username}`} className="flex-shrink-0">
-              <img
-                src={post.avatar}
+              <Image
+                src={post.avatar || '/Assets/Img/default-avatar.png'}
                 alt={name}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
               />
             </Link>
@@ -1453,10 +1464,12 @@ const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete 
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
               />
               {post.image_path && (
-                <img
+                <Image
                   src={post.image_path}
                   alt=""
-                  loading="lazy"
+                  width={1200}
+                  height={800}
+                  sizes="(max-width: 1024px) 100vw, 600px"
                   className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
                 />
               )}
@@ -1725,9 +1738,11 @@ function CommentCard({
   const name = displayName(comment);
   return (
     <div className={`flex gap-2 ${className ?? ''}`}>
-      <img
-        src={comment.avatar}
+      <Image
+        src={comment.avatar || '/Assets/Img/default-avatar.png'}
         alt=""
+        width={28}
+        height={28}
         className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
       />
       <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl border border-white/[0.05] px-3 py-2">

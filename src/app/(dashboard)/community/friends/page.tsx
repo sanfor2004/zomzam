@@ -3,6 +3,7 @@ import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, ShieldAlert } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
@@ -143,9 +144,11 @@ export default function FriendsPage() {
                       onClick={() => router.push(`/u/${usr.username}`)}
                       className="flex items-center gap-3 text-left group min-w-0 flex-1"
                     >
-                      <img
-                        src={usr.avatar}
+                      <Image
+                        src={usr.avatar || '/Assets/Img/default-avatar.png'}
                         alt=""
+                        width={34}
+                        height={34}
                         className="w-8.5 h-8.5 rounded-full object-cover border border-slate-800 flex-shrink-0"
                       />
                       <div className="min-w-0">
@@ -206,9 +209,11 @@ export default function FriendsPage() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="relative flex-shrink-0">
-                      <img
-                        src={f.avatar}
+                      <Image
+                        src={f.avatar || '/Assets/Img/default-avatar.png'}
                         alt={f.username}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded-2xl object-cover border border-slate-850"
                       />
                       <span className={`absolute bottom-[-2px] right-[-2px] w-3 h-3 rounded-full border-2 border-[#1A1D24]${

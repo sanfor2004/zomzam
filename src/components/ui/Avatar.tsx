@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,12 +50,19 @@ export function Avatar({ src, alt = '', name, size = 'md', status, shape = 'circ
     <span className={cn('relative inline-flex shrink-0', SIZES[size], className)}>
       <span
         className={cn(
-          'w-full h-full flex items-center justify-center overflow-hidden bg-slate-800 border border-slate-800/60 font-black text-slate-300 select-none',
+          'relative w-full h-full flex items-center justify-center overflow-hidden bg-slate-800 border border-slate-800/60 font-black text-slate-300 select-none',
           shape === 'circle' ? 'rounded-full' : 'rounded-xl',
         )}
       >
         {showImage ? (
-          <img src={src!} alt={alt} onError={() => setErrored(true)} className="w-full h-full object-cover" />
+          <Image
+            src={src!}
+            alt={alt}
+            fill
+            sizes="80px"
+            onError={() => setErrored(true)}
+            className="object-cover"
+          />
         ) : name ? (
           <span>{getInitials(name)}</span>
         ) : (

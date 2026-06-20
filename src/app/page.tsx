@@ -7,6 +7,7 @@ import { useTranslation } from '@/context/TranslationContext';
 import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, Activity, DollarSign, Clock } from 'lucide-react';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 
 // Load Silk component dynamically to avoid SSR/hydration issues with ThreeJS/WebGL
 const Silk = dynamic(() => import('@/components/Silk'), { ssr: false });
@@ -504,9 +505,9 @@ export default function LandingPage() {
               {/* Stack of avatars */}
               <div className="flex items-center gap-1.5">
                 <div className="flex -space-x-3.5 overflow-hidden">
-                  <img className="inline-block h-9 w-9 rounded-full ring-2 ring-[#161920] object-cover" src="/Assets/Img/default-avatar.png" alt="A1" />
-                  <img className="inline-block h-9 w-9 rounded-full ring-2 ring-[#161920] object-cover" src="/Assets/Img/default-avatar.png" alt="A2" />
-                  <img className="inline-block h-9 w-9 rounded-full ring-2 ring-[#161920] object-cover" src="/Assets/Img/default-avatar.png" alt="A3" />
+                  <Image width={36} height={36} className="inline-block h-9 w-9 rounded-full ring-2 ring-[#161920] object-cover" src="/Assets/Img/default-avatar.png" alt="A1" />
+                  <Image width={36} height={36} className="inline-block h-9 w-9 rounded-full ring-2 ring-[#161920] object-cover" src="/Assets/Img/default-avatar.png" alt="A2" />
+                  <Image width={36} height={36} className="inline-block h-9 w-9 rounded-full ring-2 ring-[#161920] object-cover" src="/Assets/Img/default-avatar.png" alt="A3" />
                   <div className="inline-flex items-center justify-center h-9 w-9 rounded-full ring-2 ring-[#161920] bg-primary-500 text-white text-[10px] font-black">
                     +20
                   </div>

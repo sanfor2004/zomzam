@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { gsap, useGSAP, ScrollTrigger, SplitText, getScrollParent } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
 import { 
@@ -493,9 +494,11 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl md:self-center">
-            <img
+            <Image
               src={profile.avatar || '/Assets/Img/default-avatar.png'}
               alt="Avatar"
+              width={48}
+              height={48}
               className="w-12 h-12 rounded-xl object-cover border border-white/20"
             />
             <div>
@@ -1032,7 +1035,7 @@ export default function DashboardPage() {
               <p className="text-xs italic text-slate-400 py-2">No active financial accounts connected.</p>
             ) : (
               money.accounts.map((acc) => (
-                <div key={acc.id} className="flex justify-between items-center text-xs border-b border-dashed border-slate-800/80 pb-2 last:border-b-0">
+                <div key={acc.name} className="flex justify-between items-center text-xs border-b border-dashed border-slate-800/80 pb-2 last:border-b-0">
                   <span className="text-slate-400 font-medium">{acc.name}</span>
                   <span className="font-bold text-slate-200 font-mono">
                     {formatCurrency(parseFloat(acc.balance), acc.currency)}

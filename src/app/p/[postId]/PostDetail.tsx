@@ -4,6 +4,7 @@ import { Button } from '@/components/ui';
 import React, { useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check } from 'lucide-react';
 
 interface Post {
@@ -158,9 +159,11 @@ export default function PostDetail({
         {/* Author row */}
         <div className="flex items-center gap-4 pb-6 border-b border-slate-800/40 mb-6">
           <Link href={`/u/${post.username}`} className="flex-shrink-0 group">
-            <img
-              src={post.avatar}
+            <Image
+              src={post.avatar || '/Assets/Img/default-avatar.png'}
               alt={authorName}
+              width={48}
+              height={48}
               className="w-12 h-12 rounded-2xl object-cover border border-slate-800 group-hover:border-primary-500/40 transition-colors"
             />
           </Link>
@@ -300,9 +303,11 @@ function CommentRow({
     <div data-entrance={depth === 0 ? 'list-item' : undefined} className={depth > 0 ? 'ml-8 border-l border-slate-800/50 pl-4' : ''}>
       <div className="flex gap-3">
         <Link href={`/u/${comment.username}`} className="flex-shrink-0 mt-0.5">
-          <img
-            src={comment.avatar}
+          <Image
+            src={comment.avatar || '/Assets/Img/default-avatar.png'}
             alt=""
+            width={32}
+            height={32}
             className="w-8 h-8 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
           />
         </Link>
