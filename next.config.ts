@@ -8,6 +8,12 @@ const nextConfig: NextConfig = {
   // neither fall back to the original. Order matters — first Accept match wins.
   images: {
     formats: ["image/avif", "image/webp"],
+    // Production avatars are local (sharp → public/Assets/Uploads), but the
+    // db:seed script assigns pravatar.cc URLs — allow that host so seeded dev
+    // data renders through next/image instead of throwing "hostname not
+    // configured". Add other avatar hosts here if the upload pipeline ever
+    // stores remote URLs.
+    remotePatterns: [{ protocol: "https", hostname: "i.pravatar.cc" }],
   },
 
   // Strip the `X-Powered-By: Next.js` response header (no functional value,
