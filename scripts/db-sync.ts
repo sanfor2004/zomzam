@@ -209,7 +209,28 @@ const schema: Record<string, Record<string, string>> = {
   },
 };
 
+/**
+ * Guard rail: db:sync performs declarative schema migration (CREATE/ALTER) on
+ * whatever DB_HOST points to. Against the live site that can change tables out
+ * from under running traffic. Any non-localhost host is treated as production
+ * and requires an explicit ALLOW_PROD_SYNC=1 opt-in.
+ */
+function assertSyncTargetIsSafe() {
+  const host = (process.env.DB_HOST || 'localhost').toLowerCase();
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  if (!isLocal && process.env.ALLOW_PROD_SYNC !== '1') {
+    console.error(
+      `\n  ✋ REFUSING to sync schema: DB_HOST="${host}" looks like a remote/production database.\n` +
+      `     db:sync runs CREATE/ALTER against this DB and can disrupt live traffic.\n` +
+      `     Back up first, then re-run intentionally with:\n\n` +
+      `       ALLOW_PROD_SYNC=1 npm run db:sync\n`
+    );
+    process.exit(1);
+  }
+}
+
 async function syncDatabase() {
+  assertSyncTargetIsSafe();
   console.log('Connecting to database...');
   const connection = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',

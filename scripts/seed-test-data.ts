@@ -141,7 +141,30 @@ function tagPill(tag: string): string {
   return `<span data-tag="${slug}" class="inline-flex items-center px-0.5 mx-0.5 text-sm font-bold cursor-text text-sky-400">#${slug}</span>`;
 }
 
+/**
+ * Guard rail: this script wipes the previous seed batch and injects 100 fake
+ * users + posts. That is catastrophic against a live database. We treat any
+ * non-localhost DB_HOST as "production" and refuse to run unless the operator
+ * explicitly opts in with ALLOW_PROD_SEED=1. Belt-and-suspenders for the
+ * "we debug on prod" workflow — accidental `npm run db:seed` can't pollute
+ * real customer data.
+ */
+function assertSeedTargetIsSafe() {
+  const host = (process.env.DB_HOST || 'localhost').toLowerCase();
+  const isLocal = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  if (!isLocal && process.env.ALLOW_PROD_SEED !== '1') {
+    console.error(
+      `\n  ✋ REFUSING to seed: DB_HOST="${host}" looks like a remote/production database.\n` +
+      `     db:seed WIPES the prior seed batch and inserts 100 fake users + posts.\n` +
+      `     If you really mean to seed THIS database, re-run with:\n\n` +
+      `       ALLOW_PROD_SEED=1 npm run db:seed\n`
+    );
+    process.exit(1);
+  }
+}
+
 async function main() {
+  assertSeedTargetIsSafe();
   const conn = await mysql.createConnection({
     host: process.env.DB_HOST || 'localhost',
     port: parseInt(process.env.DB_PORT || '3306'),
