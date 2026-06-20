@@ -3,7 +3,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useRouter } from 'next/navigation';
-import { useTranslation, ZLANG_CONFIG } from '@/context/TranslationContext';
+import { useTranslation, LANGUAGES } from '@/context/TranslationContext';
 import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
 import { Button, Switch, Modal, Select, NumberInput, Alert } from '@/components/ui';
 
@@ -493,9 +493,9 @@ export default function SettingsPage() {
                 label={t('settings_lang')}
                 value={language}
                 onChange={(val) => setLanguage(val)}
-                options={Object.keys(ZLANG_CONFIG).map((lang) => ({
-                  value: lang,
-                  label: ZLANG_CONFIG[lang].lang_name,
+                options={LANGUAGES.map((lang) => ({
+                  value: lang.code,
+                  label: lang.name,
                 }))}
               />
 
