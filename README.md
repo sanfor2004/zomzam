@@ -62,7 +62,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 27 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
 | **Styling** | **Tailwind CSS v4** (`@theme` CSS-first tokens) | Modern CSS variables, Tailwind engine for atomic utility styling, custom HSL/Zomzam-Orange palettes defined directly in `globals.css`. |
 | **Database** | **MySQL (via `mysql2/promise`)** | High performance, transaction safety, and sub-millisecond query execution on structured schemas. |
-| **Security** | **Jose JWT (Edge), jsonwebtoken (Node) & BcryptJS** | Edge-runtime compatible token signing/validation for `proxy.ts`; Node-side `jsonwebtoken` for API routes; high-rounds bcrypt salt for password protection. |
+| **Security** | **Jose JWT & BcryptJS** | A single `jose`-based session module (`src/lib/session.ts`) signs/verifies the `ZOMZAM_SESSION` JWT for both the Edge proxy and Node API routes (`jsonwebtoken` removed). API routes are gated by a `withAuth()` wrapper (`src/lib/api-auth.ts`), not the proxy; high-rounds bcrypt salt for password protection. |
 | **Streaming** | **Server-Sent Events (SSE)** | Low-overhead server-push pipe for real-time presence sync without the overhead of WebSockets. |
 | **Animation** | **GSAP + `@gsap/react`** (centralized in `src/lib/gsap.ts`) | `ScrollTrigger`, `SplitText`, `Observer`, `Flip`, and `ScrambleTextPlugin` registered once; powers the shared `usePageEntrance` reveal hook. `canvas-confetti` handles reward bursts. No Framer Motion. |
 | **3D / Ambient Visuals** | **three.js + React Three Fiber** | Shader background (`Silk.tsx`) on the landing page only, lazy-loaded client-side and gated by `useDesktopWebGL` (`(min-width:1024px) and (pointer:fine)` + idle) so the three.js chunk never downloads on phones/tablets — they get a static CSS-gradient fallback. The dashboard shell uses a zero-cost static CSS gradient (the former `LiquidEther` WebGL fluid sim was removed in the P3 perf pass — its non-stop rAF loop cost ~11s TBT on every authenticated route). |
@@ -134,7 +134,9 @@ zomzam.com/
 │   │   └── usePageEntrance.ts   # Shared GSAP page-entrance reveal (title/card/list-item stagger)
 │   │
 │   ├── lib/
-│   │   ├── auth.ts              # Token signing/verification, password hashing
+│   │   ├── session.ts           # jose JWT sign/verify (Edge + Node) — single secret, fail-fast on boot
+│   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
+│   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── db.ts                # MySQL connection pool + transaction helpers
 │   │   ├── gsap.ts               # Single source of truth for GSAP + plugin registration
 │   │   ├── notion.ts             # Notion API client for CRM lead sync
@@ -223,8 +225,10 @@ DB_USER=root
 DB_PASS=your_mysql_password
 DB_CHARSET=utf8mb4
 
-# JSON Web Token Secret
-JWT_SECRET=super_secret_zomzam_jwt_key_2026_zenith_tier
+# JSON Web Token Secret — generate a strong random value; never reuse a placeholder.
+# The app refuses to boot if this is unset (no insecure fallback).
+#   node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"
+JWT_SECRET=replace_with_a_random_64_byte_hex_string
 
 # Environment Settings
 NODE_ENV=development
@@ -273,8 +277,8 @@ sequenceDiagram
 ```
 
 ### Authentication Core Code:
-* **Token Verification**: [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) signs and verifies user credentials.
-* **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) dynamically matches paths (e.g., `/dashboard`, `/time`, `/money`, `/settings`) and intercepts unauthenticated requests. It uses the edge-optimized library `jose` to verify tokens cleanly without triggering Node-only environment crashes.
+* **Session Tokens**: [session.ts](file:///c:/www/zomzam.com/src/lib/session.ts) is the single place a `jose` JWT is signed/verified (Edge proxy + Node routes). [api-auth.ts](file:///c:/www/zomzam.com/src/lib/api-auth.ts) exposes the `withAuth()`/`withError()` route gates and `getSessionUser()`, which also enforces `is_active` + `token_version` revocation. [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) is now bcrypt-only.
+* **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) dynamically matches paths (e.g., `/dashboard`, `/time`, `/money`, `/settings`) and intercepts unauthenticated requests. It verifies tokens via the shared edge-safe `verifySession` (`jose`) without triggering Node-only environment crashes; API authorization itself lives in `withAuth()` at the route layer, not the proxy.
 
 ---
 
