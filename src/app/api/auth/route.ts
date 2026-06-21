@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { loginUser, registerUser, getUserById } from '@/lib/models/user';
 import { signSession } from '@/lib/session';
 import { withError, getSessionUser } from '@/lib/api-auth';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { execute } from '@/lib/db';
 
 export const POST = withError(async (request) => {
@@ -13,6 +14,18 @@ export const POST = withError(async (request) => {
   }
 
   const body = await request.json().catch(() => ({}));
+
+  // Throttle the credential endpoints per IP to blunt brute-force + enumeration.
+  // The field-specific signup messages stay (real UX); the throttle is the
+  // meaningful mitigation. 5 attempts / 15 min per IP, per action.
+  if (action === 'login' || action === 'register') {
+    if (!rateLimit(`${action}:${clientIp(request)}`, 5, 15 * 60 * 1000)) {
+      return NextResponse.json(
+        { success: false, message: 'Too many attempts. Please wait a few minutes and try again.' },
+        { status: 429 }
+      );
+    }
+  }
 
   if (action === 'register') {
     const { username, email, password } = body;

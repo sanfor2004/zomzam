@@ -136,6 +136,7 @@ zomzam.com/
 │   ├── lib/
 │   │   ├── session.ts           # jose JWT sign/verify (Edge + Node) — single secret, fail-fast on boot
 │   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
+│   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── db.ts                # MySQL connection pool + transaction helpers
 │   │   ├── gsap.ts               # Single source of truth for GSAP + plugin registration
