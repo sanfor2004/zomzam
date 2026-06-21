@@ -15,6 +15,7 @@ export interface UserRow {
   timezone: string;
   notifications_enabled: number;
   is_active: number;
+  token_version: number;
   is_verified: number;
   primary_currency: 'EGP' | 'USD' | 'EUR' | 'GBP';
   secondary_currency: 'EGP' | 'USD' | 'EUR' | 'GBP';
@@ -119,6 +120,12 @@ export async function loginUser(identifier: string, passwordPlain: string) {
   const passwordValid = await comparePassword(passwordPlain, user.password || '');
   if (!passwordValid) {
     return { success: false, message: 'Invalid credentials' };
+  }
+
+  // Deactivated accounts cannot mint a new session (mirrors the per-request
+  // is_active gate in getSessionUser, but blocks login outright).
+  if (user.is_active === 0) {
+    return { success: false, message: 'This account has been deactivated.' };
   }
 
   await execute(`UPDATE users SET last_login_at = NOW() WHERE id = ?`, [user.id]);
