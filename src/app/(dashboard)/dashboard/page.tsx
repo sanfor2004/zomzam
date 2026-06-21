@@ -3,8 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { gsap, useGSAP, ScrollTrigger, SplitText, getScrollParent } from '@/lib/gsap';
+import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
+import { useCurrentUser } from '@/context/CurrentUserContext';
 import { 
   User, 
   Shield, 
@@ -100,9 +101,11 @@ export default function DashboardPage() {
   const router = useRouter();
   const cardRef = React.useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
-  const welcomeRef = useRef<HTMLDivElement>(null);
-  const welcomeTitleRef = useRef<HTMLHeadingElement>(null);
   const heatmapRef = useRef<HTMLDivElement>(null);
+
+  // Server-seeded identity (no client fetch) — lets the welcome banner, the LCP
+  // element, paint with first HTML instead of waiting on /api/dashboard.
+  const user = useCurrentUser();
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -141,9 +144,11 @@ export default function DashboardPage() {
 
   // ──────────────────────────────────────────────────────────
   // DEVELOPMENT NAVIGATOR: DASHBOARD SECTION REVEALS (GSAP)
-  // Welcome banner rises on data load; HUD/pillar/detail groups stagger in on
-  // scroll; heatmap reveals row-by-row (7 elements, not 168 cells). All motion is
-  // gated behind matchMedia → reduced-motion users get the static, visible DOM.
+  // HUD/pillar/detail groups stagger in on scroll; heatmap reveals row-by-row
+  // (7 elements, not 168 cells). All motion is gated behind matchMedia →
+  // reduced-motion users get the static, visible DOM. The welcome banner is
+  // deliberately NOT animated here — it renders immediately from server identity
+  // so it can be the LCP element at first paint, not after the data fetch.
   // ──────────────────────────────────────────────────────────
   useGSAP(() => {
     const root = pageRef.current;
@@ -156,29 +161,6 @@ export default function DashboardPage() {
     const mm = gsap.matchMedia();
 
     mm.add('(prefers-reduced-motion: no-preference)', () => {
-      // Welcome banner: rises on load, then title chars spring up.
-      if (welcomeRef.current && welcomeTitleRef.current) {
-        const welcomeSplit = SplitText.create(welcomeTitleRef.current, {
-          type: 'chars,words',
-          mask: 'chars',
-          aria: 'auto',
-        });
-
-        const welcomeTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-        welcomeTl
-          .from(welcomeRef.current, { autoAlpha: 0, y: 28, duration: 0.5 })
-          .from(
-            welcomeSplit.chars,
-            {
-              yPercent: 110,
-              duration: 0.42,
-              stagger: { amount: 0.38, from: 'start' },
-              ease: 'back.out(1.4)',
-            },
-            '-=0.2'
-          );
-      }
-
       // Collect all targets first — querySelectorAll has no layout cost.
       const hudCards    = gsap.utils.toArray<HTMLElement>('[data-animate="hud-card"]',    root);
       const heatmapRows = gsap.utils.toArray<HTMLElement>('[data-animate="heatmap-row"]', root);
@@ -428,28 +410,75 @@ export default function DashboardPage() {
     return hour > 12 ? `${hour - 12} PM` : `${hour} AM`;
   };
 
+  // The welcome banner needs only server-seeded identity (no /api/dashboard data),
+  // so it renders in every state — loading, error, and loaded. This is what makes
+  // it paintable as the LCP element at first HTML instead of after the fetch.
+  const welcomeBanner = (
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-570 to-primary-600 p-8 sm:p-10 text-white shadow-apple border border-primary-400/20">
+      <div className="absolute top-0 right-0 -mt-4 -mr-4 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute bottom-0 right-1/4 mb-[-2rem] w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+
+      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2.5">
+            <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider">
+              Freelancer Suite
+            </span>
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-xs font-semibold text-primary-50">Operational Hub</span>
+          </div>
+          <h2 className="text-title font-black tracking-tight font-display">
+            Welcome back, {user.username}!
+          </h2>
+          <p className="text-primary-50/90 text-sm sm:text-base max-w-xl font-medium">
+            Manage your tasks, track hours, sync payments, and convert inbound leads. Let&apos;s make today highly profitable.
+          </p>
+        </div>
+        <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl md:self-center">
+          <Image
+            src={user.avatar || '/Assets/Img/default-avatar.png'}
+            alt="Avatar"
+            width={48}
+            height={48}
+            className="w-12 h-12 rounded-xl object-cover border border-white/20"
+          />
+          <div>
+            <p className="font-bold text-sm text-white">{user.username}</p>
+            <p className="text-xs text-primary-100">{user.email}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-sm font-semibold text-slate-500 animate-pulse">
-          Compiling your operational workspace...
-        </p>
+      <div ref={pageRef} className="max-w-6xl mx-auto space-y-8 pb-12">
+        {welcomeBanner}
+        <div className="flex flex-col items-center justify-center min-h-[300px] space-y-4">
+          <div className="w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm font-semibold text-slate-500 animate-pulse">
+            Compiling your operational workspace...
+          </p>
+        </div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="max-w-md mx-auto mt-12 bg-[#1A1D24] border border-red-950/40 rounded-3xl p-6 shadow-apple text-center space-y-4">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-        <h3 className="font-bold text-lg text-white">Workspace Sync Error</h3>
-        <p className="text-sm text-slate-400">
-          {error || 'Failed to fetch dashboard data.'}
-        </p>
-        <Button onClick={fetchDashboardData} variant="primary" className="w-full">
-          Retry Sync
-        </Button>
+      <div className="max-w-6xl mx-auto space-y-8 pb-12">
+        {welcomeBanner}
+        <div className="max-w-md mx-auto mt-12 bg-[#1A1D24] border border-red-950/40 rounded-3xl p-6 shadow-apple text-center space-y-4">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
+          <h3 className="font-bold text-lg text-white">Workspace Sync Error</h3>
+          <p className="text-sm text-slate-400">
+            {error || 'Failed to fetch dashboard data.'}
+          </p>
+          <Button onClick={fetchDashboardData} variant="primary" className="w-full">
+            Retry Sync
+          </Button>
+        </div>
       </div>
     );
   }
@@ -473,41 +502,7 @@ export default function DashboardPage() {
           DEVELOPMENT NAVIGATOR: WELCOME BANNER
           Contains: Freelancer profile identity, status badge, greeting
           ────────────────────────────────────────────────────────── */}
-      <div ref={welcomeRef} className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary-500 via-primary-570 to-primary-600 p-8 sm:p-10 text-white shadow-apple border border-primary-400/20">
-        <div className="absolute top-0 right-0 -mt-4 -mr-4 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-0 right-1/4 mb-[-2rem] w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
-        
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-3">
-            <div className="flex items-center gap-2.5">
-              <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black uppercase tracking-wider">
-                Freelancer Suite
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs font-semibold text-primary-50">Operational Hub</span>
-            </div>
-            <h2 ref={welcomeTitleRef} className="text-title font-black tracking-tight font-display">
-              Welcome back, {profile.username}!
-            </h2>
-            <p className="text-primary-50/90 text-sm sm:text-base max-w-xl font-medium">
-              Manage your tasks, track hours, sync payments, and convert inbound leads. Let's make today highly profitable.
-            </p>
-          </div>
-          <div className="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/10 p-4 rounded-2xl md:self-center">
-            <Image
-              src={profile.avatar || '/Assets/Img/default-avatar.png'}
-              alt="Avatar"
-              width={48}
-              height={48}
-              className="w-12 h-12 rounded-xl object-cover border border-white/20"
-            />
-            <div>
-              <p className="font-bold text-sm text-white">{profile.username}</p>
-              <p className="text-xs text-primary-100">{profile.email}</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      {welcomeBanner}
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: CORE HOURLY RATE HUD

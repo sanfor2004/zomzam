@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
+import { CurrentUserProvider } from '@/context/CurrentUserContext';
 import { DropdownMenu } from '@/components/ui/Dropdown';
 import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
@@ -711,12 +712,14 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
 export function DashboardShell({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   return (
-    <StreamWaiterProvider>
-      <MoneyProvider>
-        <ToastProvider>
-          <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
-        </ToastProvider>
-      </MoneyProvider>
-    </StreamWaiterProvider>
+    <CurrentUserProvider user={initialUser}>
+      <StreamWaiterProvider>
+        <MoneyProvider>
+          <ToastProvider>
+            <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
+          </ToastProvider>
+        </MoneyProvider>
+      </StreamWaiterProvider>
+    </CurrentUserProvider>
   );
 }
