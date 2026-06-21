@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import DOMPurify from 'isomorphic-dompurify';
 import { withAuth } from '@/lib/api-auth';
 import { query, queryOne, execute } from '@/lib/db';
 import { DEFAULT_AVATAR } from '@/lib/models/user';
@@ -76,13 +77,18 @@ async function ensureTables() {
   tablesReady = true;
 }
 
+// Allowlist sanitizer for composer HTML that is later rendered via
+// dangerouslySetInnerHTML. Permits only the formatting tags the toolbar emits
+// (bold / italic / underline / lists) plus the mention & hashtag pill spans;
+// data-* attributes survive (DOMPurify's ALLOW_DATA_ATTR default) so the feed's
+// extractPostTags can still read data-tag. DOMPurify strips scripts, inline
+// event handlers, javascript: URIs and contenteditable. Input is capped first so
+// truncation can never leave a half-open tag.
 function sanitizeHtml(html: string): string {
-  return html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/\son\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '')
-    .replace(/javascript\s*:/gi, '')
-    .replace(/\scontenteditable="false"/gi, '')
-    .slice(0, 10000);
+  return DOMPurify.sanitize(html.slice(0, 10000), {
+    ALLOWED_TAGS: ['b', 'strong', 'i', 'em', 'u', 's', 'span', 'div', 'p', 'br', 'ul', 'ol', 'li'],
+    ALLOWED_ATTR: ['class'],
+  });
 }
 
 function normalizeAvatar(row: any) {

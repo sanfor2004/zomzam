@@ -20,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "canvas-confetti": "^1.9.4",
     "gsap": "^3.15.0",
+    "isomorphic-dompurify": "^3.18.0",
     "jose": "^6.2.3",
     "lucide-react": "^1.17.0",
     "mysql2": "^3.22.5",
