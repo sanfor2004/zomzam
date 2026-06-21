@@ -1,16 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import axios from 'axios';
-import { verifyToken } from '@/lib/auth';
+import { withAuth } from '@/lib/api-auth';
 import { queryOne } from '@/lib/db';
 
-export async function GET(request: NextRequest) {
-  const session = request.cookies.get('ZOMZAM_SESSION')?.value;
-  const user = session ? verifyToken(session) : null;
-
-  if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
+export const GET = withAuth(async (request, user) => {
   const { searchParams } = new URL(request.url);
   const lat = searchParams.get('lat');
   const lng = searchParams.get('lng');
@@ -91,6 +84,6 @@ export async function GET(request: NextRequest) {
       details: error.response?.data || error.message 
     }, { status: 500 });
   }
-}
+});
 
 export const dynamic = 'force-dynamic';

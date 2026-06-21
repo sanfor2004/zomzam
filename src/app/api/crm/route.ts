@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api-auth';
 import { query, queryOne, execute, transaction } from '@/lib/db';
 import axios from 'axios';
 
@@ -62,480 +62,468 @@ const industryData: Record<string, {
   }
 };
 
-export async function POST(request: NextRequest) {
-  const session = request.cookies.get('ZOMZAM_SESSION')?.value;
-  const user = session ? verifyToken(session) : null;
+export const POST = withAuth(async (request, user) => {
+  const body = await request.json().catch(() => ({}));
+  const action = body.action || '';
 
-  if (!user) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
-  }
+  switch (action) {
+    case 'get_leads': {
+      const leads = await query(
+        'SELECT * FROM crm_leads WHERE user_id = ? ORDER BY created_at DESC',
+        [user.id]
+      );
+      return NextResponse.json({ success: true, leads });
+    }
 
-  try {
-    const body = await request.json().catch(() => ({}));
-    const action = body.action || '';
+    case 'get_lead': {
+      const id = parseInt(body.id || 0);
+      const lead = await queryOne(
+        'SELECT * FROM crm_leads WHERE id = ? AND user_id = ? LIMIT 1',
+        [id, user.id]
+      );
+      return NextResponse.json({ success: true, lead });
+    }
 
-    switch (action) {
-      case 'get_leads': {
-        const leads = await query(
-          'SELECT * FROM crm_leads WHERE user_id = ? ORDER BY created_at DESC',
-          [user.id]
-        );
-        return NextResponse.json({ success: true, leads });
+    case 'add_lead': {
+      const leadData = body.lead || {};
+      const res = await execute(
+        `INSERT INTO crm_leads (user_id, name, email, phone, website, address, company, status, source, industry, notes, rating, review_count)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          user.id,
+          leadData.name || 'Unnamed Business',
+          leadData.email || null,
+          leadData.phone || null,
+          leadData.website || null,
+          leadData.address || null,
+          leadData.company || null,
+          leadData.status || 'new',
+          leadData.source || 'Manual Import',
+          leadData.industry || 'Local Business',
+          leadData.notes || null,
+          leadData.rating || null,
+          leadData.review_count || null
+        ]
+      );
+      return NextResponse.json({ success: true, id: res.insertId });
+    }
+
+    case 'add_leads_batch': {
+      const leadsList = body.leads || [];
+      if (!Array.isArray(leadsList) || leadsList.length === 0) {
+        return NextResponse.json({ success: true, count: 0 });
       }
 
-      case 'get_lead': {
-        const id = parseInt(body.id || 0);
-        const lead = await queryOne(
-          'SELECT * FROM crm_leads WHERE id = ? AND user_id = ? LIMIT 1',
-          [id, user.id]
-        );
-        return NextResponse.json({ success: true, lead });
-      }
-
-      case 'add_lead': {
-        const leadData = body.lead || {};
-        const res = await execute(
-          `INSERT INTO crm_leads (user_id, name, email, phone, website, address, company, status, source, industry, notes, rating, review_count)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            user.id,
-            leadData.name || 'Unnamed Business',
-            leadData.email || null,
-            leadData.phone || null,
-            leadData.website || null,
-            leadData.address || null,
-            leadData.company || null,
-            leadData.status || 'new',
-            leadData.source || 'Manual Import',
-            leadData.industry || 'Local Business',
-            leadData.notes || null,
-            leadData.rating || null,
-            leadData.review_count || null
-          ]
-        );
-        return NextResponse.json({ success: true, id: res.insertId });
-      }
-
-      case 'add_leads_batch': {
-        const leadsList = body.leads || [];
-        if (!Array.isArray(leadsList) || leadsList.length === 0) {
-          return NextResponse.json({ success: true, count: 0 });
+      await transaction(async (connection) => {
+        for (const leadData of leadsList) {
+          await connection.execute(
+            `INSERT INTO crm_leads (user_id, name, email, phone, website, address, company, status, source, industry, notes, rating, review_count)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              user.id,
+              leadData.name || 'Unnamed Business',
+              leadData.email || null,
+              leadData.phone || null,
+              leadData.website || null,
+              leadData.address || null,
+              leadData.company || null,
+              leadData.status || 'new',
+              leadData.source || 'Google Maps Scanner',
+              leadData.industry || 'Local Business',
+              leadData.notes || null,
+              leadData.rating || null,
+              leadData.review_count || null
+            ]
+          );
         }
+      });
 
-        await transaction(async (connection) => {
-          for (const leadData of leadsList) {
-            await connection.execute(
-              `INSERT INTO crm_leads (user_id, name, email, phone, website, address, company, status, source, industry, notes, rating, review_count)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-              [
-                user.id,
-                leadData.name || 'Unnamed Business',
-                leadData.email || null,
-                leadData.phone || null,
-                leadData.website || null,
-                leadData.address || null,
-                leadData.company || null,
-                leadData.status || 'new',
-                leadData.source || 'Google Maps Scanner',
-                leadData.industry || 'Local Business',
-                leadData.notes || null,
-                leadData.rating || null,
-                leadData.review_count || null
-              ]
-            );
-          }
-        });
+      return NextResponse.json({ success: true, count: leadsList.length });
+    }
 
-        return NextResponse.json({ success: true, count: leadsList.length });
-      }
+    case 'update_lead': {
+      const id = parseInt(body.id || 0);
+      const data = body.data || {};
+      const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'status', 'source', 'industry', 'notes', 'rating', 'review_count']);
+      const keys = Object.keys(data).filter(key => ALLOWED_LEAD_COLUMNS.has(key));
 
-      case 'update_lead': {
-        const id = parseInt(body.id || 0);
-        const data = body.data || {};
-        const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'status', 'source', 'industry', 'notes', 'rating', 'review_count']);
-        const keys = Object.keys(data).filter(key => ALLOWED_LEAD_COLUMNS.has(key));
-
-        if (keys.length === 0) {
-          return NextResponse.json({ success: true });
-        }
-
-        const setClause = keys.map(key => `\`${key}\` = ?`).join(', ');
-        const values = keys.map(key => data[key]);
-
-        await execute(
-          `UPDATE crm_leads SET ${setClause} WHERE id = ? AND user_id = ?`,
-          [...values, id, user.id]
-        );
-
+      if (keys.length === 0) {
         return NextResponse.json({ success: true });
       }
 
-      case 'update_lead_status': {
-        const id = parseInt(body.id || 0);
-        const status = body.status;
+      const setClause = keys.map(key => `\`${key}\` = ?`).join(', ');
+      const values = keys.map(key => data[key]);
 
-        await execute(
-          'UPDATE crm_leads SET status = ? WHERE id = ? AND user_id = ?',
-          [status, id, user.id]
-        );
+      await execute(
+        `UPDATE crm_leads SET ${setClause} WHERE id = ? AND user_id = ?`,
+        [...values, id, user.id]
+      );
 
-        return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true });
+    }
+
+    case 'update_lead_status': {
+      const id = parseInt(body.id || 0);
+      const status = body.status;
+
+      await execute(
+        'UPDATE crm_leads SET status = ? WHERE id = ? AND user_id = ?',
+        [status, id, user.id]
+      );
+
+      return NextResponse.json({ success: true });
+    }
+
+    case 'qualify_lead': {
+      const leadId = parseInt(body.lead_id || 0);
+      const accountId = parseInt(body.account_id || 0);
+      const amount = parseFloat(body.amount || 0);
+      const currency = body.currency || 'EGP';
+      const dueDate = body.due_date || null;
+
+      if (!leadId || !accountId || isNaN(amount) || amount <= 0) {
+        return NextResponse.json({ success: false, message: 'Invalid input parameters' }, { status: 400 });
       }
 
-      case 'qualify_lead': {
-        const leadId = parseInt(body.lead_id || 0);
-        const accountId = parseInt(body.account_id || 0);
-        const amount = parseFloat(body.amount || 0);
-        const currency = body.currency || 'EGP';
-        const dueDate = body.due_date || null;
+      const lead = await queryOne(
+        'SELECT name, company FROM crm_leads WHERE id = ? AND user_id = ? LIMIT 1',
+        [leadId, user.id]
+      );
 
-        if (!leadId || !accountId || isNaN(amount) || amount <= 0) {
-          return NextResponse.json({ success: false, message: 'Invalid input parameters' }, { status: 400 });
-        }
+      if (!lead) {
+        return NextResponse.json({ success: false, message: 'Lead not found' }, { status: 404 });
+      }
 
-        const lead = await queryOne(
-          'SELECT name, company FROM crm_leads WHERE id = ? AND user_id = ? LIMIT 1',
+      const clientName = lead.company || lead.name;
+      const projectName = `${clientName} Project`;
+
+      await transaction(async (connection) => {
+        // 1. Update Lead status
+        await connection.execute(
+          `UPDATE crm_leads SET status = 'qualified' WHERE id = ? AND user_id = ?`,
           [leadId, user.id]
         );
 
-        if (!lead) {
-          return NextResponse.json({ success: false, message: 'Lead not found' }, { status: 404 });
+        // 2. Create Projects record
+        const [projRes] = await connection.execute<any>(
+          `INSERT INTO crm_projects (user_id, lead_id, name, status, amount, currency)
+           VALUES (?, ?, ?, 'planning', ?, ?)`,
+          [user.id, leadId, projectName, amount, currency]
+        );
+        const projectId = projRes.insertId;
+
+        // 3. Seed 4 Tasks in Time suite
+        const tasksToSeed = [
+          { title: `${projectName}: Client Kickoff Consultation`, duration: 30, priority: 'urgent' },
+          { title: `${projectName}: Mockup Blueprint Redesign`, duration: 60, priority: 'medium' },
+          { title: `${projectName}: Outreach Feedback Review`, duration: 30, priority: 'maybe' },
+          { title: `${projectName}: Production Delivery & Launch`, duration: 60, priority: 'urgent' },
+        ];
+
+        for (const t of tasksToSeed) {
+          await connection.execute(
+            `INSERT INTO time_tasks (user_id, title, priority, duration_block, status)
+             VALUES (?, ?, ?, ?, 'pending')`,
+            [user.id, t.title, t.priority, t.duration]
+          );
         }
 
-        const clientName = lead.company || lead.name;
-        const projectName = `${clientName} Project`;
+        // 4. Record income transaction
+        // Check for existing Salary/Outreach category or defaults
+        const [catRows] = await connection.execute<any[]>(
+          `SELECT id FROM money_categories WHERE user_id = ? AND (name = 'Salary' OR name = 'Salary/Outreach' OR type = 'income') LIMIT 1`,
+          [user.id]
+        );
+        let categoryId = catRows[0]?.id || null;
 
-        await transaction(async (connection) => {
-          // 1. Update Lead status
-          await connection.execute(
-            `UPDATE crm_leads SET status = 'qualified' WHERE id = ? AND user_id = ?`,
-            [leadId, user.id]
-          );
-
-          // 2. Create Projects record
-          const [projRes] = await connection.execute<any>(
-            `INSERT INTO crm_projects (user_id, lead_id, name, status, amount, currency)
-             VALUES (?, ?, ?, 'planning', ?, ?)`,
-            [user.id, leadId, projectName, amount, currency]
-          );
-          const projectId = projRes.insertId;
-
-          // 3. Seed 4 Tasks in Time suite
-          const tasksToSeed = [
-            { title: `${projectName}: Client Kickoff Consultation`, duration: 30, priority: 'urgent' },
-            { title: `${projectName}: Mockup Blueprint Redesign`, duration: 60, priority: 'medium' },
-            { title: `${projectName}: Outreach Feedback Review`, duration: 30, priority: 'maybe' },
-            { title: `${projectName}: Production Delivery & Launch`, duration: 60, priority: 'urgent' },
-          ];
-
-          for (const t of tasksToSeed) {
-            await connection.execute(
-              `INSERT INTO time_tasks (user_id, title, priority, duration_block, status)
-               VALUES (?, ?, ?, ?, 'pending')`,
-              [user.id, t.title, t.priority, t.duration]
-            );
-          }
-
-          // 4. Record income transaction
-          // Check for existing Salary/Outreach category or defaults
-          const [catRows] = await connection.execute<any[]>(
-            `SELECT id FROM money_categories WHERE user_id = ? AND (name = 'Salary' OR name = 'Salary/Outreach' OR type = 'income') LIMIT 1`,
+        if (!categoryId) {
+          // Seed a dynamic income category
+          const [catRes] = await connection.execute<any>(
+            `INSERT INTO money_categories (user_id, name, type, icon) VALUES (?, 'Salary/Outreach', 'income', 'dollar-sign')`,
             [user.id]
           );
-          let categoryId = catRows[0]?.id || null;
+          categoryId = catRes.insertId;
+        }
 
-          if (!categoryId) {
-            // Seed a dynamic income category
-            const [catRes] = await connection.execute<any>(
-              `INSERT INTO money_categories (user_id, name, type, icon) VALUES (?, 'Salary/Outreach', 'income', 'dollar-sign')`,
-              [user.id]
-            );
-            categoryId = catRes.insertId;
-          }
+        await connection.execute(
+          `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, description, transaction_date)
+           VALUES (?, ?, ?, 'income', ?, ?, ?, CURRENT_DATE)`,
+          [user.id, accountId, categoryId, amount, currency, `Deal qualification: ${projectName}`]
+        );
 
+        // Update Account Balance
+        await connection.execute(
+          `UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`,
+          [amount, accountId, user.id]
+        );
+
+        // 5. Setup Lending settlement if due date provided
+        if (dueDate) {
           await connection.execute(
-            `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, description, transaction_date)
-             VALUES (?, ?, ?, 'income', ?, ?, ?, CURRENT_DATE)`,
-            [user.id, accountId, categoryId, amount, currency, `Deal qualification: ${projectName}`]
+            `INSERT INTO money_lend (user_id, person_name, type, amount, currency, status, due_date)
+             VALUES (?, ?, 'owe_me', ?, ?, 'pending', ?)`,
+            [user.id, clientName, amount, currency, dueDate]
           );
-
-          // Update Account Balance
-          await connection.execute(
-            `UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`,
-            [amount, accountId, user.id]
-          );
-
-          // 5. Setup Lending settlement if due date provided
-          if (dueDate) {
-            await connection.execute(
-              `INSERT INTO money_lend (user_id, person_name, type, amount, currency, status, due_date)
-               VALUES (?, ?, 'owe_me', ?, ?, 'pending', ?)`,
-              [user.id, clientName, amount, currency, dueDate]
-            );
-          }
-        });
-
-        return NextResponse.json({ success: true });
-      }
-
-      case 'delete_lead': {
-        const id = parseInt(body.id || 0);
-        await execute(
-          'DELETE FROM crm_leads WHERE id = ? AND user_id = ?',
-          [id, user.id]
-        );
-        return NextResponse.json({ success: true });
-      }
-
-      case 'delete_leads_batch': {
-        const ids = body.ids || [];
-        if (!Array.isArray(ids) || ids.length === 0) {
-          return NextResponse.json({ success: true });
         }
+      });
 
-        await transaction(async (connection) => {
-          for (const id of ids) {
-            await connection.execute(
-              'DELETE FROM crm_leads WHERE id = ? AND user_id = ?',
-              [id, user.id]
-            );
-          }
-        });
-
-        return NextResponse.json({ success: true });
-      }
-
-      case 'clear_all_data': {
-        if (process.env.NODE_ENV !== 'development') {
-          return NextResponse.json({ success: false, message: 'Unauthorized debug switch' }, { status: 403 });
-        }
-
-        await transaction(async (connection) => {
-          await connection.execute('DELETE FROM crm_leads WHERE user_id = ?', [user.id]);
-          await connection.execute('DELETE FROM crm_scrape_jobs WHERE user_id = ?', [user.id]);
-          await connection.execute('DELETE FROM crm_projects WHERE user_id = ?', [user.id]);
-        });
-
-        return NextResponse.json({ success: true });
-      }
-
-      case 'get_scrape_history': {
-        const history = await query(
-          'SELECT * FROM crm_scrape_jobs WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
-          [user.id]
-        );
-        return NextResponse.json({ success: true, history });
-      }
-
-      case 'create_scrape_job': {
-        const queryVal = body.query || '';
-        const areaVal = body.area || '';
-
-        if (!queryVal || !areaVal) {
-          return NextResponse.json({ success: false, error: 'Query and area parameters are required' }, { status: 400 });
-        }
-
-        const res = await execute(
-          'INSERT INTO crm_scrape_jobs (user_id, query, area, status, leads_found) VALUES (?, ?, ?, ?, ?)',
-          [user.id, queryVal, areaVal, 'scraping', 0]
-        );
-        const jobId = res.insertId;
-
-        // Trigger background simulator asynchronously
-        simulateScrapingBackground(user.id, jobId, queryVal, areaVal).catch(err => {
-          console.error('[Scrape Simulator Error] Background execution failed:', err);
-        });
-
-        return NextResponse.json({ success: true, jobId });
-      }
-
-      case 'get_dashboard_stats': {
-        const getCount = async (sql: string, params: any[] = []): Promise<number> => {
-          const row = await queryOne<{ count: number }>(sql, params);
-          return row?.count || 0;
-        };
-
-        const totalLeads = await getCount('SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ?', [user.id]);
-        const newLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'new'", [user.id]);
-        const contactedLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'contacted'", [user.id]);
-        const qualifiedLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'qualified'", [user.id]);
-        const lostLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'lost'", [user.id]);
-
-        const activeLeads = totalLeads - lostLeads;
-        const conversionRate = activeLeads > 0 ? Math.round((qualifiedLeads / activeLeads) * 100) : 0;
-
-        const leadsWithWebsites = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND website IS NOT NULL AND website != ''", [user.id]);
-        const leadsWithPhones = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND phone IS NOT NULL AND phone != ''", [user.id]);
-
-        const industryRows = await query(
-          `SELECT COALESCE(industry, 'Uncategorized') as industry, COUNT(*) as count 
-           FROM crm_leads 
-           WHERE user_id = ? 
-           GROUP BY industry 
-           ORDER BY count DESC 
-           LIMIT 5`,
-          [user.id]
-        );
-
-        const sourceRows = await query(
-          `SELECT COALESCE(source, 'Unknown') as source, COUNT(*) as count 
-           FROM crm_leads 
-           WHERE user_id = ? 
-           GROUP BY source 
-           ORDER BY count DESC`,
-          [user.id]
-        );
-
-        return NextResponse.json({
-          success: true,
-          stats: {
-            totalLeads,
-            newLeads,
-            contactedLeads,
-            qualifiedLeads,
-            lostLeads,
-            conversionRate,
-            leadsWithWebsites,
-            leadsWithPhones,
-            industryDistribution: industryRows,
-            sourceDistribution: sourceRows
-          }
-        });
-      }
-
-      case 'generate_outreach': {
-        const leadId = parseInt(body.lead_id || 0);
-        const campaignType = body.campaign_type || 'audit';
-
-        const lead = await queryOne(
-          'SELECT * FROM crm_leads WHERE id = ? AND user_id = ? LIMIT 1',
-          [leadId, user.id]
-        );
-
-        if (!lead) {
-          return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
-        }
-
-        const getSetting = async (key: string): Promise<string> => {
-          const row = await queryOne<{ value: string }>(
-            'SELECT value FROM crm_settings WHERE user_id = ? AND `key` = ? LIMIT 1',
-            [user.id, key]
-          );
-          return row?.value || '';
-        };
-
-        const apiKey = await getSetting('CLAUDE_API_KEY');
-        const model = await getSetting('claude_model') || 'claude-3-5-sonnet-latest';
-        const tone = await getSetting('claude_tone') || 'professional';
-        const temp = parseFloat(await getSetting('claude_temperature') || '0.75');
-        const maxTokens = parseInt(await getSetting('claude_max_tokens') || '800', 10);
-        const signature = await getSetting('system_signature');
-
-        // Fallback checks
-        if (!apiKey || apiKey.trim() === '' || apiKey.startsWith('sk-ant-sid-placeholder')) {
-          return NextResponse.json({ success: true, text: getTemplateOutreach(lead, campaignType), isMock: true });
-        }
-
-        const prompt = getOutreachPrompt(lead, campaignType, tone, signature);
-
-        try {
-          const response = await axios.post(
-            'https://api.anthropic.com/v1/messages',
-            {
-              model: model,
-              max_tokens: maxTokens,
-              temperature: temp,
-              messages: [{ role: 'user', content: prompt }]
-            },
-            {
-              headers: {
-                'x-api-key': apiKey,
-                'anthropic-version': '2023-06-01',
-                'content-type': 'application/json',
-              },
-              timeout: 10000,
-            }
-          );
-
-          const generatedText = response.data?.content?.[0]?.text;
-          if (!generatedText) {
-            throw new Error('Claude response content empty.');
-          }
-
-          return NextResponse.json({ success: true, text: generatedText.trim(), isMock: false });
-        } catch (apiErr: any) {
-          console.error('Claude API call failed, falling back to templates:', apiErr.message);
-          return NextResponse.json({ success: true, text: getTemplateOutreach(lead, campaignType), isMock: true, error: apiErr.message });
-        }
-      }
-
-      case 'get_crm_settings': {
-        const rows = await query(
-          'SELECT `key`, value FROM crm_settings WHERE user_id = ?',
-          [user.id]
-        );
-        const settings: Record<string, string> = {};
-        rows.forEach((row: any) => {
-          settings[row.key] = row.value;
-        });
-        return NextResponse.json({ success: true, settings });
-      }
-
-      case 'update_crm_settings': {
-        const settings = body.settings || {};
-        await transaction(async (connection) => {
-          for (const [key, value] of Object.entries(settings)) {
-            await connection.execute(
-              `INSERT INTO crm_settings (user_id, \`key\`, value) 
-               VALUES (?, ?, ?) 
-               ON DUPLICATE KEY UPDATE value = ?`,
-              [user.id, key, value, value] as any
-            );
-          }
-        });
-        return NextResponse.json({ success: true });
-      }
-
-      case 'get_contacts': {
-        const contacts = await query(
-          "SELECT * FROM crm_leads WHERE user_id = ? AND (status = 'qualified' OR status = 'contacted') ORDER BY name ASC",
-          [user.id]
-        );
-        return NextResponse.json({ success: true, contacts });
-      }
-
-      case 'get_projects': {
-        const projects = await query(
-          `SELECT p.*, l.name as lead_name, l.company as lead_company, l.website as lead_website
-           FROM crm_projects p
-           LEFT JOIN crm_leads l ON p.lead_id = l.id
-           WHERE p.user_id = ?
-           ORDER BY p.created_at DESC`,
-          [user.id]
-        );
-        return NextResponse.json({ success: true, projects });
-      }
-
-      case 'update_project_status': {
-        const id = parseInt(body.id || 0);
-        const status = body.status;
-
-        await execute(
-          'UPDATE crm_projects SET status = ? WHERE id = ? AND user_id = ?',
-          [status, id, user.id]
-        );
-
-        return NextResponse.json({ success: true });
-      }
-
-      default:
-        return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
+      return NextResponse.json({ success: true });
     }
-  } catch (err: any) {
-    console.error('CRM API Error:', err);
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+
+    case 'delete_lead': {
+      const id = parseInt(body.id || 0);
+      await execute(
+        'DELETE FROM crm_leads WHERE id = ? AND user_id = ?',
+        [id, user.id]
+      );
+      return NextResponse.json({ success: true });
+    }
+
+    case 'delete_leads_batch': {
+      const ids = body.ids || [];
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return NextResponse.json({ success: true });
+      }
+
+      await transaction(async (connection) => {
+        for (const id of ids) {
+          await connection.execute(
+            'DELETE FROM crm_leads WHERE id = ? AND user_id = ?',
+            [id, user.id]
+          );
+        }
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    case 'clear_all_data': {
+      if (process.env.NODE_ENV !== 'development') {
+        return NextResponse.json({ success: false, message: 'Unauthorized debug switch' }, { status: 403 });
+      }
+
+      await transaction(async (connection) => {
+        await connection.execute('DELETE FROM crm_leads WHERE user_id = ?', [user.id]);
+        await connection.execute('DELETE FROM crm_scrape_jobs WHERE user_id = ?', [user.id]);
+        await connection.execute('DELETE FROM crm_projects WHERE user_id = ?', [user.id]);
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    case 'get_scrape_history': {
+      const history = await query(
+        'SELECT * FROM crm_scrape_jobs WHERE user_id = ? ORDER BY created_at DESC LIMIT 10',
+        [user.id]
+      );
+      return NextResponse.json({ success: true, history });
+    }
+
+    case 'create_scrape_job': {
+      const queryVal = body.query || '';
+      const areaVal = body.area || '';
+
+      if (!queryVal || !areaVal) {
+        return NextResponse.json({ success: false, error: 'Query and area parameters are required' }, { status: 400 });
+      }
+
+      const res = await execute(
+        'INSERT INTO crm_scrape_jobs (user_id, query, area, status, leads_found) VALUES (?, ?, ?, ?, ?)',
+        [user.id, queryVal, areaVal, 'scraping', 0]
+      );
+      const jobId = res.insertId;
+
+      // Trigger background simulator asynchronously
+      simulateScrapingBackground(user.id, jobId, queryVal, areaVal).catch(err => {
+        console.error('[Scrape Simulator Error] Background execution failed:', err);
+      });
+
+      return NextResponse.json({ success: true, jobId });
+    }
+
+    case 'get_dashboard_stats': {
+      const getCount = async (sql: string, params: any[] = []): Promise<number> => {
+        const row = await queryOne<{ count: number }>(sql, params);
+        return row?.count || 0;
+      };
+
+      const totalLeads = await getCount('SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ?', [user.id]);
+      const newLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'new'", [user.id]);
+      const contactedLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'contacted'", [user.id]);
+      const qualifiedLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'qualified'", [user.id]);
+      const lostLeads = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND status = 'lost'", [user.id]);
+
+      const activeLeads = totalLeads - lostLeads;
+      const conversionRate = activeLeads > 0 ? Math.round((qualifiedLeads / activeLeads) * 100) : 0;
+
+      const leadsWithWebsites = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND website IS NOT NULL AND website != ''", [user.id]);
+      const leadsWithPhones = await getCount("SELECT COUNT(*) as count FROM crm_leads WHERE user_id = ? AND phone IS NOT NULL AND phone != ''", [user.id]);
+
+      const industryRows = await query(
+        `SELECT COALESCE(industry, 'Uncategorized') as industry, COUNT(*) as count 
+         FROM crm_leads 
+         WHERE user_id = ? 
+         GROUP BY industry 
+         ORDER BY count DESC 
+         LIMIT 5`,
+        [user.id]
+      );
+
+      const sourceRows = await query(
+        `SELECT COALESCE(source, 'Unknown') as source, COUNT(*) as count 
+         FROM crm_leads 
+         WHERE user_id = ? 
+         GROUP BY source 
+         ORDER BY count DESC`,
+        [user.id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        stats: {
+          totalLeads,
+          newLeads,
+          contactedLeads,
+          qualifiedLeads,
+          lostLeads,
+          conversionRate,
+          leadsWithWebsites,
+          leadsWithPhones,
+          industryDistribution: industryRows,
+          sourceDistribution: sourceRows
+        }
+      });
+    }
+
+    case 'generate_outreach': {
+      const leadId = parseInt(body.lead_id || 0);
+      const campaignType = body.campaign_type || 'audit';
+
+      const lead = await queryOne(
+        'SELECT * FROM crm_leads WHERE id = ? AND user_id = ? LIMIT 1',
+        [leadId, user.id]
+      );
+
+      if (!lead) {
+        return NextResponse.json({ success: false, error: 'Lead not found' }, { status: 404 });
+      }
+
+      const getSetting = async (key: string): Promise<string> => {
+        const row = await queryOne<{ value: string }>(
+          'SELECT value FROM crm_settings WHERE user_id = ? AND `key` = ? LIMIT 1',
+          [user.id, key]
+        );
+        return row?.value || '';
+      };
+
+      const apiKey = await getSetting('CLAUDE_API_KEY');
+      const model = await getSetting('claude_model') || 'claude-3-5-sonnet-latest';
+      const tone = await getSetting('claude_tone') || 'professional';
+      const temp = parseFloat(await getSetting('claude_temperature') || '0.75');
+      const maxTokens = parseInt(await getSetting('claude_max_tokens') || '800', 10);
+      const signature = await getSetting('system_signature');
+
+      // Fallback checks
+      if (!apiKey || apiKey.trim() === '' || apiKey.startsWith('sk-ant-sid-placeholder')) {
+        return NextResponse.json({ success: true, text: getTemplateOutreach(lead, campaignType), isMock: true });
+      }
+
+      const prompt = getOutreachPrompt(lead, campaignType, tone, signature);
+
+      try {
+        const response = await axios.post(
+          'https://api.anthropic.com/v1/messages',
+          {
+            model: model,
+            max_tokens: maxTokens,
+            temperature: temp,
+            messages: [{ role: 'user', content: prompt }]
+          },
+          {
+            headers: {
+              'x-api-key': apiKey,
+              'anthropic-version': '2023-06-01',
+              'content-type': 'application/json',
+            },
+            timeout: 10000,
+          }
+        );
+
+        const generatedText = response.data?.content?.[0]?.text;
+        if (!generatedText) {
+          throw new Error('Claude response content empty.');
+        }
+
+        return NextResponse.json({ success: true, text: generatedText.trim(), isMock: false });
+      } catch (apiErr: any) {
+        console.error('Claude API call failed, falling back to templates:', apiErr.message);
+        return NextResponse.json({ success: true, text: getTemplateOutreach(lead, campaignType), isMock: true, error: apiErr.message });
+      }
+    }
+
+    case 'get_crm_settings': {
+      const rows = await query(
+        'SELECT `key`, value FROM crm_settings WHERE user_id = ?',
+        [user.id]
+      );
+      const settings: Record<string, string> = {};
+      rows.forEach((row: any) => {
+        settings[row.key] = row.value;
+      });
+      return NextResponse.json({ success: true, settings });
+    }
+
+    case 'update_crm_settings': {
+      const settings = body.settings || {};
+      await transaction(async (connection) => {
+        for (const [key, value] of Object.entries(settings)) {
+          await connection.execute(
+            `INSERT INTO crm_settings (user_id, \`key\`, value) 
+             VALUES (?, ?, ?) 
+             ON DUPLICATE KEY UPDATE value = ?`,
+            [user.id, key, value, value] as any
+          );
+        }
+      });
+      return NextResponse.json({ success: true });
+    }
+
+    case 'get_contacts': {
+      const contacts = await query(
+        "SELECT * FROM crm_leads WHERE user_id = ? AND (status = 'qualified' OR status = 'contacted') ORDER BY name ASC",
+        [user.id]
+      );
+      return NextResponse.json({ success: true, contacts });
+    }
+
+    case 'get_projects': {
+      const projects = await query(
+        `SELECT p.*, l.name as lead_name, l.company as lead_company, l.website as lead_website
+         FROM crm_projects p
+         LEFT JOIN crm_leads l ON p.lead_id = l.id
+         WHERE p.user_id = ?
+         ORDER BY p.created_at DESC`,
+        [user.id]
+      );
+      return NextResponse.json({ success: true, projects });
+    }
+
+    case 'update_project_status': {
+      const id = parseInt(body.id || 0);
+      const status = body.status;
+
+      await execute(
+        'UPDATE crm_projects SET status = ? WHERE id = ? AND user_id = ?',
+        [status, id, user.id]
+      );
+
+      return NextResponse.json({ success: true });
+    }
+
+    default:
+      return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
   }
-}
+});
 
 // Scrape Simulator background loop
 async function simulateScrapingBackground(userId: number, jobId: number, queryVal: string, area: string) {

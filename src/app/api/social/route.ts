@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/api-auth';
 import { getUserById, createNotification, pushStreamOrder, computeOnlineFields, DEFAULT_AVATAR } from '@/lib/models/user';
 import { query, queryOne, execute } from '@/lib/db';
 
@@ -40,229 +40,210 @@ function normalizeAvatar(f: any): any {
   return { ...f, avatar, tags };
 }
 
-export async function POST(request: NextRequest) {
-  const session = request.cookies.get('ZOMZAM_SESSION')?.value;
-  const user = session ? verifyToken(session) : null;
+export const POST = withAuth(async (request, user) => {
+  const body = await request.json().catch(() => ({}));
+  const action = body.action || '';
+  const targetId = parseInt(body.user_id || 0);
 
-  if (!user) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  if (!action) {
+    return NextResponse.json({ success: false, message: 'Action is required' }, { status: 400 });
   }
 
-  try {
-    const body = await request.json().catch(() => ({}));
-    const action = body.action || '';
-    const targetId = parseInt(body.user_id || 0);
-
-    if (!action) {
-      return NextResponse.json({ success: false, message: 'Action is required' }, { status: 400 });
+  if (['friend_request', 'friend_accept', 'friend_decline', 'friend_cancel', 'unfriend', 'block', 'unblock', 'follow', 'unfollow'].includes(action)) {
+    if (!targetId || targetId === user.id) {
+      return NextResponse.json({ success: false, message: 'Invalid target user' }, { status: 400 });
     }
-
-    if (['friend_request', 'friend_accept', 'friend_decline', 'friend_cancel', 'unfriend', 'block', 'unblock', 'follow', 'unfollow'].includes(action)) {
-      if (!targetId || targetId === user.id) {
-        return NextResponse.json({ success: false, message: 'Invalid target user' }, { status: 400 });
-      }
-    }
-
-    switch (action) {
-      case 'friend_request': {
-        const target = await getUserById(targetId);
-        if (!target) {
-          return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
-        }
-
-        const me = await getUserById(user.id);
-
-        // Check existing
-        const existing = await queryOne(
-          `SELECT * FROM user_connections WHERE type = 'friend' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
-          [user.id, targetId, targetId, user.id]
-        );
-
-        if (existing) {
-          switch (existing.status) {
-            case 'accepted':
-              return NextResponse.json({ success: false, message: 'Already friends' }, { status: 400 });
-            case 'pending':
-              if (existing.requester_id === user.id) {
-                return NextResponse.json({ success: false, message: 'Request already sent' }, { status: 400 });
-              }
-              // Auto accept if they requested first
-              await execute(`UPDATE user_connections SET status = 'accepted', updated_at = NOW() WHERE id = ?`, [existing.id]);
-              await createNotification(user.id, 'friend_accept', {
-                from_user_id: user.id,
-                from_username: user.username,
-                from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
-                message: 'accepted your friend request',
-              });
-              return NextResponse.json({ success: true, message: 'Friend request accepted' });
-            case 'blocked':
-              return NextResponse.json({ success: false, message: 'Cannot send request' }, { status: 400 });
-            case 'declined':
-              await execute(`DELETE FROM user_connections WHERE id = ?`, [existing.id]);
-              break;
-          }
-        }
-
-        await execute(
-          `INSERT INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'friend', 'pending') ON DUPLICATE KEY UPDATE status = 'pending', updated_at = NOW()`,
-          [user.id, targetId]
-        );
-
-        await createNotification(targetId, 'friend_request', {
-          from_user_id: user.id,
-          from_username: user.username,
-          from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
-          message: 'sent you a friend request',
-        });
-
-        return NextResponse.json({ success: true, message: 'Friend request sent' });
-      }
-
-      case 'friend_accept': {
-        const existing = await queryOne(
-          `SELECT id FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'friend' AND status = 'pending' LIMIT 1`,
-          [targetId, user.id]
-        );
-
-        if (!existing) {
-          return NextResponse.json({ success: false, message: 'No pending request found' }, { status: 404 });
-        }
-
-        await execute(`UPDATE user_connections SET status = 'accepted', updated_at = NOW() WHERE id = ?`, [existing.id]);
-
-        const acceptor = await getUserById(user.id);
-        await createNotification(targetId, 'friend_accept', {
-          from_user_id: user.id,
-          from_username: user.username,
-          from_avatar: acceptor?.avatar || '/Assets/Img/default-avatar.png',
-          message: 'accepted your friend request',
-        });
-
-        return NextResponse.json({ success: true, message: 'Friend request accepted' });
-      }
-
-      case 'friend_decline': {
-        const res = await execute(
-          `UPDATE user_connections SET status = 'declined', updated_at = NOW() WHERE requester_id = ? AND addressee_id = ? AND type = 'friend' AND status = 'pending'`,
-          [targetId, user.id]
-        );
-
-        if (res.affectedRows === 0) {
-          return NextResponse.json({ success: false, message: 'No pending request to decline' }, { status: 400 });
-        }
-
-        return NextResponse.json({ success: true, message: 'Friend request declined' });
-      }
-
-      case 'friend_cancel': {
-        const res = await execute(
-          `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'friend' AND status = 'pending'`,
-          [user.id, targetId]
-        );
-
-        if (res.affectedRows === 0) {
-          return NextResponse.json({ success: false, message: 'No pending request to cancel' }, { status: 400 });
-        }
-
-        // Clean up ghost notifications
-        await execute(
-          `DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.from_user_id')) = ?`,
-          [targetId, String(user.id)]
-        );
-
-        await pushStreamOrder(targetId, 'social_update', {
-          action: 'request_cancelled',
-          from_user_id: user.id,
-        });
-
-        return NextResponse.json({ success: true, message: 'Friend request cancelled' });
-      }
-
-      case 'unfriend': {
-        const res = await execute(
-          `DELETE FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?))`,
-          [user.id, targetId, targetId, user.id]
-        );
-
-        if (res.affectedRows === 0) {
-          return NextResponse.json({ success: false, message: 'Not friends' }, { status: 400 });
-        }
-
-        await pushStreamOrder(targetId, 'social_update', {
-          action: 'unfriended',
-          from_user_id: user.id,
-        });
-
-        return NextResponse.json({ success: true, message: 'Unfriended' });
-      }
-
-      case 'block': {
-        await execute(
-          `DELETE FROM user_connections WHERE (requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)`,
-          [user.id, targetId, targetId, user.id]
-        );
-
-        await execute(
-          `INSERT INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'friend', 'blocked')`,
-          [user.id, targetId]
-        );
-
-        return NextResponse.json({ success: true, message: 'User blocked' });
-      }
-
-      case 'unblock': {
-        await execute(
-          `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND status = 'blocked'`,
-          [user.id, targetId]
-        );
-
-        return NextResponse.json({ success: true, message: 'User unblocked' });
-      }
-
-      case 'follow': {
-        const blockCheck = await queryOne(
-          `SELECT id FROM user_connections WHERE status = 'blocked' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
-          [user.id, targetId, targetId, user.id]
-        );
-
-        if (blockCheck) {
-          return NextResponse.json({ success: false, message: 'Cannot follow this user' }, { status: 400 });
-        }
-
-        await execute(
-          `INSERT IGNORE INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'follow', 'accepted')`,
-          [user.id, targetId]
-        );
-
-        return NextResponse.json({ success: true, message: 'Now following' });
-      }
-
-      case 'unfollow': {
-        await execute(
-          `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'follow'`,
-          [user.id, targetId]
-        );
-
-        return NextResponse.json({ success: true, message: 'Unfollowed' });
-      }
-
-      default:
-        return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
-    }
-  } catch (error: any) {
-    console.error('Social API POST error:', error);
-    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
-  }
-}
-
-export async function GET(request: NextRequest) {
-  const session = request.cookies.get('ZOMZAM_SESSION')?.value;
-  const user = session ? verifyToken(session) : null;
-
-  if (!user) {
-    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
   }
 
+  switch (action) {
+    case 'friend_request': {
+      const target = await getUserById(targetId);
+      if (!target) {
+        return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 });
+      }
+
+      const me = await getUserById(user.id);
+
+      // Check existing
+      const existing = await queryOne(
+        `SELECT * FROM user_connections WHERE type = 'friend' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
+        [user.id, targetId, targetId, user.id]
+      );
+
+      if (existing) {
+        switch (existing.status) {
+          case 'accepted':
+            return NextResponse.json({ success: false, message: 'Already friends' }, { status: 400 });
+          case 'pending':
+            if (existing.requester_id === user.id) {
+              return NextResponse.json({ success: false, message: 'Request already sent' }, { status: 400 });
+            }
+            // Auto accept if they requested first
+            await execute(`UPDATE user_connections SET status = 'accepted', updated_at = NOW() WHERE id = ?`, [existing.id]);
+            await createNotification(user.id, 'friend_accept', {
+              from_user_id: user.id,
+              from_username: user.username,
+              from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
+              message: 'accepted your friend request',
+            });
+            return NextResponse.json({ success: true, message: 'Friend request accepted' });
+          case 'blocked':
+            return NextResponse.json({ success: false, message: 'Cannot send request' }, { status: 400 });
+          case 'declined':
+            await execute(`DELETE FROM user_connections WHERE id = ?`, [existing.id]);
+            break;
+        }
+      }
+
+      await execute(
+        `INSERT INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'friend', 'pending') ON DUPLICATE KEY UPDATE status = 'pending', updated_at = NOW()`,
+        [user.id, targetId]
+      );
+
+      await createNotification(targetId, 'friend_request', {
+        from_user_id: user.id,
+        from_username: user.username,
+        from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
+        message: 'sent you a friend request',
+      });
+
+      return NextResponse.json({ success: true, message: 'Friend request sent' });
+    }
+
+    case 'friend_accept': {
+      const existing = await queryOne(
+        `SELECT id FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'friend' AND status = 'pending' LIMIT 1`,
+        [targetId, user.id]
+      );
+
+      if (!existing) {
+        return NextResponse.json({ success: false, message: 'No pending request found' }, { status: 404 });
+      }
+
+      await execute(`UPDATE user_connections SET status = 'accepted', updated_at = NOW() WHERE id = ?`, [existing.id]);
+
+      const acceptor = await getUserById(user.id);
+      await createNotification(targetId, 'friend_accept', {
+        from_user_id: user.id,
+        from_username: user.username,
+        from_avatar: acceptor?.avatar || '/Assets/Img/default-avatar.png',
+        message: 'accepted your friend request',
+      });
+
+      return NextResponse.json({ success: true, message: 'Friend request accepted' });
+    }
+
+    case 'friend_decline': {
+      const res = await execute(
+        `UPDATE user_connections SET status = 'declined', updated_at = NOW() WHERE requester_id = ? AND addressee_id = ? AND type = 'friend' AND status = 'pending'`,
+        [targetId, user.id]
+      );
+
+      if (res.affectedRows === 0) {
+        return NextResponse.json({ success: false, message: 'No pending request to decline' }, { status: 400 });
+      }
+
+      return NextResponse.json({ success: true, message: 'Friend request declined' });
+    }
+
+    case 'friend_cancel': {
+      const res = await execute(
+        `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'friend' AND status = 'pending'`,
+        [user.id, targetId]
+      );
+
+      if (res.affectedRows === 0) {
+        return NextResponse.json({ success: false, message: 'No pending request to cancel' }, { status: 400 });
+      }
+
+      // Clean up ghost notifications
+      await execute(
+        `DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.from_user_id')) = ?`,
+        [targetId, String(user.id)]
+      );
+
+      await pushStreamOrder(targetId, 'social_update', {
+        action: 'request_cancelled',
+        from_user_id: user.id,
+      });
+
+      return NextResponse.json({ success: true, message: 'Friend request cancelled' });
+    }
+
+    case 'unfriend': {
+      const res = await execute(
+        `DELETE FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?))`,
+        [user.id, targetId, targetId, user.id]
+      );
+
+      if (res.affectedRows === 0) {
+        return NextResponse.json({ success: false, message: 'Not friends' }, { status: 400 });
+      }
+
+      await pushStreamOrder(targetId, 'social_update', {
+        action: 'unfriended',
+        from_user_id: user.id,
+      });
+
+      return NextResponse.json({ success: true, message: 'Unfriended' });
+    }
+
+    case 'block': {
+      await execute(
+        `DELETE FROM user_connections WHERE (requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)`,
+        [user.id, targetId, targetId, user.id]
+      );
+
+      await execute(
+        `INSERT INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'friend', 'blocked')`,
+        [user.id, targetId]
+      );
+
+      return NextResponse.json({ success: true, message: 'User blocked' });
+    }
+
+    case 'unblock': {
+      await execute(
+        `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND status = 'blocked'`,
+        [user.id, targetId]
+      );
+
+      return NextResponse.json({ success: true, message: 'User unblocked' });
+    }
+
+    case 'follow': {
+      const blockCheck = await queryOne(
+        `SELECT id FROM user_connections WHERE status = 'blocked' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
+        [user.id, targetId, targetId, user.id]
+      );
+
+      if (blockCheck) {
+        return NextResponse.json({ success: false, message: 'Cannot follow this user' }, { status: 400 });
+      }
+
+      await execute(
+        `INSERT IGNORE INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'follow', 'accepted')`,
+        [user.id, targetId]
+      );
+
+      return NextResponse.json({ success: true, message: 'Now following' });
+    }
+
+    case 'unfollow': {
+      await execute(
+        `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'follow'`,
+        [user.id, targetId]
+      );
+
+      return NextResponse.json({ success: true, message: 'Unfollowed' });
+    }
+
+    default:
+      return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
+  }
+});
+
+export const GET = withAuth(async (request, user) => {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
   const targetId = parseInt(searchParams.get('user_id') || '0');
@@ -271,179 +252,174 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, message: 'Action required' }, { status: 400 });
   }
 
-  try {
-    switch (action) {
-      case 'status': {
-        if (!targetId) {
-          return NextResponse.json({ success: false, message: 'user_id required' }, { status: 400 });
+  switch (action) {
+    case 'status': {
+      if (!targetId) {
+        return NextResponse.json({ success: false, message: 'user_id required' }, { status: 400 });
+      }
+
+      const rows = await query(
+        `SELECT requester_id, addressee_id, type, status FROM user_connections WHERE ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) ORDER BY type ASC, created_at DESC`,
+        [user.id, targetId, targetId, user.id]
+      );
+
+      let status = 'none';
+      let isFollowing = false;
+
+      for (const row of rows) {
+        if (row.status === 'blocked') {
+          status = row.requester_id === user.id ? 'blocked_by_me' : 'blocked_by_them';
+          break;
         }
-
-        const rows = await query(
-          `SELECT requester_id, addressee_id, type, status FROM user_connections WHERE ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) ORDER BY type ASC, created_at DESC`,
-          [user.id, targetId, targetId, user.id]
-        );
-
-        let status = 'none';
-        let isFollowing = false;
-
-        for (const row of rows) {
-          if (row.status === 'blocked') {
-            status = row.requester_id === user.id ? 'blocked_by_me' : 'blocked_by_them';
+        if (row.type === 'friend') {
+          if (row.status === 'accepted') {
+            status = 'friends';
             break;
           }
-          if (row.type === 'friend') {
-            if (row.status === 'accepted') {
-              status = 'friends';
-              break;
-            }
-            if (row.status === 'pending') {
-              status = row.requester_id === user.id ? 'friend_pending_out' : 'friend_pending_in';
-            }
-          }
-          if (row.type === 'follow' && row.status === 'accepted' && row.requester_id === user.id) {
-            isFollowing = true;
+          if (row.status === 'pending') {
+            status = row.requester_id === user.id ? 'friend_pending_out' : 'friend_pending_in';
           }
         }
-
-        return NextResponse.json({ success: true, status, is_following: isFollowing });
-      }
-
-      case 'friends': {
-        const friends = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS connected_since, uos.last_seen, uos.is_idle
-           FROM user_connections uc
-           JOIN users u ON u.id = IF(uc.requester_id = ?, uc.addressee_id, uc.requester_id)
-           LEFT JOIN user_online_status uos ON uos.user_id = u.id
-           WHERE uc.type = 'friend' AND uc.status = 'accepted' AND (uc.requester_id = ? OR uc.addressee_id = ?)
-           ORDER BY u.username ASC`,
-          [user.id, user.id, user.id]
-        );
-
-        const enriched = friends.map((f) => normalizeAvatar(enrichOnline(f)));
-        return NextResponse.json({ success: true, friends: enriched });
-      }
-
-      case 'requests_in': {
-        const requests = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS requested_at
-           FROM user_connections uc
-           JOIN users u ON u.id = uc.requester_id
-           WHERE uc.addressee_id = ? AND uc.type = 'friend' AND uc.status = 'pending'
-           ORDER BY uc.created_at DESC`,
-          [user.id]
-        );
-        return NextResponse.json({ success: true, requests: requests.map(normalizeAvatar) });
-      }
-
-      case 'requests_out': {
-        const requests = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS requested_at
-           FROM user_connections uc
-           JOIN users u ON u.id = uc.addressee_id
-           WHERE uc.requester_id = ? AND uc.type = 'friend' AND uc.status = 'pending'
-           ORDER BY uc.created_at DESC`,
-          [user.id]
-        );
-        return NextResponse.json({ success: true, requests: requests.map(normalizeAvatar) });
-      }
-
-      case 'followers': {
-        const followers = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS followed_at
-           FROM user_connections uc
-           JOIN users u ON u.id = uc.requester_id
-           WHERE uc.addressee_id = ? AND uc.type = 'follow' AND uc.status = 'accepted'
-           ORDER BY uc.created_at DESC`,
-          [user.id]
-        );
-        return NextResponse.json({ success: true, followers: followers.map(normalizeAvatar) });
-      }
-
-      case 'following': {
-        const following = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS followed_at
-           FROM user_connections uc
-           JOIN users u ON u.id = uc.addressee_id
-           WHERE uc.requester_id = ? AND uc.type = 'follow' AND uc.status = 'accepted'
-           ORDER BY uc.created_at DESC`,
-          [user.id]
-        );
-        return NextResponse.json({ success: true, following: following.map(normalizeAvatar) });
-      }
-
-      case 'discover': {
-        const myData = await queryOne<{ tags: string }>(
-          `SELECT tags FROM users WHERE id = ? LIMIT 1`,
-          [user.id]
-        );
-
-        let myTags: string[] = [];
-        if (myData?.tags) {
-          try {
-            myTags = JSON.parse(myData.tags) || [];
-          } catch {}
+        if (row.type === 'follow' && row.status === 'accepted' && row.requester_id === user.id) {
+          isFollowing = true;
         }
-
-        const usersList = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags,
-             (SELECT COUNT(*) FROM user_connections mf WHERE mf.type = 'friend' AND mf.status = 'accepted' AND (mf.requester_id = u.id OR mf.addressee_id = u.id)) AS friend_count
-           FROM users u
-           WHERE u.id != ?
-             AND u.id NOT IN (
-               SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END
-               FROM user_connections
-               WHERE (requester_id = ? OR addressee_id = ?) AND status != 'declined'
-             )
-           LIMIT 100`,
-          [user.id, user.id, user.id, user.id]
-        );
-
-        const enrichedUsers = usersList.map((usr) => {
-          const norm = normalizeAvatar(usr);
-          const common = norm.tags.filter((t: string) => myTags.includes(t));
-          return {
-            ...norm,
-            matching_tags_count: common.length,
-            matching_tags: common,
-            friend_count: parseInt(norm.friend_count || 0),
-          };
-        });
-
-        // Sort: matching tags count descending, friend count descending
-        enrichedUsers.sort((a, b) => {
-          if (b.matching_tags_count !== a.matching_tags_count) {
-            return b.matching_tags_count - a.matching_tags_count;
-          }
-          return b.friend_count - a.friend_count;
-        });
-
-        return NextResponse.json({ success: true, users: enrichedUsers.slice(0, 20) });
       }
 
-      case 'search': {
-        const q = (searchParams.get('q') || '').trim();
-        if (q.length < 2) {
-          return NextResponse.json({ success: true, users: [] });
-        }
-
-        const usersList = await query(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags
-           FROM users u
-           WHERE u.id != ? AND u.username LIKE ?
-           ORDER BY u.username ASC
-           LIMIT 15`,
-          [user.id, `%${q}%`]
-        );
-
-        return NextResponse.json({ success: true, users: usersList.map(normalizeAvatar) });
-      }
-
-      default:
-        return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
+      return NextResponse.json({ success: true, status, is_following: isFollowing });
     }
-  } catch (error: any) {
-    console.error('Social API GET error:', error);
-    return NextResponse.json({ success: false, message: 'Internal Server Error' }, { status: 500 });
+
+    case 'friends': {
+      const friends = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS connected_since, uos.last_seen, uos.is_idle
+         FROM user_connections uc
+         JOIN users u ON u.id = IF(uc.requester_id = ?, uc.addressee_id, uc.requester_id)
+         LEFT JOIN user_online_status uos ON uos.user_id = u.id
+         WHERE uc.type = 'friend' AND uc.status = 'accepted' AND (uc.requester_id = ? OR uc.addressee_id = ?)
+         ORDER BY u.username ASC`,
+        [user.id, user.id, user.id]
+      );
+
+      const enriched = friends.map((f) => normalizeAvatar(enrichOnline(f)));
+      return NextResponse.json({ success: true, friends: enriched });
+    }
+
+    case 'requests_in': {
+      const requests = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS requested_at
+         FROM user_connections uc
+         JOIN users u ON u.id = uc.requester_id
+         WHERE uc.addressee_id = ? AND uc.type = 'friend' AND uc.status = 'pending'
+         ORDER BY uc.created_at DESC`,
+        [user.id]
+      );
+      return NextResponse.json({ success: true, requests: requests.map(normalizeAvatar) });
+    }
+
+    case 'requests_out': {
+      const requests = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS requested_at
+         FROM user_connections uc
+         JOIN users u ON u.id = uc.addressee_id
+         WHERE uc.requester_id = ? AND uc.type = 'friend' AND uc.status = 'pending'
+         ORDER BY uc.created_at DESC`,
+        [user.id]
+      );
+      return NextResponse.json({ success: true, requests: requests.map(normalizeAvatar) });
+    }
+
+    case 'followers': {
+      const followers = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS followed_at
+         FROM user_connections uc
+         JOIN users u ON u.id = uc.requester_id
+         WHERE uc.addressee_id = ? AND uc.type = 'follow' AND uc.status = 'accepted'
+         ORDER BY uc.created_at DESC`,
+        [user.id]
+      );
+      return NextResponse.json({ success: true, followers: followers.map(normalizeAvatar) });
+    }
+
+    case 'following': {
+      const following = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS followed_at
+         FROM user_connections uc
+         JOIN users u ON u.id = uc.addressee_id
+         WHERE uc.requester_id = ? AND uc.type = 'follow' AND uc.status = 'accepted'
+         ORDER BY uc.created_at DESC`,
+        [user.id]
+      );
+      return NextResponse.json({ success: true, following: following.map(normalizeAvatar) });
+    }
+
+    case 'discover': {
+      const myData = await queryOne<{ tags: string }>(
+        `SELECT tags FROM users WHERE id = ? LIMIT 1`,
+        [user.id]
+      );
+
+      let myTags: string[] = [];
+      if (myData?.tags) {
+        try {
+          myTags = JSON.parse(myData.tags) || [];
+        } catch {}
+      }
+
+      const usersList = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags,
+           (SELECT COUNT(*) FROM user_connections mf WHERE mf.type = 'friend' AND mf.status = 'accepted' AND (mf.requester_id = u.id OR mf.addressee_id = u.id)) AS friend_count
+         FROM users u
+         WHERE u.id != ?
+           AND u.id NOT IN (
+             SELECT CASE WHEN requester_id = ? THEN addressee_id ELSE requester_id END
+             FROM user_connections
+             WHERE (requester_id = ? OR addressee_id = ?) AND status != 'declined'
+           )
+         LIMIT 100`,
+        [user.id, user.id, user.id, user.id]
+      );
+
+      const enrichedUsers = usersList.map((usr) => {
+        const norm = normalizeAvatar(usr);
+        const common = norm.tags.filter((t: string) => myTags.includes(t));
+        return {
+          ...norm,
+          matching_tags_count: common.length,
+          matching_tags: common,
+          friend_count: parseInt(norm.friend_count || 0),
+        };
+      });
+
+      // Sort: matching tags count descending, friend count descending
+      enrichedUsers.sort((a, b) => {
+        if (b.matching_tags_count !== a.matching_tags_count) {
+          return b.matching_tags_count - a.matching_tags_count;
+        }
+        return b.friend_count - a.friend_count;
+      });
+
+      return NextResponse.json({ success: true, users: enrichedUsers.slice(0, 20) });
+    }
+
+    case 'search': {
+      const q = (searchParams.get('q') || '').trim();
+      if (q.length < 2) {
+        return NextResponse.json({ success: true, users: [] });
+      }
+
+      const usersList = await query(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags
+         FROM users u
+         WHERE u.id != ? AND u.username LIKE ?
+         ORDER BY u.username ASC
+         LIMIT 15`,
+        [user.id, `%${q}%`]
+      );
+
+      return NextResponse.json({ success: true, users: usersList.map(normalizeAvatar) });
+    }
+
+    default:
+      return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
   }
-}
+});
 export const dynamic = 'force-dynamic';

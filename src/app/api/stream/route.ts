@@ -1,15 +1,16 @@
-import { NextRequest } from 'next/server';
-import { verifyToken } from '@/lib/auth';
+import { withError, getSessionUser } from '@/lib/api-auth';
 import { getOnlineStatus, updateOnlineStatus } from '@/lib/models/user';
 import { queryOne, execute } from '@/lib/db';
 
-export async function GET(request: NextRequest) {
+// Soft auth: the SSE feed also serves anonymous viewers watching another user's
+// presence, so a missing session is allowed — the logged-in-only branches just
+// skip. withError centralizes the boundary for the synchronous setup phase.
+export const GET = withError(async (request) => {
   const { searchParams } = new URL(request.url);
   const viewingUserIdParam = searchParams.get('viewing_user_id');
   const viewingUserId = viewingUserIdParam ? parseInt(viewingUserIdParam) : null;
 
-  const session = request.cookies.get('ZOMZAM_SESSION')?.value;
-  const user = session ? verifyToken(session) : null;
+  const user = await getSessionUser();
 
   const encoder = new TextEncoder();
 
@@ -129,5 +130,5 @@ export async function GET(request: NextRequest) {
       'X-Accel-Buffering': 'no',
     },
   });
-}
+});
 export const dynamic = 'force-dynamic';
