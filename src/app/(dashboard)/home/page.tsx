@@ -13,7 +13,7 @@ import {
 import { Button, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
 import { PostComposer } from './PostComposer';
 import {
-  displayName, type CurrentUser, type MentionUser, type Comment, type Post,
+  displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
   type ConversationSummary, type ThreadMessage,
 } from './shared';
 
@@ -53,15 +53,6 @@ function buildTree(flat: Comment[]): Comment[] {
     }
   }
   return sortByUpvotes(roots);
-}
-
-function relativeTime(dateStr: string): string {
-  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(dateStr).toLocaleDateString();
 }
 
 // How many top-level comments to reveal before the "Load more" button.
