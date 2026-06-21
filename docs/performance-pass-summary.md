@@ -55,9 +55,37 @@
 
 ---
 
-## One item intentionally left for later
+## Follow-up: P3 pass — dashboard WebGL removed (2026-06-21)
 
-- **3D ambient backgrounds (three.js — Silk / LiquidEther):** they cost ~177 KB gzipped and run a continuous GPU loop for a very subtle (0.18 opacity) effect. Replacing them with a near-free CSS/SVG version is on the table, but it's a **visual/brand decision**, so it was deferred for a deliberate look-and-feel sign-off rather than removed silently.
+The "3D ambient backgrounds" item below (deferred for a visual sign-off) was actioned for the
+**dashboard shell**. The landing `Silk` shader stays (desktop-gated, 0 ms TBT, scores 100); the
+dashboard's `LiquidEther` — a full fluid simulation (BFECC advection + 32 Poisson/viscous
+iterations per frame) rendered at **0.18 opacity** — was deleted and replaced with a **static CSS
+gradient** (no JS, no `requestAnimationFrame` loop). It had been running on *every* authenticated
+route, mobile and desktop alike.
+
+**Measured (local production build, Lighthouse, authenticated as a real user):**
+
+| | Before (LiquidEther) | After (CSS gradient) |
+|---|---|---|
+| Desktop Perf (dashboard / settings / crm) | 61 / 59 / — | **99 / 100 / 99** ✅ |
+| Desktop TBT | ~11,000–13,000 ms | **10–70 ms** |
+| Mobile Perf (range across routes) | 49–65 | **75–92** |
+| Mobile TBT | 4,200–8,700 ms | **180–570 ms** |
+| Main-thread "Other" (rAF/WebGL) | ~35,000–40,000 ms | collapsed |
+
+**Desktop now meets the 97+ goal everywhere.** Mobile improved ~30 points but does **not** yet reach
+97: with the rAF loop gone, the limiter is now **LCP (~3.5 s)** — pure client-render/hydration cost
+of the `'use client'` dashboard shell on a 4×-throttled CPU (the *identical* markup renders LCP in
+0.8 s on desktop). Closing it requires an architectural change (server-render the dashboard content
+/ defer context providers), which is a **deliberate decision** tracked separately — not done
+silently here. See `docs/performance-pass-P3-plan.md`.
+
+---
+
+## One item intentionally left for later (from the 2026-06-20 pass)
+
+- **3D ambient backgrounds (three.js — Silk / LiquidEther):** they cost ~177 KB gzipped and run a continuous GPU loop for a very subtle (0.18 opacity) effect. Replacing them with a near-free CSS/SVG version is on the table, but it's a **visual/brand decision**, so it was deferred for a deliberate look-and-feel sign-off rather than removed silently. *(Resolved for the dashboard in the P3 pass above; the landing `Silk` is kept, desktop-gated.)*
 
 ---
 

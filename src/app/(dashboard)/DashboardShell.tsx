@@ -3,7 +3,6 @@ import { Button, ToastProvider } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import dynamicImport from 'next/dynamic';
 import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
@@ -11,11 +10,6 @@ import { MoneyProvider } from '@/context/MoneyContext';
 import { DropdownMenu } from '@/components/ui/Dropdown';
 import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
-
-// Loaded client-side only — WebGL requires browser APIs
-const LiquidEther = dynamicImport(() => import('@/components/LiquidEther'), { ssr: false });
-
-const BACKGROUND_COLORS = ['#EE5712', '#ff7340', '#C94A0D'];
 
 function DashboardLayoutContent({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   const { t } = useTranslation();
@@ -34,24 +28,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const [crmGroupOpen, setCrmGroupOpen] = useState(false);
   const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
-  const [bgReady, setBgReady] = useState(false);
   const sidebarNavRef = useRef<HTMLElement>(null);
-
-  // Defer the WebGL background until the browser is idle after first paint, so its
-  // one-time shader compilation / GPU buffer allocation doesn't stall the initial
-  // content render (and the dashboard entrance animations) on load.
-  useEffect(() => {
-    const w = window as typeof window & {
-      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-      cancelIdleCallback?: (id: number) => void;
-    };
-    if (typeof w.requestIdleCallback === 'function') {
-      const id = w.requestIdleCallback(() => setBgReady(true), { timeout: 1500 });
-      return () => w.cancelIdleCallback?.(id);
-    }
-    const t = setTimeout(() => setBgReady(true), 1000);
-    return () => clearTimeout(t);
-  }, []);
 
   // Auto-expand the nav section corresponding to current route on load
   useEffect(() => {
@@ -162,33 +139,24 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-[#111318] relative">
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: LIQUIDETHER WEBGL BACKGROUND
-          Contains: Fixed full-bleed animated canvas behind all content
-          (pointer-events-none so the UI stays fully interactive)
+          DEVELOPMENT NAVIGATOR: AMBIENT BACKGROUND
+          Contains: Fixed full-bleed static gradient behind all content.
+          Replaces the former LiquidEther WebGL fluid sim (P3 perf pass): that
+          ran a non-stop requestAnimationFrame fluid solver (~11s TBT, on every
+          route, mobile and desktop) for an 18%-opacity effect almost nobody
+          could see. This gradient is zero-cost — no JS, no compositor work, no
+          battery drain. A faint slate lift up top + a soft bottom vignette add
+          depth without any glow. pointer-events-none keeps the UI interactive.
           ────────────────────────────────────────────────────────── */}
       <div
         aria-hidden="true"
         className="fixed inset-0 z-0 pointer-events-none"
-        style={{ opacity: bgReady ? 0.18 : 0, transition: 'opacity 600ms ease' }}
-      >
-        {bgReady && (
-          <LiquidEther
-            colors={BACKGROUND_COLORS}
-            mouseForce={18}
-            cursorSize={120}
-            resolution={0.35}
-            autoDemo={true}
-            autoSpeed={0.28}
-            autoIntensity={2.0}
-            autoResumeDelay={3000}
-            autoRampDuration={1.2}
-            takeoverDuration={0.3}
-            isBounce={false}
-            isViscous={false}
-            BFECC={true}
-          />
-        )}
-      </div>
+        style={{
+          background:
+            'radial-gradient(120% 80% at 50% 0%, rgba(123,116,129,0.06) 0%, transparent 55%), ' +
+            'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.22) 100%)',
+        }}
+      />
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
