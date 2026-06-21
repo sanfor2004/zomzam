@@ -1,6 +1,12 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { verifySession } from './lib/session';
 
+// Pages anyone may see without a session. Everything else is protected by
+// DEFAULT-DENY: a newly added page can never be accidentally left unguarded
+// (the bug that previously left /crm exposed). Public set = landing, auth/
+// recovery pages, public profiles (/u), shareable post pages (/p), the dev kit.
+const PUBLIC_PREFIXES = ['/sign', '/forgot-password', '/u', '/ui-kit', '/p'];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -10,29 +16,19 @@ export async function proxy(request: NextRequest) {
   const token = request.cookies.get('ZOMZAM_SESSION')?.value;
   const user = await verifySession(token);
 
-  // Define route lists
-  const isAuthRoute = pathname.startsWith('/sign') || pathname === '/';
-  const isProtectedRoute =
-    pathname.startsWith('/dashboard') ||
-    pathname.startsWith('/home') ||
-    pathname.startsWith('/time') ||
-    pathname.startsWith('/money') ||
-    pathname.startsWith('/me') ||
-    pathname.startsWith('/settings') ||
-    pathname.startsWith('/change-password') ||
-    pathname.startsWith('/community');
+  const isPublic = pathname === '/' || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p));
+  // The landing and sign pages are where a logged-in user has nothing to do.
+  const isAuthEntry = pathname === '/' || pathname.startsWith('/sign');
 
-  // If user is authenticated and goes to sign/landing, redirect to dashboard
-  if (user && isAuthRoute) {
+  // Authenticated users skip the marketing/sign pages straight into the app.
+  if (user && isAuthEntry) {
     return NextResponse.redirect(new URL('/home', request.url));
   }
 
-  // If user is not authenticated and tries to access protected route, redirect to signin
-  if (!user && isProtectedRoute) {
+  // Unauthenticated users may only reach public pages; gate everything else.
+  if (!user && !isPublic) {
     const signInUrl = new URL('/sign', request.url);
-    if (pathname !== '/') {
-      signInUrl.searchParams.set('redirect', pathname);
-    }
+    signInUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(signInUrl);
   }
 

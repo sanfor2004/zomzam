@@ -279,7 +279,7 @@ sequenceDiagram
 
 ### Authentication Core Code:
 * **Session Tokens**: [session.ts](file:///c:/www/zomzam.com/src/lib/session.ts) is the single place a `jose` JWT is signed/verified (Edge proxy + Node routes). [api-auth.ts](file:///c:/www/zomzam.com/src/lib/api-auth.ts) exposes the `withAuth()`/`withError()` route gates and `getSessionUser()`, which also enforces `is_active` + `token_version` revocation. [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) is now bcrypt-only.
-* **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) dynamically matches paths (e.g., `/dashboard`, `/time`, `/money`, `/settings`) and intercepts unauthenticated requests. It verifies tokens via the shared edge-safe `verifySession` (`jose`) without triggering Node-only environment crashes; API authorization itself lives in `withAuth()` at the route layer, not the proxy.
+* **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) protects every page by **default-deny** — only an explicit public allowlist (`/`, `/sign`, `/forgot-password`, `/u`, `/p`, `/ui-kit`) is reachable without a session; everything else redirects to `/sign`. So a newly added page can never be accidentally left unguarded. It verifies tokens via the shared edge-safe `verifySession` (`jose`) without triggering Node-only environment crashes; API authorization itself lives in `withAuth()` at the route layer, not the proxy.
 
 ---
 
