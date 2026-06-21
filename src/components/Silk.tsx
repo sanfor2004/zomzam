@@ -127,7 +127,10 @@ const Silk = ({ speed = 5, scale = 1, color = '#7B7481', noiseIntensity = 1.5, r
 
   return (
     <div className="w-full h-full">
-      <Canvas dpr={[1, 2]} frameloop="always">
+      {/* dpr capped at 1: the Silk pattern is a blurred, low-frequency field, so 2×
+          on retina is imperceptible but doubles GPU fill-rate. Only desktops render
+          this (gated by useDesktopWebGL), so 1× keeps even high-DPI laptops smooth. */}
+      <Canvas dpr={1} frameloop="always">
         <SilkPlane ref={meshRef} uniforms={uniforms} />
       </Canvas>
     </div>

@@ -8,14 +8,18 @@ import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, Activity, DollarSi
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
+import { useDesktopWebGL } from '@/hooks/useDesktopWebGL';
 
-// Load Silk component dynamically to avoid SSR/hydration issues with ThreeJS/WebGL
+// Load Silk component dynamically to avoid SSR/hydration issues with ThreeJS/WebGL.
+// Combined with the useDesktopWebGL gate below, the three.js chunk is only ever
+// fetched on real desktop pointers — phones/tablets get the static gradient fallback.
 const Silk = dynamic(() => import('@/components/Silk'), { ssr: false });
 
 export default function LandingPage() {
   const { t, language, setLanguage } = useTranslation();
   const [langOpen, setLangOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
+  // True only on desktop pointers, after first idle — gates the WebGL Silk shaders.
+  const showSilk = useDesktopWebGL();
   const bentoRef = useRef<HTMLDivElement>(null);
   const heroTitleRef = useRef<HTMLHeadingElement>(null);
   const descRef = useRef<HTMLParagraphElement>(null);
@@ -25,7 +29,6 @@ export default function LandingPage() {
   const marqueeTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMounted(true);
     document.documentElement.classList.add('dark');
   }, []);
 
@@ -376,7 +379,7 @@ export default function LandingPage() {
         <div ref={bentoRef} className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mt-4">
           
           {/* Card 1: Heading/Hero description (Spans 8 columns, medium height) */}
-          <div data-animate="bento-card" className="lg:col-span-8 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 sm:p-10 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group will-change-transform">
+          <div data-animate="bento-card" className="lg:col-span-8 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 sm:p-10 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none group-hover:bg-primary-500/10 transition-colors"></div>
             
             <div className="space-y-6">
@@ -414,10 +417,15 @@ export default function LandingPage() {
           </div>
 
           {/* Card 2: Interactive Goal / Silk background card (Spans 4 columns) */}
-          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group will-change-transform">
-            {/* Silk background inside card */}
+          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[360px] relative overflow-hidden group">
+            {/* Background: static orange gradient is always painted (the only layer on
+                phones/tablets); the live Silk shader overlays it on desktop only. */}
             <div className="absolute inset-0 z-0">
-              <Silk speed={3} scale={1.3} color="#EE5712" noiseIntensity={0.8} />
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-[radial-gradient(125%_120%_at_50%_0%,rgba(238,87,18,0.45)_0%,rgba(238,87,18,0.12)_38%,transparent_72%)]"
+              />
+              {showSilk && <Silk speed={3} scale={1.3} color="#EE5712" noiseIntensity={0.8} />}
             </div>
             {/* Soft overlay to guarantee text legibility */}
             <div className="absolute inset-0 bg-gradient-to-b from-[#161920]/10 via-[#161920]/85 to-[#161920] z-10 pointer-events-none" />
@@ -453,11 +461,16 @@ export default function LandingPage() {
           </div>
 
           {/* Card 3: Large Canvas Card with Silk Background & floating service card (Spans 8 columns) */}
-          <div data-animate="bento-card" className="lg:col-span-8 bg-slate-900 border border-slate-800/80 rounded-[2rem] overflow-hidden shadow-apple min-h-[460px] relative flex flex-col justify-end p-6 sm:p-8 will-change-transform">
+          <div data-animate="bento-card" className="lg:col-span-8 bg-slate-900 border border-slate-800/80 rounded-[2rem] overflow-hidden shadow-apple min-h-[460px] relative flex flex-col justify-end p-6 sm:p-8">
             
-            {/* Large primary Silk background */}
+            {/* Background: static slate gradient is always painted (the only layer on
+                phones/tablets); the live Silk shader overlays it on desktop only. */}
             <div className="absolute inset-0 z-0">
-              <Silk speed={4} scale={0.7} color="#7B7481" noiseIntensity={1.4} />
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 bg-[radial-gradient(130%_110%_at_50%_100%,rgba(123,116,129,0.30)_0%,rgba(123,116,129,0.08)_45%,transparent_75%)]"
+              />
+              {showSilk && <Silk speed={4} scale={0.7} color="#7B7481" noiseIntensity={1.4} />}
             </div>
             <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent z-10 pointer-events-none" />
             
@@ -487,7 +500,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 4: Team/Active community list (Spans 4 columns) */}
-          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[460px] relative overflow-hidden group will-change-transform">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[460px] relative overflow-hidden group">
             <div className="space-y-6">
               <div className="w-10 h-10 bg-primary-500/10 text-primary-500 rounded-2xl flex items-center justify-center">
                 <Users className="w-5 h-5" />
@@ -521,7 +534,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 5: 5+ Native tools (Spans 4 columns, Primary colored) */}
-          <div data-animate="bento-card" className="lg:col-span-4 bg-primary-500 text-white rounded-[2rem] p-8 flex flex-col justify-between shadow-lg shadow-primary-500/15 relative overflow-hidden group will-change-transform">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-primary-500 text-white rounded-[2rem] p-8 flex flex-col justify-between shadow-lg shadow-primary-500/15 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-8 -mt-8 blur-xl pointer-events-none"></div>
             
             <div className="space-y-4">
@@ -535,7 +548,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 6: Security-First metadata (Spans 4 columns, dark themed) */}
-          <div data-animate="bento-card" className="lg:col-span-4 bg-slate-950 text-white border border-slate-900 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple relative overflow-hidden will-change-transform">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-slate-950 text-white border border-slate-900 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple relative overflow-hidden">
             <div className="absolute bottom-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full blur-2xl pointer-events-none"></div>
             
             <div className="space-y-4">
@@ -556,7 +569,7 @@ export default function LandingPage() {
           </div>
 
           {/* Card 7: Real-Time Engine specs (Spans 4 columns) */}
-          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[220px] will-change-transform">
+          <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[220px]">
             <div className="space-y-4">
               <div className="w-8 h-8 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center font-bold">
                 ✦

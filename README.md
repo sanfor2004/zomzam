@@ -65,7 +65,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | **Security** | **Jose JWT (Edge), jsonwebtoken (Node) & BcryptJS** | Edge-runtime compatible token signing/validation for `proxy.ts`; Node-side `jsonwebtoken` for API routes; high-rounds bcrypt salt for password protection. |
 | **Streaming** | **Server-Sent Events (SSE)** | Low-overhead server-push pipe for real-time presence sync without the overhead of WebSockets. |
 | **Animation** | **GSAP + `@gsap/react`** (centralized in `src/lib/gsap.ts`) | `ScrollTrigger`, `SplitText`, `Observer`, `Flip`, and `ScrambleTextPlugin` registered once; powers the shared `usePageEntrance` reveal hook. `canvas-confetti` handles reward bursts. No Framer Motion. |
-| **3D / Ambient Visuals** | **three.js + React Three Fiber** | Shader backgrounds (`Silk.tsx` on the landing page, `LiquidEther.jsx` on the dashboard shell), lazy-loaded client-side and deferred via `requestIdleCallback`. |
+| **3D / Ambient Visuals** | **three.js + React Three Fiber** | Shader backgrounds (`Silk.tsx` on the landing page, `LiquidEther.jsx` on the dashboard shell), lazy-loaded client-side. The dashboard `LiquidEther` defers via `requestIdleCallback`; the landing `Silk` is gated by `useDesktopWebGL` (`(min-width:1024px) and (pointer:fine)` + idle) so the three.js chunk never downloads on phones/tablets — they get a static CSS-gradient fallback. |
 | **Icons** | **Lucide React** | Consistent, tree-shakeable icon set across the Kit and every feature page. |
 | **Maps** | **`@vis.gl/react-google-maps`** | Powers the CRM Map Leads Scraper's Place Search interface. |
 | **Image Processing** | **`sharp`** | Server-side avatar resizing/optimization in `api/profile`. |

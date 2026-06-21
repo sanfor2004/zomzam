@@ -33,6 +33,12 @@ yarn-error.log*
 # runtime logs
 /Logs/
 
+# user-uploaded avatars (runtime sharp pipeline output + db:seed dev artifacts).
+# The directory itself is kept via .gitkeep so the upload pipeline always has a
+# target; only its contents are ignored so dev-seed PNGs never ship to prod.
+/public/Assets/Uploads/avatars/*
+!/public/Assets/Uploads/avatars/.gitkeep
+
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
