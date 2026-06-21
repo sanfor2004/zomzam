@@ -2,15 +2,16 @@
 
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Send, Loader2, Heart, MessageCircle, Trash2,
-  UserPlus, Check, Users, ArrowBigUp, MoreHorizontal, Pencil,
+  UserPlus, Check, Users, ArrowBigUp, Pencil,
   MessageSquarePlus, Search, MessagesSquare,
 } from 'lucide-react';
-import { Button, Tooltip, ConfirmDialog, Dropdown, DropdownItem, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
+import { Button, Tooltip, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
 import { PostComposer } from './PostComposer';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
@@ -26,38 +27,6 @@ interface SuggestedUser {
   bio?: string | null;
   matching_tags?: string[];
 }
-
-// Highest-voted first; ties fall back to oldest-first so order stays stable.
-function byUpvotes(a: Comment, b: Comment): number {
-  return b.upvote_count - a.upvote_count
-    || new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-}
-
-// Sort a level and every nested reply level the same way (recursive).
-function sortByUpvotes(nodes: Comment[]): Comment[] {
-  nodes.sort(byUpvotes);
-  for (const n of nodes) if (n.replies?.length) sortByUpvotes(n.replies);
-  return nodes;
-}
-
-function buildTree(flat: Comment[]): Comment[] {
-  const map = new Map<number, Comment>();
-  const roots: Comment[] = [];
-  for (const c of flat) map.set(c.id, { ...c, replies: [] });
-  for (const c of flat) {
-    const node = map.get(c.id)!;
-    if (c.parent_id != null && map.has(c.parent_id)) {
-      map.get(c.parent_id)!.replies!.push(node);
-    } else {
-      roots.push(node);
-    }
-  }
-  return sortByUpvotes(roots);
-}
-
-// How many top-level comments to reveal before the "Load more" button.
-const COMMENTS_PAGE_SIZE = 6;
-const REPLIES_PAGE_SIZE = 4;
 
 export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -324,7 +293,6 @@ export default function HomePage() {
                   key={post.id}
                   post={post}
                   isOwn={currentUser?.username === post.username}
-                  viewerUsername={currentUser?.username ?? null}
                   onDelete={handleDeletePost}
                 />
               ))}
@@ -694,102 +662,20 @@ export default function HomePage() {
 // memo'd so composer keystrokes (and other HomePage state churn) don't re-render
 // every mounted card — only cards whose own props actually change re-render.
 // Relies on `onDelete` being a stable useCallback in HomePage.
-const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete }: { post: Post; isOwn: boolean; viewerUsername?: string | null; onDelete: (id: number) => void }) {
+const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDelete: (id: number) => void }) {
   const name = displayName(post);
   const { toast } = useToast();
 
+  const router = useRouter();
   const [liked, setLiked] = useState(post.liked_by_me);
   const [likeCount, setLikeCount] = useState(post.like_count);
-  const [commentCount, setCommentCount] = useState(post.comment_count);
-  const [commentsOpen, setCommentsOpen] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [loadingComments, setLoadingComments] = useState(false);
-  const [commentText, setCommentText] = useState('');
-  const [submittingComment, setSubmittingComment] = useState(false);
-  const [visibleComments, setVisibleComments] = useState(COMMENTS_PAGE_SIZE);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [postDeleting, setPostDeleting] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
-  const topStackRef = useRef<HTMLDivElement>(null);
-  const commentsWrapRef = useRef<HTMLDivElement>(null);
-  const commentsInnerRef = useRef<HTMLDivElement>(null);
-  const wasLoadingRef = useRef(false);
-  const [deleteConfirming, setDeleteConfirming] = useState(false);
-  const [postDeleting, setPostDeleting] = useState(false);
-  // Trails `commentsOpen`: stays true through the collapse tween so the close
-  // animation can play out before React unmounts the thread.
-  const [commentsMounted, setCommentsMounted] = useState(false);
 
-  // Top-2 rated root comments ship inline with the feed payload (api/posts feed
-  // action) and render as an always-visible static stack beneath the card — no
-  // hover, no per-card fetch. Animated out only while the full thread is open.
   const topComments = post.top_comments ?? [];
-
-  // ── Comment reveal (accordion height + content fade) ──────────
-  // Sequenced against the static top-2 stack so the two never co-exist at full
-  // height (no mid-transition bulge): opening collapses the stack, then expands
-  // the thread; closing reverses. Height is the one layout-bound property we
-  // animate — justified because no transform can make sibling content reflow,
-  // and it's a one-shot, single-card interaction. `will-change` is scoped to the
-  // tween's lifetime, never left on. Reduced-motion users get an instant swap.
-  useGSAP(() => {
-    const wrap = commentsWrapRef.current;
-    if (!wrap) return; // closed + unmounted — nothing to animate
-    const stack = topStackRef.current;
-    const inner = commentsInnerRef.current;
-    // Cancel any in-flight tweens so a fast open→close→open never overlaps.
-    gsap.killTweensOf([wrap, inner, stack].filter(Boolean) as Element[]);
-
-    gsap.matchMedia().add('(prefers-reduced-motion: reduce)', () => {
-      if (commentsOpen) {
-        if (stack) gsap.set(stack, { height: 0, autoAlpha: 0 });
-        gsap.set(wrap, { height: 'auto' });
-        if (inner) gsap.set(inner, { autoAlpha: 1, y: 0 });
-      } else {
-        gsap.set(wrap, { height: 0 });
-        if (stack) gsap.set(stack, { height: 'auto', autoAlpha: 1 });
-        setCommentsMounted(false);
-      }
-    });
-
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      const tl = gsap.timeline({ defaults: { ease: 'power2.out' } });
-      if (commentsOpen) {
-        if (stack) tl.to(stack, { height: 0, autoAlpha: 0, duration: 0.18, ease: 'power2.in' });
-        tl.set(wrap, { willChange: 'height' })
-          .fromTo(wrap, { height: 0 }, { height: 'auto', duration: 0.3 });
-        if (inner) tl.fromTo(inner, { autoAlpha: 0, y: 8 }, { autoAlpha: 1, y: 0, duration: 0.26 }, '<0.04');
-        tl.set(wrap, { willChange: 'auto' });
-      } else {
-        tl.set(wrap, { willChange: 'height' });
-        if (inner) tl.to(inner, { autoAlpha: 0, y: 8, duration: 0.16, ease: 'power2.in' });
-        tl.to(wrap, { height: 0, duration: 0.24, ease: 'power2.in' }, inner ? '<0.04' : 0)
-          .set(wrap, { willChange: 'auto' });
-        if (stack) tl.fromTo(stack, { height: 0, autoAlpha: 0 }, { height: 'auto', autoAlpha: 1, duration: 0.22 });
-        tl.call(() => setCommentsMounted(false)); // unmount once fully collapsed
-      }
-    });
-  }, { dependencies: [commentsOpen], scope: cardRef });
-
-  // First open fetches comments async, so the thread expands to the loader's
-  // height first; when the real comments land we settle from that height to the
-  // content's. Subsequent opens already have the data, so this no-ops.
-  useGSAP(() => {
-    const wrap = commentsWrapRef.current;
-    const finishedLoading = wasLoadingRef.current && !loadingComments;
-    wasLoadingRef.current = loadingComments;
-    if (!wrap || !commentsOpen || !finishedLoading) return;
-    gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.killTweensOf(wrap);
-      const fromHeight = wrap.offsetHeight; // loader height
-      gsap.set(wrap, { height: 'auto' });
-      const toHeight = wrap.offsetHeight;   // settled content height
-      gsap.fromTo(wrap, { height: fromHeight }, {
-        height: toHeight, duration: 0.28, willChange: 'height',
-        onComplete: () => gsap.set(wrap, { height: 'auto', willChange: 'auto' }),
-      });
-    });
-  }, { dependencies: [loadingComments], scope: cardRef });
 
   // Disarm the armed delete wedge on outside-click or Escape — the cross-device
   // replacement for the old pointer-leave disarm (touch never had a "leave").
@@ -861,120 +747,6 @@ const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete 
         .to(heartIconRef.current, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
     });
   };
-
-  const toggleComments = async () => {
-    const opening = !commentsOpen;
-    setCommentsOpen(opening);
-    if (opening) {
-      setCommentsMounted(true); // mount the thread so the open tween has a target
-      if (comments.length === 0) {
-        setLoadingComments(true);
-        try {
-          const res = await fetch(`/api/posts?action=comments&post_id=${post.id}`);
-          const data = await res.json();
-          if (data.success) setComments(data.comments);
-        } catch { /* non-blocking */ }
-        setLoadingComments(false);
-      }
-    }
-  };
-
-  // Shared by PostCard (top-level) and CommentRow (replies)
-  const addComment = async (text: string, parentId?: number): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'comment', post_id: post.id, content: text, parent_id: parentId ?? null }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setComments((prev) => [...prev, data.comment]);
-        setCommentCount((prev) => prev + 1);
-        // Keep a freshly posted top-level comment visible past the page limit.
-        if (!parentId) setVisibleComments((v) => v + 1);
-        return true;
-      }
-    } catch { /* non-blocking */ }
-    return false;
-  };
-
-  // Toggle an upvote on a comment. State lives here (not in CommentRow) so the
-  // tree re-sorts by vote count the moment a vote lands — that's the reordering.
-  const voteComment = async (commentId: number) => {
-    const target = comments.find((c) => c.id === commentId);
-    if (!target) return;
-    const nextUp = !target.upvoted_by_me;
-
-    const apply = (up: boolean) => setComments((prev) => prev.map((c) =>
-      c.id === commentId
-        ? { ...c, upvoted_by_me: up, upvote_count: c.upvote_count + (up ? 1 : -1) }
-        : c
-    ));
-
-    apply(nextUp); // optimistic
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'comment_vote', comment_id: commentId }),
-      });
-      const data = await res.json();
-      if (!data.success) apply(!nextUp); // revert on server rejection
-    } catch {
-      apply(!nextUp); // revert on network failure
-    }
-  };
-
-  // Edit a comment's text in place. Returns false so the row can stay in edit
-  // mode (keeping the user's draft) if the save fails.
-  const editComment = async (commentId: number, text: string): Promise<boolean> => {
-    const content = text.trim().slice(0, 1000);
-    if (!content) return false;
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'comment_edit', comment_id: commentId, content }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setComments((prev) => prev.map((c) => (c.id === commentId ? { ...c, content: data.content } : c)));
-        return true;
-      }
-    } catch { /* non-blocking */ }
-    return false;
-  };
-
-  // Delete a comment and its whole reply thread (the server returns every id it
-  // removed so the count and list stay in sync).
-  const deleteComment = async (commentId: number): Promise<boolean> => {
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'comment_delete', comment_id: commentId }),
-      });
-      const data = await res.json();
-      if (data.success && Array.isArray(data.deleted_ids)) {
-        const removed = new Set<number>(data.deleted_ids.map((id: number) => Number(id)));
-        setComments((prev) => prev.filter((c) => !removed.has(c.id)));
-        setCommentCount((prev) => Math.max(0, prev - removed.size));
-        return true;
-      }
-    } catch { /* non-blocking */ }
-    return false;
-  };
-
-  const submitTopComment = async () => {
-    if (!commentText.trim() || submittingComment) return;
-    setSubmittingComment(true);
-    const ok = await addComment(commentText);
-    if (ok) setCommentText('');
-    setSubmittingComment(false);
-  };
-
-  const tree = buildTree(comments);
 
   return (
     <div
@@ -1086,17 +858,15 @@ const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete 
               </Button>
             </Tooltip>
 
-            <Tooltip content={commentsOpen ? 'Hide comments' : 'View comments'}>
+            <Tooltip content="View comments">
               <Button
                 variant="unstyled"
-                onClick={toggleComments}
-                aria-label={commentsOpen ? 'Hide comments' : 'View comments on post'}
-                className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-                  commentsOpen ? 'text-sky-400' : 'text-slate-400 hover:text-sky-400'
-                }`}
+                onClick={() => router.push(`/p/${post.id}`)}
+                aria-label="View comments on post"
+                className="flex items-center gap-1.5 text-xs font-semibold transition-colors text-slate-400 hover:text-sky-400"
               >
                 <MessageCircle className="w-4 h-4" />
-                {commentCount > 0 && <span>{commentCount}</span>}
+                {post.comment_count > 0 && <span>{post.comment_count}</span>}
               </Button>
             </Tooltip>
           </div>
@@ -1110,13 +880,9 @@ const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete 
         </div>
       </div>
 
-      {/* ─── Static top-2 comment layers — "imported" as a stepped/inset stack
-           descending from the card. Always mounted (so GSAP can collapse/expand
-           its height); animated out while the full thread is open, which shows
-           these same two ranked at its top. overflow-hidden keeps the collapse
-           crisp; the pt-2 lives inside so the gap collapses with it. ─── */}
+      {/* ─── Static top-2 comment preview — stepped/inset stack descending from the card. ─── */}
       {topComments.length > 0 && (
-        <div ref={topStackRef} className="relative z-[1] overflow-hidden" aria-label="Top comments">
+        <div className="relative z-[1] overflow-hidden" aria-label="Top comments">
           <div className="pt-2">
             {topComments.slice(0, 2).map((c, i, arr) => (
               <ThreadChild key={c.id} isLast={i === arr.length - 1}>
@@ -1135,75 +901,6 @@ const PostCard = memo(function PostCard({ post, isOwn, viewerUsername, onDelete 
         </div>
       )}
 
-      {/* ─── Expanded comments section — accordion wrapper animates height,
-           inner fades/slides up. Kept mounted via `commentsMounted` so the
-           collapse tween can finish before React unmounts the thread. ─── */}
-      {commentsMounted && (
-        <div
-          ref={commentsWrapRef}
-          className="overflow-hidden"
-          style={{ height: 0 }}
-          aria-hidden={!commentsOpen}
-        >
-          <div ref={commentsInnerRef} className="mt-3 px-1">
-          {loadingComments ? (
-            <div className="flex justify-center py-3">
-              <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
-            </div>
-          ) : tree.length === 0 ? (
-            <p className="text-xs text-slate-600 text-center py-2">No comments yet — be the first!</p>
-          ) : (
-            <>
-              {tree.slice(0, visibleComments).map((c, i, arr) => (
-                <ThreadChild key={c.id} isLast={i === arr.length - 1}>
-                  <CommentRow
-                    comment={c}
-                    onReply={addComment}
-                    onVote={voteComment}
-                    onEdit={editComment}
-                    onCommentDelete={deleteComment}
-                    viewerUsername={viewerUsername}
-                    depth={0}
-                  />
-                </ThreadChild>
-              ))}
-              {tree.length > visibleComments && (
-                <Button
-                  variant="unstyled"
-                  onClick={() => setVisibleComments((v) => v + COMMENTS_PAGE_SIZE)}
-                  className="w-full text-center text-xs font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1.5 mt-1"
-                >
-                  Show {Math.min(COMMENTS_PAGE_SIZE, tree.length - visibleComments)} more comments
-                </Button>
-              )}
-            </>
-          )}
-
-          {/* Comment input */}
-          <div className="flex gap-2 mt-3 pt-1">
-            <input
-              value={commentText}
-              onChange={(e) => setCommentText(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTopComment(); } }}
-              placeholder="Write a comment…"
-              maxLength={1000}
-              className="flex-1 bg-white/[0.03] rounded-xl px-3 py-2 text-xs text-slate-200 border border-white/[0.06] outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
-            />
-            <Button
-              variant="primary"
-              size="none"
-              onClick={submitTopComment}
-              disabled={!commentText.trim() || submittingComment}
-              className="p-2 disabled:opacity-40 flex-shrink-0"
-            >
-              {submittingComment
-                ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
-                : <Send className="w-3.5 h-3.5 text-white" />}
-            </Button>
-          </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 });
@@ -1339,235 +1036,3 @@ function CommentCard({
   );
 }
 
-// ── Comment row (recursive — supports reply threads) ──────────
-function CommentRow({
-  comment,
-  onReply,
-  onVote,
-  onEdit,
-  onCommentDelete,
-  viewerUsername,
-  depth,
-}: {
-  comment: Comment;
-  onReply: (text: string, parentId?: number) => Promise<boolean>;
-  onVote: (commentId: number) => void;
-  onEdit: (commentId: number, text: string) => Promise<boolean>;
-  onCommentDelete: (commentId: number) => Promise<boolean>;
-  viewerUsername?: string | null;
-  depth: number;
-}) {
-  const name = displayName(comment);
-  const isMine = !!viewerUsername && comment.username === viewerUsername;
-  const [replyOpen, setReplyOpen] = useState(false);
-  const [replyText, setReplyText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editText, setEditText] = useState(comment.content);
-  const [savingEdit, setSavingEdit] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-
-  // Replies mirror the post's comment toggle: one reply shows statically, the
-  // rest reveal on a "View replies" button — no hover, no push-down animation.
-  const [repliesExpanded, setRepliesExpanded] = useState(false);
-  const [visibleReplies, setVisibleReplies] = useState(REPLIES_PAGE_SIZE);
-  const replies = comment.replies ?? [];
-  const replyCount = replies.length;
-  const shownReplies = repliesExpanded ? replies.slice(0, visibleReplies) : replies.slice(0, 1);
-
-  const submitReply = async () => {
-    if (!replyText.trim() || submitting) return;
-    setSubmitting(true);
-    const ok = await onReply(replyText, comment.id);
-    if (ok) { setReplyText(''); setReplyOpen(false); }
-    setSubmitting(false);
-  };
-
-  const startEdit = () => {
-    setEditText(comment.content);
-    setEditing(true);
-    setMenuOpen(false);
-  };
-
-  const saveEdit = async () => {
-    if (!editText.trim() || savingEdit) return;
-    setSavingEdit(true);
-    const ok = await onEdit(comment.id, editText);
-    if (ok) setEditing(false);
-    setSavingEdit(false);
-  };
-
-  const confirmAndDelete = async () => {
-    setDeleting(true);
-    const ok = await onCommentDelete(comment.id);
-    // On success the row unmounts; on failure, drop back out of the dialog.
-    if (!ok) { setDeleting(false); setConfirmDelete(false); }
-  };
-
-  return (
-    <div>
-
-      <CommentCard
-        comment={comment}
-        actions={
-          <>
-            <Tooltip content={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote'}>
-              <Button
-                variant="unstyled"
-                onClick={() => onVote(comment.id)}
-                aria-label={comment.upvoted_by_me ? 'Remove upvote' : 'Upvote comment'}
-                className={`flex items-center gap-1 text-[10px] font-bold transition-colors ${
-                  comment.upvoted_by_me ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
-                }`}
-              >
-                <ArrowBigUp className="w-3.5 h-3.5" fill={comment.upvoted_by_me ? 'currentColor' : 'none'} />
-                {comment.upvote_count > 0 && <span>{comment.upvote_count}</span>}
-              </Button>
-            </Tooltip>
-            {depth < 2 && (
-              <Button
-                variant="unstyled"
-                onClick={() => setReplyOpen((p) => !p)}
-                className={`text-[10px] font-semibold transition-colors ${
-                  replyOpen ? 'text-sky-400' : 'text-slate-500 hover:text-sky-400'
-                }`}
-              >
-                Reply
-              </Button>
-            )}
-            {isMine && (
-              <Dropdown
-                mode="menu"
-                open={menuOpen}
-                onClose={() => setMenuOpen(false)}
-                align="right"
-                dropdownClassName="min-w-[10rem] p-1.5 space-y-0.5"
-                trigger={
-                  <Button
-                    variant="unstyled"
-                    onClick={() => setMenuOpen((p) => !p)}
-                    aria-label="Comment options"
-                    aria-haspopup="menu"
-                    aria-expanded={menuOpen}
-                    className="flex items-center text-slate-500 hover:text-slate-300 transition-colors"
-                  >
-                    <MoreHorizontal className="w-3.5 h-3.5" />
-                  </Button>
-                }
-              >
-                <DropdownItem leading={<Pencil className="w-4 h-4" />} onClick={startEdit}>Edit</DropdownItem>
-                <DropdownItem
-                  leading={<Trash2 className="w-4 h-4" />}
-                  onClick={() => { setMenuOpen(false); setConfirmDelete(true); }}
-                  className="text-rose-400 hover:bg-rose-500/10"
-                >
-                  Delete
-                </DropdownItem>
-              </Dropdown>
-            )}
-          </>
-        }
-      >
-        {editing ? (
-          <div className="mt-1.5">
-            <textarea
-              autoFocus
-              value={editText}
-              onChange={(e) => setEditText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); }
-                if (e.key === 'Escape') { setEditing(false); }
-              }}
-              rows={2}
-              maxLength={1000}
-              className="w-full bg-[#0E1015] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors resize-none"
-            />
-            <div className="flex items-center gap-2 mt-1.5">
-              <Button variant="primary" size="xs" onClick={saveEdit} loading={savingEdit} disabled={!editText.trim() || editText.trim() === comment.content}>Save</Button>
-              <Button variant="ghost" size="xs" onClick={() => setEditing(false)} disabled={savingEdit}>Cancel</Button>
-            </div>
-          </div>
-        ) : undefined}
-      </CommentCard>
-
-      {/* Reply input */}
-      {replyOpen && (
-        <div className="flex gap-2 mt-2 ml-9">
-          <input
-            autoFocus
-            value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply(); } }}
-            placeholder={`Reply to ${name}…`}
-            maxLength={1000}
-            className="flex-1 bg-[#111318] rounded-xl px-3 py-1.5 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
-          />
-          <Button variant="primary" size="none" shape="lg" onClick={submitReply} disabled={!replyText.trim() || submitting} className="p-1.5 disabled:opacity-40 flex-shrink-0">
-            {submitting ? <Loader2 className="w-3 h-3 text-white animate-spin" /> : <Send className="w-3 h-3 text-white" />}
-          </Button>
-        </div>
-      )}
-
-      {/* Nested replies — one shows statically; the rest reveal on the toggle,
-          mirroring the post's comment button. */}
-      {replyCount > 0 && (
-        <div className="mt-2">
-          {shownReplies.map((reply, i, arr) => (
-            <ThreadChild key={reply.id} isLast={i === arr.length - 1}>
-              <CommentRow
-                comment={reply}
-                onReply={onReply}
-                onVote={onVote}
-                onEdit={onEdit}
-                onCommentDelete={onCommentDelete}
-                viewerUsername={viewerUsername}
-                depth={depth + 1}
-              />
-            </ThreadChild>
-          ))}
-
-          {/* View / hide the remaining replies */}
-          {replyCount > 1 && (
-            <Button
-              variant="unstyled"
-              onClick={() => setRepliesExpanded((v) => !v)}
-              aria-expanded={repliesExpanded}
-              className="ml-5 mt-1 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
-            >
-              {repliesExpanded
-                ? 'Hide replies'
-                : `View ${replyCount - 1} ${replyCount - 1 === 1 ? 'reply' : 'replies'}`}
-            </Button>
-          )}
-
-          {/* Pager within the expanded list, for long reply chains */}
-          {repliesExpanded && replyCount > visibleReplies && (
-            <Button
-              variant="unstyled"
-              onClick={() => setVisibleReplies((v) => v + REPLIES_PAGE_SIZE)}
-              className="ml-5 text-[10px] font-semibold text-slate-500 hover:text-sky-400 transition-colors py-1"
-            >
-              Show {Math.min(REPLIES_PAGE_SIZE, replyCount - visibleReplies)} more replies
-            </Button>
-          )}
-        </div>
-      )}
-
-      <ConfirmDialog
-        isOpen={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={confirmAndDelete}
-        loading={deleting}
-        title="Delete this comment?"
-        description={
-          comment.replies && comment.replies.length > 0
-            ? 'This also removes all replies underneath it. This can\'t be undone.'
-            : 'This permanently removes your comment. This can\'t be undone.'
-        }
-        confirmLabel="Delete"
-      />
-    </div>
-  );
-}
