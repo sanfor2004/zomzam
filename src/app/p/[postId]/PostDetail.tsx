@@ -15,6 +15,7 @@ interface Post {
   last_name: string | null;
   avatar: string;
   content_html: string;
+  image_path?: string | null;
   created_at: string;
   like_count: number;
   comment_count: number;
@@ -190,6 +191,18 @@ export default function PostDetail({
           className="text-[15px] text-slate-200 leading-[1.75] post-content break-words [overflow-wrap:anywhere]"
           dangerouslySetInnerHTML={{ __html: post.content_html }}
         />
+
+        {post.image_path && (
+          <Image
+            src={post.image_path}
+            alt=""
+            width={1200}
+            height={800}
+            priority
+            sizes="(max-width: 800px) calc(100vw - 2rem), 736px"
+            className="mt-4 w-full max-h-[32rem] object-cover rounded-2xl border border-white/[0.06]"
+          />
+        )}
 
         {/* Action bar */}
         <div className="flex items-center gap-6 mt-6 pt-5 border-t border-slate-800/40">

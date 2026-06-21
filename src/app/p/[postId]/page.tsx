@@ -49,7 +49,7 @@ export default async function PostPage({ params }: PageProps) {
   const viewer = session ? verifyToken(session) : null;
 
   const post = await queryOne<any>(
-    `SELECT p.id, p.user_id, p.content_html, p.created_at,
+    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.created_at,
             u.username, u.first_name, u.last_name, u.avatar,
             (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
