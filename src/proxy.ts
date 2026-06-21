@@ -1,27 +1,14 @@
 import { NextResponse, NextRequest } from 'next/server';
-import * as jose from 'jose'; // Use jose in edge middleware since jsonwebtoken doesn't support Edge runtime
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'super_secret_zomzam_jwt_key_2026_zenith_tier'
-);
+import { verifySession } from './lib/session';
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Retrieve the session cookie
-  const sessionCookie = request.cookies.get('ZOMZAM_SESSION');
-  const token = sessionCookie?.value;
-
-  // Validate the JWT
-  let user: any = null;
-  if (token) {
-    try {
-      const { payload } = await jose.jwtVerify(token, JWT_SECRET);
-      user = payload;
-    } catch (err) {
-      // Token is invalid or expired
-    }
-  }
+  // Optimistic page-level check: read + verify the session cookie. This proxy
+  // only redirects pages; API authorization (and revocation) lives in
+  // withAuth()/getSessionUser() at the route layer, which can reach the DB.
+  const token = request.cookies.get('ZOMZAM_SESSION')?.value;
+  const user = await verifySession(token);
 
   // Define route lists
   const isAuthRoute = pathname.startsWith('/sign') || pathname === '/';

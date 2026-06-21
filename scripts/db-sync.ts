@@ -36,6 +36,7 @@ const schema: Record<string, Record<string, string>> = {
     timezone: "VARCHAR(50) NOT NULL DEFAULT 'UTC'",
     notifications_enabled: 'TINYINT(1) NOT NULL DEFAULT 0',
     is_active: 'TINYINT(1) NOT NULL DEFAULT 1',
+    token_version: 'INT NOT NULL DEFAULT 0',
     is_verified: 'TINYINT(1) NOT NULL DEFAULT 0',
     verification_token: 'VARCHAR(255) NULL',
     reset_token: 'VARCHAR(255) NULL',
