@@ -1,9 +1,8 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import { verifyToken } from '@/lib/auth';
+import { getSessionUser } from '@/lib/api-auth';
 import { query, queryOne } from '@/lib/db';
 import { LogIn } from 'lucide-react';
 import PostDetail from './PostDetail';
@@ -44,9 +43,8 @@ export default async function PostPage({ params }: PageProps) {
   const postIdNum = parseInt(postId);
   if (isNaN(postIdNum)) return notFound();
 
-  const cookieStore = await cookies();
-  const session = cookieStore.get('ZOMZAM_SESSION')?.value;
-  const viewer = session ? verifyToken(session) : null;
+  // Anonymous viewers are allowed → null
+  const viewer = await getSessionUser();
 
   const post = await queryOne<any>(
     `SELECT p.id, p.user_id, p.content_html, p.image_path, p.created_at,

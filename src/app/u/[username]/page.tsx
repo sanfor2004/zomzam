@@ -1,11 +1,10 @@
 import React from 'react';
 import { Metadata } from 'next';
-import { cookies } from 'next/headers';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getUserByUsername, getOnlineStatus } from '@/lib/models/user';
-import { verifyToken } from '@/lib/auth';
+import { getSessionUser } from '@/lib/api-auth';
 import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
 import PublicUserStatus from './PublicUserStatus';
@@ -55,10 +54,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // Fetch online status metrics
   const onlineStatus = await getOnlineStatus(profileUserId);
 
-  // Authenticate the current viewer
-  const cookieStore = await cookies();
-  const session = cookieStore.get('ZOMZAM_SESSION')?.value;
-  const viewer = session ? verifyToken(session) : null;
+  // Authenticate the current viewer (anonymous viewers are allowed → null)
+  const viewer = await getSessionUser();
   const viewerId = viewer ? viewer.id : null;
 
   // Query friendship and follow relations if viewer is authenticated
