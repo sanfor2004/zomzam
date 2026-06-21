@@ -79,7 +79,7 @@ route, mobile and desktop alike.
 of the `'use client'` dashboard shell on a 4×-throttled CPU (the *identical* markup renders LCP in
 0.8 s on desktop). Closing it requires an architectural change (server-render the dashboard content
 / defer context providers), which is a **deliberate decision** tracked separately — not done
-silently here. See `docs/performance-pass-P3-plan.md`.
+silently here. (The P3 plan that drove this pass was completed and removed in the 2026-06-21 docs cleanup — recoverable via git history.)
 
 ---
 

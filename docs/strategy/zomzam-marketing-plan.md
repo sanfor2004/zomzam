@@ -1,6 +1,6 @@
 # Zomzam — The Marketing Plan 🚀
 
-> **The one document for how Zomzam grows.** It consolidates the strategy, the channels, the in-product growth loops, the 90-day execution calendar, the outreach toolkit, and the metrics into a single runnable plan. Companion deep-dives stay separate where the detail is operational: [`business-model.md`](./business-model.md), [`credits-economy.md`](./credits-economy.md), and the raw provider research in [`bulk-outreach-deep-search.md`](./bulk-outreach-deep-search.md).
+> **The one document for how Zomzam grows.** It consolidates the strategy, the channels, the in-product growth loops, the 90-day execution calendar, the outreach toolkit, and the metrics into a single runnable plan. Companion deep-dives stay separate where the detail is operational: [`business-model.md`](./business-model.md), [`credits-economy.md`](./credits-economy.md), and the raw provider research in [`bulk-outreach-deep-search.md`](../research/bulk-outreach-deep-search.md).
 
 ---
 
@@ -123,7 +123,7 @@ Each stage has **one job.** Don't skip ahead — chasing scale before retention 
 
 ### 6a. 📨 The Outreach Toolkit (Direct Email & SMS)
 
-When direct outreach is warranted (founding-cohort recruitment, re-engagement, regional campaigns), use a **hybrid regional stack** to keep cost low and deliverability high. Full provider research: [`bulk-outreach-deep-search.md`](./bulk-outreach-deep-search.md).
+When direct outreach is warranted (founding-cohort recruitment, re-engagement, regional campaigns), use a **hybrid regional stack** to keep cost low and deliverability high. Full provider research: [`bulk-outreach-deep-search.md`](../research/bulk-outreach-deep-search.md).
 
 | Job | Use | Why | ~Cost (5k) |
 | :--- | :--- | :--- | :--- |
