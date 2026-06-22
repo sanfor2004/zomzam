@@ -150,6 +150,45 @@ export async function acceptAnswer(userId: number, postId: number, commentId: nu
   return { result: { postId, commentId, resolvedAt }, helperUserId: answer.user_id };
 }
 
+/**
+ * Resolve who to notify about a new ask: the asker's friends + followers whose
+ * profile tags include the ask's skill_tag, minus anyone already at the per-day
+ * notification cap (anti-nag). Returns recipient user ids; the route fires the
+ * actual notifications. Tag matching is done in JS (slugified) to stay
+ * consistent with the feed ranking — users.tags stores raw labels.
+ */
+export async function findAskNotifyRecipients(askerId: number, skillTag: string, dailyCap = 3): Promise<number[]> {
+  if (!skillTag) return [];
+
+  const connected = await query<{ id: number; tags: any }>(
+    `SELECT DISTINCT u.id, u.tags
+     FROM users u
+     JOIN user_connections c ON (
+       (c.type = 'friend' AND c.status = 'accepted'
+          AND ((c.requester_id = ? AND c.addressee_id = u.id)
+               OR (c.addressee_id = ? AND c.requester_id = u.id)))
+       OR (c.type = 'follow' AND c.status = 'accepted' AND c.addressee_id = ? AND c.requester_id = u.id)
+     )
+     WHERE u.id <> ?`,
+    [askerId, askerId, askerId, askerId]
+  );
+
+  const skill = slugifyTag(skillTag);
+  const matched = connected.filter((u) => parseTagList(u.tags).includes(skill)).map((u) => Number(u.id));
+  if (matched.length === 0) return [];
+
+  // Drop anyone who already hit today's cap of new_help_request notifications.
+  const placeholders = matched.map(() => '?').join(',');
+  const counts = await query<{ user_id: number; c: number }>(
+    `SELECT user_id, COUNT(*) AS c FROM notifications
+     WHERE type = 'new_help_request' AND created_at >= CURDATE() AND user_id IN (${placeholders})
+     GROUP BY user_id`,
+    matched
+  );
+  const overCap = new Set(counts.filter((r) => Number(r.c) >= dailyCap).map((r) => Number(r.user_id)));
+  return matched.filter((id) => !overCap.has(id));
+}
+
 /** Asker resolves their own ask without accepting an answer ("solved it myself"):
  *  no helpful_event, no notification. */
 export async function resolveAsk(userId: number, postId: number): Promise<{ resolvedAt: string }> {

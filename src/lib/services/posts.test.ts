@@ -36,6 +36,12 @@ function seedQueryOne(...rows: any[]) {
   db.queryOne.mock.mockImplementation(async () => (i < rows.length ? rows[i++] : null));
 }
 
+// Return the given result sets from successive query() calls, then [].
+function seedQuery(...resultSets: any[][]) {
+  let i = 0;
+  db.query.mock.mockImplementation(async () => (i < resultSets.length ? resultSets[i++] : []));
+}
+
 beforeEach(() => {
   for (const fn of [db.query, db.queryOne, db.execute, db.transaction, connExecute]) fn.mock.resetCalls();
   db.queryOne.mock.mockImplementation(async () => null);
@@ -155,6 +161,28 @@ test('acceptAnswer 404s when the comment is not on the post', async () => {
     (err: any) => err instanceof HttpError && err.status === 404
   );
   assert.equal(db.transaction.mock.calls.length, 0);
+});
+
+test('findAskNotifyRecipients returns only skill-matched connections under the daily cap', async () => {
+  seedQuery(
+    // connected friends/followers + their tags
+    [
+      { id: 1, tags: ['uiux', 'react'] },
+      { id: 2, tags: ['seo'] },          // no skill match -> dropped
+      { id: 3, tags: ['uiux'] },         // matches but over cap -> dropped
+    ],
+    // today's new_help_request counts: user 3 already at the cap
+    [{ user_id: 3, c: 3 }]
+  );
+
+  const recipients = await posts.findAskNotifyRecipients(99, 'uiux', 3);
+  assert.deepEqual(recipients, [1]);
+});
+
+test('findAskNotifyRecipients returns nothing for a tagless ask', async () => {
+  const recipients = await posts.findAskNotifyRecipients(99, '', 3);
+  assert.deepEqual(recipients, []);
+  assert.equal(db.query.mock.calls.length, 0, 'no DB hit when there is no skill tag');
 });
 
 test('resolveAsk scopes the UPDATE to the owner and writes no helpful_event', async () => {

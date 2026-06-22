@@ -36,6 +36,19 @@ export const POST = withAuth(async (request, user) => {
         type: body.type,
         skillTag: body.skill_tag,
       });
+      // Notify skill-matched friends/followers about a new help request (throttled).
+      if (post.type === 'ask' && post.skill_tag) {
+        const recipients = await posts.findAskNotifyRecipients(user.id, post.skill_tag);
+        await Promise.all(
+          recipients.map((rid) =>
+            createNotification(rid, 'new_help_request', {
+              post_id: post.id,
+              skill_tag: post.skill_tag,
+              by_user: user.username,
+            })
+          )
+        );
+      }
       return NextResponse.json({ success: true, post });
     }
 
