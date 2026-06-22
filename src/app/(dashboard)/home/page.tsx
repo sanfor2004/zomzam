@@ -10,7 +10,9 @@ import {
   Send, Loader2, Heart, MessageCircle, Trash2,
   UserPlus, Check, Users, ArrowBigUp, Pencil,
   MessageSquarePlus, Search, MessagesSquare,
+  HelpCircle, Trophy, CheckCircle2, Hash,
 } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { Button, Tooltip, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
 import { PostComposer } from './PostComposer';
 import {
@@ -677,6 +679,31 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
 
   const topComments = post.top_comments ?? [];
 
+  // Favor economy: one card, branch on type. Legacy rows have no type → 'status'.
+  const postType = post.type ?? 'status';
+  const isAsk = postType === 'ask';
+  const isWin = postType === 'win';
+  const isResolved = isAsk && !!post.resolved_at;
+  const acceptedId = post.accepted_answer_id ?? null;
+  // Pin the accepted answer to the top of the preview when the ask is resolved.
+  const orderedTop = acceptedId
+    ? [...topComments].sort((a, b) => Number(b.id === acceptedId) - Number(a.id === acceptedId))
+    : topComments;
+
+  // Win posts celebrate on first paint — a short confetti burst from the card,
+  // honoring reduced-motion (canvas-confetti's own guard + an explicit check).
+  useEffect(() => {
+    if (!isWin) return;
+    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const rect = cardRef.current?.getBoundingClientRect();
+    const origin = rect
+      ? { x: (rect.left + rect.width / 2) / window.innerWidth, y: Math.max(0, (rect.top + 40) / window.innerHeight) }
+      : { x: 0.5, y: 0.3 };
+    confetti({ particleCount: 60, spread: 70, startVelocity: 28, scalar: 0.9, origin, disableForReducedMotion: true });
+    // Fire once when the win card mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Disarm the armed delete wedge on outside-click or Escape — the cross-device
   // replacement for the old pointer-leave disarm (touch never had a "leave").
   // This card's own wedge is excluded so its second click can still confirm.
@@ -809,6 +836,33 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
                   <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
                 )}
               </div>
+
+              {/* ─── Type badges (ask / win) — icon + label, never colour alone (HIG) ─── */}
+              {(isAsk || isWin) && (
+                <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                  {isAsk && (
+                    <span
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
+                        isResolved ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-300'
+                      }`}
+                    >
+                      {isResolved ? <CheckCircle2 className="w-3 h-3" /> : <HelpCircle className="w-3 h-3" />}
+                      {isResolved ? 'Resolved' : 'Help needed'}
+                    </span>
+                  )}
+                  {isAsk && post.skill_tag && (
+                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800/60 text-slate-300">
+                      <Hash className="w-3 h-3" />{post.skill_tag}
+                    </span>
+                  )}
+                  {isWin && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-primary-500/15 text-primary-400">
+                      <Trophy className="w-3 h-3" /> Win
+                    </span>
+                  )}
+                </div>
+              )}
+
               <div
                 className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
@@ -884,16 +938,27 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
       {topComments.length > 0 && (
         <div className="relative z-[1] overflow-hidden" aria-label="Top comments">
           <div className="pt-2">
-            {topComments.slice(0, 2).map((c, i, arr) => (
+            {orderedTop.slice(0, 2).map((c, i, arr) => (
               <ThreadChild key={c.id} isLast={i === arr.length - 1}>
                 <CommentCard
                   comment={c}
-                  actions={c.upvote_count > 0 ? (
-                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
-                      <ArrowBigUp className="w-3 h-3" fill="currentColor" />
-                      {c.upvote_count}
-                    </span>
-                  ) : null}
+                  actions={
+                    c.id === acceptedId || c.upvote_count > 0 ? (
+                      <>
+                        {c.id === acceptedId && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-400">
+                            <CheckCircle2 className="w-3 h-3" /> Accepted
+                          </span>
+                        )}
+                        {c.upvote_count > 0 && (
+                          <span className="flex items-center gap-0.5 text-[10px] font-bold text-primary-500/80">
+                            <ArrowBigUp className="w-3 h-3" fill="currentColor" />
+                            {c.upvote_count}
+                          </span>
+                        )}
+                      </>
+                    ) : null
+                  }
                 />
               </ThreadChild>
             ))}
