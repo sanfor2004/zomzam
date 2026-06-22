@@ -10,7 +10,7 @@ import {
   Send, Loader2, Heart, MessageCircle, Trash2,
   UserPlus, Check, Users, ArrowBigUp, Pencil,
   MessageSquarePlus, Search, MessagesSquare,
-  HelpCircle, Trophy, CheckCircle2, Hash,
+  HelpCircle, Trophy, CheckCircle2, Hash, Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button, Tooltip, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
@@ -51,6 +51,7 @@ export default function HomePage() {
 
   // Feed state
   const [posts, setPosts] = useState<Post[]>([]);
+  const [feedFilter, setFeedFilter] = useState<'all' | 'help' | 'help_matches'>('all');
   const [hasMore, setHasMore] = useState(true);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -235,7 +236,8 @@ export default function HomePage() {
     loadingFeedRef.current = true;
     setLoadingFeed(true);
     try {
-      const res = await fetch(`/api/posts?action=feed&offset=${offset}`);
+      const filterParam = feedFilter !== 'all' ? `&filter=${feedFilter}` : '';
+      const res = await fetch(`/api/posts?action=feed&offset=${offset}${filterParam}`);
       const data = await res.json();
       if (data.success) {
         setPosts((prev) => {
@@ -250,8 +252,10 @@ export default function HomePage() {
     setLoadingFeed(false);
     setInitialLoading(false);
     loadingFeedRef.current = false;
-  }, []);
+  }, [feedFilter]);
 
+  // Reloading from offset 0 happens automatically: changing feedFilter gives
+  // loadFeed a new identity, re-firing this effect.
   useEffect(() => { loadFeed(); }, [loadFeed]);
 
   // ── Infinite scroll sentinel ────────────────────────────────
@@ -305,6 +309,35 @@ export default function HomePage() {
 
           <div id="post-composer">
             <PostComposer currentUser={currentUser} friends={friends} onPosted={handlePostCreated} seed={composerSeed} />
+          </div>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: FEED FILTER (All · Help requests · Matching skills)
+              Contains: segmented feed scope selector (drives ?filter=)
+              ────────────────────────────────────────────────────────── */}
+          <div role="tablist" aria-label="Feed filter" className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-1">
+            {([
+              { value: 'all', label: 'All', icon: MessagesSquare },
+              { value: 'help', label: 'Help requests', icon: HelpCircle },
+              { value: 'help_matches', label: 'Matching my skills', icon: Sparkles },
+            ] as const).map(({ value, label, icon: Icon }) => {
+              const isActive = feedFilter === value;
+              return (
+                <Button
+                  key={value}
+                  variant="unstyled"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => setFeedFilter(value)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+                    isActive ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                  }`}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{label}</span>
+                </Button>
+              );
+            })}
           </div>
 
           {/* ──────────────────────────────────────────────────────────
