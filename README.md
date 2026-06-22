@@ -68,7 +68,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | **3D / Ambient Visuals** | **three.js + React Three Fiber** | Shader background (`Silk.tsx`) on the landing page only, lazy-loaded client-side and gated by `useDesktopWebGL` (`(min-width:1024px) and (pointer:fine)` + idle) so the three.js chunk never downloads on phones/tablets — they get a static CSS-gradient fallback. The dashboard shell uses a zero-cost static CSS gradient (the former `LiquidEther` WebGL fluid sim was removed in the P3 perf pass — its non-stop rAF loop cost ~11s TBT on every authenticated route). |
 | **Icons** | **Lucide React** | Consistent, tree-shakeable icon set across the Kit and every feature page. |
 | **Maps** | **`@vis.gl/react-google-maps`** | Powers the CRM Map Leads Scraper's Place Search interface. |
-| **Image Processing** | **`sharp`** | Server-side avatar resizing/optimization in `api/profile`. |
+| **Image Processing** | **`sharp` + `@vercel/blob`** | `sharp` re-encodes/resizes avatar and post images server-side (strips EXIF); the result is uploaded to Vercel Blob (`src/lib/uploads.ts`) rather than local disk, since Vercel's serverless functions have a read-only filesystem at runtime. |
 
 ---
 
@@ -104,7 +104,7 @@ zomzam.com/
 │   │   │   ├── notifications/  # Notification list + mark-as-read
 │   │   │   ├── notion/         # Notion integration settings + lead sync
 │   │   │   ├── posts/          # Feed, create/like/delete/comment on posts
-│   │   │   ├── profile/        # Profile field updates, avatar upload (sharp)
+│   │   │   ├── profile/        # Profile field updates, avatar upload (sharp -> Vercel Blob)
 │   │   │   │   └── change-password/  # Authenticated password change
 │   │   │   ├── shops/          # Google Places proxy (nearby business search, backs the CRM map scraper)
 │   │   │   ├── social/         # Friend requests, follows, blocks, discovery, search
@@ -201,7 +201,7 @@ zomzam.com/
 | `/api/auth/forgot-password` / `/reset-password` | — | Token-based password recovery, outside the session. |
 | `/api/auth/oauth/google` / `/oauth/google/callback` | — | Google Sign-In: redirects to Google's consent screen, then verifies the returned `id_token` (`jose` remote JWKS) and mints a `ZOMZAM_SESSION` cookie. |
 | `/api/auth/oauth/facebook` / `/oauth/facebook/callback` | — | Facebook Sign-In/Sign-Up: redirects to Facebook's consent screen, exchanges the code for an access token (server-to-server), resolves the profile via the Graph API, and mints a `ZOMZAM_SESSION` cookie. |
-| `/api/profile` / `/api/profile/change-password` | — | Profile field updates, avatar upload (`sharp`), authenticated password change. |
+| `/api/profile` / `/api/profile/change-password` | — | Profile field updates, avatar upload (`sharp` -> Vercel Blob), authenticated password change. |
 | `/api/dashboard` | — | Aggregates Time/Money metrics for the primary dashboard. |
 | `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
 | `/api/money` | `get_initial_data`, `add/delete_transaction`, `add/delete_account`, `add/settle/delete_lend` | Accounts, transactions, lending ledger. |
@@ -254,6 +254,11 @@ GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/google/callback
 FACEBOOK_CLIENT_ID=
 FACEBOOK_CLIENT_SECRET=
 FACEBOOK_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/facebook/callback
+
+# File uploads — Vercel Blob store (Storage -> Create Database -> Blob in the
+# Vercel dashboard auto-injects this in production). For local dev, run
+# `vercel env pull .env` or copy the token from the dashboard's "env.local" tab.
+BLOB_READ_WRITE_TOKEN=
 ```
 
 ### 3. Initialize & Seed the Database

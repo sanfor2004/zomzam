@@ -21,10 +21,10 @@ export default function MyProfilePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
 
-  // File upload states
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  // File upload states — avatar changes upload immediately on selection (see
+  // uploadAvatar/handleRemoveAvatar), independent of the Save button below.
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [removeAvatar, setRemoveAvatar] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   // Tag input state
   const [tagInput, setTagInput] = useState('');
@@ -87,9 +87,37 @@ export default function MyProfilePage() {
     };
   }, [avatarPreview]);
 
+  // Upload the avatar immediately — no separate "Save" step for photo changes.
+  const uploadAvatar = async (file: File) => {
+    setAvatarUploading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const formData = new FormData();
+      formData.append('avatar', file);
+      const res = await fetch('/api/profile', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        setCurrentAvatarUrl(data.user?.avatar || null);
+        setAvatarPreview(null);
+        setSuccessMsg('Profile photo updated');
+      } else {
+        setAvatarPreview(null);
+        setErrorMsg(data.message || 'Failed to upload photo');
+      }
+    } catch (err) {
+      console.error(err);
+      setAvatarPreview(null);
+      setErrorMsg('An error occurred while uploading the photo');
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   // Handle file change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ''; // reset so re-picking the same file still fires onChange
     if (!file) return;
 
     // Client-side validations
@@ -105,21 +133,39 @@ export default function MyProfilePage() {
     }
 
     setErrorMsg(null);
-    setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
-    setRemoveAvatar(false);
+    uploadAvatar(file);
   };
 
   // Trigger file select dialog
   const triggerFileSelect = () => {
+    if (avatarUploading) return;
     fileInputRef.current?.click();
   };
 
-  // Handle avatar removal
-  const handleRemoveAvatar = () => {
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setRemoveAvatar(true);
+  // Handle avatar removal — fires immediately, same as upload.
+  const handleRemoveAvatar = async () => {
+    setAvatarUploading(true);
+    setErrorMsg(null);
+    setSuccessMsg(null);
+    try {
+      const formData = new FormData();
+      formData.append('remove_avatar', '1');
+      const res = await fetch('/api/profile', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        setCurrentAvatarUrl(null);
+        setAvatarPreview(null);
+        setSuccessMsg('Profile photo removed');
+      } else {
+        setErrorMsg(data.message || 'Failed to remove photo');
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg('An error occurred while removing the photo');
+    } finally {
+      setAvatarUploading(false);
+    }
   };
 
   // Add tag
@@ -182,11 +228,6 @@ export default function MyProfilePage() {
       formData.append('last_name', lastName);
       formData.append('bio', bio);
       formData.append('tags', JSON.stringify(tags));
-      formData.append('remove_avatar', removeAvatar ? '1' : '0');
-      
-      if (avatarFile) {
-        formData.append('avatar', avatarFile);
-      }
 
       const res = await fetch('/api/profile', {
         method: 'POST',
@@ -196,12 +237,6 @@ export default function MyProfilePage() {
       const data = await res.json();
       if (data.success) {
         setSuccessMsg(t('profile_success'));
-        if (data.user) {
-          setCurrentAvatarUrl(data.user.avatar || null);
-          setAvatarFile(null);
-          setAvatarPreview(null);
-          setRemoveAvatar(false);
-        }
         // Force header re-render to load updated details
         window.location.reload();
       } else {
@@ -227,7 +262,7 @@ export default function MyProfilePage() {
   let displayAvatar = '/Assets/Img/default-avatar.png';
   if (avatarPreview) {
     displayAvatar = avatarPreview;
-  } else if (currentAvatarUrl && !removeAvatar) {
+  } else if (currentAvatarUrl) {
     displayAvatar = currentAvatarUrl;
   }
 
@@ -261,7 +296,8 @@ export default function MyProfilePage() {
         <div className="lg:col-span-1 space-y-6">
           <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
             
-            {/* Avatar Photo Frame */}
+            {/* Avatar Photo Frame — click/tap anywhere on the photo to change it
+                (auto-uploads on selection, no separate Save step) */}
             <div className="relative group w-32 h-32 rounded-3xl overflow-hidden shadow-lg mb-5 bg-[#111318] isolate [transform:translateZ(0)] outline outline-2 outline-offset-2 outline-transparent hover:outline-primary-500/50 transition-colors duration-300">
               <img
                 src={displayAvatar}
@@ -271,10 +307,20 @@ export default function MyProfilePage() {
               <Button variant="unstyled"
                 type="button"
                 onClick={triggerFileSelect}
-                className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition-opacity duration-200 cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider"
+                disabled={avatarUploading}
+                aria-label={t('profile_avatar_change')}
+                className={`absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center gap-1.5 transition-opacity duration-200 cursor-pointer text-white text-[10px] font-bold uppercase tracking-wider ${
+                  avatarUploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}
               >
-                <Upload className="w-5 h-5" />
-                <span>{t('profile_avatar_change')}</span>
+                {avatarUploading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="w-5 h-5" />
+                    <span>{t('profile_avatar_change')}</span>
+                  </>
+                )}
               </Button>
             </div>
 
@@ -287,27 +333,22 @@ export default function MyProfilePage() {
               className="hidden"
             />
 
-            {/* Photo Action Buttons */}
-            <div className="flex gap-2 w-full justify-center">
-              <Button variant="unstyled"
-                type="button"
-                onClick={triggerFileSelect}
-                className="px-3.5 py-2 bg-slate-800/40 border border-slate-800/50 hover:bg-slate-850 rounded-xl text-xs font-semibold transition-all cursor-pointer text-slate-350"
-              >
-                {t('profile_avatar_change')}
-              </Button>
-              
-              {((currentAvatarUrl && !removeAvatar) || avatarPreview) && (
+            {/* Photo Action Buttons — delete only; changing the photo is done by
+                clicking the frame above */}
+            {(currentAvatarUrl || avatarPreview) && (
+              <div className="flex gap-2 w-full justify-center">
                 <Button variant="unstyled"
                   type="button"
                   onClick={handleRemoveAvatar}
-                  className="p-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/10 rounded-xl text-red-500 transition-all cursor-pointer"
+                  disabled={avatarUploading}
+                  className="p-2 bg-red-500/10 hover:bg-red-500/25 border border-red-500/10 rounded-xl text-red-500 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-default"
                   title={t('profile_avatar_remove')}
+                  aria-label={t('profile_avatar_remove')}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
 
             <span className="text-[9px] text-slate-400 mt-4 max-w-[180px] leading-relaxed block">
               Max file size is 2MB. Valid formats: JPEG, PNG, GIF, WEBP. Image metadata is stripped automatically.

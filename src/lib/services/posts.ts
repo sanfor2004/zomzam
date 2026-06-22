@@ -277,8 +277,8 @@ export async function deletePost(userId: number, postId: number): Promise<void> 
   await execute(`DELETE FROM post_comments WHERE post_id = ?`, [postId]);
   await execute(`DELETE FROM posts         WHERE id = ? AND user_id = ?`, [postId, userId]);
 
-  // Remove the orphaned image file from disk (mirrors avatar cleanup).
-  deleteUploadFile(owned.image_path);
+  // Remove the orphaned image blob (mirrors avatar cleanup).
+  await deleteUploadFile(owned.image_path);
 }
 
 export async function addComment(userId: number, postId: number, rawContent: string, parentId: number | null) {

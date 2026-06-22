@@ -59,7 +59,7 @@ export const POST = withAuth(async (request, user) => {
   let avatarPath: string | null = null;
 
   if (removeAvatar) {
-    deleteUploadFile(oldAvatar);
+    await deleteUploadFile(oldAvatar);
     avatarPath = '';
   } else if (avatarFile && avatarFile.size > 0) {
     try {
@@ -67,8 +67,8 @@ export const POST = withAuth(async (request, user) => {
         subdir: 'avatars',
         filenamePrefix: `avatar_${user.id}`,
       });
-      // Remove old avatar only once the new one is safely on disk
-      deleteUploadFile(oldAvatar);
+      // Remove old avatar only once the new one is safely uploaded
+      await deleteUploadFile(oldAvatar);
     } catch (err) {
       if (err instanceof ImageUploadError) {
         return NextResponse.json({ success: false, message: err.message }, { status: 400 });
@@ -145,8 +145,8 @@ export const DELETE = withAuth(async (request, user) => {
     return NextResponse.json({ success: false, message: 'Incorrect password. Account deletion aborted.' }, { status: 403 });
   }
 
-  // Remove avatar file from disk if it exists and is not the default
-  deleteUploadFile(currentUser.avatar);
+  // Remove the avatar blob if it exists and is not the default
+  await deleteUploadFile(currentUser.avatar);
 
   // Delete the user — ON DELETE CASCADE handles all child tables
   await execute('DELETE FROM users WHERE id = ?', [user.id]);
