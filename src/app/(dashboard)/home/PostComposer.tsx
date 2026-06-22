@@ -463,8 +463,9 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
   return (
     /* ──────────────────────────────────────────────────────────
         DEVELOPMENT NAVIGATOR: POST COMPOSER
-        Contains: Row 1 (avatar + editor + char counter),
-                  Row 2 (text settings toolbar + audience switch + Post button),
+        Contains: Top row (post type switch + audience switch),
+                  Row 1 (avatar + editor + char counter),
+                  Row 2 (text settings toolbar + Post button),
                   image preview, @/#-autocomplete popover
         ────────────────────────────────────────────────────────── */
     <div
@@ -496,21 +497,25 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
       />
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: POST TYPE SWITCH (Status · Ask · Win)
-          Contains: segmented post-type selector + (Ask) skill/topic field
+          DEVELOPMENT NAVIGATOR: POST TYPE + AUDIENCE ROW
+          Contains: segmented post-type selector (+ Ask skill/topic field) on
+          the left, audience switch (Friends / Public) on the right
           ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-2 mb-4">
-        <PostTypeSwitch value={postType} onChange={setPostType} />
-        {postType === 'ask' && (
-          <Input
-            value={skillTag}
-            onChange={(e) => setSkillTag(e.target.value)}
-            placeholder="Skill / topic (e.g. react, seo)"
-            aria-label="Skill or topic for this help request"
-            leftIcon={<Hash className="w-3.5 h-3.5" />}
-            className="h-[34px] max-w-[220px] text-xs"
-          />
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <PostTypeSwitch value={postType} onChange={setPostType} />
+          {postType === 'ask' && (
+            <Input
+              value={skillTag}
+              onChange={(e) => setSkillTag(e.target.value)}
+              placeholder="Skill / topic (e.g. react, seo)"
+              aria-label="Skill or topic for this help request"
+              leftIcon={<Hash className="w-3.5 h-3.5" />}
+              className="h-[34px] max-w-[220px] text-xs"
+            />
+          )}
+        </div>
+        <AudienceSwitch value={visibility} onChange={setVisibility} />
       </div>
 
       {/* Row 1 — avatar, text area, character amount */}
@@ -598,7 +603,7 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
         </div>
       )}
 
-      {/* Row 2 — text settings (left) + audience switch & Post button (right) */}
+      {/* Row 2 — text settings (left) + Post button (right) */}
       <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
         {/* Text settings */}
         <div className="flex items-center gap-1">
@@ -641,22 +646,17 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
           />
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Audience switch — friends / public (exclusive hidden in composer) */}
-          <AudienceSwitch value={visibility} onChange={setVisibility} />
-
-          <Button
-            size="none"
-            shape="rounded"
-            onClick={handlePost}
-            disabled={(charCount === 0 && !imageFile) || charCount > MAX_POST_CHARS || postingLoading}
-            loading={postingLoading}
-            leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
-            className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
-          >
-            {submitLabel}
-          </Button>
-        </div>
+        <Button
+          size="none"
+          shape="rounded"
+          onClick={handlePost}
+          disabled={(charCount === 0 && !imageFile) || charCount > MAX_POST_CHARS || postingLoading}
+          loading={postingLoading}
+          leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
+          className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
+        >
+          {submitLabel}
+        </Button>
       </div>
 
       {/* ──────────────────────────────────────────────────────────
