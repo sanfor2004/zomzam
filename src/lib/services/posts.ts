@@ -1,5 +1,5 @@
 import DOMPurify from 'isomorphic-dompurify';
-import { query, queryOne, execute } from '@/lib/db';
+import { query, queryOne, execute, transaction } from '@/lib/db';
 import { HttpError } from '@/lib/http-error';
 import { DEFAULT_AVATAR } from '@/lib/models/user';
 import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
@@ -47,7 +47,11 @@ export interface CreatePostInput {
   contentHtml: string;
   visibility: string;
   imageFile: File | null;
+  type?: string;             // 'status' | 'ask' | 'win'
+  skillTag?: string | null;  // ask routing tag, ignored for non-ask
 }
+
+const POST_TYPES = ['status', 'ask', 'win'];
 
 export async function createPost(userId: number, input: CreatePostInput) {
   const raw = (input.contentHtml || '').trim();
@@ -60,6 +64,9 @@ export async function createPost(userId: number, input: CreatePostInput) {
   const content_html = sanitizeHtml(raw);
   const allowedVisibility = ['friends', 'public', 'exclusive'];
   const visibility = allowedVisibility.includes(input.visibility) ? input.visibility : 'friends';
+  const type = POST_TYPES.includes(input.type ?? '') ? input.type! : 'status';
+  // Only asks carry a routing tag; slugify-cap to the column width.
+  const skill_tag = type === 'ask' && input.skillTag ? slugifyTag(input.skillTag).slice(0, 50) || null : null;
 
   let image_path: string | null = null;
   if (hasImage) {
@@ -80,12 +87,13 @@ export async function createPost(userId: number, input: CreatePostInput) {
   }
 
   const result = await execute(
-    `INSERT INTO posts (user_id, content_html, visibility, image_path) VALUES (?, ?, ?, ?)`,
-    [userId, content_html, visibility, image_path]
+    `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag) VALUES (?, ?, ?, ?, ?, ?)`,
+    [userId, content_html, visibility, image_path, type, skill_tag]
   );
 
   const post = await queryOne(
-    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility, p.created_at,
+    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
             u.username, u.first_name, u.last_name, u.avatar,
             0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
      FROM posts p JOIN users u ON u.id = p.user_id
@@ -94,6 +102,68 @@ export async function createPost(userId: number, input: CreatePostInput) {
   );
 
   return normalizeAvatar(post);
+}
+
+export interface AcceptAnswerResult {
+  postId: number;
+  commentId: number;
+  resolvedAt: string;
+}
+
+/**
+ * Asker accepts one answer: resolves the ask and logs an append-only
+ * helpful_event (the future credit trigger — NO balance touched). Idempotent /
+ * re-markable: changing the accepted answer overwrites the pointer and logs a
+ * fresh event. Guards: caller owns the post, post is an ask, comment belongs to
+ * the post. Notifies the answer's author. Returns the helper id so the route can
+ * fire the notification outside the transaction.
+ */
+export async function acceptAnswer(userId: number, postId: number, commentId: number): Promise<{ result: AcceptAnswerResult; helperUserId: number }> {
+  if (!postId || !commentId) throw new HttpError(400, 'post_id and comment_id required');
+
+  const post = await queryOne<{ id: number; type: string }>(
+    `SELECT id, type FROM posts WHERE id = ? AND user_id = ?`,
+    [postId, userId]
+  );
+  if (!post) throw new HttpError(403, 'Not found or not yours');
+  if (post.type !== 'ask') throw new HttpError(400, 'Only ask posts can accept an answer');
+
+  const answer = await queryOne<{ id: number; user_id: number }>(
+    `SELECT id, user_id FROM post_comments WHERE id = ? AND post_id = ?`,
+    [commentId, postId]
+  );
+  if (!answer) throw new HttpError(404, 'Answer not found on this post');
+
+  const resolvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+
+  await transaction(async (connection) => {
+    await connection.execute(
+      `UPDATE posts SET accepted_answer_id = ?, resolved_at = ? WHERE id = ? AND user_id = ?`,
+      [commentId, resolvedAt, postId, userId]
+    );
+    await connection.execute(
+      `INSERT INTO helpful_events (post_id, comment_id, helper_user_id, asker_user_id) VALUES (?, ?, ?, ?)`,
+      [postId, commentId, answer.user_id, userId]
+    );
+  });
+
+  return { result: { postId, commentId, resolvedAt }, helperUserId: answer.user_id };
+}
+
+/** Asker resolves their own ask without accepting an answer ("solved it myself"):
+ *  no helpful_event, no notification. */
+export async function resolveAsk(userId: number, postId: number): Promise<{ resolvedAt: string }> {
+  if (!postId) throw new HttpError(400, 'post_id required');
+  const post = await queryOne<{ id: number; type: string }>(
+    `SELECT id, type FROM posts WHERE id = ? AND user_id = ?`,
+    [postId, userId]
+  );
+  if (!post) throw new HttpError(403, 'Not found or not yours');
+  if (post.type !== 'ask') throw new HttpError(400, 'Only ask posts can be resolved');
+
+  const resolvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+  await execute(`UPDATE posts SET resolved_at = ? WHERE id = ? AND user_id = ?`, [resolvedAt, postId, userId]);
+  return { resolvedAt };
 }
 
 export async function toggleLike(userId: number, postId: number): Promise<{ liked: boolean }> {
@@ -204,12 +274,13 @@ const FEED_WINDOW = 300; // candidate pool ranked in-memory
  * posts, ranked by how well the in-post hashtags match the viewer's profile tags,
  * then recency, with top-2 root comments embedded per post.
  */
-export async function getFeed(userId: number, offset: number, limit: number) {
+export async function getFeed(userId: number, offset: number, limit: number, filter?: string) {
   const me = await queryOne<{ tags: any }>(`SELECT tags FROM users WHERE id = ?`, [userId]);
   const viewerTags = new Set(parseTagList(me?.tags));
 
   const candidates = await query(
-    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility, p.created_at,
+    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
             u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
             (SELECT COUNT(*) FROM post_likes   WHERE post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
@@ -230,14 +301,36 @@ export async function getFeed(userId: number, offset: number, limit: number) {
     [userId, userId, userId, userId, userId, userId]
   );
 
-  // Score: in-post hashtags weigh heaviest, author's profile tags break ties,
-  // then most-recent wins; id is the final deterministic tiebreaker so offset
-  // pagination stays stable between requests.
-  const scored = candidates
+  // Optional help views: 'help' = all asks; 'help_matches' = open asks whose
+  // skill_tag is one of the viewer's tags.
+  let pool = candidates;
+  if (filter === 'help') {
+    pool = candidates.filter((p) => p.type === 'ask');
+  } else if (filter === 'help_matches') {
+    pool = candidates.filter(
+      (p) => p.type === 'ask' && !p.resolved_at && p.skill_tag && viewerTags.has(slugifyTag(p.skill_tag))
+    );
+  }
+
+  // Score: in-post hashtags weigh heaviest, author's profile tags break ties.
+  // Open asks float up (skill-matched highest) on a 3-day time-decay so help
+  // requests get seen while fresh; resolved asks settle below. Then most-recent
+  // wins; id is the final deterministic tiebreaker so offset pagination stays
+  // stable between requests.
+  const scored = pool
     .map((p) => {
       const postMatches = extractPostTags(p.content_html).filter((t) => viewerTags.has(t)).length;
       const authorMatches = parseTagList(p.author_tags).filter((t) => viewerTags.has(t)).length;
-      return { p, score: postMatches * 10 + authorMatches };
+      let score = postMatches * 10 + authorMatches;
+      if (p.type === 'ask' && !p.resolved_at) {
+        const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3.6e6;
+        const decay = Math.max(0, 1 - ageHours / 72);
+        const skillMatch = p.skill_tag && viewerTags.has(slugifyTag(p.skill_tag));
+        score += (skillMatch ? 30 : 8) * decay;
+      } else if (p.type === 'ask' && p.resolved_at) {
+        score -= 5;
+      }
+      return { p, score };
     })
     .sort((a, b) =>
       b.score - a.score ||

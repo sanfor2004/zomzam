@@ -2,11 +2,13 @@ import { test, mock, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { HttpError } from '@/lib/http-error';
 
+// Shared connection.execute so transaction-internal SQL is inspectable after run.
+const connExecute = mock.fn(async (_sql: string, _params?: any[]) => [{ insertId: 1 }] as any);
 const db = {
   query: mock.fn(async (_sql: string, _params?: any[]) => [] as any[]),
   queryOne: mock.fn(async (_sql: string, _params?: any[]) => null as any),
   execute: mock.fn(async (_sql: string, _params?: any[]) => ({ insertId: 1 }) as any),
-  transaction: mock.fn(async (cb: any) => cb({ execute: mock.fn(async () => [{ insertId: 1 }]) })),
+  transaction: mock.fn(async (cb: any) => cb({ execute: connExecute })),
 };
 
 mock.module('@/lib/db', { namedExports: db });
@@ -26,11 +28,20 @@ before(async () => { posts = await import('@/lib/services/posts'); });
 
 const USER_ID = 42;
 
+// Return the given rows from successive queryOne calls, then null. (node:test's
+// mockImplementationOnce doesn't FIFO-queue across multiple calls, so sequence
+// explicitly.)
+function seedQueryOne(...rows: any[]) {
+  let i = 0;
+  db.queryOne.mock.mockImplementation(async () => (i < rows.length ? rows[i++] : null));
+}
+
 beforeEach(() => {
-  for (const fn of [db.query, db.queryOne, db.execute]) fn.mock.resetCalls();
+  for (const fn of [db.query, db.queryOne, db.execute, db.transaction, connExecute]) fn.mock.resetCalls();
   db.queryOne.mock.mockImplementation(async () => null);
   db.query.mock.mockImplementation(async () => []);
   db.execute.mock.mockImplementation(async () => ({ insertId: 1 }));
+  connExecute.mock.mockImplementation(async () => [{ insertId: 1 }]);
 });
 
 // ── Ownership scoping on the mutating post/comment operations (finding E) ─────
@@ -100,4 +111,58 @@ test('createPost rejects an empty post (no text, no image) with HttpError 400', 
     (err: any) => err instanceof HttpError && err.status === 400
   );
   assert.equal(db.execute.mock.calls.length, 0);
+});
+
+// ── Favor economy: accept_answer bridge + resolve_ask ────────────────────────
+
+test('acceptAnswer resolves the ask, logs a helpful_event, and returns the helper id', async () => {
+  seedQueryOne({ id: 50, type: 'ask' }, { id: 9, user_id: 77 }); // owned ask, then answer -> helper 77
+
+  const { result, helperUserId } = await posts.acceptAnswer(USER_ID, 50, 9);
+
+  assert.equal(helperUserId, 77);
+  assert.equal(result.postId, 50);
+  assert.equal(result.commentId, 9);
+
+  const sqls = connExecute.mock.calls.map((c) => c.arguments[0] as string);
+  assert.ok(sqls.some((s) => /UPDATE posts SET accepted_answer_id = \?, resolved_at = \? WHERE id = \? AND user_id = \?/.test(s)), 'ask resolved + scoped to owner');
+  const logCall = connExecute.mock.calls.find((c) => /INSERT INTO helpful_events/.test(c.arguments[0] as string))!;
+  // (post_id, comment_id, helper_user_id, asker_user_id)
+  assert.deepEqual(logCall.arguments[1], [50, 9, 77, USER_ID]);
+});
+
+test('acceptAnswer refuses a post the user does not own (403)', async () => {
+  seedQueryOne(); // post lookup -> null
+  await assert.rejects(
+    () => posts.acceptAnswer(USER_ID, 50, 9),
+    (err: any) => err instanceof HttpError && err.status === 403
+  );
+  assert.equal(db.transaction.mock.calls.length, 0);
+});
+
+test('acceptAnswer rejects a non-ask post (400)', async () => {
+  seedQueryOne({ id: 50, type: 'status' });
+  await assert.rejects(
+    () => posts.acceptAnswer(USER_ID, 50, 9),
+    (err: any) => err instanceof HttpError && err.status === 400
+  );
+});
+
+test('acceptAnswer 404s when the comment is not on the post', async () => {
+  seedQueryOne({ id: 50, type: 'ask' }); // ask found; answer lookup then returns null
+  await assert.rejects(
+    () => posts.acceptAnswer(USER_ID, 50, 9),
+    (err: any) => err instanceof HttpError && err.status === 404
+  );
+  assert.equal(db.transaction.mock.calls.length, 0);
+});
+
+test('resolveAsk scopes the UPDATE to the owner and writes no helpful_event', async () => {
+  seedQueryOne({ id: 50, type: 'ask' });
+  await posts.resolveAsk(USER_ID, 50);
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /UPDATE posts SET resolved_at = \? WHERE id = \? AND user_id = \?/);
+  assert.equal(params[1], 50);
+  assert.equal(params[2], USER_ID);
+  assert.equal(db.transaction.mock.calls.length, 0, 'resolve-self touches no helpful_events');
 });

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api-auth';
 import * as posts from '@/lib/services/posts';
+import { createNotification } from '@/lib/models/user';
 
 // Thin dispatch layer: authenticate, parse the request body (post creation is
 // multipart/form-data because it may carry an image File; every other action is
@@ -18,6 +19,8 @@ export const POST = withAuth(async (request, user) => {
       action: 'create',
       content_html: formData.get('content_html'),
       visibility: formData.get('visibility'),
+      type: formData.get('type'),
+      skill_tag: formData.get('skill_tag'),
     };
   } else {
     body = await request.json().catch(() => ({}));
@@ -30,9 +33,31 @@ export const POST = withAuth(async (request, user) => {
         contentHtml: body.content_html || '',
         visibility: body.visibility,
         imageFile,
+        type: body.type,
+        skillTag: body.skill_tag,
       });
       return NextResponse.json({ success: true, post });
     }
+
+    case 'accept_answer': {
+      const { result, helperUserId } = await posts.acceptAnswer(
+        user.id,
+        parseInt(body.post_id || 0),
+        parseInt(body.comment_id || 0)
+      );
+      // Notify the answer's author (never self-notify on a self-accept).
+      if (helperUserId !== user.id) {
+        await createNotification(helperUserId, 'answer_accepted', {
+          post_id: result.postId,
+          comment_id: result.commentId,
+          by_user: user.username,
+        });
+      }
+      return NextResponse.json({ success: true, ...result });
+    }
+
+    case 'resolve_ask':
+      return NextResponse.json({ success: true, ...await posts.resolveAsk(user.id, parseInt(body.post_id || 0)) });
 
     case 'like':
       return NextResponse.json({ success: true, ...await posts.toggleLike(user.id, parseInt(body.post_id || 0)) });
@@ -73,7 +98,7 @@ export const GET = withAuth(async (request, user) => {
 
   switch (action) {
     case 'feed':
-      return NextResponse.json({ success: true, ...await posts.getFeed(user.id, offset, limit) });
+      return NextResponse.json({ success: true, ...await posts.getFeed(user.id, offset, limit, searchParams.get('filter') || undefined) });
 
     case 'comments':
       return NextResponse.json({ success: true, comments: await posts.getComments(user.id, parseInt(searchParams.get('post_id') || '0')) });
