@@ -5,78 +5,6 @@ import { query, queryOne, execute } from '@/lib/db';
 import { DEFAULT_AVATAR } from '@/lib/models/user';
 import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
 
-let tablesReady = false;
-async function ensureTables() {
-  if (tablesReady) return;
-  await execute(`
-    CREATE TABLE IF NOT EXISTS posts (
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      user_id INT NOT NULL,
-      content_html TEXT NOT NULL,
-      created_at DATETIME DEFAULT NOW(),
-      INDEX idx_user_id (user_id),
-      INDEX idx_created_at (created_at DESC)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-  await execute(`
-    CREATE TABLE IF NOT EXISTS post_likes (
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      post_id BIGINT UNSIGNED NOT NULL,
-      user_id INT NOT NULL,
-      created_at DATETIME DEFAULT NOW(),
-      UNIQUE KEY uq_post_user (post_id, user_id),
-      INDEX idx_post_id (post_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-  await execute(`
-    CREATE TABLE IF NOT EXISTS post_comments (
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      post_id BIGINT UNSIGNED NOT NULL,
-      user_id INT NOT NULL,
-      content VARCHAR(1000) NOT NULL,
-      created_at DATETIME DEFAULT NOW(),
-      INDEX idx_post_id (post_id),
-      INDEX idx_created_at (created_at ASC)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-  await execute(`
-    CREATE TABLE IF NOT EXISTS comment_votes (
-      id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-      comment_id BIGINT UNSIGNED NOT NULL,
-      user_id INT NOT NULL,
-      created_at DATETIME DEFAULT NOW(),
-      UNIQUE KEY uq_comment_user (comment_id, user_id),
-      INDEX idx_comment_id (comment_id)
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-  `);
-  const dbName = process.env.DB_NAME || 'zomzam_db';
-  const hasParentId = await queryOne(
-    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='post_comments' AND COLUMN_NAME='parent_id'`,
-    [dbName]
-  );
-  if (!hasParentId) {
-    await execute(`ALTER TABLE post_comments ADD COLUMN parent_id BIGINT UNSIGNED NULL DEFAULT NULL`);
-    await execute(`ALTER TABLE post_comments ADD INDEX idx_parent_id (parent_id)`);
-  }
-  const hasVisibility = await queryOne(
-    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='posts' AND COLUMN_NAME='visibility'`,
-    [dbName]
-  );
-  if (!hasVisibility) {
-    await execute(
-      `ALTER TABLE posts ADD COLUMN visibility ENUM('friends','public','exclusive') NOT NULL DEFAULT 'friends'`
-    );
-  }
-  const hasImagePath = await queryOne(
-    `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='posts' AND COLUMN_NAME='image_path'`,
-    [dbName]
-  );
-  if (!hasImagePath) {
-    await execute(`ALTER TABLE posts ADD COLUMN image_path VARCHAR(255) NULL DEFAULT NULL`);
-  }
-  tablesReady = true;
-}
-
 // Allowlist sanitizer for composer HTML that is later rendered via
 // dangerouslySetInnerHTML. Permits only the formatting tags the toolbar emits
 // (bold / italic / underline / lists) plus the mention & hashtag pill spans;
@@ -118,8 +46,6 @@ function extractPostTags(html: string): string[] {
 }
 
 export const POST = withAuth(async (request, user) => {
-  await ensureTables();
-
   // Post creation arrives as multipart/form-data (it may carry an image File);
   // every other action stays JSON. Parse the body once accordingly so it is
   // never read twice.
@@ -327,8 +253,6 @@ export const GET = withAuth(async (request, user) => {
   const action = searchParams.get('action');
   const offset = Math.max(0, parseInt(searchParams.get('offset') || '0'));
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 20);
-
-  await ensureTables();
 
   // ── Feed ─────────────────────────────────────────────────
   // Shows every PUBLIC post (from anyone) plus your own and friends-only /
