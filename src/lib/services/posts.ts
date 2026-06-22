@@ -328,13 +328,13 @@ export async function getFeed(userId: number, offset: number, limit: number, fil
      JOIN users u ON u.id = p.user_id
      WHERE p.visibility = 'public'
         OR p.user_id = ?
-        OR p.user_id IN (
+        OR (p.visibility = 'friends' AND p.user_id IN (
              SELECT addressee_id FROM user_connections
                WHERE requester_id = ? AND type = 'follow' AND status = 'accepted'
              UNION
              SELECT IF(requester_id = ?, addressee_id, requester_id) FROM user_connections
                WHERE (requester_id = ? OR addressee_id = ?) AND type = 'friend' AND status = 'accepted'
-           )
+           ))
      ORDER BY p.created_at DESC
      LIMIT ${FEED_WINDOW}`,
     [userId, userId, userId, userId, userId, userId]
