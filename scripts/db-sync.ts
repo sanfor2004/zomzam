@@ -233,6 +233,10 @@ const schema: Record<string, Record<string, string>> = {
     content_html: 'TEXT NOT NULL',
     visibility: "ENUM('friends', 'public', 'exclusive') NOT NULL DEFAULT 'friends'",
     image_path: 'VARCHAR(255) NULL DEFAULT NULL',
+    type: "ENUM('status', 'ask', 'win') NOT NULL DEFAULT 'status'", // favor economy: one feed, branch on type
+    skill_tag: 'VARCHAR(50) NULL DEFAULT NULL',                      // ask routing/matching
+    accepted_answer_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',         // FK -> post_comments.id (the accepted answer)
+    resolved_at: 'DATETIME NULL DEFAULT NULL',                       // set on accept OR manual resolve; resolved = NOT NULL
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   post_likes: {
@@ -255,6 +259,16 @@ const schema: Record<string, Record<string, string>> = {
     user_id: 'INT NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Append-only log the future credits engine consumes (NOT a ledger): one row
+  // each time an asker accepts an answer. No balance is ever touched here.
+  helpful_events: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    comment_id: 'BIGINT UNSIGNED NOT NULL',
+    helper_user_id: 'INT UNSIGNED NOT NULL',   // answer author (future credit recipient)
+    asker_user_id: 'INT UNSIGNED NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
 };
 
 // Composite / secondary indexes the column-only `schema` map cannot express
@@ -266,6 +280,7 @@ const indexes: Record<string, Record<string, string>> = {
   posts: {
     idx_user_id: 'INDEX idx_user_id (user_id)',
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
+    idx_type_resolved: 'INDEX idx_type_resolved (type, resolved_at)',
   },
   post_likes: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',
