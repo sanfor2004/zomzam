@@ -1,5 +1,5 @@
 import { query, queryOne } from '@/lib/db';
-import { HttpError } from '@/lib/api-auth';
+import { HttpError } from '@/lib/http-error';
 import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 
 // Dashboard aggregation: one read-only rollup across the Time, Money and CRM

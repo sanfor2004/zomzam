@@ -1,14 +1,6 @@
 import { test, mock, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-
-class HttpError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-    this.name = 'HttpError';
-  }
-}
+import { HttpError } from '@/lib/http-error';
 
 const db = {
   query: mock.fn(async (_sql: string, _params?: any[]) => [] as any[]),
@@ -18,7 +10,6 @@ const db = {
 };
 
 mock.module('@/lib/db', { namedExports: db });
-mock.module('@/lib/api-auth', { namedExports: { HttpError } });
 // Keep sharp and the real user model out of the test process.
 class ImageUploadError extends Error {}
 mock.module('@/lib/uploads', {

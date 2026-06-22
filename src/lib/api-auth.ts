@@ -2,6 +2,11 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { queryOne } from './db';
 import { verifySession, type SessionUser } from './session';
+import { HttpError } from './http-error';
+
+// Re-export so existing importers of `HttpError` from '@/lib/api-auth' keep
+// working; the class itself now lives in the runtime-free leaf module.
+export { HttpError };
 
 const SESSION_COOKIE = 'ZOMZAM_SESSION';
 
@@ -37,14 +42,6 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   }
 
   return { id: session.id, username: session.username, email: session.email, role: session.role };
-}
-
-/** Throw for an intentional, client-safe error with a specific status. */
-export class HttpError extends Error {
-  constructor(public readonly status: number, message: string) {
-    super(message);
-    this.name = 'HttpError';
-  }
 }
 
 const unauthorized = () =>

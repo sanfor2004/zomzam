@@ -1,17 +1,8 @@
 import { test, mock, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-
-// Stub matching the real HttpError contract (status + message). Mocking the
-// api-auth module keeps next/server, next/headers and the JWT_SECRET fail-fast
-// in session.ts out of this plain node:test process.
-class HttpError extends Error {
-  status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-    this.name = 'HttpError';
-  }
-}
+// Real error class from its runtime-free leaf module — no Next/JWT pulled in, so
+// the test asserts against exactly what the service throws (no stub drift).
+import { HttpError } from '@/lib/http-error';
 
 // Shared connection.execute so transaction-internal SQL is inspectable after run.
 const connExecute = mock.fn(async (_sql: string, _params?: any[]) => [{ insertId: 1 }] as any);
@@ -23,7 +14,6 @@ const db = {
 };
 
 mock.module('@/lib/db', { namedExports: db });
-mock.module('@/lib/api-auth', { namedExports: { HttpError } });
 
 // Imported after the module mocks are registered (top-level await is unavailable
 // under the project's CJS transform, so this runs in a before hook).

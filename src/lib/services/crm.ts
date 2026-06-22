@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { query, queryOne, execute, transaction } from '@/lib/db';
-import { HttpError } from '@/lib/api-auth';
+import { HttpError } from '@/lib/http-error';
 
 // CRM suite business logic. Route handlers stay thin (parse → call → respond);
 // every SQL/transaction/owner-scoping rule lives here so it is unit-testable in

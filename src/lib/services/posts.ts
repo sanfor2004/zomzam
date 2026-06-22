@@ -1,6 +1,6 @@
 import DOMPurify from 'isomorphic-dompurify';
 import { query, queryOne, execute } from '@/lib/db';
-import { HttpError } from '@/lib/api-auth';
+import { HttpError } from '@/lib/http-error';
 import { DEFAULT_AVATAR } from '@/lib/models/user';
 import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
 
