@@ -28,7 +28,8 @@ const schema: Record<string, Record<string, string>> = {
     email: 'VARCHAR(255) NOT NULL UNIQUE',
     first_name: 'VARCHAR(100) NULL',
     last_name: 'VARCHAR(100) NULL',
-    password: 'VARCHAR(255) NOT NULL',
+    password: 'VARCHAR(255) NULL',
+    google_id: 'VARCHAR(255) NULL UNIQUE',
     role: "ENUM('user', 'admin', 'moderator') NOT NULL DEFAULT 'user'",
     avatar: 'VARCHAR(500) NULL',
     bio: 'TEXT NULL',
@@ -300,6 +301,18 @@ async function syncDatabase() {
     }
   } catch (err) {
     console.error('Failed to update crm_projects.lead_id column:', err);
+  }
+
+  // Custom schema updates (making users.password nullable for Google-OAuth-only accounts)
+  try {
+    const [columnsInfo] = await connection.query<any[]>(`DESCRIBE \`users\``);
+    const passwordCol = columnsInfo.find((c: any) => c.Field === 'password');
+    if (passwordCol && passwordCol.Null === 'NO') {
+      console.log('Modifying users.password to be nullable...');
+      await connection.query('ALTER TABLE `users` MODIFY COLUMN `password` VARCHAR(255) NULL');
+    }
+  } catch (err) {
+    console.error('Failed to update users.password column:', err);
   }
 
   console.log('Database synchronization complete.');

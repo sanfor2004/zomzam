@@ -7,7 +7,8 @@ export interface UserRow {
   email: string;
   first_name: string | null;
   last_name: string | null;
-  password?: string;
+  password?: string | null;
+  google_id?: string | null;
   role: 'user' | 'admin' | 'moderator';
   avatar: string | null;
   bio: string | null;
@@ -135,6 +136,85 @@ export async function loginUser(identifier: string, passwordPlain: string) {
     success: true,
     message: 'Login successful',
     user: normalizeAvatar(safeUser),
+  };
+}
+
+function usernameFromEmail(email: string): string {
+  const base = email
+    .split('@')[0]
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .slice(0, 40);
+  return base || 'user';
+}
+
+async function uniqueUsername(base: string): Promise<string> {
+  let candidate = base;
+  let suffix = 0;
+  while (await queryOne('SELECT id FROM users WHERE username = ? LIMIT 1', [candidate])) {
+    suffix += 1;
+    candidate = `${base}_${suffix}`.slice(0, 50);
+  }
+  return candidate;
+}
+
+export interface GoogleProfileInput {
+  googleId: string;
+  email: string;
+  name?: string;
+  picture?: string;
+}
+
+/**
+ * Finds the user tied to this Google account, links an existing email
+ * account on first Google sign-in, or creates a brand-new password-less
+ * account. Email is trusted for linking because Google has already verified
+ * ownership of it (the caller checks `email_verified` before calling this).
+ */
+export async function findOrCreateGoogleUser(profile: GoogleProfileInput) {
+  const byGoogleId = await queryOne<UserRow>('SELECT * FROM users WHERE google_id = ? LIMIT 1', [
+    profile.googleId,
+  ]);
+  if (byGoogleId) {
+    if (byGoogleId.is_active === 0) {
+      return { success: false, message: 'This account has been deactivated.' };
+    }
+    await execute(`UPDATE users SET last_login_at = NOW() WHERE id = ?`, [byGoogleId.id]);
+    const { password, ...safeUser } = byGoogleId;
+    return { success: true, message: 'Login successful', user: normalizeAvatar(safeUser) };
+  }
+
+  const byEmail = await queryOne<UserRow>('SELECT * FROM users WHERE email = ? LIMIT 1', [profile.email]);
+  if (byEmail) {
+    if (byEmail.is_active === 0) {
+      return { success: false, message: 'This account has been deactivated.' };
+    }
+    await execute(`UPDATE users SET google_id = ?, last_login_at = NOW() WHERE id = ?`, [
+      profile.googleId,
+      byEmail.id,
+    ]);
+    const { password, ...safeUser } = byEmail;
+    return { success: true, message: 'Login successful', user: normalizeAvatar(safeUser) };
+  }
+
+  const username = await uniqueUsername(usernameFromEmail(profile.email));
+  const res = await execute(
+    `INSERT INTO users (username, email, google_id, avatar, is_verified, last_login_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 1, NOW(), NOW(), NOW())`,
+    [username, profile.email, profile.googleId, profile.picture || null]
+  );
+
+  return {
+    success: true,
+    message: 'Account created successfully',
+    user: normalizeAvatar({
+      id: res.insertId,
+      username,
+      email: profile.email,
+      avatar: profile.picture || null,
+      role: 'user' as const,
+      token_version: 0,
+    }),
   };
 }
 

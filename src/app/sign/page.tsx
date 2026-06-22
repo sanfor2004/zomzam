@@ -13,6 +13,17 @@ import { Alert } from '@/components/ui/Alert';
 import { Button, Input, Divider, SegmentedSwitch } from '@/components/ui';
 import { gsap, useGSAP, SplitText } from '@/lib/gsap';
 
+function oauthErrorMessage(code: string): string {
+  switch (code) {
+    case 'email_unverified':
+      return "Your Google account's email isn't verified yet. Verify it with Google, then try again.";
+    case 'account_unavailable':
+      return 'This account is unavailable. Contact support if you think this is a mistake.';
+    default:
+      return "Google sign-in didn't go through. Please try again.";
+  }
+}
+
 function SignPageContent() {
   const { t, language, setLanguage } = useTranslation();
   const searchParams = useSearchParams();
@@ -48,7 +59,17 @@ function SignPageContent() {
       setPillTab('signup');
     }
     document.documentElement.classList.add('dark');
+
+    const oauthError = searchParams.get('error');
+    if (oauthError) {
+      setMessage({ type: 'error', text: oauthErrorMessage(oauthError) });
+    }
   }, []);
+
+  const handleGoogleSignIn = () => {
+    const redirect = searchParams.get('redirect') || '/home';
+    window.location.href = `/api/auth/oauth/google?redirect=${encodeURIComponent(redirect)}`;
+  };
 
   // ──────────────────────────────────────────────────────────
   // DEVELOPMENT NAVIGATOR: PAGE ENTRANCE CHOREOGRAPHY (GSAP)
@@ -315,6 +336,7 @@ function SignPageContent() {
           <div className="grid grid-cols-2 gap-2.5">
             <button
               type="button"
+              onClick={handleGoogleSignIn}
               className="flex items-center justify-center gap-2 py-2.5 bg-white/[0.04] border border-white/[0.07] rounded-xl text-[13px] font-semibold text-slate-300 hover:bg-white/[0.07] hover:border-white/[0.13] hover:text-white transition-all duration-150"
             >
               <svg viewBox="0 0 24 24" className="w-[15px] h-[15px] flex-shrink-0" aria-hidden="true">
