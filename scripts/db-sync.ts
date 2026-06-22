@@ -30,6 +30,7 @@ const schema: Record<string, Record<string, string>> = {
     last_name: 'VARCHAR(100) NULL',
     password: 'VARCHAR(255) NULL',
     google_id: 'VARCHAR(255) NULL UNIQUE',
+    facebook_id: 'VARCHAR(255) NULL UNIQUE',
     role: "ENUM('user', 'admin', 'moderator') NOT NULL DEFAULT 'user'",
     avatar: 'VARCHAR(500) NULL',
     bio: 'TEXT NULL',
