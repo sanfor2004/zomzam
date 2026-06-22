@@ -14,6 +14,35 @@ We did two big things:
 
 No new heavy dependencies were added. The app behaves the same for everything that already worked; we only *added* capabilities and *reorganized* code behind the scenes.
 
+> ⚠️ **One required deploy step:** the database needs a one-time, additive migration (`db:sync`) — see **Deployment Notes** at the bottom. Pulling the code alone is not enough.
+
+---
+
+## Part 0 — Security audit + hardening (Spec 1 audit → Spec 2, Phases 0–2)
+
+> Most of this part shipped in earlier sessions; it's included here so the before/after is complete. The newest work (the structural refactor + first tests) is **Part 1**.
+
+### What the audit (Spec 1) found
+A pre-launch security audit flagged, in priority order:
+- **3 release-blockers:** (1) the JWT signing key fell back to a **hardcoded string that's public in git history** — anyone could forge a login; (2) error responses leaked **internal error messages/stack traces** to the client; (3) **no brute-force / account-enumeration protection** on login/register.
+- **3 high-severity findings:** the page guard was **"default-allow"** (a newly added page could be accidentally public); there was **no way to revoke a session** (you couldn't force-logout or ban a user); and the post-HTML sanitizer was a **regex blocklist** (bypassable XSS) feeding `dangerouslySetInnerHTML`.
+- **Architecture verdict:** giant "god-route" files, no service layer, and database schema defined in two different places. (Good news: **no broken access control** — users couldn't reach each other's data.)
+
+### Before → After (Spec 2, Phases 0–2)
+
+| Area | Before | After |
+|---|---|---|
+| **JWT secret** | Fell back to a hardcoded, publicly-known key if the env var was missing | One `jose`-based session module reads `JWT_SECRET` once and **refuses to start** if it's missing — no forgeable fallback |
+| **Error responses** | Routes forwarded the raw `error.message` to the client | A single error boundary logs details **server-side** and returns a generic `500` — nothing internal leaks |
+| **Login/Register abuse** | No rate limit; distinct "username exists" vs "email exists" let attackers probe accounts | **Per-IP limit (5 tries / 15 min) → `429`**; helpful messages kept, but now safely behind the throttle |
+| **Page protection** | Only a hardcoded allowlist was protected (default-allow); `/crm` and post pages were unguarded | **Inverted to default-deny** — everything is protected, public pages are the explicit exceptions; a new page can't be accidentally public |
+| **Session revocation** | Deactivating or banning a user couldn't invalidate their existing session | Added `is_active` + `token_version`: flip `is_active` to ban, bump `token_version` to **force-logout every device** on next request |
+| **HTML sanitizing** | Home-grown regex blocklist (bypassable) | Real allowlist sanitizer (**`isomorphic-dompurify`**) before anything is stored |
+| **Auth plumbing** | The same cookie-read + verify + 401 + `try/catch` boilerplate was copy-pasted ~25× across routes; used `jsonwebtoken` | One `withAuth()` / `withError()` gate wraps every route; `jsonwebtoken` removed in favor of `jose` |
+
+### Why it matters
+These were the genuine launch-blockers: forged logins, leaked internals, and unthrottled password guessing are all closed, and the app can now ban or force-logout a user instantly.
+
 ---
 
 ## Part 1 — Backend cleanup + first tests (Spec 2, Phase 3)
@@ -80,3 +109,47 @@ The feed is now tied to the actual work freelancers do: they get **unblocked** (
 - **Schema:** `scripts/db-sync.ts` (posts type/skill_tag/accepted_answer_id/resolved_at, `helpful_events` table, index sync).
 - **API:** `src/app/api/posts/route.ts` (ask/win create, `accept_answer`, `resolve_ask`, help filters, notifications), `src/app/api/crm/route.ts` + `src/app/api/time/route.ts` (emit the Win prompt).
 - **UI:** `src/app/(dashboard)/home/PostComposer.tsx` + `page.tsx`, `src/app/p/[postId]/PostDetail.tsx`, `src/context/StreamWaiterContext.tsx`.
+
+---
+
+## Deployment Notes (READ THIS before going live)
+
+> **For whoever has the Vercel + Hostinger access.** Short version: **the code auto-deploys, but the database does NOT auto-update, and there is one required manual migration. Run it, or things break.**
+
+### 1. The code (Vercel) — automatic, safe
+When the new code is pushed, Vercel rebuilds and deploys it. Nothing special is needed for the code itself.
+
+### 2. The database (Hostinger MySQL) — one required, additive migration
+
+**Why it's needed:** earlier, the social-feed tables were auto-created at request time. **In Phase 3 we removed that on-the-fly behavior on purpose** — the database is now managed only by the migrator script (`scripts/db-sync.ts`). So the new columns/tables the code relies on **will not appear by themselves.**
+
+**What's missing on the current production DB until you migrate:**
+- `posts.type`, `posts.skill_tag`, `posts.accepted_answer_id`, `posts.resolved_at`, the `idx_type_resolved` index, and the new `helpful_events` table (Spec 3).
+- `users.is_active`, `users.token_version` (Spec 2 session revocation), and `users.google_id` (Google Sign-In).
+
+> ⚠️ **The `users` columns are auth-critical.** The login check now reads `token_version` and `is_active` on every request. If those columns are missing on production, **all logged-in requests will error**, not just the feed. So this migration is not optional.
+
+**The command (run once, pointed at the Hostinger DB):**
+```bash
+ALLOW_PROD_SYNC=1 npm run db:sync
+```
+- The `ALLOW_PROD_SYNC=1` flag is a deliberate safety guard — the script **refuses** to touch a non-localhost database without it.
+- The `DB_HOST` / `DB_USER` / `DB_PASS` / `DB_NAME` env vars must point at the Hostinger database when you run it.
+
+### 3. Is the migration dangerous? No — it only adds, never removes
+- `db:sync` **only adds** missing tables, columns, and indexes. It **never drops or alters existing columns and never deletes data.**
+- New columns are nullable / defaulted, so **existing posts are untouched** — they simply become `type = 'status'` and render exactly as before.
+- Heads-up: the script also has a "seed defaults" step that inserts default money categories / accounts / CRM settings **for `user_id = 1` only**, and only if they're missing. Harmless, but worth knowing it exists.
+
+### 4. Recommended order (avoids a broken window)
+1. **Back up the Hostinger database first** (always, before any schema change).
+2. **Run `ALLOW_PROD_SYNC=1 npm run db:sync`** against production.
+3. **Then** let the new Vercel code go live.
+
+If the code deploys *before* the migration, the feed (and possibly auth) will error in the gap between — so run the migration first, or immediately.
+
+### 5. Pre-existing notes (not introduced by this work, just good to know)
+- The live updates stream (`/api/stream`) holds a long-running connection; serverless platforms cap function duration. This is **existing** architecture — the Win-prompt rides on a database-backed queue, so it survives function restarts.
+- The login rate-limiter is in-memory per instance (also existing) — fine on a single host, looser across multiple serverless instances.
+
+**Bottom line:** redeploying the code is safe; it is **not** "auto-sync everything." Back up the DB, run the one additive `db:sync` migration against Hostinger, then go live — and nothing is at risk.
