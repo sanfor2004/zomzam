@@ -146,6 +146,36 @@ export default function HomePage() {
     return () => window.removeEventListener('zz-new-message', onNewMessage);
   }, [loadConversations]);
 
+  // ── Win prompt (favor economy) ──────────────────────────────
+  // A deal-close / project-delivery fires a transient 'win_prompt' over SSE.
+  // Seed the composer in Win mode with the suggested draft (amount intentionally
+  // omitted — opt-in only) and scroll it into view; the user edits or dismisses.
+  // Picks it up live (already on /home) or from sessionStorage on first paint.
+  const [composerSeed, setComposerSeed] = useState<{ type: 'win'; text: string; key: number } | null>(null);
+  const seedWin = useCallback((draft: string) => {
+    setComposerSeed({ type: 'win', text: draft, key: Date.now() });
+    requestAnimationFrame(() => {
+      document.getElementById('post-composer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, []);
+  useEffect(() => {
+    const onWinPrompt = (e: Event) => {
+      const draft = (e as CustomEvent).detail?.draft;
+      if (draft) seedWin(String(draft));
+    };
+    window.addEventListener('zz-win-prompt', onWinPrompt);
+    // First paint: consume a pending nudge stored before navigation.
+    try {
+      const pending = sessionStorage.getItem('zz-win-prompt');
+      if (pending) {
+        sessionStorage.removeItem('zz-win-prompt');
+        const draft = JSON.parse(pending)?.draft;
+        if (draft) seedWin(String(draft));
+      }
+    } catch {}
+    return () => window.removeEventListener('zz-win-prompt', onWinPrompt);
+  }, [seedWin]);
+
   // Auto-scroll the open thread to the newest message.
   useEffect(() => {
     if (activeThread) threadEndRef.current?.scrollIntoView({ block: 'end' });
@@ -273,7 +303,9 @@ export default function HomePage() {
             ────────────────────────────────────────────────────────── */}
         <div ref={feedRef} className="lg:col-span-2 space-y-4">
 
-          <PostComposer currentUser={currentUser} friends={friends} onPosted={handlePostCreated} />
+          <div id="post-composer">
+            <PostComposer currentUser={currentUser} friends={friends} onPosted={handlePostCreated} seed={composerSeed} />
+          </div>
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: FEED

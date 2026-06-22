@@ -152,7 +152,7 @@ export interface QualifyLeadInput {
  * account balance bump in Money, and (optionally) a Lending settlement — all in
  * one transaction, all scoped to userId. This is the regression-tested spine.
  */
-export async function qualifyLead(userId: number, input: QualifyLeadInput): Promise<void> {
+export async function qualifyLead(userId: number, input: QualifyLeadInput): Promise<{ clientName: string; projectName: string }> {
   const { leadId, accountId, amount, currency, dueDate } = input;
   if (!leadId || !accountId || isNaN(amount) || amount <= 0) {
     throw new HttpError(400, 'Invalid input parameters');
@@ -227,6 +227,8 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
       );
     }
   });
+
+  return { clientName, projectName };
 }
 
 export async function deleteLead(userId: number, id: number): Promise<void> {

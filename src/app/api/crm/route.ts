@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api-auth';
 import * as crm from '@/lib/services/crm';
+import { pushStreamOrder } from '@/lib/models/user';
 
 // Thin dispatch layer: authenticate, parse the action body, delegate to the CRM
 // service (which owns all SQL, transactions, and owner-scoping), shape the
@@ -30,15 +31,21 @@ export const POST = withAuth(async (request, user) => {
       await crm.updateLeadStatus(user.id, parseInt(body.id || 0), body.status);
       return NextResponse.json({ success: true });
 
-    case 'qualify_lead':
-      await crm.qualifyLead(user.id, {
+    case 'qualify_lead': {
+      const won = await crm.qualifyLead(user.id, {
         leadId: parseInt(body.lead_id || 0),
         accountId: parseInt(body.account_id || 0),
         amount: parseFloat(body.amount || 0),
         currency: body.currency || 'EGP',
         dueDate: body.due_date || null,
       });
+      // Transient nudge to celebrate the deal — never auto-posts (favor economy).
+      await pushStreamOrder(user.id, 'win_prompt', {
+        source: 'deal',
+        draft: `Just closed a new deal with ${won.clientName}! 🎉`,
+      });
       return NextResponse.json({ success: true });
+    }
 
     case 'delete_lead':
       await crm.deleteLead(user.id, parseInt(body.id || 0));

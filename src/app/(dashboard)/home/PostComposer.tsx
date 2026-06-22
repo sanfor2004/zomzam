@@ -40,6 +40,9 @@ interface PostComposerProps {
   friends: MentionUser[];
   /** Called with the freshly-created post so the parent can prepend it to the feed. */
   onPosted: (post: Post) => void;
+  /** External seed (e.g. the win prompt): switches type + prefills the editor.
+   *  `key` changes per nudge so re-firing the same draft re-applies it. */
+  seed?: { type: PostType; text: string; key: number } | null;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -48,7 +51,7 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, seed }: PostComposerProps) {
   const { toast } = useToast();
 
   // Editor refs / state
@@ -383,6 +386,26 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
       document.removeEventListener('keydown', onKey);
     };
   }, [showEmoji]);
+
+  // ── Apply an external seed (win prompt) ─────────────────────
+  // Switches type and prefills the editor as plain text, caret at end. Keyed on
+  // seed.key so each nudge re-applies even with the same draft.
+  useEffect(() => {
+    if (!seed) return;
+    setPostType(seed.type);
+    const el = editorRef.current;
+    if (!el) return;
+    el.innerText = seed.text;
+    setCharCount(seed.text.trim().length);
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.key]);
 
   // ── Post ────────────────────────────────────────────────────
   const handlePost = async () => {
