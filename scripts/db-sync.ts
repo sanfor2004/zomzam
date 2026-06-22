@@ -227,6 +227,74 @@ const schema: Record<string, Record<string, string>> = {
     updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
     notion_page_id: 'VARCHAR(255) NULL UNIQUE',
   },
+  posts: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT NOT NULL',
+    content_html: 'TEXT NOT NULL',
+    visibility: "ENUM('friends', 'public', 'exclusive') NOT NULL DEFAULT 'friends'",
+    image_path: 'VARCHAR(255) NULL DEFAULT NULL',
+    type: "ENUM('status', 'ask', 'win') NOT NULL DEFAULT 'status'", // favor economy: one feed, branch on type
+    skill_tag: 'VARCHAR(50) NULL DEFAULT NULL',                      // ask routing/matching
+    accepted_answer_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',         // FK -> post_comments.id (the accepted answer)
+    resolved_at: 'DATETIME NULL DEFAULT NULL',                       // set on accept OR manual resolve; resolved = NOT NULL
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  post_likes: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  post_comments: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    content: 'VARCHAR(1000) NOT NULL',
+    parent_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  comment_votes: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    comment_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  // Append-only log the future credits engine consumes (NOT a ledger): one row
+  // each time an asker accepts an answer. No balance is ever touched here.
+  helpful_events: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    comment_id: 'BIGINT UNSIGNED NOT NULL',
+    helper_user_id: 'INT UNSIGNED NOT NULL',   // answer author (future credit recipient)
+    asker_user_id: 'INT UNSIGNED NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+};
+
+// Composite / secondary indexes the column-only `schema` map cannot express
+// (single-column UNIQUE is folded into the column def above; everything below is
+// a multi-column key or a named secondary index). Keyed by index name so the
+// sync can check INFORMATION_SCHEMA.STATISTICS and add only what is missing —
+// declarative + idempotent, the same contract as the column sync.
+const indexes: Record<string, Record<string, string>> = {
+  posts: {
+    idx_user_id: 'INDEX idx_user_id (user_id)',
+    idx_created_at: 'INDEX idx_created_at (created_at DESC)',
+    idx_type_resolved: 'INDEX idx_type_resolved (type, resolved_at)',
+  },
+  post_likes: {
+    uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',
+    idx_post_id: 'INDEX idx_post_id (post_id)',
+  },
+  post_comments: {
+    idx_post_id: 'INDEX idx_post_id (post_id)',
+    idx_created_at: 'INDEX idx_created_at (created_at ASC)',
+    idx_parent_id: 'INDEX idx_parent_id (parent_id)',
+  },
+  comment_votes: {
+    uq_comment_user: 'UNIQUE INDEX uq_comment_user (comment_id, user_id)',
+    idx_comment_id: 'INDEX idx_comment_id (comment_id)',
+  },
 };
 
 /**
@@ -287,6 +355,21 @@ async function syncDatabase() {
           console.log(`Adding column \`${name}\` to table \`${tableName}\``);
           await connection.query(`ALTER TABLE \`${tableName}\` ADD COLUMN \`${name}\` ${def}`);
         }
+      }
+    }
+  }
+
+  // Sync secondary / composite indexes idempotently (the column loop above only
+  // creates tables + adds missing columns; multi-column keys live here).
+  for (const [tableName, idxs] of Object.entries(indexes)) {
+    for (const [idxName, addClause] of Object.entries(idxs)) {
+      const [existing] = await connection.query<any[]>(
+        `SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND INDEX_NAME = ? LIMIT 1`,
+        [dbName, tableName, idxName]
+      );
+      if (existing.length === 0) {
+        console.log(`Adding index \`${idxName}\` to table \`${tableName}\``);
+        await connection.query(`ALTER TABLE \`${tableName}\` ADD ${addClause}`);
       }
     }
   }

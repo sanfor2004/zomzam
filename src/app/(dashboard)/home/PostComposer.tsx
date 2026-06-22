@@ -5,12 +5,14 @@ import Image from 'next/image';
 import {
   Bold, Italic, Underline, List, Smile, Image as ImageIcon,
   AtSign, Hash, Send, Users, X,
+  MessageSquare, HelpCircle, Trophy, type LucideIcon,
 } from 'lucide-react';
-import { Button, AudienceSwitch, Tooltip, useToast, type PostVisibility } from '@/components/ui';
+import { Button, AudienceSwitch, Input, Tooltip, useToast, type PostVisibility } from '@/components/ui';
 import { gsap } from '@/lib/gsap';
 import { displayName, type CurrentUser, type MentionUser, type Post } from './shared';
 
 type Trigger = '@' | '#';
+type PostType = 'status' | 'ask' | 'win';
 
 // Maximum visible characters allowed per post. Mention (@) and tag (#) pills
 // count toward this via innerText, so the limit reflects what the reader sees.
@@ -38,6 +40,9 @@ interface PostComposerProps {
   friends: MentionUser[];
   /** Called with the freshly-created post so the parent can prepend it to the feed. */
   onPosted: (post: Post) => void;
+  /** External seed (e.g. the win prompt): switches type + prefills the editor.
+   *  `key` changes per nudge so re-firing the same draft re-applies it. */
+  seed?: { type: PostType; text: string; key: number } | null;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -46,7 +51,7 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, seed }: PostComposerProps) {
   const { toast } = useToast();
 
   // Editor refs / state
@@ -72,6 +77,12 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
 
   const [postingLoading, setPostingLoading] = useState(false);
   const [visibility, setVisibility] = useState<PostVisibility>('friends');
+
+  // Favor economy: one composer, branch on type. Ask reveals a skill/topic tag
+  // for routing/matching; Win posts share milestones (amount stays opt-in, body
+  // text only — never a column).
+  const [postType, setPostType] = useState<PostType>('status');
+  const [skillTag, setSkillTag] = useState('');
 
   // ── Sync which formats are active at the caret/selection ────
   const FORMAT_COMMANDS = ['bold', 'italic', 'underline', 'insertUnorderedList'];
@@ -376,6 +387,26 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
     };
   }, [showEmoji]);
 
+  // ── Apply an external seed (win prompt) ─────────────────────
+  // Switches type and prefills the editor as plain text, caret at end. Keyed on
+  // seed.key so each nudge re-applies even with the same draft.
+  useEffect(() => {
+    if (!seed) return;
+    setPostType(seed.type);
+    const el = editorRef.current;
+    if (!el) return;
+    el.innerText = seed.text;
+    setCharCount(seed.text.trim().length);
+    el.focus();
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(range);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.key]);
+
   // ── Post ────────────────────────────────────────────────────
   const handlePost = async () => {
     // A post is valid with text, an image, or both.
@@ -387,6 +418,8 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
       const formData = new FormData();
       formData.append('content_html', content_html);
       formData.append('visibility', visibility);
+      formData.append('type', postType);
+      if (postType === 'ask' && skillTag.trim()) formData.append('skill_tag', skillTag.trim());
       if (imageFile) formData.append('image', imageFile);
       // No Content-Type header — the browser sets the multipart boundary itself.
       const res = await fetch('/api/posts', { method: 'POST', body: formData });
@@ -397,6 +430,8 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
         setPopoverActive(false);
         setShowEmoji(false);
         removeImage();
+        setPostType('status');
+        setSkillTag('');
         onPosted(data.post);
         toast({ variant: 'success', title: 'Post shared', description: 'Your post is now live in the feed.' });
       } else {
@@ -414,6 +449,16 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
     document.execCommand('insertText', false, char);
     handleInput();
   }
+
+  // Placeholder + submit label adapt to the post type so the composer reads like
+  // the action it performs (discoverability, HIG).
+  const editorPlaceholder =
+    postType === 'ask'
+      ? 'What do you need help with? Be specific so the right people can answer.'
+      : postType === 'win'
+      ? 'Share a win worth celebrating — what did you just pull off?'
+      : `What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`;
+  const submitLabel = postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
 
   return (
     /* ──────────────────────────────────────────────────────────
@@ -450,6 +495,24 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
         className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
       />
 
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: POST TYPE SWITCH (Status · Ask · Win)
+          Contains: segmented post-type selector + (Ask) skill/topic field
+          ────────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 mb-4">
+        <PostTypeSwitch value={postType} onChange={setPostType} />
+        {postType === 'ask' && (
+          <Input
+            value={skillTag}
+            onChange={(e) => setSkillTag(e.target.value)}
+            placeholder="Skill / topic (e.g. react, seo)"
+            aria-label="Skill or topic for this help request"
+            leftIcon={<Hash className="w-3.5 h-3.5" />}
+            className="h-[34px] max-w-[220px] text-xs"
+          />
+        )}
+      </div>
+
       {/* Row 1 — avatar, text area, character amount */}
       <div className="flex gap-3">
         <Image
@@ -467,7 +530,7 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
               contentEditable
               onInput={handleInput}
               onKeyDown={handleKeyDown}
-              data-placeholder={`What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`}
+              data-placeholder={editorPlaceholder}
               className="w-full min-h-[44px] max-w-full bg-[#111318] rounded-2xl px-4 py-2.5 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden outline-none focus:border-primary-500/40 transition-colors"
             />
             <style jsx>{`
@@ -591,7 +654,7 @@ export function PostComposer({ currentUser, friends, onPosted }: PostComposerPro
             leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
             className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
           >
-            Post
+            {submitLabel}
           </Button>
         </div>
       </div>
@@ -755,6 +818,47 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// Segmented Status·Ask·Win selector. Mirrors the Kit AudienceSwitch styling but
+// is a distinct domain (post type, not visibility); if a third segmented control
+// appears, promote a generic primitive into the Kit (CLAUDE 2.0 one-off rule).
+const POST_TYPE_OPTIONS: { value: PostType; label: string; icon: LucideIcon; hint: string }[] = [
+  { value: 'status', label: 'Status', icon: MessageSquare, hint: 'Share an update' },
+  { value: 'ask', label: 'Ask', icon: HelpCircle, hint: 'Ask for help — get unblocked' },
+  { value: 'win', label: 'Win', icon: Trophy, hint: 'Celebrate a milestone' },
+];
+
+function PostTypeSwitch({ value, onChange }: { value: PostType; onChange: (v: PostType) => void }) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label="Post type"
+      className="flex items-center gap-0.5 bg-[#111318] border border-slate-800/60 rounded-xl p-0.5"
+    >
+      {POST_TYPE_OPTIONS.map(({ value: optionValue, label, icon: Icon, hint }) => {
+        const isActive = value === optionValue;
+        return (
+          <button
+            key={optionValue}
+            type="button"
+            role="radio"
+            aria-checked={isActive}
+            title={hint}
+            onClick={() => onChange(optionValue)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.97] ${
+              isActive
+                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+            }`}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

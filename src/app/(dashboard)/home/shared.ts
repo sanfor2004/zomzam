@@ -61,6 +61,8 @@ export interface Comment {
   replies?: Comment[];
 }
 
+export type PostType = 'status' | 'ask' | 'win';
+
 export interface Post {
   id: number;
   user_id: number;
@@ -71,6 +73,11 @@ export interface Post {
   content_html: string;
   image_path?: string | null;
   visibility?: PostVisibility;
+  // Favor economy (ask/win). Absent on legacy rows → treated as 'status'.
+  type?: PostType;
+  skill_tag?: string | null;
+  accepted_answer_id?: number | null;
+  resolved_at?: string | null;
   created_at: string;
   like_count: number;
   comment_count: number;

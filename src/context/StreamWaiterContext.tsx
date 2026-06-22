@@ -169,6 +169,11 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
             window.dispatchEvent(customEvent);
             setNotificationsCount((c) => c + 1);
             setNotifications((n) => [params, ...n]);
+          } else if (order_name === 'win_prompt') {
+            // Transient "share this win?" nudge. Persist so /home can pick it up
+            // after the user navigates there, and emit live for anyone already on /home.
+            try { sessionStorage.setItem('zz-win-prompt', JSON.stringify(params)); } catch {}
+            window.dispatchEvent(new CustomEvent('zz-win-prompt', { detail: params }));
           } else if (order_name === 'social_update') {
             const customEvent = new CustomEvent('zz-social-update', { detail: params });
             window.dispatchEvent(customEvent);

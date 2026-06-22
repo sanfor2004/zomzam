@@ -136,6 +136,7 @@ zomzam.com/
 │   ├── lib/
 │   │   ├── session.ts           # jose JWT sign/verify (Edge + Node) — single secret, fail-fast on boot
 │   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
+│   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
 │   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
@@ -143,6 +144,10 @@ zomzam.com/
 │   │   ├── gsap.ts               # Single source of truth for GSAP + plugin registration
 │   │   ├── notion.ts             # Notion API client for CRM lead sync
 │   │   ├── utils.ts              # cn() class merger, currency conversion rates
+│   │   ├── services/             # Per-suite business logic extracted from the route megaswitches
+│   │   │   ├── crm.ts           # CRM logic + qualify_lead cross-suite bridge (+ crm.test.ts)
+│   │   │   ├── posts.ts         # Social feed/comment logic + sanitizer + tag ranking (+ posts.test.ts)
+│   │   │   └── dashboard.ts     # Cross-suite rollup + blended hourly-rate math (+ dashboard.test.ts)
 │   │   └── models/
 │   │       └── user.ts          # User table queries
 │   │
@@ -201,12 +206,12 @@ zomzam.com/
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
 | `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
 | `/api/notion` | `sync`, `update_settings` | Notion integration for CRM lead sync. |
-| `/api/posts` | `feed`, `comments`, `create`, `like`, `delete`, `comment` | Home feed CRUD + engagement. |
+| `/api/posts` | `feed` (+ `filter=help`/`help_matches`), `comments`, `top_comments`, `create` (status/ask/win), `like`, `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement + favor economy (ask/win, accept-answer bridge). |
 | `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `list`, `thread`, `send`, `mark_read` | 1:1 direct messages between friends, delivered live via `/api/stream`. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
-| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders. |
+| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications and the transient `win_prompt` nudge). |
 
 ---
 
@@ -259,6 +264,12 @@ npm install
 npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your web browser.
+
+### 5. Run the Tests
+The service layer (`src/lib/services/`) is covered by unit tests on Node's built-in runner (via `tsx`, no extra pinned dependency). Boundaries (`@/lib/db`, uploads, etc.) are mocked; the `qualify_lead` cross-suite bridge and per-suite ownership scoping are the focus.
+```bash
+npm test
+```
 
 ---
 

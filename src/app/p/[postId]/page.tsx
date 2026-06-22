@@ -48,6 +48,7 @@ export default async function PostPage({ params }: PageProps) {
 
   const post = await queryOne<any>(
     `SELECT p.id, p.user_id, p.content_html, p.image_path, p.created_at,
+            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at,
             u.username, u.first_name, u.last_name, u.avatar,
             (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
