@@ -1,23 +1,42 @@
 import mysql from 'mysql2/promise';
+import type { EventEmitter } from 'events';
 
 // Prevent multiple connection pools in development hot-reloads
 declare global {
   var mysqlPool: mysql.Pool | undefined;
 }
 
-const pool = globalThis.mysqlPool || mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  database: process.env.DB_NAME || 'zomzam_db',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASS || '',
-  charset: process.env.DB_CHARSET || 'utf8mb4',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  enableKeepAlive: true,
-  keepAliveInitialDelay: 10000,
-});
+function createPool(): mysql.Pool {
+  const p = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306'),
+    database: process.env.DB_NAME || 'zomzam_db',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASS || '',
+    charset: process.env.DB_CHARSET || 'utf8mb4',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 10000,
+  });
+
+  // enableKeepAlive pings idle pooled connections in the background, outside
+  // any query's promise chain. If the remote host (shared MySQL hosting) drops
+  // an idle connection first, that ping fails and emits 'error' on the pool —
+  // with no listener, Node treats it as an uncaught exception and kills the
+  // whole serverless function (surfaces as Vercel's generic crash page, not a
+  // graceful JSON 500 from our route handlers). Log instead of crashing.
+  // (mysql2's Pool type omits 'error' from its `.on()` overloads even though
+  // it's a real EventEmitter at runtime — cast to call it.)
+  (p as unknown as EventEmitter).on('error', (err: Error) => {
+    console.error('MySQL pool error:', err);
+  });
+
+  return p;
+}
+
+const pool = globalThis.mysqlPool || createPool();
 
 if (process.env.NODE_ENV !== 'production') {
   globalThis.mysqlPool = pool;
