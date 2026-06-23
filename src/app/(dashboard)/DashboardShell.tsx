@@ -4,6 +4,7 @@ import { Button } from '@/components/ui';
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useTranslation } from '@/context/TranslationContext';
 import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
@@ -471,13 +472,13 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
           {/* Mobile-only centered logo → home. Desktop already has the logo
               in the sidebar, so this is gated md:hidden. */}
-          <a
+          <Link
             href="/home"
             aria-label={t('nav_home') || 'Home'}
             className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
           >
             <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7" />
-          </a>
+          </Link>
 
           {/* Right Header: Notifications Dropdown */}
           <div className="flex items-center gap-3">
