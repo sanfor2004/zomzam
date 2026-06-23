@@ -749,6 +749,14 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
   const isAsk = postType === 'ask';
   const isWin = postType === 'win';
   const isResolved = isAsk && !!post.resolved_at;
+  // Left-edge type accent — muted echo of the type badge colour (sky=help,
+  // emerald=resolved, orange=win). Status posts get none, keeping the feed
+  // calm: an accent only appears where it carries meaning.
+  const typeAccent = isWin
+    ? 'bg-primary-500/50'
+    : isAsk
+      ? (isResolved ? 'bg-emerald-500/50' : 'bg-sky-500/50')
+      : null;
   const acceptedId = post.accepted_answer_id ?? null;
   // Pin the accepted answer to the top of the preview when the ask is resolved.
   const orderedTop = acceptedId
@@ -859,6 +867,14 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
           aria-hidden
           className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
         />
+
+        {/* Left-edge type accent (ask / resolved / win only) */}
+        {typeAccent && (
+          <span
+            aria-hidden
+            className={`absolute left-1 top-5 bottom-5 w-1 rounded-full pointer-events-none ${typeAccent}`}
+          />
+        )}
 
         {/* ─── Owner quarter-circle: Edit (top wedge) + Delete (right wedge) ─── */}
         {isOwn && (
