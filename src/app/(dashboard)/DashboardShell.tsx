@@ -455,18 +455,29 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             DEVELOPMENT NAVIGATOR: MOBILE HEADER / TOP BAR
             Contains: Mobile drawer toggle, notifications Bell with dropdown
             ────────────────────────────────────────────────────────── */}
-        <header className="h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-6 z-40">
+        <header className="relative h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-6 z-40">
           <div className="flex items-center gap-4">
             <Button variant="unstyled"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="md:hidden p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
               {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </Button>
-            <h2 className="text-sm font-bold text-slate-400 hidden sm:block">
+            <h2 className="text-sm font-bold text-slate-400 hidden md:block">
               {pathname === '/dashboard' ? 'Welcome Back' : 'Zomzam Workspace'}
             </h2>
           </div>
+
+          {/* Mobile-only centered logo → home. Desktop already has the logo
+              in the sidebar, so this is gated md:hidden. */}
+          <a
+            href="/home"
+            aria-label={t('nav_home') || 'Home'}
+            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          >
+            <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7" />
+          </a>
 
           {/* Right Header: Notifications Dropdown */}
           <div className="flex items-center gap-3">
