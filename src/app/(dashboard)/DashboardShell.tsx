@@ -1,5 +1,5 @@
 'use client';
-import { Button, ToastProvider } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -715,9 +715,7 @@ export function DashboardShell({ children, initialUser }: { children: React.Reac
     <CurrentUserProvider user={initialUser}>
       <StreamWaiterProvider>
         <MoneyProvider>
-          <ToastProvider>
-            <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
-          </ToastProvider>
+          <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
         </MoneyProvider>
       </StreamWaiterProvider>
     </CurrentUserProvider>

@@ -13,7 +13,7 @@ import {
   HelpCircle, Trophy, CheckCircle2, Hash, Sparkles,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Button, Tooltip, ShareButton, ToastProvider, useToast, Modal, Input } from '@/components/ui';
+import { Button, Tooltip, ShareButton, useToast, Modal, Input } from '@/components/ui';
 import { PostComposer } from './PostComposer';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
