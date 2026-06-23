@@ -5,7 +5,7 @@ import React, { useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw } from 'lucide-react';
 
 interface Post {
   id: number;
@@ -124,6 +124,22 @@ export default function PostDetail({
       });
       const data = await res.json();
       if (data.success) setResolvedAt(data.resolvedAt ?? new Date().toISOString());
+    } catch { /* non-blocking */ }
+  };
+
+  // Owner reopens a resolved ask → back to "Help needed"; drops the accepted
+  // answer and deletes the helpful-event server-side. The reversible undo, so no
+  // confirm step (CLAUDE.md: Undo > Confirm).
+  const reopenAsk = async () => {
+    if (!isOwner || !isAsk) return;
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reopen_ask', post_id: post.id }),
+      });
+      const data = await res.json();
+      if (data.success) { setAcceptedId(null); setResolvedAt(null); }
     } catch { /* non-blocking */ }
   };
 
@@ -325,6 +341,15 @@ export default function PostDetail({
               className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 hover:text-emerald-400 transition-colors"
             >
               <CheckCircle2 className="w-3.5 h-3.5" /> I solved it myself
+            </Button>
+          )}
+          {isOwner && isAsk && isResolved && (
+            <Button
+              variant="unstyled"
+              onClick={reopenAsk}
+              className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-400 hover:text-sky-400 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reopen
             </Button>
           )}
         </div>

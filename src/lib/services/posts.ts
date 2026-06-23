@@ -205,6 +205,35 @@ export async function resolveAsk(userId: number, postId: number): Promise<{ reso
   return { resolvedAt };
 }
 
+/**
+ * Owner reopens a resolved ask: clears resolution state and hard-deletes the
+ * append-only helpful_events row(s) for the post. No credits are computed yet,
+ * so the undo is total — as if the answer had never been accepted. Silent: fires
+ * no notification, and leaves the helper's prior answer_accepted notification be.
+ * Covers both resolved states — accepted-answer and "solved it myself"
+ * (accepted_answer_id may already be NULL, making its clear a no-op).
+ */
+export async function reopenAsk(userId: number, postId: number): Promise<{ reopened: true }> {
+  if (!postId) throw new HttpError(400, 'post_id required');
+
+  const post = await queryOne<{ id: number; type: string }>(
+    `SELECT id, type FROM posts WHERE id = ? AND user_id = ?`,
+    [postId, userId]
+  );
+  if (!post) throw new HttpError(403, 'Not found or not yours');
+  if (post.type !== 'ask') throw new HttpError(400, 'Only ask posts can be reopened');
+
+  await transaction(async (connection) => {
+    await connection.execute(
+      `UPDATE posts SET accepted_answer_id = NULL, resolved_at = NULL WHERE id = ? AND user_id = ?`,
+      [postId, userId]
+    );
+    await connection.execute(`DELETE FROM helpful_events WHERE post_id = ?`, [postId]);
+  });
+
+  return { reopened: true };
+}
+
 export async function toggleLike(userId: number, postId: number): Promise<{ liked: boolean }> {
   if (!postId) throw new HttpError(400, 'post_id required');
   const existing = await queryOne(`SELECT id FROM post_likes WHERE post_id = ? AND user_id = ?`, [postId, userId]);

@@ -72,6 +72,9 @@ export const POST = withAuth(async (request, user) => {
     case 'resolve_ask':
       return NextResponse.json({ success: true, ...await posts.resolveAsk(user.id, parseInt(body.post_id || 0)) });
 
+    case 'reopen_ask':
+      return NextResponse.json({ success: true, ...await posts.reopenAsk(user.id, parseInt(body.post_id || 0)) });
+
     case 'like':
       return NextResponse.json({ success: true, ...await posts.toggleLike(user.id, parseInt(body.post_id || 0)) });
 
