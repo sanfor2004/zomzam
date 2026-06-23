@@ -10,8 +10,9 @@ import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/S
 import { MoneyProvider } from '@/context/MoneyContext';
 import { CurrentUserProvider } from '@/context/CurrentUserContext';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home, ListChecks, Compass, UserPlus, Heart, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
+import { cn } from '@/lib/utils';
 
 function DashboardLayoutContent({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   const { t } = useTranslation();
@@ -31,6 +32,13 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const sidebarNavRef = useRef<HTMLElement>(null);
+
+  // Mobile bottom-sheet swipe-to-dismiss. sheetDragY is the live finger
+  // offset; we translate the sheet 1:1 during the drag (transition off via
+  // the `dragging` flag), then on release dismiss past the threshold or
+  // snap back. Pure pointer events — no gesture library, transform-only.
+  const [sheetDragY, setSheetDragY] = useState(0);
+  const sheetDrag = useRef<{ startY: number; active: boolean }>({ startY: 0, active: false });
 
   // Auto-expand the nav section corresponding to current route on load
   useEffect(() => {
@@ -62,6 +70,45 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
   const isActive = (path: string) => {
     return pathname === path ? 'nav-link-active' : '';
+  };
+
+  // Navigate from the mobile sheet, then dismiss it.
+  const goToMobile = (path: string) => {
+    router.push(path);
+    setMobileMenuOpen(false);
+  };
+
+  // Flat mobile nav (Home first, then every live sub-page). Mirrors the
+  // desktop sidebar minus the parked CRM/Dashboard suites.
+  const mobileNavLinks: { label: string; path: string; Icon: LucideIcon }[] = [
+    { label: t('nav_home') || 'Home', path: '/home', Icon: Home },
+    { label: 'Pomodoro Focus', path: '/time/execution', Icon: Clock },
+    { label: 'Task Board', path: '/time/tasks', Icon: ListChecks },
+    { label: 'Ledger Overview', path: '/money/dashboard', Icon: DollarSign },
+    { label: 'Friends Grid', path: '/community/friends', Icon: Users },
+    { label: 'Discover People', path: '/community/discover', Icon: Compass },
+    { label: 'Friend Requests', path: '/community/requests', Icon: UserPlus },
+    { label: 'Connections & Follows', path: '/community/following', Icon: Heart },
+    { label: t('nav_settings') || 'Settings', path: '/settings', Icon: Settings },
+  ];
+
+  // ── Bottom-sheet drag handlers (attached to the grab handle only, so the
+  //    scrollable link list underneath is never hijacked) ──
+  const SHEET_DISMISS_THRESHOLD = 80; // px dragged before we close
+  const handleSheetPointerDown = (e: React.PointerEvent) => {
+    sheetDrag.current = { startY: e.clientY, active: true };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const handleSheetPointerMove = (e: React.PointerEvent) => {
+    if (!sheetDrag.current.active) return;
+    const dy = e.clientY - sheetDrag.current.startY;
+    setSheetDragY(dy > 0 ? dy : 0); // only downward drags count
+  };
+  const handleSheetPointerUp = () => {
+    if (!sheetDrag.current.active) return;
+    sheetDrag.current.active = false;
+    if (sheetDragY > SHEET_DISMISS_THRESHOLD) setMobileMenuOpen(false);
+    setSheetDragY(0);
   };
 
   const handleNotificationToggle = () => {
@@ -551,173 +598,84 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
       </div>
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: MOBILE MENU OVERLAY (drawer)
-          Contains: Dashboard link + Time / Money / CRM / Community nav groups,
-          Settings and Sign Out actions (rendered only when mobileMenuOpen)
-          ────────────────────────────────────────────────────────── */}
-      {mobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-[75px] bg-slate-900/50 backdrop-blur-sm z-30">
-          <div className="w-64 bg-surface-dark h-full border-r border-slate-800 p-6 flex flex-col space-y-4">
-            {/* TEMPORARILY DISABLED: Dashboard Home — parked for later work
-            <Button variant="unstyled"
-              onClick={() => {
-                router.push('/dashboard');
-                setMobileMenuOpen(false);
-              }}
-              className="w-full text-left block py-2.5 text-sm font-semibold text-slate-300"
-            >
-              Dashboard Home
-            </Button>
-            */}
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Time Suite</p>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/time/execution');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Pomodoro Focus
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/time/tasks');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Task Board
-              </Button>
-            </div>
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Money Suite</p>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/money/dashboard');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Ledger Overview
-              </Button>
-            </div>
-            {/* TEMPORARILY DISABLED: CRM Suite — parked for later work
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{t('nav_crm')}</p>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/crm');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                CRM Dashboard
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/crm/leads');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Lead Vault
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/crm/pipeline');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Kanban Pipeline
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/crm/contacts');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Client Profiles
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/crm/outreach');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Outreach AI
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/crm/projects');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Projects Hub
-              </Button>
-            </div>
-            */}
-            <div className="space-y-1">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Community</p>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/community/friends');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Friends Grid
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/community/discover');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Discover People
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/community/requests');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Friend Requests
-              </Button>
-              <Button variant="unstyled"
-                onClick={() => {
-                  router.push('/community/following');
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full text-left block pl-4 py-2 text-xs text-slate-400"
-              >
-                Connections & Follows
-              </Button>
-            </div>
-            <Button variant="unstyled"
-              onClick={() => {
-                router.push('/settings');
-                setMobileMenuOpen(false);
-              }}
-              className="w-full text-left block py-2.5 text-sm font-semibold text-slate-300"
-            >
-              Settings
-            </Button>
-            <Button variant="unstyled"
-              onClick={handleLogout}
-              className="w-full text-left block py-2.5 text-sm font-semibold text-red-500"
-            >
-              Sign Out
-            </Button>
-          </div>
+          DEVELOPMENT NAVIGATOR: MOBILE NAV BOTTOM SHEET
+          Contains: dimmed backdrop, swipe-to-dismiss grab handle, flat link
+          list (Home → live sub-pages → Settings) and Sign Out action.
+          ──────────────────────────────────────────────────────────
+          Always mounted (md:hidden) so open/close animate via CSS transform
+          alone — no JS on idle. Backdrop tap or swipe-down closes it. */}
+
+      {/* Backdrop */}
+      <div
+        aria-hidden={!mobileMenuOpen}
+        onClick={() => setMobileMenuOpen(false)}
+        className={cn(
+          'md:hidden fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm transition-opacity duration-300',
+          mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none',
+        )}
+      />
+
+      {/* Sheet */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Navigation menu"
+        className={cn(
+          'md:hidden fixed inset-x-0 bottom-0 z-50 flex flex-col max-h-[70vh]',
+          'bg-surface-dark border-t border-slate-800 rounded-t-3xl shadow-2xl',
+          'transition-transform duration-300 ease-out',
+          mobileMenuOpen ? 'translate-y-0' : 'translate-y-full',
+        )}
+        style={
+          sheetDragY > 0
+            ? { transform: `translateY(${sheetDragY}px)`, transition: 'none' }
+            : undefined
+        }
+      >
+        {/* Grab handle — the only drag surface, so the list scrolls freely */}
+        <div
+          onPointerDown={handleSheetPointerDown}
+          onPointerMove={handleSheetPointerMove}
+          onPointerUp={handleSheetPointerUp}
+          onPointerCancel={handleSheetPointerUp}
+          className="flex-shrink-0 flex items-center justify-center pt-3 pb-2 cursor-grab active:cursor-grabbing touch-none"
+        >
+          <span className="w-10 h-1.5 rounded-full bg-slate-700" />
         </div>
-      )}
+
+        {/* Flat link list */}
+        <nav className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-1 space-y-1">
+          {mobileNavLinks.map(({ label, path, Icon }) => {
+            const active = pathname === path;
+            return (
+              <Button
+                key={path}
+                variant="unstyled"
+                onClick={() => goToMobile(path)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold transition-colors',
+                  active
+                    ? 'bg-primary-500/10 text-primary-500'
+                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-white',
+                )}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                <span>{label}</span>
+              </Button>
+            );
+          })}
+
+          {/* Sign Out */}
+          <Button
+            variant="unstyled"
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-950/20 transition-colors"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <span>{t('nav_logout') || 'Sign Out'}</span>
+          </Button>
+        </nav>
+      </div>
     </div>
   );
 }
