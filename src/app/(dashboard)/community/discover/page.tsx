@@ -1,5 +1,5 @@
 'use client';
-import { Button } from '@/components/ui';
+import { Button, useToast } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, Sparkles } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { socialSuccessToast } from '@/lib/social-actions';
 
 interface SocialUser {
   id: number;
@@ -27,6 +28,7 @@ interface SocialUser {
 export default function DiscoverPage() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { toast } = useToast();
 
   const [discoverUsers, setDiscoverUsers] = useState<SocialUser[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,6 +86,8 @@ export default function DiscoverPage() {
       });
       const data = await res.json();
       if (data.success) {
+        const successMsg = socialSuccessToast(action);
+        if (successMsg) toast({ variant: 'success', description: successMsg });
         fetchDiscover();
         if (searchQuery.trim().length >= 2) {
           const sRes = await fetch(`/api/social?action=search&q=${encodeURIComponent(searchQuery)}`);
@@ -91,10 +95,11 @@ export default function DiscoverPage() {
           if (sData.success) setSearchResults(sData.users || []);
         }
       } else {
-        alert(data.message || 'Action failed');
+        toast({ variant: 'error', description: data.message || 'Action failed' });
       }
     } catch (err) {
       console.error('Action error:', err);
+      toast({ variant: 'error', description: 'An error occurred. Please try again.' });
     }
   };
 
