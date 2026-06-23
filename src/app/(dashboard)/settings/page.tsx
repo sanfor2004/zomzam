@@ -5,7 +5,7 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useRouter } from 'next/navigation';
 import { useTranslation, LANGUAGES } from '@/context/TranslationContext';
 import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
-import { Button, Switch, Modal, Select, NumberInput, Alert } from '@/components/ui';
+import { Button, Switch, Modal, Select, NumberInput, Alert, useToast } from '@/components/ui';
 
 const COMMON_TIMEZONES = [
   'UTC',
@@ -25,6 +25,7 @@ const CURRENCIES = ['EGP', 'USD', 'EUR', 'GBP'];
 export default function SettingsPage() {
   const { t, language, setLanguage } = useTranslation();
   const router = useRouter();
+  const { toast } = useToast();
 
   // Settings states
   const [timezone, setTimezone] = useState('UTC');
@@ -56,11 +57,6 @@ export default function SettingsPage() {
   const [isSavingPref, setIsSavingPref] = useState(false);
   const [isSavingPass, setIsSavingPass] = useState(false);
 
-  const [prefError, setPrefError] = useState<string | null>(null);
-  const [prefSuccess, setPrefSuccess] = useState<string | null>(null);
-  const [passError, setPassError] = useState<string | null>(null);
-  const [passSuccess, setPassSuccess] = useState<string | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
   usePageEntrance(containerRef, [isPageLoading]);
 
@@ -78,8 +74,6 @@ export default function SettingsPage() {
   const [showClaudeKey, setShowClaudeKey] = useState(false);
   const [showMapsKey, setShowMapsKey] = useState(false);
   const [isSavingCrm, setIsSavingCrm] = useState(false);
-  const [crmError, setCrmError] = useState<string | null>(null);
-  const [crmSuccess, setCrmSuccess] = useState<string | null>(null);
 
   // Notion Settings States
   const [notionSettings, setNotionSettings] = useState<Record<string, string>>({
@@ -90,8 +84,6 @@ export default function SettingsPage() {
   });
   const [showNotionKey, setShowNotionKey] = useState(false);
   const [isSavingNotion, setIsSavingNotion] = useState(false);
-  const [notionError, setNotionError] = useState<string | null>(null);
-  const [notionSuccess, setNotionSuccess] = useState<string | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
 
   // Fetch initial user settings
@@ -159,8 +151,6 @@ export default function SettingsPage() {
 
   const handleSaveNotionSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setNotionError(null);
-    setNotionSuccess(null);
     setIsSavingNotion(true);
 
     try {
@@ -171,14 +161,13 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setNotionSuccess('Notion settings updated successfully!');
-        setTimeout(() => setNotionSuccess(null), 3000);
+        toast({ variant: 'success', description: 'Notion settings updated successfully!' });
       } else {
-        setNotionError(data.error || 'Failed to save Notion settings');
+        toast({ variant: 'error', description: data.error || 'Failed to save Notion settings' });
       }
     } catch (err) {
       console.error(err);
-      setNotionError('An error occurred while saving Notion settings');
+      toast({ variant: 'error', description: 'An error occurred while saving Notion settings' });
     } finally {
       setIsSavingNotion(false);
     }
@@ -192,8 +181,6 @@ export default function SettingsPage() {
   };
 
   const handleSyncNotion = async () => {
-    setNotionError(null);
-    setNotionSuccess(null);
     setIsSyncing(true);
 
     try {
@@ -205,13 +192,17 @@ export default function SettingsPage() {
       const data = await res.json();
       if (data.success) {
         const stats = data.stats;
-        setNotionSuccess(`Notion synchronization complete! Synced: ${stats.tasks} tasks, ${stats.projects} projects, ${stats.links} links.`);
+        toast({
+          variant: 'success',
+          title: 'Notion sync complete',
+          description: `Synced ${stats.tasks} tasks, ${stats.projects} projects, ${stats.links} links.`,
+        });
       } else {
-        setNotionError(data.error || 'Failed to synchronize with Notion');
+        toast({ variant: 'error', description: data.error || 'Failed to synchronize with Notion' });
       }
     } catch (err) {
       console.error(err);
-      setNotionError('An error occurred during synchronization');
+      toast({ variant: 'error', description: 'An error occurred during synchronization' });
     } finally {
       setIsSyncing(false);
     }
@@ -219,8 +210,6 @@ export default function SettingsPage() {
 
   const handleSaveCrmSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setCrmError(null);
-    setCrmSuccess(null);
     setIsSavingCrm(true);
 
     try {
@@ -231,14 +220,13 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setCrmSuccess('CRM settings updated successfully!');
-        setTimeout(() => setCrmSuccess(null), 3000);
+        toast({ variant: 'success', description: 'CRM settings updated successfully!' });
       } else {
-        setCrmError(data.error || 'Failed to save CRM settings');
+        toast({ variant: 'error', description: data.error || 'Failed to save CRM settings' });
       }
     } catch (err) {
       console.error(err);
-      setCrmError('An error occurred while saving CRM settings');
+      toast({ variant: 'error', description: 'An error occurred while saving CRM settings' });
     } finally {
       setIsSavingCrm(false);
     }
@@ -283,8 +271,6 @@ export default function SettingsPage() {
   // Handle saving general preferences
   const handleSavePreferences = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPrefError(null);
-    setPrefSuccess(null);
     setIsSavingPref(true);
 
     try {
@@ -301,33 +287,33 @@ export default function SettingsPage() {
 
       const data = await res.json();
       if (data.success) {
-        setPrefSuccess(t('settings_save_success'));
+        toast({ variant: 'success', description: t('settings_save_success') });
         // Trigger page refresh to propagate header/context updates
         router.refresh();
       } else {
-        setPrefError(data.message || 'Failed to save settings');
+        toast({ variant: 'error', description: data.message || 'Failed to save settings' });
       }
     } catch (err) {
       console.error(err);
-      setPrefError('An error occurred while saving settings');
+      toast({ variant: 'error', description: 'An error occurred while saving settings' });
     } finally {
       setIsSavingPref(false);
     }
   };
 
-  // Handle saving new password
+  // Handle saving new password — on success we force a logout so the
+  // session can't outlive the credential change (other devices/tabs are
+  // invalidated when the user signs back in with the new password).
   const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPassError(null);
-    setPassSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setPassError('New passwords do not match');
+      toast({ variant: 'error', description: 'New passwords do not match' });
       return;
     }
 
     if (newPassword.length < 8) {
-      setPassError('Password must be at least 8 characters');
+      toast({ variant: 'error', description: 'Password must be at least 8 characters' });
       return;
     }
 
@@ -345,17 +331,19 @@ export default function SettingsPage() {
 
       const data = await res.json();
       if (data.success) {
-        setPassSuccess(t('settings_pass_success'));
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        toast({ variant: 'success', description: 'Password changed — signing you out…' });
+        // Tear down the current session, then bounce to sign-in. Keep the
+        // form disabled (isSavingPass stays true) through the redirect.
+        await fetch('/api/auth?action=logout', { method: 'POST' }).catch(() => {});
+        router.push('/sign');
+        router.refresh();
       } else {
-        setPassError(data.message || 'Failed to update password');
+        toast({ variant: 'error', description: data.message || 'Failed to update password' });
+        setIsSavingPass(false);
       }
     } catch (err) {
       console.error(err);
-      setPassError('An error occurred while updating password');
-    } finally {
+      toast({ variant: 'error', description: 'An error occurred while updating password' });
       setIsSavingPass(false);
     }
   };
@@ -484,9 +472,6 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            {prefSuccess && <Alert variant="success" className="mb-6">{prefSuccess}</Alert>}
-            {prefError && <Alert variant="error" className="mb-6">{prefError}</Alert>}
-
             <form onSubmit={handleSavePreferences} className="space-y-6">
               {/* Language Preference */}
               <Select
@@ -583,9 +568,6 @@ export default function SettingsPage() {
                 CRM & Outreach Settings
               </h2>
             </div>
-
-            {crmSuccess && <Alert variant="success" className="mb-6">{crmSuccess}</Alert>}
-            {crmError && <Alert variant="error" className="mb-6">{crmError}</Alert>}
 
             <form onSubmit={handleSaveCrmSettings} className="space-y-6">
               {/* API Keys */}
@@ -777,9 +759,6 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            {notionSuccess && <Alert variant="success" className="mb-6">{notionSuccess}</Alert>}
-            {notionError && <Alert variant="error" className="mb-6">{notionError}</Alert>}
-
             <form onSubmit={handleSaveNotionSettings} className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
@@ -909,9 +888,6 @@ export default function SettingsPage() {
                 {t('settings_security')}
               </h2>
             </div>
-
-            {passSuccess && <Alert variant="success" className="mb-6">{passSuccess}</Alert>}
-            {passError && <Alert variant="error" className="mb-6">{passError}</Alert>}
 
             <form onSubmit={handleSavePassword} className="space-y-5">
               {/* Current Password */}
