@@ -333,8 +333,12 @@ export default function SettingsPage() {
       if (data.success) {
         toast({ variant: 'success', description: 'Password changed — signing you out…' });
         // Tear down the current session, then bounce to sign-in. Keep the
-        // form disabled (isSavingPass stays true) through the redirect.
-        await fetch('/api/auth?action=logout', { method: 'POST' }).catch(() => {});
+        // form disabled (isSavingPass stays true) through the redirect. Logout
+        // is best-effort — even if it fails we still redirect, since the
+        // password is already changed — but we surface the failure to the log.
+        await fetch('/api/auth?action=logout', { method: 'POST' }).catch((err) =>
+          console.error('Logout after password change failed:', err),
+        );
         router.push('/sign');
         router.refresh();
       } else {
