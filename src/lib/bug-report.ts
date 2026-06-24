@@ -9,16 +9,17 @@
 // Design constraints:
 //   • Zero new dependencies — delivers via the Resend HTTP API over native fetch
 //     (no nodemailer/SMTP, which is unreliable on Vercel's serverless runtime).
-//   • Fully env-gated — if RESEND_API_KEY + BUG_REPORT_TO are unset it no-ops
-//     (and just relies on console.error), so the app runs fine unconfigured.
+//   • Env-gated — sending is enabled only once RESEND_API_KEY is set; until then
+//     it no-ops (console.error only), so the app runs fine unconfigured. The
+//     recipient defaults to 2004.Sanfor@gmail.com (override with BUG_REPORT_TO).
 //   • Never throws — the reporter sits inside error-handling paths; it must not
 //     turn a handled 500 into an unhandled crash.
 //   • Throttled — one email per identical fault per 10 min, so a recurring error
 //     (e.g. a downed DB hit on every request) can't flood the inbox.
 //
 // Setup: add to .env (and the Vercel project env):
-//   RESEND_API_KEY=re_xxx                 # https://resend.com/api-keys
-//   BUG_REPORT_TO=you@example.com         # comma-separated for multiple
+//   RESEND_API_KEY=re_xxx                 # https://resend.com/api-keys (required to send)
+//   BUG_REPORT_TO=you@example.com         # optional; defaults to 2004.Sanfor@gmail.com (comma-separated for multiple)
 //   BUG_REPORT_FROM=Zomzam Bugs <bugs@yourdomain.com>   # optional; sender must
 //     be a Resend-verified domain. Defaults to onboarding@resend.dev (Resend test
 //     mode only delivers that to the account owner's own verified address).
@@ -46,6 +47,8 @@ export interface BugReportInput {
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 const DEFAULT_FROM = 'Zomzam Bugs <onboarding@resend.dev>';
+// Default bug recipient. BUG_REPORT_TO overrides it (comma-separated for several).
+const DEFAULT_TO = '2004.Sanfor@gmail.com';
 
 // One email per identical fault per window — see module header.
 const THROTTLE_MAX = 1;
@@ -105,8 +108,8 @@ function buildHtml(input: BugReportInput): string {
 export async function reportBug(input: BugReportInput): Promise<void> {
   try {
     const apiKey = process.env.RESEND_API_KEY;
-    const to = process.env.BUG_REPORT_TO;
-    if (!apiKey || !to) return; // not configured → console.error trail only
+    const to = process.env.BUG_REPORT_TO || DEFAULT_TO;
+    if (!apiKey || !to) return; // no API key → console.error trail only
 
     if (!rateLimit(`bug:${fingerprint(input)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS)) return;
 

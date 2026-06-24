@@ -142,7 +142,7 @@ zomzam.com/
 │   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
 │   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
 │   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle, bug-report throttle)
-│   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, env-gated, throttled, never throws)
+│   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, throttled, never throws; recipient defaults to 2004.Sanfor@gmail.com)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
 │   │   ├── facebook-oauth.ts    # Facebook Sign-In/Sign-Up: auth URL builder, code exchange, Graph API profile fetch
@@ -268,14 +268,14 @@ FACEBOOK_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/facebook/callba
 BLOB_READ_WRITE_TOKEN=
 
 # Bug reporter — emails unexpected server (500) + uncaught client errors via the
-# Resend HTTP API (src/lib/bug-report.ts). All optional: if RESEND_API_KEY or
-# BUG_REPORT_TO are unset, error reporting silently no-ops (console.error only).
-#   RESEND_API_KEY: https://resend.com/api-keys
-#   BUG_REPORT_TO:  comma-separated recipient(s)
+# Resend HTTP API (src/lib/bug-report.ts). Sending turns on once RESEND_API_KEY
+# is set; until then it silently no-ops (console.error only).
+#   RESEND_API_KEY: https://resend.com/api-keys (required to send)
+#   BUG_REPORT_TO:  recipient(s), comma-separated. Defaults to 2004.Sanfor@gmail.com
 #   BUG_REPORT_FROM: sender; must be a Resend-verified domain. Defaults to
 #     onboarding@resend.dev (Resend test mode only delivers to the account owner).
 RESEND_API_KEY=
-BUG_REPORT_TO=
+BUG_REPORT_TO=2004.Sanfor@gmail.com
 BUG_REPORT_FROM=
 ```
 
