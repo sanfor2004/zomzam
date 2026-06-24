@@ -189,11 +189,15 @@ export const POST = withAuth(async (request, user) => {
       };
 
       const me = await getUserById(user.id);
+      // touchLastSeen=false: delivering a message to the recipient must NOT bump
+      // their last_seen — doing so falsely flips them "online" on presence rails
+      // until the next poll re-reads their stale timestamp (the online→offline
+      // flicker). Their real presence is maintained by their own heartbeat/SSE loop.
       await pushStreamOrder(recipientId, 'new_message', {
         conversation_id: conversationId,
         message,
         sender: me ? normalizeUser(me) : { id: user.id, username: user.username },
-      });
+      }, false);
 
       return NextResponse.json({ success: true, message, conversation_id: conversationId });
     }

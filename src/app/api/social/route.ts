@@ -162,10 +162,12 @@ export const POST = withAuth(async (request, user) => {
         [targetId, String(user.id)]
       );
 
+      // touchLastSeen=false: this targets another user; don't bump their
+      // last_seen (would falsely show them online — see new_message/notifications).
       await pushStreamOrder(targetId, 'social_update', {
         action: 'request_cancelled',
         from_user_id: user.id,
-      });
+      }, false);
 
       return NextResponse.json({ success: true, message: 'Friend request cancelled' });
     }
@@ -183,7 +185,7 @@ export const POST = withAuth(async (request, user) => {
       await pushStreamOrder(targetId, 'social_update', {
         action: 'unfriended',
         from_user_id: user.id,
-      });
+      }, false);
 
       return NextResponse.json({ success: true, message: 'Unfriended' });
     }

@@ -5,7 +5,7 @@ import { verifySession } from './lib/session';
 // DEFAULT-DENY: a newly added page can never be accidentally left unguarded
 // (the bug that previously left /crm exposed). Public set = landing, auth/
 // recovery pages, public profiles (/u), shareable post pages (/p), the dev kit.
-const PUBLIC_PREFIXES = ['/sign', '/forgot-password', '/u', '/ui-kit', '/p'];
+const PUBLIC_PREFIXES = ['/sign', '/forgot-password', '/u', '/ui-kit', '/p', '/pricing'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

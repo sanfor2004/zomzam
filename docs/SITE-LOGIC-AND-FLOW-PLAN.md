@@ -1,181 +1,236 @@
-# Zomzam — Site Logic & Flow Plan
+# Zomzam — Site Logic, Flow & Monetization Plan
 
-> A plan for how Zomzam should *think* (its logic) and how a user should *move
-> through it* (its flow). Written against the codebase as it stands today, with
-> a prioritized path to make the product coherent and genuinely good.
+> How Zomzam should *think* (its logic), how a user should *move through it* (its
+> flow), and how it *makes money* (CRM + Leads as a paid tier). Written against
+> the codebase as it stands today, with a prioritized path to ship.
 
 ---
 
-## 1. The product thesis (the one sentence everything serves)
+## 1. The product thesis (social-first)
 
-**Zomzam is a personal operating system where a solo professional runs their
-day (Time), their money (Money), and their network (Social) in one place — and
-the three reinforce each other instead of living in separate apps.**
+**Zomzam is a social network for solo professionals — freelancers, agencies,
+operators — where you build a real network, then turn that network into clients.
+The social layer is the free, sticky core; the productivity suites deepen the
+daily habit; and the CRM + Leads-generation suite is the paid engine that
+converts connections into revenue.**
 
-Everything below is judged by one question: *does it make that sentence true and
-obvious?* If a feature doesn't serve the daily loop or the cross-suite payoff,
-it's noise.
+The order of operations matters and drives every decision below:
+
+1. **Social is the product** (free, the reason people show up and come back).
+2. **Time + Money are the habit** (free; they make Zomzam a *daily* open, not a
+   weekly one — they keep people inside the social graph).
+3. **CRM + Leads is the business** (paid; the place users happily pay because it
+   makes them money).
+
+Test for any change: *does it make the social loop tighter, the daily habit
+stickier, or the paid conversion more obvious?* If none — cut it.
 
 ### Current reality vs thesis
-- ✅ **Time Suite** (execution/tasks/planning/ideas/tracker) — built, coherent.
-- ✅ **Money Suite** (dashboard/accounts/income/expenses/lend) — built, coherent.
-- ✅ **Social layer** (feed, messaging, presence, notifications) — built recently.
-- ⏸️ **CRM Suite** — parked (kept intentionally, see project memory). It is the
-  bridge that ties Social → Money → Time, so its absence is *why the suites feel
-  separate today.*
-- ⚠️ **Dashboard** (`/dashboard`) — the cross-suite rollup that should be the
-  "spine" is currently disabled in nav. The app effectively opens on `/home`
-  (the feed), which makes Zomzam read as a *social app with tools attached*
-  rather than a *personal OS with a social layer*.
-
-**The single biggest logic problem is altitude:** the home screen is the feed,
-not the user's life. Fixing the flow starts there.
+- ✅ **Social layer** — feed, posts/`@mentions`, live messaging, presence,
+  notifications, friends/followers, public profiles, favor economy. **This is now
+  the front door** (`/home` after login). Correct.
+- ✅ **Time Suite** & ✅ **Money Suite** — built; the free engagement deepeners.
+- 💰 **CRM Suite + Map Leads Scraper + AI Outreach** — built but parked. This is
+  the **paid tier** (see §5). Re-enabling it *behind a paywall* is the monetization.
+- The earlier worry that "the app opens on the feed" is, under a social-first
+  thesis, **a feature, not a bug.** `/home` as the landing is right. `/dashboard`
+  becomes an optional "command center," not the forced front door.
 
 ---
 
-## 2. The flows that must work (in priority order)
+## 2. The social loops (the retention engine — top priority)
 
-### 2.1 First-run / onboarding flow (currently missing)
-Today: register → cookie set → land on `/home` with an empty feed and no context.
-A new user has no tags, no currency preference, no friends, no tasks — so every
-suite looks empty and the favor economy (skill matching) can't function.
+Social-first means these loops are P0. They're mostly built; the work is
+*tightening* them so the network feels alive.
 
-**Target flow:**
-1. Register / OAuth → **3-step onboarding** (skippable, resumable):
-   - **Identity & skills**: name, avatar, and **profile tags** (these power the
-     `ask`/help-matching logic — without them the favor economy is dead on arrival).
-   - **Money basics**: primary/secondary currency (drives every Money conversion).
-   - **Find your people**: seed 3–5 friend suggestions (`/api/social?action=discover`).
-2. Land on **`/dashboard`** (not `/home`) with a "Day Zero" state that teaches
-   the loop: "Start a focus session", "Log your first expense", "Say hi to a friend".
+### 2.1 The presence loop — *"my people are here"*  ✅ just fixed
+A network feels alive when you can see who's around. Two bugs that broke this
+were fixed in this pass:
+- **Texting/notifying someone falsely flipped them "online" then back offline.**
+  Root cause: `pushStreamOrder` defaulted to bumping the *recipient's*
+  `last_seen`. Delivering a message/notification/social-update to a user is not
+  *activity by* them — those calls now pass `touchLastSeen=false`.
+- **Presence flickered even for genuinely-online friends.** The "online" window
+  was 7s while the heartbeat is ~25s. Widened to **35s** (`ONLINE_WINDOW_SECONDS`)
+  so a connected user stays steadily online and fades to "active recently" for
+  ~30s after leaving.
+- **Next:** show "active recently" / "last seen" text (not just a dot), and an
+  "Active now" count, so presence reads as a living room, not a status light.
 
-**Why:** onboarding is the cheapest lever for activation. The data it collects
-(tags, currency) is a *hard dependency* of features already built.
+### 2.2 The conversation loop — *"talk to my network live"*  ✅ built
+Global docked chat (`ChatDock`), `/messages` hub, topbar unread dot, contacts
+ordered by last-chatted. Next tightening:
+- Typing indicators + read receipts over the existing SSE pipe (new `order_name`s).
+- Message reactions; share a post into a DM (turns the feed into conversations).
 
-### 2.2 The daily loop (the core habit)
-This is the flow that should pull a user back every day:
+### 2.3 The content loop — *"post → reach → reaction → reply"*  ✅ built
+Feed, live "new posts" pill, likes/comments, ask/win posts. Next:
+- Richer reactions; @mention notifications that deep-link to the post.
+- A "who saw your win/ask" surface to reward posting.
+
+### 2.4 The favor economy — *"help & get known for it"*  ⚠️ loop is open-ended
+`ask`/`win` posts + skill matching exist, and `helpful_event` rows are logged —
+but "**NO balance touched**," so helping earns nothing visible. **An unrewarded
+loop trains people to stop.** Close it: a **reputation/helpful score** on the
+profile, a weekly "Most helpful" surface, and badges. This is pure social fuel
+and should ship before monetization polish.
+
+---
+
+## 3. The daily-habit loop (Time + Money keep people in the graph)
+
+These free suites aren't a separate app — they're *why a social user opens Zomzam
+daily* instead of weekly. The logic that makes them serve the social thesis:
+
+- Surface productivity *socially*: a finished focus streak or a money milestone
+  can become an optional `win` post — habit feeds content feeds network.
+- A lightweight optional **`/dashboard`** stays as a personal "command center"
+  (hours focused, money in/out, streak, pending help requests, unread) — but it
+  is *not* the forced landing. `/home` (the network) is.
+
+---
+
+## 4. The monetized value loop (network → clients → revenue)
+
+The reason a free social user converts to paid: **Zomzam is where their network
+already is, so it's the natural place to find and close business.**
 
 ```
-Open Zomzam → /dashboard (what matters today)
-   → Time:  start a focus session / clear a task
-   → Money: log today's income/expense, glance at net worth
-   → Social: see who's around, answer a help request, share a win
-   → close the loop: dashboard reflects the day's deltas
+Grow your network (free, social)
+   → spot opportunity (a friend needs what you sell; a niche to prospect)
+   → CRM + Leads (PAID): scrape leads, run AI outreach, work the pipeline
+   → close a deal → the cross-suite bridge logs income + seeds delivery tasks
+   → post the `win` → social proof pulls in more network → repeat
 ```
 
-**Logic to make this real:**
-- `/dashboard` must become the **default post-login route** and the **home of the
-  daily loop** — a glanceable rollup (hours focused, money in/out, streak,
-  pending help requests from friends, unread messages).
-- Every suite action should produce a **visible delta on the dashboard** (close
-  the Gulf of Evaluation — the user must *see* that what they did mattered).
-
-### 2.3 The social / engagement loop (built — needs tightening)
-Now that messaging, presence, notifications, and the new-posts pill exist, the
-loop is: *post/ask → friend sees it live → they react/answer/DM → you get a live
-notification/toast → you respond.* This is the retention engine. See §4 for the
-specific logic fixes it still needs.
-
-### 2.4 The value loop (the cross-suite bridge — the moat)
-The thing no single-purpose app can do: **an event in one suite cascades into the
-others.** The pattern already exists (`qualify_lead` seeds Money income + Time
-tasks + a debtor ledger row — see README "Cross-Suite Data Bridges"). The plan is
-to make this pattern the product's signature rather than a hidden CRM detail:
-- A **`win` post** ("closed a client") could offer to log the income.
-- Completing a **focus session** on a client task could nudge an invoice.
-- The **favor economy** (`helpful_event` is logged but "no balance touched")
-  should *pay out* into something visible — reputation, credits, or a leaderboard.
-  Right now the loop is opened and never closed.
+The cross-suite bridge already exists (`qualify_lead` seeds Money income + Time
+tasks + a debtor ledger row). Making it *visible* is what justifies the price.
 
 ---
 
-## 3. Information architecture & navigation logic
+## 5. Monetization — CRM + Leads as a paid tier
 
-**Problem:** nav is a flat list of suites; there's no sense of "home base."
+### 5.1 What's free vs paid
+| Tier | Price | What you get |
+|------|-------|--------------|
+| **Free** | **$0 forever** | The entire social platform (feed, messaging, presence, notifications, profiles, favor economy) + the full **Time** and **Money** suites. The product is genuinely useful and viral at $0. |
+| **Pro** | **$19/mo** (or **$15/mo billed annually**, $180/yr) | Everything free **+ CRM Suite** (contacts, Kanban pipeline, projects) + **Map Leads Scraper (300 leads/mo)** + **AI Outreach (100 emails/mo)** + Lead Vault + the won-deal → income/tasks bridge. |
+| **Agency** | **$49/mo** (or **$39/mo annually**, $468/yr) | Everything in Pro + **1,500 leads/mo** + **500 AI emails/mo** + priority enrichment/support + higher API limits + early access to team seats. |
 
-**Target model — three altitudes:**
-1. **Spine (always one tap away):** `/dashboard` (today), `/home` (network),
-   `/messages` (conversations). These are the verbs of the daily loop.
-2. **Suites (workbenches you go *into*):** Time, Money, (CRM later). You enter to
-   do focused work, then return to the spine.
-3. **Self (account):** `/me`, `/settings`.
+### 5.2 How the price was calculated
+**Value anchor (what the market charges):** standalone lead-gen tools — Apollo
+(~$49+/mo), Hunter (~$34+/mo), Instantly (~$37+/mo) — sell *only* prospecting.
+Zomzam Pro at **$19** (annual $15) **undercuts all of them** while bundling CRM +
+AI outreach **and** the social graph the leads live next to. Pricing below the
+category anchor is deliberate: the social network is the moat, lead-gen is the
+upsell — we win on bundle value, not on being the cheapest scraper.
 
-**Concrete fixes:**
-- Re-enable `/dashboard` and make it the login landing + first sidebar item.
-- Keep the new **right presence rail** and **topbar messages/bell** as the
-  persistent "social pulse" across all routes (already implemented).
-- The mobile bottom-sheet nav (recently added) should mirror these three altitudes,
-  Spine items first.
+**Cost to serve (why the caps exist, and the margin):**
+- *Lead scrape* — Google Places (Nearby + Details) ≈ **$0.03–0.06 per enriched
+  lead**. Pro's 300/mo cap ⇒ ~$9–18 COGS *only if maxed*; typical users pull far
+  less, so blended gross margin lands ~50–70%. Agency's 1,500/mo cap is priced
+  for users converting leads into real contract revenue.
+- *AI outreach* — a cold email ≈ 1–2k tokens via Claude ⇒ **fractions of a cent**.
+  100/mo is <$1 COGS; 500/mo a few dollars. Negligible vs the price.
+- *Free tier* — near-zero COGS (no lead API, no AI). It's the funnel: every free
+  social user is a future Pro prospect the moment they want to sell to their network.
 
----
+**Annual discount:** ~20% off (Pro $180/yr, Agency $468/yr) to pull cash forward
+and cut churn. Shown via the monthly/annual toggle on `/pricing`.
 
-## 4. Specific logic gaps to fix (found in the current code)
+**Conversion thesis:** Free grows the graph → the moment a user wants to *monetize*
+that graph (sell to connections, prospect a niche), Pro is the obvious unlock.
+We sell *outcomes* (clients, revenue), not *features*.
 
-| # | Area | Issue | Fix |
-|---|------|-------|-----|
-| 1 | **Presence** | "Online" = `last_seen` within **7s** (`computeOnlineFields`), but the friends rail polls every **20s** and the heartbeat is ~25s. Users will flicker offline constantly. | Widen the online window to ~45–60s (heartbeat interval + slack), or push presence over SSE instead of polling. Presence should be *forgiving*, not knife-edge. |
-| 2 | **Favor economy** | `helpful_event` rows are logged but "NO balance touched" — the reward loop is opened and never closed. | Decide the payout (reputation score on profile, a credits balance, a "most helpful this week" surface) and render it. An unrewarded loop trains users to stop helping. |
-| 3 | **Notifications** | Only `mark_read`; no history/pagination, no dedicated view. | Add a notifications page (or infinite dropdown) and per-item deep links (a comment notification should open the post). |
-| 4 | **Onboarding data** | Tags/currency are hard dependencies with no collection flow (see §2.1). | Build onboarding; until then, surface inline prompts ("add skills to get matched"). |
-| 5 | **Empty states** | Empty feed/dashboard/suites give no next action. | Every empty state gets one primary CTA wired to the daily loop. |
-| 6 | **Auth edge** | Existing sessions kept the old 7-day token until next login (the 60-day change only applies to new logins). | Acceptable, but note it; consider a silent re-issue on next authenticated request. |
-| 7 | **`/api/messages` scale** | `contacts` runs correlated subqueries per friend; fine for small graphs, will degrade. | Revisit with a `JOIN`/window function if friend counts grow. Not urgent. |
+### 5.3 The subscribe flow (built + the gap)
+- **`/pricing`** (public, in the proxy allowlist) — built this pass. Free/Pro/
+  Agency cards, monthly/annual toggle with live savings, feature lists, CTAs.
+  Reachable via the sidebar **"Upgrade"** entry (desktop + mobile nav).
+- **CTA behavior today:** logged-out → routed to sign-up; logged-in → records
+  intent (honest "checkout launching soon" toast). **No charge happens yet.**
+- **The gap to real revenue (next build, needs a decision):** wire **Stripe
+  Checkout** + a webhook. This needs a payment processor choice + keys — *flagged
+  for the owner*; not added speculatively (no new dependency without sign-off).
 
----
-
-## 5. Data & state-flow architecture (keep it clean as it grows)
-
-The current architecture is sound — preserve these boundaries:
-
-- **One API boundary:** every route goes through `withAuth`/`withError`
-  (`src/lib/api-auth.ts`). Business logic lives in `src/lib/services/*`, not in
-  routes. *Rule: routes parse + dispatch; services decide.* Keep new logic in
-  services so it stays unit-testable (see `*.test.ts`).
-- **One realtime pipe:** SSE via `/api/stream` + `StreamWaiterContext`, with a
-  per-user `stream_queue`. New live features = a new `order_name`, not a new
-  transport. (`new_message`, `new_post`, `new_notification` already follow this.)
-- **One source per concern on the client:** `MessagesContext` owns all DM state;
-  `StreamWaiterContext` owns presence/notifications; `MoneyContext` owns balances.
-  *Rule: don't duplicate a model into a page — lift it into the context* (this is
-  exactly the cleanup that consolidated the old `/home`-only messaging).
-- **Observability:** unexpected errors now email via `src/lib/bug-report.ts`
-  (server boundary + client `ErrorReporter` + `global-error.tsx`). Keep *expected*
-  failures as `HttpError` (not emailed) and let genuine bugs surface. Watch the
-  inbox after each deploy — it's now the early-warning system.
-
-**Conventions to enforce going forward:**
-- Use the **Zomzam Kit** (`src/components/ui`) before writing new markup.
-- Parameterized SQL only; ownership-scope every query to the acting user.
-- New page = automatically protected by the default-deny proxy; no extra wiring.
+### 5.4 Entitlements & metering (how gating should work)
+When CRM/Leads is re-enabled behind the paywall:
+- Add `users.plan` (`free|pro|agency`) + `plan_status` + `plan_renews_at`, and
+  monthly usage counters (`leads_used`, `ai_emails_used`) that reset on renewal.
+- Gate at the **service boundary**, not just the UI: a `requirePlan('pro')` guard
+  in the CRM/leads routes (mirrors `withAuth`) so the entitlement can't be
+  bypassed by hitting the API directly. The UI shows locked states + an Upgrade CTA.
+- **Meter** each lead scrape and AI email against the cap; at the cap, return a
+  clean "limit reached — upgrade or wait for reset" (an `HttpError`, not a bug).
+- Stripe webhook is the *only* writer of `plan`/`plan_status` (never trust the client).
 
 ---
 
-## 6. Prioritized roadmap
+## 6. Information architecture (social-first)
 
-**P0 — Make the spine real (1 flow, highest leverage)**
-- Re-enable `/dashboard`; make it the post-login landing and the daily-loop home.
-- Wire each suite's primary action to a visible dashboard delta.
-- Fix presence window (gap #1) so the new social rail feels trustworthy.
+**Three altitudes:**
+1. **Spine (the social pulse, one tap away):** `/home` (network feed — the
+   landing), `/messages` (conversations), notifications + presence rail
+   (persistent across routes — built).
+2. **Habit suites (free workbenches):** Time, Money. Enter to do focused work,
+   return to the network.
+3. **Business (paid):** CRM, Leads, Pipeline, Outreach — gated to Pro/Agency,
+   entered via **Upgrade** / `/pricing`.
+4. **Self:** `/me`, `/settings`.
 
-**P1 — Close the loops**
-- Onboarding flow (§2.1) — unlocks tags/currency dependencies.
-- Favor-economy payout (gap #2) + notifications history (gap #3).
-- Empty-state CTAs everywhere (gap #5).
+Keep the **right presence rail** and **topbar messages/bell** everywhere — they
+are the "someone's around" signal that makes a social product feel inhabited.
 
-**P2 — The moat**
-- Bring back CRM and make the **cross-suite bridge** a first-class, *visible*
-  story (a `win` post → income; a client task → invoice nudge).
-- "Most helpful this week" / reputation surface to reward the favor economy.
+---
+
+## 7. Data & state-flow architecture (keep it clean as it grows)
+
+- **One API boundary:** every route via `withAuth`/`withError` (`src/lib/api-auth.ts`);
+  business logic in `src/lib/services/*` (unit-tested). Routes parse + dispatch;
+  services decide. Plan gating will live here too (`requirePlan`).
+- **One realtime pipe:** SSE `/api/stream` + `StreamWaiterContext`, per-user
+  `stream_queue`. New live features = a new `order_name`, not a new transport.
+  **Presence rule (now enforced):** cross-user pushes use `touchLastSeen=false`;
+  only a user's *own* heartbeat/SSE loop updates their `last_seen`.
+- **One source per concern on the client:** `MessagesContext` (DMs),
+  `StreamWaiterContext` (presence/notifications), `MoneyContext` (balances).
+  Don't duplicate a model into a page — lift it into the context.
+- **Observability:** unexpected errors email via `src/lib/bug-report.ts` (server
+  boundary + client `ErrorReporter` + `global-error.tsx`). Expected failures stay
+  `HttpError` (not emailed). Watch the inbox after deploys.
+- **Conventions:** Zomzam Kit before new markup; parameterized + owner-scoped SQL;
+  new pages auto-protected by default-deny (public pages are explicitly allowlisted).
+
+---
+
+## 8. Prioritized roadmap
+
+**P0 — Make the network feel alive (social-first core)**
+- ✅ Fix presence flicker (texting false-online + 7s→35s window) — done this pass.
+- Favor-economy payout (§2.4): reputation/helpful score + "Most helpful this week".
+- Presence polish: "active recently" text + "Active now" count.
+
+**P1 — Tighten the conversation & content loops**
+- Typing indicators + read receipts (new SSE orders).
+- @mention/comment notifications with deep links + a notifications history view.
+- Share-post-to-DM; richer reactions.
+
+**P2 — Turn it on as a business (monetization)**
+- ✅ `/pricing` page + Upgrade entry + public allowlist — done this pass.
+- Entitlements: `users.plan` + usage counters + `requirePlan` service guard (§5.4).
+- **Stripe Checkout + webhook** (owner decision required) — the step that turns
+  the page into revenue.
+- Re-enable CRM/Leads **behind the paywall**, with locked states + metering, and
+  make the won-deal → income/tasks **bridge visible** (the thing people pay for).
 
 **Always-on**
-- Keep services unit-tested, keep the realtime pipe single, watch bug-report
-  email after deploys, prune dead code as features consolidate (this pass removed
-  the orphaned `messages?action=list` and unused `home/shared` types).
+- Services unit-tested; single realtime pipe; watch bug-report email; prune dead
+  code as features consolidate.
 
 ---
 
-## 7. The one-line test for every future change
+## 9. The one-line test for every future change
 
-> *Does this make the daily loop tighter, or the cross-suite payoff more visible?*
+> *Does this make the social loop tighter, the daily habit stickier, or the paid
+> conversion more obvious?*
 
-If neither — it's probably noise, and the thesis in §1 says cut it.
+If none — the thesis in §1 says cut it.

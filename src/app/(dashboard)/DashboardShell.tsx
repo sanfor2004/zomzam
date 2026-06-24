@@ -14,7 +14,7 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { PresenceRail } from '@/components/chat/PresenceRail';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 
@@ -112,6 +112,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     { label: 'Discover People', path: '/community/discover', Icon: Compass },
     { label: 'Friend Requests', path: '/community/requests', Icon: UserPlus },
     { label: 'Connections & Follows', path: '/community/following', Icon: Heart },
+    { label: 'Upgrade', path: '/pricing', Icon: Sparkles },
     { label: t('nav_settings') || 'Settings', path: '/settings', Icon: Settings },
   ];
 
@@ -473,6 +474,15 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
               </div>
             )}
           </div>
+
+          {/* Upgrade — unlock the paid CRM + Leads suite */}
+          <Button variant="unstyled"
+            onClick={() => router.push('/pricing')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-primary-400 rounded-lg hover:bg-primary-500/10 transition-colors${isActive('/pricing')}`}
+          >
+            <Sparkles className="w-5 h-5 flex-shrink-0" />
+            <span>Upgrade</span>
+          </Button>
 
           {/* Settings */}
           <Button variant="unstyled"

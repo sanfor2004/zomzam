@@ -34,12 +34,22 @@ export function normalizeAvatar<T extends { avatar?: string | null }>(user: T): 
 }
 
 /**
+ * "Online" means seen within this many seconds. Must comfortably exceed the
+ * background refresh cadence (SSE loop 2–5s, out-of-band heartbeat ~25s) plus
+ * slack — otherwise a genuinely-connected user whose last ping is mid-interval
+ * reads as offline, and presence flickers. 7s was far too tight; 35s keeps a
+ * connected user steadily online and degrades gracefully ("active recently")
+ * for ~half a minute after they leave.
+ */
+export const ONLINE_WINDOW_SECONDS = 35;
+
+/**
  * Returns online status fields from a DB-fetched last_seen timestamp.
  * Exported so list endpoints can enrich joined user rows without re-querying.
  */
 export function computeOnlineFields(lastSeen: string, isIdleFlag: number | boolean) {
   const diff = Math.floor((Date.now() - new Date(lastSeen).getTime()) / 1000);
-  const is_online = diff < 7;
+  const is_online = diff < ONLINE_WINDOW_SECONDS;
   const is_idle = !!isIdleFlag && is_online;
   return { diff, is_online, is_idle };
 }
@@ -399,12 +409,16 @@ export async function createNotification(userId: number, type: string, data: any
 
     const notificationId = res.insertId;
 
+    // touchLastSeen=false: a notification is delivered TO this user, it is not
+    // activity BY them — bumping last_seen would falsely show them online. The
+    // row is persisted in `notifications` regardless, so an offline recipient
+    // still sees it on their next sync.
     await pushStreamOrder(userId, 'new_notification', {
       id: notificationId,
       type,
       data,
       created_at: new Date().toISOString(),
-    });
+    }, false);
 
     return notificationId;
   } catch (error) {
