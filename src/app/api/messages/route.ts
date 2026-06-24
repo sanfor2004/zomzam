@@ -76,6 +76,36 @@ export const GET = withAuth(async (request, user) => {
       });
     }
 
+    case 'contacts': {
+      // Every accepted friend, LEFT-joined to any 1:1 conversation we share, with
+      // live presence. Ordered: friends I've chatted with first (most-recent
+      // message first), then friends I've never messaged, alphabetically. This is
+      // the single source the topbar messages dropdown, the /messages page, and
+      // the presence rail all read from.
+      const rows = await query(
+        `SELECT u.id AS other_id, u.username, u.first_name, u.last_name, u.avatar,
+           uos.last_seen, uos.is_idle,
+           c.id AS conversation_id, c.last_message_at,
+           (SELECT m.content   FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message,
+           (SELECT m.sender_id FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_sender_id,
+           (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != ? AND m.read_at IS NULL) AS unread_count
+         FROM user_connections uc
+         JOIN users u ON u.id = IF(uc.requester_id = ?, uc.addressee_id, uc.requester_id)
+         LEFT JOIN user_online_status uos ON uos.user_id = u.id
+         LEFT JOIN conversations c
+           ON c.user_one_id = LEAST(?, u.id) AND c.user_two_id = GREATEST(?, u.id)
+         WHERE uc.type = 'friend' AND uc.status = 'accepted'
+           AND (uc.requester_id = ? OR uc.addressee_id = ?)
+         ORDER BY (c.last_message_at IS NULL), c.last_message_at DESC, u.username ASC`,
+        [user.id, user.id, user.id, user.id, user.id, user.id]
+      );
+
+      return NextResponse.json({
+        success: true,
+        contacts: rows.map((r: any) => normalizeUser(enrichOnline(r))),
+      });
+    }
+
     case 'thread': {
       const otherId = parseInt(searchParams.get('user_id') || '0');
       if (!otherId || otherId === user.id) {
@@ -108,11 +138,17 @@ export const GET = withAuth(async (request, user) => {
         [conversation.id]
       );
 
-      // Mark the other person's messages as read now that we're viewing the thread.
-      await execute(
-        `UPDATE messages SET read_at = NOW() WHERE conversation_id = ? AND sender_id != ? AND read_at IS NULL`,
-        [conversation.id, user.id]
-      );
+      // Mark the other person's messages as read now that we're viewing the thread —
+      // unless this is a "peek" (e.g. a chat window auto-popped by an incoming
+      // message): a peek loads history without clearing the unread badge, so the
+      // topbar red dot persists until the user actually engages with the thread.
+      const peek = searchParams.get('peek') === '1';
+      if (!peek) {
+        await execute(
+          `UPDATE messages SET read_at = NOW() WHERE conversation_id = ? AND sender_id != ? AND read_at IS NULL`,
+          [conversation.id, user.id]
+        );
+      }
 
       return NextResponse.json({
         success: true,

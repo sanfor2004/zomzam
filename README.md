@@ -122,11 +122,13 @@ zomzam.com/
 │   │
 │   ├── components/
 │   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + index.ts barrel
+│   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), PresenceRail (friends online/away/offline), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
 │   │   └── Silk.tsx              # React Three Fiber shader background (landing page, desktop-gated)
 │   │
 │   ├── context/                 # Client-side global state
 │   │   ├── MoneyContext.tsx           # Multi-currency balances, cash flows, accounts
+│   │   ├── MessagesContext.tsx        # Global DM state: contacts model, unread total, docked chat windows, live new_message delivery
 │   │   ├── StreamWaiterContext.tsx    # SSE listener, idle triggers, notification toasts
 │   │   └── TranslationContext.tsx     # Multi-language dictionary + RTL (Arabic/Hebrew) direction control
 │   │
@@ -167,7 +169,8 @@ zomzam.com/
 | `/` | Public | Marketing landing page (multi-language, Silk WebGL hero cards). |
 | `/sign` | Public (redirects away if logged in) | Unified Sign In / Sign Up split-screen, OrbitRings ambient background. |
 | `/forgot-password` | Public | Request a password-reset token. |
-| `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed, right sidebar. |
+| `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill), right sidebar. |
+| `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
 | `/p/[postId]` | Protected | Permalink view for a single post (deep-linkable from the feed). |
 | `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
 | `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |
@@ -211,9 +214,9 @@ zomzam.com/
 | `/api/posts` | `feed` (+ `filter=help`/`help_matches`), `comments`, `top_comments`, `create` (status/ask/win), `like`, `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement + favor economy (ask/win, accept-answer bridge). |
 | `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
-| `/api/messages` | `list`, `thread`, `send`, `mark_read` | 1:1 direct messages between friends, delivered live via `/api/stream`. |
+| `/api/messages` | `list`, `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read` | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
-| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications and the transient `win_prompt` nudge). |
+| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, and the `new_post` feed-pill fan-out). |
 
 ---
 

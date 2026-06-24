@@ -297,12 +297,32 @@ export async function updateOnlineStatus(userId: number, isIdle: number = 0) {
   }
 }
 
-export async function pushStreamOrder(userId: number, orderName: string, params: any = {}) {
+/**
+ * Enqueue an SSE order onto a user's `stream_queue`, delivered by their open
+ * `/api/stream` connection on the next loop tick.
+ *
+ * `touchLastSeen` (default true) bumps `last_seen = NOW()`, which is correct for
+ * targeted, user-initiated pushes (a DM, a friend request) — the recipient just
+ * "did something" relative to the sender. For broadcast fan-outs (e.g. the
+ * "new posts" pill pushed to every friend/follower) pass `false`: bumping
+ * last_seen there would make all those recipients spuriously appear ONLINE on
+ * presence rails. In no-touch mode we also skip the INSERT — a user who has
+ * never connected has no live stream to deliver to, so there's nothing to queue.
+ */
+export async function pushStreamOrder(
+  userId: number,
+  orderName: string,
+  params: any = {},
+  touchLastSeen = true
+) {
   try {
     const row = await queryOne<{ stream_queue: string }>(
       `SELECT stream_queue FROM user_online_status WHERE user_id = ?`,
       [userId]
     );
+
+    // No-touch fan-out to a user who has never connected: nothing to deliver to.
+    if (!touchLastSeen && !row) return false;
 
     let queue: any[] = [];
     if (row?.stream_queue) {
@@ -317,12 +337,19 @@ export async function pushStreamOrder(userId: number, orderName: string, params:
     queue.push({ order_name: orderName, params });
     const jsonStr = JSON.stringify(queue);
 
-    await execute(
-      `INSERT INTO user_online_status (user_id, stream_queue, last_seen) 
-       VALUES (?, ?, NOW()) 
-       ON DUPLICATE KEY UPDATE stream_queue = ?, last_seen = NOW()`,
-      [userId, jsonStr, jsonStr]
-    );
+    if (touchLastSeen) {
+      await execute(
+        `INSERT INTO user_online_status (user_id, stream_queue, last_seen)
+         VALUES (?, ?, NOW())
+         ON DUPLICATE KEY UPDATE stream_queue = ?, last_seen = NOW()`,
+        [userId, jsonStr, jsonStr]
+      );
+    } else {
+      await execute(
+        `UPDATE user_online_status SET stream_queue = ? WHERE user_id = ?`,
+        [jsonStr, userId]
+      );
+    }
     return true;
   } catch (error) {
     console.error('Failed to push stream order:', error);

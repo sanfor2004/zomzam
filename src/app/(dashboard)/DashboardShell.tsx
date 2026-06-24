@@ -8,14 +8,19 @@ import { useTranslation } from '@/context/TranslationContext';
 import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
 import { MoneyProvider } from '@/context/MoneyContext';
 import { CurrentUserProvider } from '@/context/CurrentUserContext';
+import { MessagesProvider, useMessages, type ChatContact } from '@/context/MessagesContext';
+import { ChatDock } from '@/components/chat/ChatDock';
+import { PresenceRail } from '@/components/chat/PresenceRail';
+import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home, MessageCircle } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 
 function DashboardLayoutContent({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   const { t } = useTranslation();
   const { currentUserStatus } = usePresence();
   const { notificationsCount, notifications, markRead } = useNotifications();
+  const { contacts, unreadTotal, openChat } = useMessages();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -29,7 +34,25 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const [crmGroupOpen, setCrmGroupOpen] = useState(false);
   const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
+  const [msgDropdownOpen, setMsgDropdownOpen] = useState(false);
   const sidebarNavRef = useRef<HTMLElement>(null);
+
+  // Open a docked chat window for a contact, then close the dropdown.
+  const handleOpenContact = (c: ChatContact) => {
+    openChat(
+      {
+        id: c.other_id,
+        username: c.username,
+        first_name: c.first_name,
+        last_name: c.last_name,
+        avatar: c.avatar,
+        online_label: c.online_label,
+        is_online: c.is_online,
+      },
+      c.conversation_id,
+    );
+    setMsgDropdownOpen(false);
+  };
 
   // Auto-expand the nav section corresponding to current route on load
   useEffect(() => {
@@ -183,6 +206,20 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           >
             <Home className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_home') || 'Home'}</span>
+          </Button>
+
+          {/* Messages */}
+          <Button variant="unstyled"
+            onClick={() => router.push('/messages')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/messages')}`}
+          >
+            <MessageCircle className="w-5 h-5 flex-shrink-0" />
+            <span>Messages</span>
+            {unreadTotal > 0 && (
+              <span className="ml-auto min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadTotal}
+              </span>
+            )}
           </Button>
 
           {/* Time Management Group */}
@@ -468,8 +505,86 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             </h2>
           </div>
 
-          {/* Right Header: Notifications Dropdown */}
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: TOPBAR ACTIONS
+              Contains: Messages dropdown (red dot + contacts list), Notifications bell
+              ────────────────────────────────────────────────────────── */}
           <div className="flex items-center gap-3">
+            {/* Messages */}
+            <DropdownMenu
+              open={msgDropdownOpen}
+              onClose={() => setMsgDropdownOpen(false)}
+              align="right"
+              trigger={
+                <Button variant="unstyled"
+                  onClick={() => setMsgDropdownOpen((p) => !p)}
+                  className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
+                  aria-expanded={msgDropdownOpen}
+                  aria-label="Open messages"
+                  type="button"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  {unreadTotal > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-md shadow-red-500/50"></span>
+                  )}
+                </Button>
+              }
+            >
+              <div className="py-3 w-72">
+                <div className="px-4 pb-2 border-b border-slate-800 flex justify-between items-center">
+                  <span className="text-xs font-bold">Messages</span>
+                  <Button variant="unstyled"
+                    onClick={() => { setMsgDropdownOpen(false); router.push('/messages'); }}
+                    className="text-[10px] font-bold text-primary-500 hover:text-primary-400 transition-colors"
+                  >
+                    Open Messenger
+                  </Button>
+                </div>
+                <div className="max-h-72 overflow-y-auto py-1">
+                  {contacts.length === 0 ? (
+                    <p className="text-center text-xs text-slate-400 py-6 italic">
+                      No friends yet — connect to start chatting.
+                    </p>
+                  ) : (
+                    contacts.map((c) => (
+                      <button
+                        key={c.other_id}
+                        onClick={() => handleOpenContact(c)}
+                        className="w-full px-4 py-2.5 hover:bg-slate-800/30 flex gap-3 items-center border-b border-slate-800/40 last:border-b-0 cursor-pointer text-left"
+                      >
+                        <div className="relative flex-shrink-0">
+                          <Image
+                            src={c.avatar || '/Assets/Img/default-avatar.png'}
+                            alt=""
+                            width={36}
+                            height={36}
+                            className="w-9 h-9 rounded-xl object-cover border border-slate-800"
+                          />
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${c.is_online ? (c.is_idle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600'}`} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-xs truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-300'}`}>
+                            {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.username}
+                          </p>
+                          <p className={`text-[11px] truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
+                            {c.last_message
+                              ? `${c.last_sender_id === currentUser?.id ? 'You: ' : ''}${c.last_message}`
+                              : 'Start a conversation'}
+                          </p>
+                        </div>
+                        {c.unread_count > 0 && (
+                          <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+                            {c.unread_count}
+                          </span>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+            </DropdownMenu>
+
+            {/* Notifications */}
             <DropdownMenu
             open={notifDropdownOpen}
             onClose={() => setNotifDropdownOpen(false)}
@@ -537,6 +652,16 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           {children}
         </main>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PRESENCE RAIL (right)
+          Live friends online/away/offline list (desktop column + mobile drawer).
+          ────────────────────────────────────────────────────────── */}
+      <PresenceRail />
+
+      {/* Global overlays: docked chat windows + live notification toasts. */}
+      <ChatDock />
+      <NotificationToaster />
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: MOBILE MENU OVERLAY (drawer)
@@ -714,11 +839,13 @@ export function DashboardShell({ children, initialUser }: { children: React.Reac
   return (
     <CurrentUserProvider user={initialUser}>
       <StreamWaiterProvider>
-        <MoneyProvider>
-          <ToastProvider>
-            <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
-          </ToastProvider>
-        </MoneyProvider>
+        <MessagesProvider>
+          <MoneyProvider>
+            <ToastProvider>
+              <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
+            </ToastProvider>
+          </MoneyProvider>
+        </MessagesProvider>
       </StreamWaiterProvider>
     </CurrentUserProvider>
   );

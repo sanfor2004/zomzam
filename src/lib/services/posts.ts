@@ -189,6 +189,29 @@ export async function findAskNotifyRecipients(askerId: number, skillTag: string,
   return matched.filter((id) => !overCap.has(id));
 }
 
+/**
+ * The set of user ids who can see `authorId`'s feed activity — accepted friends
+ * plus followers. Used to fan out the live "new posts" pill over SSE so a
+ * viewer's feed can offer to refresh the moment someone they follow posts.
+ * Public posts are visible to strangers too, but friends/followers are the
+ * bounded, meaningful audience actually watching a personal feed.
+ */
+export async function getFeedAudience(authorId: number): Promise<number[]> {
+  const rows = await query<{ id: number }>(
+    `SELECT DISTINCT u.id
+     FROM users u
+     JOIN user_connections c ON (
+       (c.type = 'friend' AND c.status = 'accepted'
+          AND ((c.requester_id = ? AND c.addressee_id = u.id)
+               OR (c.addressee_id = ? AND c.requester_id = u.id)))
+       OR (c.type = 'follow' AND c.status = 'accepted' AND c.addressee_id = ? AND c.requester_id = u.id)
+     )
+     WHERE u.id <> ?`,
+    [authorId, authorId, authorId, authorId]
+  );
+  return rows.map((r) => Number(r.id));
+}
+
 /** Asker resolves their own ask without accepting an answer ("solved it myself"):
  *  no helpful_event, no notification. */
 export async function resolveAsk(userId: number, postId: number): Promise<{ resolvedAt: string }> {

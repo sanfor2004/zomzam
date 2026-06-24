@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api-auth';
 import * as posts from '@/lib/services/posts';
-import { createNotification } from '@/lib/models/user';
+import { createNotification, pushStreamOrder } from '@/lib/models/user';
 
 // Thin dispatch layer: authenticate, parse the request body (post creation is
 // multipart/form-data because it may carry an image File; every other action is
@@ -36,6 +36,23 @@ export const POST = withAuth(async (request, user) => {
         type: body.type,
         skillTag: body.skill_tag,
       });
+      // Live "new posts" pill: fan a lightweight signal out to everyone who can
+      // see this author's feed (friends + followers) so their feed offers a
+      // refresh in real time. touchLastSeen=false → this broadcast must not mark
+      // recipients as recently-online on presence rails.
+      {
+        const audience = await posts.getFeedAudience(user.id);
+        await Promise.all(
+          audience.map((rid) =>
+            pushStreamOrder(
+              rid,
+              'new_post',
+              { post_id: post.id, by_user: user.username },
+              false
+            )
+          )
+        );
+      }
       // Notify skill-matched friends/followers about a new help request (throttled).
       if (post.type === 'ask' && post.skill_tag) {
         const recipients = await posts.findAskNotifyRecipients(user.id, post.skill_tag);
