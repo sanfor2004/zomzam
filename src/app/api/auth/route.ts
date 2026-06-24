@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { loginUser, registerUser, getUserById } from '@/lib/models/user';
-import { signSession } from '@/lib/session';
+import { signSession, SESSION_MAX_AGE_SECONDS } from '@/lib/session';
 import { withError, getSessionUser } from '@/lib/api-auth';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { execute } from '@/lib/db';
@@ -49,6 +49,7 @@ export const POST = withError(async (request) => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
+        maxAge: SESSION_MAX_AGE_SECONDS,
       });
       return response;
     }
@@ -71,14 +72,17 @@ export const POST = withError(async (request) => {
         res.user.token_version ?? 0
       );
 
-      const maxAge = remember ? 30 * 24 * 60 * 60 : undefined; // 30 days or session
+      // Always persist for the full session lifetime (~2 months) so closing the
+      // browser no longer logs the user out. `remember` is accepted for
+      // backwards compatibility but no longer shortens the cookie.
+      void remember;
 
       response.cookies.set('ZOMZAM_SESSION', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge,
+        maxAge: SESSION_MAX_AGE_SECONDS,
       });
       return response;
     }

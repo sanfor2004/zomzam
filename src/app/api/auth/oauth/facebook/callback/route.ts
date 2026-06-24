@@ -2,13 +2,14 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { withError } from '@/lib/api-auth';
 import { fetchFacebookProfile } from '@/lib/facebook-oauth';
 import { findOrCreateFacebookUser } from '@/lib/models/user';
-import { signSession } from '@/lib/session';
+import { signSession, SESSION_MAX_AGE_SECONDS } from '@/lib/session';
 
 const sessionCookieOpts = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax' as const,
   path: '/',
+  maxAge: SESSION_MAX_AGE_SECONDS,
 };
 
 const expiredCookieOpts = { path: '/', expires: new Date(0) };

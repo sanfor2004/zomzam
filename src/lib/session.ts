@@ -8,7 +8,12 @@ if (!secret) {
 }
 const encodedKey = new TextEncoder().encode(secret);
 
-const SESSION_TTL = '7d';
+// Session lifetime — single source of truth for both the JWT `exp` claim and
+// the cookie `Max-Age`. Kept long (60 days ≈ 2 months) so re-opening the site
+// after a closed browser does NOT silently log the user out. Revocation still
+// works instantly via the `token_version` check in `getSessionUser()`.
+export const SESSION_MAX_AGE_SECONDS = 60 * 24 * 60 * 60; // 60 days
+const SESSION_TTL = `${SESSION_MAX_AGE_SECONDS}s`;
 const SESSION_ALG = 'HS256';
 
 /** The identity carried in a session and exposed to route handlers. */
