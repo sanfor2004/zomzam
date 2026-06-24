@@ -117,13 +117,15 @@ zomzam.com/
 │   │   ├── ui-kit/              # /ui-kit — dev-only showcase of every src/components/ui primitive
 │   │   ├── globals.css         # Tailwind v4 @theme tokens, glassmorphism, shadow/motion utilities
 │   │   ├── layout.tsx           # Base HTML shell, provider wrappers, language/dir controller
+│   │   ├── global-error.tsx     # Root render-crash boundary — reports the crash (email) + recoverable fallback
 │   │   ├── page.tsx             # Marketing landing page (multi-language, Silk WebGL hero)
-│   │   └── providers.tsx        # Global context aggregation wrapper
+│   │   └── providers.tsx        # Global context aggregation wrapper (mounts ErrorReporter)
 │   │
 │   ├── components/
 │   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + index.ts barrel
 │   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), PresenceRail (friends online/away/offline), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
+│   │   ├── ErrorReporter.tsx    # Global client error listener (uncaught errors + unhandled rejections → /api/report-error)
 │   │   └── Silk.tsx              # React Three Fiber shader background (landing page, desktop-gated)
 │   │
 │   ├── context/                 # Client-side global state
@@ -139,7 +141,8 @@ zomzam.com/
 │   │   ├── session.ts           # jose JWT sign/verify (Edge + Node) — single secret, fail-fast on boot
 │   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
 │   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
-│   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle)
+│   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle, bug-report throttle)
+│   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, env-gated, throttled, never throws)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
 │   │   ├── facebook-oauth.ts    # Facebook Sign-In/Sign-Up: auth URL builder, code exchange, Graph API profile fetch
@@ -215,6 +218,7 @@ zomzam.com/
 | `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `list`, `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read` | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
+| `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
 | `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, and the `new_post` feed-pill fan-out). |
 
@@ -262,6 +266,17 @@ FACEBOOK_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/facebook/callba
 # Vercel dashboard auto-injects this in production). For local dev, run
 # `vercel env pull .env` or copy the token from the dashboard's "env.local" tab.
 BLOB_READ_WRITE_TOKEN=
+
+# Bug reporter — emails unexpected server (500) + uncaught client errors via the
+# Resend HTTP API (src/lib/bug-report.ts). All optional: if RESEND_API_KEY or
+# BUG_REPORT_TO are unset, error reporting silently no-ops (console.error only).
+#   RESEND_API_KEY: https://resend.com/api-keys
+#   BUG_REPORT_TO:  comma-separated recipient(s)
+#   BUG_REPORT_FROM: sender; must be a Resend-verified domain. Defaults to
+#     onboarding@resend.dev (Resend test mode only delivers to the account owner).
+RESEND_API_KEY=
+BUG_REPORT_TO=
+BUG_REPORT_FROM=
 ```
 
 ### 3. Initialize & Seed the Database
