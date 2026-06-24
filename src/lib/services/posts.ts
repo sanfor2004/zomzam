@@ -53,6 +53,27 @@ export interface CreatePostInput {
 
 const POST_TYPES = ['status', 'ask', 'win'];
 
+/**
+ * Validate, re-encode, and store a post image. One piece of knowledge — the
+ * post-image params (5 MB cap, longest edge ≤ 1600 px, JPG/PNG/WebP) and the
+ * 400-vs-500 mapping — shared by createPost and editPost. Returns the public
+ * path; maps an ImageUploadError to a 400, rethrows real (sharp/disk) failures.
+ */
+async function processPostImage(file: File): Promise<string> {
+  try {
+    return await processImageUpload(file, {
+      subdir: 'posts',
+      filenamePrefix: 'post',
+      maxBytes: 5 * 1024 * 1024,
+      maxDimension: 1600,
+      allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    });
+  } catch (err) {
+    if (err instanceof ImageUploadError) throw new HttpError(400, err.message);
+    throw err;
+  }
+}
+
 export async function createPost(userId: number, input: CreatePostInput) {
   const raw = (input.contentHtml || '').trim();
   const hasImage = !!(input.imageFile && input.imageFile.size > 0);
@@ -69,22 +90,7 @@ export async function createPost(userId: number, input: CreatePostInput) {
   const skill_tag = type === 'ask' && input.skillTag ? slugifyTag(input.skillTag).slice(0, 50) || null : null;
 
   let image_path: string | null = null;
-  if (hasImage) {
-    try {
-      image_path = await processImageUpload(input.imageFile!, {
-        subdir: 'posts',
-        filenamePrefix: 'post',
-        maxBytes: 5 * 1024 * 1024,
-        maxDimension: 1600,
-        allowedTypes: ['image/jpeg', 'image/png', 'image/webp'],
-      });
-    } catch (err) {
-      if (err instanceof ImageUploadError) {
-        throw new HttpError(400, err.message);
-      }
-      throw err;
-    }
-  }
+  if (hasImage) image_path = await processPostImage(input.imageFile!);
 
   const result = await execute(
     `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag) VALUES (?, ?, ?, ?, ?, ?)`,
@@ -102,6 +108,69 @@ export async function createPost(userId: number, input: CreatePostInput) {
   );
 
   return normalizeAvatar(post);
+}
+
+export interface EditPostInput {
+  contentHtml: string;
+  visibility?: string;       // omitted ⇒ leave visibility unchanged
+  imageFile: File | null;    // present (size>0) ⇒ replace/add the image
+  removeImage: boolean;      // true (and no new file) ⇒ strip back to text-only
+}
+
+/**
+ * Owner edits a post's text, image, and (optionally) visibility — type and
+ * skill_tag are immutable here. Image intent: a new file replaces/adds; else
+ * removeImage strips it; else the current image is kept. The old blob is deleted
+ * only after the row stops referencing it, so a failed UPDATE never orphans it.
+ * Edits are silent (no edited marker). Returns the persisted content/image so
+ * the caller can patch its cached copy without a refetch.
+ */
+export async function editPost(userId: number, postId: number, input: EditPostInput) {
+  if (!postId) throw new HttpError(400, 'post_id required');
+
+  const post = await queryOne<{ id: number; image_path: string | null }>(
+    `SELECT id, image_path FROM posts WHERE id = ? AND user_id = ?`,
+    [postId, userId]
+  );
+  if (!post) throw new HttpError(403, 'Not found or not yours');
+
+  const raw = (input.contentHtml || '').trim();
+  const hasNewImage = !!(input.imageFile && input.imageFile.size > 0);
+  const keepsImage = !!post.image_path && !input.removeImage && !hasNewImage;
+  // A post must still have text or an image after the edit (mirrors createPost).
+  if (!raw && !hasNewImage && !keepsImage) throw new HttpError(400, 'Content or image required');
+
+  const content_html = sanitizeHtml(raw);
+  const allowedVisibility = ['friends', 'public', 'exclusive'];
+  const visibility = allowedVisibility.includes(input.visibility ?? '') ? input.visibility! : undefined;
+
+  // Resolve the next image_path and which old file (if any) to delete afterward.
+  let nextImagePath = post.image_path;
+  let oldFile: string | null = null;
+  if (hasNewImage) {
+    nextImagePath = await processPostImage(input.imageFile!);
+    oldFile = post.image_path;
+  } else if (input.removeImage) {
+    nextImagePath = null;
+    oldFile = post.image_path;
+  }
+
+  if (visibility) {
+    await execute(
+      `UPDATE posts SET content_html = ?, image_path = ?, visibility = ? WHERE id = ? AND user_id = ?`,
+      [content_html, nextImagePath, visibility, postId, userId]
+    );
+  } else {
+    await execute(
+      `UPDATE posts SET content_html = ?, image_path = ? WHERE id = ? AND user_id = ?`,
+      [content_html, nextImagePath, postId, userId]
+    );
+  }
+
+  // Remove the orphaned old blob only after the row no longer points at it.
+  if (oldFile) await deleteUploadFile(oldFile);
+
+  return { content_html, image_path: nextImagePath, visibility };
 }
 
 export interface AcceptAnswerResult {
@@ -226,6 +295,35 @@ export async function resolveAsk(userId: number, postId: number): Promise<{ reso
   const resolvedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
   await execute(`UPDATE posts SET resolved_at = ? WHERE id = ? AND user_id = ?`, [resolvedAt, postId, userId]);
   return { resolvedAt };
+}
+
+/**
+ * Owner reopens a resolved ask: clears resolution state and hard-deletes the
+ * append-only helpful_events row(s) for the post. No credits are computed yet,
+ * so the undo is total — as if the answer had never been accepted. Silent: fires
+ * no notification, and leaves the helper's prior answer_accepted notification be.
+ * Covers both resolved states — accepted-answer and "solved it myself"
+ * (accepted_answer_id may already be NULL, making its clear a no-op).
+ */
+export async function reopenAsk(userId: number, postId: number): Promise<{ reopened: true }> {
+  if (!postId) throw new HttpError(400, 'post_id required');
+
+  const post = await queryOne<{ id: number; type: string }>(
+    `SELECT id, type FROM posts WHERE id = ? AND user_id = ?`,
+    [postId, userId]
+  );
+  if (!post) throw new HttpError(403, 'Not found or not yours');
+  if (post.type !== 'ask') throw new HttpError(400, 'Only ask posts can be reopened');
+
+  await transaction(async (connection) => {
+    await connection.execute(
+      `UPDATE posts SET accepted_answer_id = NULL, resolved_at = NULL WHERE id = ? AND user_id = ?`,
+      [postId, userId]
+    );
+    await connection.execute(`DELETE FROM helpful_events WHERE post_id = ?`, [postId]);
+  });
+
+  return { reopened: true };
 }
 
 export async function toggleLike(userId: number, postId: number): Promise<{ liked: boolean }> {

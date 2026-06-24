@@ -13,7 +13,7 @@ import {
   HelpCircle, Trophy, CheckCircle2, Hash, Sparkles, ArrowUp,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Button, Tooltip, ShareButton, ToastProvider, useToast, Input } from '@/components/ui';
+import { Button, Tooltip, ShareButton, useToast, Modal, Input } from '@/components/ui';
 import { useMessages, type ChatContact } from '@/context/MessagesContext';
 import { PostComposer } from './PostComposer';
 import {
@@ -86,6 +86,11 @@ export default function HomePage() {
   // Prepend a freshly-created post (from the composer) to the top of the feed.
   const handlePostCreated = useCallback((post: Post) => {
     setPosts((prev) => [post, ...prev]);
+  }, []);
+
+  // Patch a post in place after an inline edit (content/image/visibility) — no refetch.
+  const handlePostEdited = useCallback((updated: Post) => {
+    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -327,6 +332,9 @@ export default function HomePage() {
                   post={post}
                   isOwn={currentUser?.username === post.username}
                   onDelete={handleDeletePost}
+                  onEdited={handlePostEdited}
+                  currentUser={currentUser}
+                  friends={friends}
                 />
               ))}
 
@@ -579,8 +587,15 @@ export default function HomePage() {
 // ── Post card ─────────────────────────────────────────────────
 // memo'd so composer keystrokes (and other HomePage state churn) don't re-render
 // every mounted card — only cards whose own props actually change re-render.
-// Relies on `onDelete` being a stable useCallback in HomePage.
-const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post; isOwn: boolean; onDelete: (id: number) => void }) {
+// Relies on `onDelete`/`onEdited` being stable useCallbacks in HomePage.
+const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, currentUser, friends }: {
+  post: Post;
+  isOwn: boolean;
+  onDelete: (id: number) => void;
+  onEdited: (post: Post) => void;
+  currentUser: CurrentUser | null;
+  friends: MentionUser[];
+}) {
   const name = displayName(post);
   const { toast } = useToast();
 
@@ -589,6 +604,7 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
   const [likeCount, setLikeCount] = useState(post.like_count);
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [postDeleting, setPostDeleting] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
@@ -600,6 +616,14 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
   const isAsk = postType === 'ask';
   const isWin = postType === 'win';
   const isResolved = isAsk && !!post.resolved_at;
+  // Left-edge type accent — muted echo of the type badge colour (sky=help,
+  // emerald=resolved, orange=win). Status posts get none, keeping the feed
+  // calm: an accent only appears where it carries meaning.
+  const typeAccent = isWin
+    ? 'bg-primary-500'
+    : isAsk
+      ? (isResolved ? 'bg-emerald-500' : 'bg-sky-500')
+      : null;
   const acceptedId = post.accepted_answer_id ?? null;
   // Pin the accepted answer to the top of the preview when the ask is resolved.
   const orderedTop = acceptedId
@@ -705,6 +729,23 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
         ref={cardRef}
         className="relative z-[3] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg"
       >
+        {/* Left-edge type accent — a thin pill on the card's left edge (ask /
+            resolved / win only). Scoped to the card so it never stretches down
+            past the comments. Rendered above the card background (positive z)
+            so the card's backdrop-blur can't smear its colour inward. The two
+            ends fade out via a vertical mask so the layer melts into the card
+            rather than terminating in a hard cut. Status posts get none. */}
+        {typeAccent && (
+          <span
+            aria-hidden
+            className={`absolute left-[-3px] top-6 bottom-6 z-1 w-[2px] rounded-full pointer-events-none ${typeAccent}`}
+            style={{
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent)',
+              maskImage: 'linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent)',
+            }}
+          />
+        )}
+
         {/* Top-edge highlight */}
         <div
           aria-hidden
@@ -716,9 +757,26 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete }: { post: Post;
           <OwnerWedge
             deleteConfirming={deleteConfirming}
             postDeleting={postDeleting}
+            onEdit={() => setEditOpen(true)}
             onDelete={handleWedgeDelete}
             onDisarm={() => setDeleteConfirming(false)}
           />
+        )}
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: EDIT POST MODAL
+            Contains: Kit Modal hosting PostComposer in edit mode (text + image
+            + visibility); patches the card in place on save via onEdited
+            ────────────────────────────────────────────────────────── */}
+        {isOwn && editOpen && (
+          <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit post">
+            <PostComposer
+              currentUser={currentUser}
+              friends={friends}
+              onPosted={() => {}}
+              editing={{ post, onSaved: (updated) => { onEdited(updated); setEditOpen(false); } }}
+            />
+          </Modal>
         )}
 
         <div className="p-5">
@@ -899,22 +957,24 @@ const WEDGE_DELETE_CLIP = 'polygon(100% 0, 29.3% 70.7%, 50% 86.6%, 74.1% 96.6%, 
 function OwnerWedge({
   deleteConfirming,
   postDeleting,
+  onEdit,
   onDelete,
   onDisarm,
 }: {
   deleteConfirming: boolean;
   postDeleting: boolean;
+  onEdit: () => void;
   onDelete: () => void;
   onDisarm: () => void;
 }) {
   return (
     <div className="absolute top-0 right-0 z-[4] w-[60px] h-[60px] rounded-tr-3xl overflow-hidden pointer-events-none">
-      {/* Edit — upper wedge (inline editing ships in a later pass) */}
+      {/* Edit — upper wedge: opens the edit modal */}
       <Button
         variant="unstyled"
-        onClick={() => { /* placeholder — inline post editing ships in a later pass */ }}
-        title="Editing coming soon"
-        aria-label="Edit post (coming soon)"
+        onClick={onEdit}
+        title="Edit post"
+        aria-label="Edit post"
         className="group absolute inset-0 pointer-events-auto bg-white/[0.04] hover:bg-primary-500/20 transition-colors"
         style={{ clipPath: WEDGE_EDIT_CLIP }}
       >

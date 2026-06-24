@@ -43,6 +43,9 @@ interface PostComposerProps {
   /** External seed (e.g. the win prompt): switches type + prefills the editor.
    *  `key` changes per nudge so re-firing the same draft re-applies it. */
   seed?: { type: PostType; text: string; key: number } | null;
+  /** Present ⇒ edit mode: seeds the editor/image/visibility from the post, hides
+   *  the type + skill controls, and submits `post_edit` instead of creating. */
+  editing?: { post: Post; onSaved: (post: Post) => void };
 }
 
 // ──────────────────────────────────────────────────────────
@@ -51,8 +54,12 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted, seed }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, seed, editing }: PostComposerProps) {
   const { toast } = useToast();
+
+  // Edit mode reuses this whole composer; the post it edits seeds the initial
+  // image preview (a server path, not a blob) and visibility below.
+  const originalImagePath = editing?.post.image_path ?? null;
 
   // Editor refs / state
   const editorRef = useRef<HTMLDivElement>(null);
@@ -65,7 +72,7 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
   const emojiGroupRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(originalImagePath);
 
   // Autocomplete dropdown state
   const [popoverActive, setPopoverActive] = useState(false);
@@ -76,7 +83,7 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
 
   const [postingLoading, setPostingLoading] = useState(false);
-  const [visibility, setVisibility] = useState<PostVisibility>('friends');
+  const [visibility, setVisibility] = useState<PostVisibility>(editing?.post.visibility ?? 'friends');
 
   // Favor economy: one composer, branch on type. Ask reveals a skill/topic tag
   // for routing/matching; Win posts share milestones (amount stays opt-in, body
@@ -347,9 +354,20 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
   // ── Image attachment ────────────────────────────────────────
   // Revoke the previous object URL whenever the preview changes or the component
   // unmounts — the cleanup runs with the *old* value, so no URL leaks.
+  // Only blob: URLs are object URLs that need revoking — the edit-mode seed is a
+  // server path, so guard against revoking (a no-op, but keeps intent clear).
   useEffect(() => {
-    return () => { if (imagePreview) URL.revokeObjectURL(imagePreview); };
+    return () => { if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview); };
   }, [imagePreview]);
+
+  // Edit mode: seed the editor from the post's HTML once on mount (image +
+  // visibility are seeded via initial state above).
+  useEffect(() => {
+    if (!editing || !editorRef.current) return;
+    editorRef.current.innerHTML = editing.post.content_html;
+    setCharCount((editorRef.current.innerText || '').trim().length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -407,13 +425,12 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seed?.key]);
 
-  // ── Post ────────────────────────────────────────────────────
-  const handlePost = async () => {
-    // A post is valid with text, an image, or both.
-    const canPost = charCount > 0 || !!imageFile;
-    if (!editorRef.current || !canPost || charCount > MAX_POST_CHARS || postingLoading) return;
-    const content_html = editorRef.current.innerHTML;
-    setPostingLoading(true);
+  // ── Post / Save ─────────────────────────────────────────────
+  // Valid with text, an image (new or kept), or both — never over the cap.
+  const hasImageContent = !!imageFile || !!imagePreview;
+  const canSubmit = (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
+
+  const createPostSubmit = async (content_html: string) => {
     try {
       const formData = new FormData();
       formData.append('content_html', content_html);
@@ -425,7 +442,7 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
       const res = await fetch('/api/posts', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success) {
-        editorRef.current.innerHTML = '';
+        editorRef.current!.innerHTML = '';
         setCharCount(0);
         setPopoverActive(false);
         setShowEmoji(false);
@@ -440,6 +457,45 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
     } catch {
       toast({ variant: 'error', title: "Couldn't post", description: 'Something went wrong. Please try again.' });
     }
+  };
+
+  const saveEdit = async (content_html: string) => {
+    if (!editing) return;
+    // Had an image, now cleared with no replacement ⇒ ask the server to drop it.
+    const removed = !!originalImagePath && !imageFile && !imagePreview;
+    try {
+      const fd = new FormData();
+      fd.append('action', 'post_edit');
+      fd.append('post_id', String(editing.post.id));
+      fd.append('content_html', content_html);
+      fd.append('visibility', visibility);
+      if (imageFile) fd.append('image', imageFile);
+      if (removed) fd.append('remove_image', '1');
+      const res = await fetch('/api/posts', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        editing.onSaved({
+          ...editing.post,
+          content_html: data.content_html,
+          image_path: data.image_path ?? null,
+          visibility: data.visibility ?? editing.post.visibility,
+        });
+        toast({ variant: 'success', title: 'Post updated', description: 'Your changes are saved.' });
+      } else {
+        // Keep the modal open with the draft so the edit isn't lost.
+        toast({ variant: 'error', title: "Couldn't save", description: data.message || 'Something went wrong. Please try again.' });
+      }
+    } catch {
+      toast({ variant: 'error', title: "Couldn't save", description: 'Something went wrong. Please try again.' });
+    }
+  };
+
+  const handlePost = async () => {
+    if (!editorRef.current || !canSubmit) return;
+    const content_html = editorRef.current.innerHTML;
+    setPostingLoading(true);
+    if (editing) await saveEdit(content_html);
+    else await createPostSubmit(content_html);
     setPostingLoading(false);
   };
 
@@ -458,7 +514,7 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
       : postType === 'win'
       ? 'Share a win worth celebrating — what did you just pull off?'
       : `What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`;
-  const submitLabel = postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
+  const submitLabel = editing ? 'Save' : postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
 
   return (
     /* ──────────────────────────────────────────────────────────
@@ -502,19 +558,22 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
           the left, audience switch (Friends / Public) on the right
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <PostTypeSwitch value={postType} onChange={setPostType} />
-          {postType === 'ask' && (
-            <Input
-              value={skillTag}
-              onChange={(e) => setSkillTag(e.target.value)}
-              placeholder="Skill / topic (e.g. react, seo)"
-              aria-label="Skill or topic for this help request"
-              leftIcon={<Hash className="w-3.5 h-3.5" />}
-              className="h-[34px] max-w-[220px] text-xs"
-            />
-          )}
-        </div>
+        {/* Type + skill are fixed in edit mode (only text/image/visibility change). */}
+        {!editing && (
+          <div className="flex flex-wrap items-center gap-2">
+            <PostTypeSwitch value={postType} onChange={setPostType} />
+            {postType === 'ask' && (
+              <Input
+                value={skillTag}
+                onChange={(e) => setSkillTag(e.target.value)}
+                placeholder="Skill / topic (e.g. react, seo)"
+                aria-label="Skill or topic for this help request"
+                leftIcon={<Hash className="w-3.5 h-3.5" />}
+                className="h-[34px] max-w-[220px] text-xs"
+              />
+            )}
+          </div>
+        )}
         <AudienceSwitch value={visibility} onChange={setVisibility} />
       </div>
 
@@ -650,7 +709,7 @@ export function PostComposer({ currentUser, friends, onPosted, seed }: PostCompo
           size="none"
           shape="rounded"
           onClick={handlePost}
-          disabled={(charCount === 0 && !imageFile) || charCount > MAX_POST_CHARS || postingLoading}
+          disabled={!canSubmit}
           loading={postingLoading}
           leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
           className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"

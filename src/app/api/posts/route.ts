@@ -16,11 +16,13 @@ export const POST = withAuth(async (request, user) => {
     const formData = await request.formData();
     imageFile = formData.get('image') as File | null;
     body = {
-      action: 'create',
+      action: formData.get('action') || 'create',
+      post_id: formData.get('post_id'),
       content_html: formData.get('content_html'),
       visibility: formData.get('visibility'),
       type: formData.get('type'),
       skill_tag: formData.get('skill_tag'),
+      remove_image: formData.get('remove_image'),
     };
   } else {
     body = await request.json().catch(() => ({}));
@@ -88,6 +90,21 @@ export const POST = withAuth(async (request, user) => {
 
     case 'resolve_ask':
       return NextResponse.json({ success: true, ...await posts.resolveAsk(user.id, parseInt(body.post_id || 0)) });
+
+    case 'reopen_ask':
+      return NextResponse.json({ success: true, ...await posts.reopenAsk(user.id, parseInt(body.post_id || 0)) });
+
+    case 'post_edit':
+      // multipart/form-data: carries the optional image File + remove_image flag.
+      return NextResponse.json({
+        success: true,
+        ...await posts.editPost(user.id, parseInt(body.post_id || 0), {
+          contentHtml: body.content_html || '',
+          visibility: body.visibility || undefined,
+          imageFile,
+          removeImage: body.remove_image === '1',
+        }),
+      });
 
     case 'like':
       return NextResponse.json({ success: true, ...await posts.toggleLike(user.id, parseInt(body.post_id || 0)) });

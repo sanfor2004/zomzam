@@ -1,9 +1,10 @@
 'use client';
-import { Button } from '@/components/ui';
+import { Button, useToast } from '@/components/ui';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus, UserMinus, UserCheck, UserX, Heart, HeartOff, Loader2 } from 'lucide-react';
+import { socialSuccessToast } from '@/lib/social-actions';
 
 interface SocialButtonsProps {
   targetUserId: number;
@@ -19,10 +20,10 @@ export default function SocialButtons({
   viewerId,
 }: SocialButtonsProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [status, setStatus] = useState<string>(initialStatus);
   const [isFollowing, setIsFollowing] = useState<boolean>(initialIsFollowing);
   const [loading, setLoading] = useState<boolean>(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   if (!viewerId) {
     return (
@@ -38,7 +39,6 @@ export default function SocialButtons({
 
   const handleAction = async (action: string) => {
     setLoading(true);
-    setErrorMsg(null);
     try {
       const res = await fetch('/api/social', {
         method: 'POST',
@@ -62,12 +62,14 @@ export default function SocialButtons({
         } else if (action === 'unfollow') {
           setIsFollowing(false);
         }
+        const successMsg = socialSuccessToast(action);
+        if (successMsg) toast({ variant: 'success', description: successMsg });
       } else {
-        setErrorMsg(data.message || 'Operation failed');
+        toast({ variant: 'error', description: data.message || 'Operation failed' });
       }
     } catch (err) {
       console.error(err);
-      setErrorMsg('An error occurred. Please try again.');
+      toast({ variant: 'error', description: 'An error occurred. Please try again.' });
     } finally {
       setLoading(false);
     }
@@ -161,12 +163,6 @@ export default function SocialButtons({
           </Button>
         )}
       </div>
-
-      {errorMsg && (
-        <p className="text-[10px] text-red-500 font-bold text-center sm:text-left">
-          {errorMsg}
-        </p>
-      )}
     </div>
   );
 }

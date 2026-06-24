@@ -12,15 +12,15 @@ const db = {
 };
 
 mock.module('@/lib/db', { namedExports: db });
-// Keep sharp and the real user model out of the test process.
+// Keep sharp and the real user model out of the test process. Hoisted so the
+// upload/cleanup calls editPost makes are inspectable after a run.
 class ImageUploadError extends Error {}
-mock.module('@/lib/uploads', {
-  namedExports: {
-    processImageUpload: mock.fn(async () => '/Assets/Uploads/posts/x.webp'),
-    deleteUploadFile: mock.fn(() => {}),
-    ImageUploadError,
-  },
-});
+const uploads = {
+  processImageUpload: mock.fn(async () => '/Assets/Uploads/posts/new.webp'),
+  deleteUploadFile: mock.fn((_path?: any) => {}),
+  ImageUploadError,
+};
+mock.module('@/lib/uploads', { namedExports: uploads });
 mock.module('@/lib/models/user', { namedExports: { DEFAULT_AVATAR: '/Assets/Img/default-avatar.png' } });
 
 let posts: typeof import('@/lib/services/posts');
@@ -43,11 +43,13 @@ function seedQuery(...resultSets: any[][]) {
 }
 
 beforeEach(() => {
-  for (const fn of [db.query, db.queryOne, db.execute, db.transaction, connExecute]) fn.mock.resetCalls();
+  for (const fn of [db.query, db.queryOne, db.execute, db.transaction, connExecute, uploads.processImageUpload, uploads.deleteUploadFile]) fn.mock.resetCalls();
   db.queryOne.mock.mockImplementation(async () => null);
   db.query.mock.mockImplementation(async () => []);
   db.execute.mock.mockImplementation(async () => ({ insertId: 1 }));
   connExecute.mock.mockImplementation(async () => [{ insertId: 1 }]);
+  uploads.processImageUpload.mock.mockImplementation(async () => '/Assets/Uploads/posts/new.webp');
+  uploads.deleteUploadFile.mock.mockImplementation(() => {});
 });
 
 // ── Ownership scoping on the mutating post/comment operations (finding E) ─────
@@ -193,4 +195,104 @@ test('resolveAsk scopes the UPDATE to the owner and writes no helpful_event', as
   assert.equal(params[1], 50);
   assert.equal(params[2], USER_ID);
   assert.equal(db.transaction.mock.calls.length, 0, 'resolve-self touches no helpful_events');
+});
+
+// ── Favor economy: reopen_ask (undo) ─────────────────────────────────────────
+
+test('reopenAsk clears both columns and deletes the ledger row, scoped to the owner', async () => {
+  seedQueryOne({ id: 50, type: 'ask' });
+
+  const out = await posts.reopenAsk(USER_ID, 50);
+  assert.deepEqual(out, { reopened: true });
+
+  // Both side effects run inside one transaction.
+  assert.equal(db.transaction.mock.calls.length, 1, 'reopen is transactional');
+  const clear = connExecute.mock.calls.find((c) => /UPDATE posts SET accepted_answer_id = NULL, resolved_at = NULL/.test(c.arguments[0] as string))!;
+  assert.deepEqual(clear.arguments[1], [50, USER_ID], 'clear is scoped to the owner');
+  const del = connExecute.mock.calls.find((c) => /DELETE FROM helpful_events WHERE post_id = \?/.test(c.arguments[0] as string))!;
+  assert.deepEqual(del.arguments[1], [50], 'ledger row deleted by post id');
+});
+
+test('reopenAsk refuses a post the user does not own (403)', async () => {
+  seedQueryOne(); // post lookup -> null
+  await assert.rejects(
+    () => posts.reopenAsk(USER_ID, 50),
+    (err: any) => err instanceof HttpError && err.status === 403
+  );
+  assert.equal(db.transaction.mock.calls.length, 0, 'no writes on ownership failure');
+});
+
+test('reopenAsk rejects a non-ask post (400)', async () => {
+  seedQueryOne({ id: 50, type: 'status' });
+  await assert.rejects(
+    () => posts.reopenAsk(USER_ID, 50),
+    (err: any) => err instanceof HttpError && err.status === 400
+  );
+  assert.equal(db.transaction.mock.calls.length, 0);
+});
+
+// ── Post editing: editPost (text + image + visibility) ───────────────────────
+
+test('editPost keeps the current image when no new file and no remove flag', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp' });
+
+  await posts.editPost(USER_ID, 7, { contentHtml: 'updated', imageFile: null, removeImage: false });
+
+  assert.deepEqual(db.queryOne.mock.calls[0].arguments[1], [7, USER_ID], 'ownership check scoped to user');
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \? WHERE id = \? AND user_id = \?/);
+  assert.deepEqual(params, ['updated', '/Assets/Uploads/posts/old.webp', 7, USER_ID]);
+  assert.equal(uploads.processImageUpload.mock.calls.length, 0, 'no re-upload when image is kept');
+  assert.equal(uploads.deleteUploadFile.mock.calls.length, 0, 'kept image is not deleted');
+});
+
+test('editPost replaces the image: stores the new one and deletes the old', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp' });
+
+  await posts.editPost(USER_ID, 7, { contentHtml: 'x', imageFile: { size: 100 } as any, removeImage: false });
+
+  assert.equal(uploads.processImageUpload.mock.calls.length, 1, 'new image processed');
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?/);
+  assert.equal(params[1], '/Assets/Uploads/posts/new.webp', 'row points at the new image');
+  assert.deepEqual(uploads.deleteUploadFile.mock.calls[0].arguments[0], '/Assets/Uploads/posts/old.webp', 'old blob removed');
+});
+
+test('editPost removes the image: nulls image_path and deletes the old file', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp' });
+
+  await posts.editPost(USER_ID, 7, { contentHtml: 'still text', imageFile: null, removeImage: true });
+
+  const [, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.equal(params[1], null, 'image_path nulled');
+  assert.equal(uploads.processImageUpload.mock.calls.length, 0, 'nothing uploaded on remove');
+  assert.deepEqual(uploads.deleteUploadFile.mock.calls[0].arguments[0], '/Assets/Uploads/posts/old.webp');
+});
+
+test('editPost persists visibility when provided (and only then)', async () => {
+  seedQueryOne({ id: 7, image_path: null });
+
+  await posts.editPost(USER_ID, 7, { contentHtml: 'hi', visibility: 'public', imageFile: null, removeImage: false });
+
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?, visibility = \? WHERE id = \? AND user_id = \?/);
+  assert.deepEqual(params, ['hi', null, 'public', 7, USER_ID]);
+});
+
+test('editPost refuses a post the user does not own (403)', async () => {
+  seedQueryOne(); // ownership miss
+  await assert.rejects(
+    () => posts.editPost(USER_ID, 7, { contentHtml: 'x', imageFile: null, removeImage: false }),
+    (err: any) => err instanceof HttpError && err.status === 403
+  );
+  assert.equal(db.execute.mock.calls.length, 0, 'no UPDATE on ownership failure');
+});
+
+test('editPost rejects an edit that would leave the post empty (400)', async () => {
+  seedQueryOne({ id: 7, image_path: null }); // no existing image to fall back on
+  await assert.rejects(
+    () => posts.editPost(USER_ID, 7, { contentHtml: '   ', imageFile: null, removeImage: false }),
+    (err: any) => err instanceof HttpError && err.status === 400
+  );
+  assert.equal(db.execute.mock.calls.length, 0);
 });
