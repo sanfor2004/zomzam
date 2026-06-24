@@ -11,30 +11,6 @@ export interface CurrentUser {
   avatar: string | null;
 }
 
-export interface ConversationSummary {
-  conversation_id: number;
-  other_id: number;
-  username: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar: string;
-  last_message: string | null;
-  last_sender_id: number | null;
-  last_message_at: string | null;
-  unread_count: number;
-  is_online?: boolean;
-  online_label?: string;
-}
-
-export interface ThreadMessage {
-  id: number;
-  conversation_id: number;
-  sender_id: number;
-  content: string;
-  read_at: string | null;
-  created_at: string;
-}
-
 export interface MentionUser {
   id: number;
   username: string;

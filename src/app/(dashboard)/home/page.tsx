@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { gsap, useGSAP, ScrollTrigger, getScrollParent } from '@/lib/gsap';
+import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Loader2, Heart, MessageCircle, Trash2,

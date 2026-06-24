@@ -54,28 +54,6 @@ export const GET = withAuth(async (request, user) => {
   const action = searchParams.get('action');
 
   switch (action) {
-    case 'list': {
-      const rows = await query(
-        `SELECT c.id AS conversation_id, c.last_message_at,
-           u.id AS other_id, u.username, u.first_name, u.last_name, u.avatar,
-           uos.last_seen, uos.is_idle,
-           (SELECT m.content FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_message,
-           (SELECT m.sender_id FROM messages m WHERE m.conversation_id = c.id ORDER BY m.created_at DESC LIMIT 1) AS last_sender_id,
-           (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id AND m.sender_id != ? AND m.read_at IS NULL) AS unread_count
-         FROM conversations c
-         JOIN users u ON u.id = IF(c.user_one_id = ?, c.user_two_id, c.user_one_id)
-         LEFT JOIN user_online_status uos ON uos.user_id = u.id
-         WHERE c.user_one_id = ? OR c.user_two_id = ?
-         ORDER BY c.last_message_at DESC`,
-        [user.id, user.id, user.id, user.id]
-      );
-
-      return NextResponse.json({
-        success: true,
-        conversations: rows.map((r: any) => normalizeUser(enrichOnline(r))),
-      });
-    }
-
     case 'contacts': {
       // Every accepted friend, LEFT-joined to any 1:1 conversation we share, with
       // live presence. Ordered: friends I've chatted with first (most-recent

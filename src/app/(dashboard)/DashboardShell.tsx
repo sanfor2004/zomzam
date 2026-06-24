@@ -14,7 +14,7 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { PresenceRail } from '@/components/chat/PresenceRail';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, User, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 
