@@ -40,9 +40,6 @@ interface PostComposerProps {
   friends: MentionUser[];
   /** Called with the freshly-created post so the parent can prepend it to the feed. */
   onPosted: (post: Post) => void;
-  /** External seed (e.g. the win prompt): switches type + prefills the editor.
-   *  `key` changes per nudge so re-firing the same draft re-applies it. */
-  seed?: { type: PostType; text: string; key: number } | null;
   /** Present ⇒ edit mode: seeds the editor/image/visibility from the post, hides
    *  the type + skill controls, and submits `post_edit` instead of creating. */
   editing?: { post: Post; onSaved: (post: Post) => void };
@@ -54,7 +51,7 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted, seed, editing }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, editing }: PostComposerProps) {
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
@@ -404,26 +401,6 @@ export function PostComposer({ currentUser, friends, onPosted, seed, editing }: 
       document.removeEventListener('keydown', onKey);
     };
   }, [showEmoji]);
-
-  // ── Apply an external seed (win prompt) ─────────────────────
-  // Switches type and prefills the editor as plain text, caret at end. Keyed on
-  // seed.key so each nudge re-applies even with the same draft.
-  useEffect(() => {
-    if (!seed) return;
-    setPostType(seed.type);
-    const el = editorRef.current;
-    if (!el) return;
-    el.innerText = seed.text;
-    setCharCount(seed.text.trim().length);
-    el.focus();
-    const range = document.createRange();
-    range.selectNodeContents(el);
-    range.collapse(false);
-    const sel = window.getSelection();
-    sel?.removeAllRanges();
-    sel?.addRange(range);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seed?.key]);
 
   // ── Post / Save ─────────────────────────────────────────────
   // Valid with text, an image (new or kept), or both — never over the cap.

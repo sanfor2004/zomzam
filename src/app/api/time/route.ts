@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api-auth';
 import { query, queryOne, execute } from '@/lib/db';
-import { pushStreamOrder } from '@/lib/models/user';
 
 export const POST = withAuth(async (request, user) => {
   // Syncs a completed task's project to 'delivered' when the task title follows the
@@ -12,17 +11,10 @@ export const POST = withAuth(async (request, user) => {
       const parts = task.title.split(':');
       if (parts.length > 1) {
         const projectName = parts[0].trim();
-        const res = await execute(
+        await execute(
           `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
           [user.id, projectName]
         );
-        // Only nudge on the actual transition (not on re-completing an already-delivered project).
-        if (res.affectedRows > 0) {
-          await pushStreamOrder(user.id, 'win_prompt', {
-            source: 'delivery',
-            draft: `Just delivered ${projectName}! 🚀`,
-          });
-        }
       }
     }
   }
