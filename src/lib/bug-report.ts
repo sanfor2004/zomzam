@@ -111,7 +111,7 @@ export async function reportBug(input: BugReportInput): Promise<void> {
     const to = process.env.BUG_REPORT_TO || DEFAULT_TO;
     if (!apiKey || !to) return; // no API key → console.error trail only
 
-    if (!rateLimit(`bug:${fingerprint(input)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS)) return;
+    if (!(await rateLimit(`bug:${fingerprint(input)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS))) return;
 
     const from = process.env.BUG_REPORT_FROM || DEFAULT_FROM;
     const subject = `🐛 [Zomzam] ${input.source} error: ${input.message.slice(0, 100)}`;

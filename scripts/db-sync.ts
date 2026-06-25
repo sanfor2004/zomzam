@@ -281,6 +281,18 @@ const schema: Record<string, Record<string, string>> = {
     asker_user_id: 'INT UNSIGNED NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Shared-backend rate limiter (src/lib/rate-limit.ts). One append-only row per
+  // attempt, keyed by an opaque `bucket` (e.g. "login:1.2.3.4"). Lives in the DB,
+  // not process memory, because Vercel's serverless functions are ephemeral +
+  // multi-instance — an in-memory window resets on every cold start and isn't
+  // shared across instances, so it can't actually throttle brute force there.
+  // `created_at_ms` is epoch milliseconds (matches Date.now()) for exact
+  // sliding-window math without DATETIME/timezone rounding.
+  rate_limit_events: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    bucket: 'VARCHAR(190) NOT NULL',
+    created_at_ms: 'BIGINT UNSIGNED NOT NULL',
+  },
 };
 
 // Composite / secondary indexes the column-only `schema` map cannot express
@@ -310,6 +322,10 @@ const indexes: Record<string, Record<string, string>> = {
   post_views: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',  // upsert target for mark_seen
     idx_user_seen: 'INDEX idx_user_seen (user_id, seen)',          // "my unseen" NOT EXISTS filter
+  },
+  rate_limit_events: {
+    // The count-within-window + per-bucket purge both filter by (bucket, time).
+    idx_bucket_time: 'INDEX idx_bucket_time (bucket, created_at_ms)',
   },
 };
 
