@@ -136,6 +136,66 @@ export async function getDashboardSummary(userId: number) {
   const hourlyRateIncome = completedHours > 0 ? totalIncomePrimary / completedHours : 0;
   const hourlyRateProjects = completedHours > 0 ? deliveredProjectRevenuePrimary / completedHours : 0;
 
+  // 7. Per-client realized hourly rate. Re-slices the blended income rate by the
+  //    CRM client/deal each income row + tracked task is attributed to, so the
+  //    freelancer can rank clients by what they actually pay per hour worked.
+  //    Pure read-only analytics over existing data — Zomzam never moves money.
+  const clientHoursRows = await query<{ lead_id: number; minutes: string }>(
+    `SELECT p.lead_id, SUM(COALESCE(t.actual_duration, t.duration_block)) AS minutes
+     FROM time_tasks t
+     JOIN crm_projects p ON t.project_id = p.id
+     WHERE t.user_id = ? AND t.status = 'completed' AND p.lead_id IS NOT NULL
+     GROUP BY p.lead_id`,
+    [userId]
+  );
+  // Multi-currency: keep currency on the row and normalize each via convertToPrimary().
+  const clientIncomeRows = await query<{ lead_id: number; currency: string; amount: string }>(
+    `SELECT lead_id, currency, SUM(amount) AS amount
+     FROM money_transactions
+     WHERE user_id = ? AND type = 'income' AND lead_id IS NOT NULL
+     GROUP BY lead_id, currency`,
+    [userId]
+  );
+  // Lead labels — LEFT JOIN semantics in JS: drop any attribution to a lead that
+  // no longer exists (deleted/declined), so dangling rows don't surface.
+  const clientLeadRows = await query<{ id: number; name: string; company: string | null }>(
+    `SELECT id, name, company FROM crm_leads WHERE user_id = ?`,
+    [userId]
+  );
+
+  const leadLabel = new Map<number, { name: string; company: string | null }>();
+  clientLeadRows.forEach((l) => leadLabel.set(l.id, { name: l.name, company: l.company }));
+
+  const clientAgg = new Map<number, { incomePrimary: number; minutes: number }>();
+  const ensureClient = (leadId: number) => {
+    let row = clientAgg.get(leadId);
+    if (!row) { row = { incomePrimary: 0, minutes: 0 }; clientAgg.set(leadId, row); }
+    return row;
+  };
+  clientHoursRows.forEach((r) => { ensureClient(r.lead_id).minutes += parseFloat(r.minutes || '0'); });
+  clientIncomeRows.forEach((r) => {
+    ensureClient(r.lead_id).incomePrimary += convertToPrimary(parseFloat(r.amount || '0'), r.currency || 'EGP', primaryCurrency);
+  });
+
+  const perClient = Array.from(clientAgg.entries())
+    .filter(([leadId, agg]) => leadLabel.has(leadId) && agg.minutes > 0) // need a live lead + tracked hours to rank
+    .map(([leadId, agg]) => {
+      const hours = agg.minutes / 60.0;
+      const label = leadLabel.get(leadId)!;
+      // $0-income-yet clients keep a null rate ("in progress") instead of dividing by zero.
+      const realizedRate = agg.incomePrimary > 0 ? parseFloat((agg.incomePrimary / hours).toFixed(2)) : null;
+      return {
+        leadId,
+        name: label.name,
+        company: label.company,
+        incomePrimary: parseFloat(agg.incomePrimary.toFixed(2)),
+        hours: parseFloat(hours.toFixed(2)),
+        realizedRate,
+      };
+    })
+    // Best $/hr first; un-earning ("in progress") clients sink to the bottom.
+    .sort((a, b) => (b.realizedRate ?? -1) - (a.realizedRate ?? -1));
+
   return {
     profile: {
       username: userRow.username,
@@ -175,6 +235,7 @@ export async function getDashboardSummary(userId: number) {
       hourlyRateIncome: parseFloat(hourlyRateIncome.toFixed(2)),
       hourlyRateProjects: parseFloat(hourlyRateProjects.toFixed(2)),
       exchangeRates: EXCHANGE_RATES_TO_EGP,
+      perClient,
     },
   };
 }

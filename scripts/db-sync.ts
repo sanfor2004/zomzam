@@ -128,6 +128,7 @@ const schema: Record<string, Record<string, string>> = {
     currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
     description: 'VARCHAR(255) NULL',
     transaction_date: 'DATE NOT NULL',
+    lead_id: 'INT UNSIGNED NULL', // CRM client/deal this income/expense is attributed to (per-client profitability)
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   money_lend: {

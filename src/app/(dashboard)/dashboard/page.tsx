@@ -24,9 +24,11 @@ import {
   ChevronRight,
   TrendingDown,
   Layers,
-  Sparkles
+  Sparkles,
+  Gauge
 } from 'lucide-react';
-import { Button, CountUp } from '@/components/ui';
+import { Button, CountUp, Progress } from '@/components/ui';
+import { cn } from '@/lib/utils';
 
 interface DashboardData {
   success: boolean;
@@ -93,6 +95,14 @@ interface DashboardData {
     hourlyRateIncome: number;
     hourlyRateProjects: number;
     exchangeRates: Record<string, number>;
+    perClient: Array<{
+      leadId: number;
+      name: string;
+      company: string | null;
+      incomePrimary: number;
+      hours: number;
+      realizedRate: number | null;
+    }>;
   };
 }
 
@@ -590,6 +600,108 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: CLIENT PROFITABILITY
+          Contains: Per-client realized hourly rate ranking (income ÷ tracked hours),
+                    health-colored rate, scaled Progress bar, income/hours footnote
+          ────────────────────────────────────────────────────────── */}
+      {(() => {
+        const perClient = rates.perClient || [];
+        // Scale every bar against the best earner; in-progress (null) clients show no bar.
+        const topRate = perClient.reduce((m, c) => Math.max(m, c.realizedRate ?? 0), 0);
+        // Health band relative to the top earner — never color-only, the number is always shown (HIG).
+        const rateHealth = (rate: number): 'success' | 'warning' | 'danger' => {
+          if (topRate <= 0) return 'warning';
+          const ratio = rate / topRate;
+          if (ratio >= 0.66) return 'success';
+          if (ratio >= 0.33) return 'warning';
+          return 'danger';
+        };
+        const HEALTH_TEXT: Record<'success' | 'warning' | 'danger', string> = {
+          success: 'text-emerald-500',
+          warning: 'text-amber-500',
+          danger: 'text-rose-500',
+        };
+        const sym = currencySymbol(profile.primary_currency);
+
+        return (
+          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 sm:p-8 shadow-apple space-y-6">
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-primary-500 flex items-center gap-1.5 mb-1">
+                <Gauge className="w-3.5 h-3.5" /> Client Profitability
+              </span>
+              <h3 className="font-display text-headline font-black text-white tracking-tight">
+                Realized Rate per Client
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                What each client actually pays per hour worked — attributed income ÷ tracked hours. Rank to keep, re-price, or drop.
+              </p>
+            </div>
+
+            {perClient.length === 0 ? (
+              <div className="flex flex-col items-center justify-center text-center py-10 px-6 border border-dashed border-slate-800 rounded-2xl">
+                <Users className="w-7 h-7 text-slate-600 mb-3" />
+                <p className="text-sm font-bold text-slate-300">No attributed clients yet</p>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm">
+                  Qualify a lead in CRM and track tasks on its project — the income and hours roll up here automatically as a per-client rate.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {perClient.map((c) => {
+                  const inProgress = c.realizedRate === null;
+                  const health = inProgress ? null : rateHealth(c.realizedRate!);
+                  return (
+                    <div
+                      key={c.leadId}
+                      className="group bg-[#13161C]/50 border border-slate-800/80 rounded-2xl p-4 sm:p-5 hover:border-slate-700/60 transition-colors duration-300"
+                    >
+                      <div className="flex items-center justify-between gap-4 mb-3">
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-white truncate">{c.name}</p>
+                          {c.company && (
+                            <p className="text-[11px] text-slate-500 truncate">{c.company}</p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          {inProgress ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-800/70 text-slate-400 border border-slate-700/60">
+                              In progress
+                            </span>
+                          ) : (
+                            <div className="flex items-baseline gap-1 justify-end">
+                              <CountUp
+                                value={c.realizedRate!}
+                                prefix={sym}
+                                decimals={2}
+                                duration={1.2}
+                                className={cn('text-2xl font-black font-mono tracking-tight', HEALTH_TEXT[health!])}
+                              />
+                              <span className="text-[10px] font-semibold text-slate-500">/ hr</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <Progress
+                        value={inProgress ? 0 : c.realizedRate!}
+                        max={topRate > 0 ? topRate : 1}
+                        variant={health ?? 'warning'}
+                        size="sm"
+                      />
+                      <p className="text-[11px] text-slate-500 mt-2 font-medium">
+                        {sym}{c.incomePrimary.toLocaleString(undefined, { maximumFractionDigits: 0 })} income
+                        <span className="text-slate-700 mx-1.5">·</span>
+                        {c.hours.toLocaleString(undefined, { maximumFractionDigits: 1 })}h tracked
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: HOURLY ACTIVITY HEATMAP

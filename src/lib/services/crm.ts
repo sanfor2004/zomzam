@@ -209,9 +209,9 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
     }
 
     await connection.execute(
-      `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, description, transaction_date)
-       VALUES (?, ?, ?, 'income', ?, ?, ?, CURRENT_DATE)`,
-      [userId, accountId, categoryId, amount, currency, `Deal qualification: ${projectName}`]
+      `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, description, transaction_date, lead_id)
+       VALUES (?, ?, ?, 'income', ?, ?, ?, CURRENT_DATE, ?)`,
+      [userId, accountId, categoryId, amount, currency, `Deal qualification: ${projectName}`, leadId]
     );
 
     await connection.execute(

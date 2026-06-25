@@ -62,6 +62,7 @@ test('qualifyLead runs the whole bridge in one transaction, all scoped to the us
   assert.equal(incomeParams[0], USER_ID);
   assert.equal(incomeParams[1], 3); // account_id
   assert.ok(incomeParams.includes(1000)); // amount
+  assert.ok(incomeParams.includes(7), 'income attributed to the lead (per-client profitability)'); // lead_id
 });
 
 test('qualifyLead seeds a Lending settlement only when a due date is given', async () => {

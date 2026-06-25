@@ -1,6 +1,6 @@
 # Spec: Client Profitability (Per-Client Realized Hourly Rate)
 
-> **Status:** proposed · **Type:** completion of existing scaffolding, not a new feature
+> **Status:** ✅ **COMPLETED (2026-06-25)** — all 4 build steps shipped; see the execution-status block below. · **Type:** completion of existing scaffolding, not a new feature
 > **Mission fit:** pure tracking/analytics — Zomzam never moves money (see the freelancer-life-cycle positioning). This only *reads* income + time the app already records and re-slices it per client.
 
 ---
@@ -115,10 +115,14 @@ Each row: client name + company, realized `$X/hr` (`CountUp`), a `Progress` bar 
 - ❌ No new dependency (no charting lib; Kit `Progress`/`CountUp` + bespoke bars only).
 - ❌ v1 = auto-attribution via `qualify_lead` + dashboard view. Manual attribution dropdown and expense-side attribution (true *net* margin per client) are fast-follows.
 
-## 9. Build order
+## 9. Build order — ✅ COMPLETED (2026-06-25)
 
-1. `db-sync.ts`: add `money_transactions.lead_id` → run migrator.
-2. `api/crm/route.ts`: set `lead_id` on the `qualify_lead` income INSERT.
-3. `api/dashboard/route.ts`: add the per-client rollup query + extend `rates.perClient`.
-4. `dashboard/page.tsx`: render the Client Profitability card under the rate HUD.
-5. README: add nothing structural (no new route/endpoint/dep) — Site Map/API tables unchanged; skip per Section 9.
+1. ✅ `scripts/db-sync.ts`: added `money_transactions.lead_id INT UNSIGNED NULL`; migrator run (column live).
+2. ✅ `lib/services/crm.ts` `qualifyLead`: `lead_id` set on the income INSERT (auto-attribution). *(Logic lives in the Phase-3 service layer, not the route megaswitch — spec's `api/crm/route.ts` line ref is pre-refactor.)*
+3. ✅ `lib/services/dashboard.ts`: per-client rollup (hours via task→project→lead, income GROUP BY lead+currency normalized through `convertToPrimary`, deleted-lead drop + divide-by-zero guard in JS) → extends `rates.perClient`. *(Service layer, not `api/dashboard/route.ts`.)*
+4. ✅ `app/(dashboard)/dashboard/page.tsx`: Client Profitability card under the rate HUD — health-colored `CountUp` rate, top-earner-scaled `Progress`, income/hours footnote, empty state. Never color-only (HIG).
+5. ✅ README: no structural change (no new route/endpoint/dep), as predicted.
+
+**Tests:** `crm.test.ts` income assertion extended to cover the `lead_id` attribution; `dashboard.test.ts` gains a `perClient` rollup test (ranking, $0-income → `null`/in-progress sort-to-bottom, deleted-lead drop). Suite green.
+
+**Deferred (per §8):** manual attribution dropdown on the income form + expense-side attribution (true net margin) remain fast-follows — not built.

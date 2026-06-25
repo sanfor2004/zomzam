@@ -1,5 +1,7 @@
 # Backend Audit — Pre-Launch (2026-06-21)
 
+> **✅ Remediation status (2026-06-22):** All 3 🔴 release blockers (#1–3) and all 3 🟠 high findings (#4–6) are **fixed** — see `2-backend-remediation-spec.md` Phases 0–2 (✅ completed). Architecture findings **A, B, C** (god-route, no service layer, duplicated auth) — C is resolved (`withAuth`); A + B + remaining C, plus **D** (posts schema) and **E** (zero tests), are deferred to that spec's **Phase 3 (not started)**. **F** minor inconsistencies and the `shops:81` inner-catch leak remain open follow-ups.
+>
 > **Scope:** whole backend (17 API route handlers, `src/lib` layer, data model). Lens: architecture & design health (primary), clean-code (clean-code-guard rubric), security (test-guard lens).
 > **Threat model:** public multi-tenant, open self-registration → findings weighted at **production / release-blocker** severity.
 > **Verdict:** ~6.5/10. Competent fundamentals (DB layer, transactions, SQL hygiene, auth-everywhere, ownership scoping, uploads) dragged down by one dominant architectural pattern (the "god-route" action megaswitch + no service layer) and a handful of must-fix security holes.

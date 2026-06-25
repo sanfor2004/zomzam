@@ -296,3 +296,111 @@ test('editPost rejects an edit that would leave the post empty (400)', async () 
   );
   assert.equal(db.execute.mock.calls.length, 0);
 });
+
+// ── getFeed: chat-style unseen-first keyset feed ─────────────────────────────
+// A minimal feed row shaped like the SELECT in getFeed; override what a test cares about.
+function feedRow(over: Partial<Record<string, any>> = {}) {
+  return {
+    id: 1, user_id: 9, content_html: '<p>hi</p>', image_path: null, visibility: 'public',
+    type: 'status', skill_tag: null, accepted_answer_id: null, resolved_at: null,
+    created_at: '2026-06-01T00:00:00Z', username: 'u', first_name: '', last_name: '',
+    avatar: null, author_tags: null, like_count: 0, comment_count: 0, liked_by_me: 0,
+    ...over,
+  };
+}
+
+test('getFeed unseen landing page ranks tag-matched posts above non-matching, over the unseen set', async () => {
+  seedQueryOne({ tags: ['react'] }); // viewer tags
+  // One window result set; embedTopComments then sees [] (no comments).
+  seedQuery([
+    feedRow({ id: 1, content_html: '<p>nothing relevant</p>' }),           // score 0
+    feedRow({ id: 2, content_html: '<span data-tag="react">#react</span>' }), // score 10
+  ]);
+
+  const res = await posts.getFeed(USER_ID, {});
+
+  assert.equal(res.tier, 'unseen');
+  assert.deepEqual(res.posts.map((p: any) => p.id), [2, 1], 'tag-matched post outranks the irrelevant one');
+  // Landing page reads the unseen pool, not the seen one, as a bounded scored window.
+  const windowSql = db.query.mock.calls[0].arguments[0] as string;
+  assert.match(windowSql, /NOT EXISTS \(SELECT 1 FROM post_views/);
+  assert.match(windowSql, /LIMIT 300/);
+  assert.equal(res.has_more, false);
+  assert.equal(res.next_cursor, null);
+});
+
+test('getFeed deeper page is a recency keyset (id < cursor) and returns the smallest delivered id as next_cursor', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 90 }), feedRow({ id: 80 })]); // exactly `limit` rows ⇒ more to come
+
+  const res = await posts.getFeed(USER_ID, { tier: 'unseen', cursor: 100, limit: 2 });
+
+  const sql = db.query.mock.calls[0].arguments[0] as string;
+  const params = db.query.mock.calls[0].arguments[1] as any[];
+  assert.match(sql, /p\.id < \?/, 'keyset predicate present');
+  assert.match(sql, /ORDER BY p\.id DESC\s+LIMIT 2/);
+  assert.equal(params[params.length - 1], 100, 'cursor bound last');
+  assert.equal(res.has_more, true);
+  assert.equal(res.next_cursor, 80, 'smallest id delivered seeds the next page');
+});
+
+test('getFeed seen tier selects already-seen posts (EXISTS, not NOT EXISTS)', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 5 })]);
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+
+  const sql = db.query.mock.calls[0].arguments[0] as string;
+  assert.equal(res.tier, 'seen');
+  assert.match(sql, /EXISTS \(SELECT 1 FROM post_views/);
+  assert.doesNotMatch(sql, /NOT EXISTS \(SELECT 1 FROM post_views/);
+});
+
+test('getFeed help filter constrains to asks in SQL (stays keyset-stable)', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 5, type: 'ask' })]);
+
+  await posts.getFeed(USER_ID, { filter: 'help' });
+
+  assert.match(db.query.mock.calls[0].arguments[0] as string, /p\.type = 'ask'/);
+});
+
+test('getFeed help_matches with no viewer tags short-circuits to empty without querying', async () => {
+  seedQueryOne({ tags: null }); // viewer has no tags
+
+  const res = await posts.getFeed(USER_ID, { filter: 'help_matches' });
+
+  assert.deepEqual(res, { posts: [], next_cursor: null, has_more: false, tier: 'unseen' });
+  assert.equal(db.query.mock.calls.length, 0, 'no candidate query issued for an impossible match');
+});
+
+// ── markPostsSeen: sanitized, deduped, bounded batch upsert ───────────────────
+
+test('markPostsSeen dedupes, drops non-positive ids, and upserts one row per (post, viewer)', async () => {
+  const res = await posts.markPostsSeen(USER_ID, [5, 5, '7' as any, -1, 0, NaN as any]);
+
+  assert.deepEqual(res, { marked: 2 });
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /INSERT INTO post_views [\s\S]*VALUES \(\?, \?, 1\), \(\?, \?, 1\)/);
+  assert.deepEqual(params, [5, USER_ID, 7, USER_ID]);
+});
+
+test('markPostsSeen with no valid ids writes nothing', async () => {
+  const res = await posts.markPostsSeen(USER_ID, []);
+  assert.deepEqual(res, { marked: 0 });
+  assert.equal(db.execute.mock.calls.length, 0);
+});
+
+// ── getFeedAudience: who receives the live "new posts" pill ───────────────────
+
+test('getFeedAudience returns friend+follower ids, every clause scoped to the author', async () => {
+  seedQuery([{ id: 3 }, { id: 4 }]);
+
+  const ids = await posts.getFeedAudience(USER_ID);
+
+  assert.deepEqual(ids, [3, 4]);
+  const [sql, params] = db.query.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /type = 'friend'/);
+  assert.match(sql, /type = 'follow'/);
+  assert.ok(params.every((p) => p === USER_ID), 'audience query never reaches outside the author');
+});
