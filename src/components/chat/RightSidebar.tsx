@@ -4,17 +4,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, X, MessagesSquare, MessageSquarePlus, Search, UserPlus, Check, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button, Input, Tooltip } from '@/components/ui';
-import { useMessages, useMyId, type ChatContact, type ChatUser } from '@/context/MessagesContext';
-import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
+import { Users, X, MessagesSquare, UserPlus, Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui';
+import { useMessages, type ChatContact, type ChatUser } from '@/context/MessagesContext';
+import { displayName } from '@/app/(dashboard)/home/shared';
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR (global)
 // The persistent right navbar for the whole dashboard (rendered by the shell,
 // not by any page). Consolidates what used to be the /home right column +
-// the old presence rail into one place: Messages, Active Now (friends presence),
-// and Suggested people. Self-contained — reads contacts from MessagesContext and
+// the old presence rail into one place: Active Now (friends presence) and
+// Suggested people. Self-contained — reads contacts from MessagesContext and
 // fetches its own suggestions. Desktop = sticky column; mobile = FAB + drawer.
 // ──────────────────────────────────────────────────────────
 
@@ -58,9 +58,6 @@ const CARD = 'bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-app
  *  `onNavigate` lets the drawer close itself once the user opens a chat. */
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const { contacts, openChat } = useMessages();
-  const myId = useMyId();
-  const router = useRouter();
-  const [search, setSearch] = useState('');
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [sent, setSent] = useState<Set<number>>(new Set());
 
@@ -74,15 +71,6 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     })();
   }, []);
 
-  // Recent conversations (friends we already share a thread with), already ordered
-  // most-recent-first by the API.
-  const threads = contacts.filter((c) => c.conversation_id);
-  const filteredThreads = threads.filter((c) => {
-    const q = search.trim().toLowerCase();
-    if (!q) return true;
-    return displayName(c).toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
-  });
-
   // All friends, ordered online → away → offline for the "Active Now" list.
   const friends = useMemo(
     () => [...contacts].sort((a, b) => {
@@ -92,7 +80,6 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     [contacts]
   );
   const onlineCount = contacts.filter((c) => c.is_online).length;
-  const unreadThreads = threads.reduce((sum, c) => sum + c.unread_count, 0);
 
   const pick = (c: ChatContact) => {
     openChat(toChatUser(c), c.conversation_id);
@@ -112,89 +99,6 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {/* ── Messages ── */}
-      <div className={CARD}>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <MessagesSquare className="w-4 h-4 text-slate-400" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Messages</h3>
-            {unreadThreads > 0 && (
-              <span className="text-[10px] font-bold bg-primary-500 text-white px-1.5 py-0.5 rounded-full">
-                {unreadThreads}
-              </span>
-            )}
-          </div>
-          <Tooltip content="Open Messenger">
-            <Button
-              variant="unstyled"
-              onClick={() => { onNavigate?.(); router.push('/messages'); }}
-              aria-label="Open Messenger"
-              className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary-400 hover:bg-white/[0.04] transition-colors"
-            >
-              <MessageSquarePlus className="w-4 h-4" />
-            </Button>
-          </Tooltip>
-        </div>
-
-        {threads.length > 0 && (
-          <Input
-            size="sm"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search messages..."
-            leftIcon={<Search className="w-3.5 h-3.5" />}
-            containerClassName="mb-3"
-          />
-        )}
-
-        {threads.length === 0 ? (
-          <p className="text-xs text-slate-600 text-center py-4">
-            No conversations yet — start one from your friends below.
-          </p>
-        ) : (
-          <div className="space-y-1 -mx-1.5">
-            {filteredThreads.map((c) => (
-              <button
-                key={c.other_id}
-                onClick={() => pick(c)}
-                className="w-full flex items-center gap-3 text-left rounded-xl px-1.5 py-1.5 hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="relative flex-shrink-0">
-                  <Image
-                    src={c.avatar || '/Assets/Img/default-avatar.png'}
-                    alt={displayName(c)}
-                    width={36}
-                    height={36}
-                    className="w-9 h-9 rounded-xl object-cover border border-slate-800"
-                  />
-                  <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${c.is_online ? 'bg-emerald-500' : 'bg-slate-600'}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className={`text-xs truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-300'}`}>
-                      {displayName(c)}
-                    </p>
-                    {c.last_message_at && (
-                      <span className="text-[10px] text-slate-600 flex-shrink-0">{relativeTime(c.last_message_at)}</span>
-                    )}
-                  </div>
-                  {c.last_message && (
-                    <p className={`text-[11px] truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
-                      {c.last_sender_id === myId ? 'You: ' : ''}{c.last_message}
-                    </p>
-                  )}
-                </div>
-                {c.unread_count > 0 && (
-                  <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
-                    {c.unread_count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* ── Active Now (friends presence) ── */}
       <div className={CARD}>
         <div className="flex items-center justify-between mb-4">
