@@ -54,6 +54,10 @@ export default function HomePage() {
   const tierRef = useRef<'unseen' | 'seen'>('unseen');
   const cursorRef = useRef<number | null>(null);
   const hasMoreRef = useRef(true);
+  // Count of posts actually delivered into the feed this session. Lets loadMore
+  // detect an empty feed without reading async `posts` state — see the
+  // unseen→seen advance below (empty unseen tier must auto-pull the seen tier).
+  const deliveredRef = useRef(0);
   const feedFilterRef = useRef(feedFilter);
   const isDesktopRef = useRef(isDesktop);
   useEffect(() => { isDesktopRef.current = isDesktop; }, [isDesktop]);
@@ -116,6 +120,10 @@ export default function HomePage() {
     if (loadingFeedRef.current || !hasMoreRef.current) return;
     loadingFeedRef.current = true;
     setLoadingFeed(true);
+    // When true, the unseen tier ran dry on a still-empty feed; we chain straight
+    // into the seen tier (the sentinel + "Load older" button that normally drive
+    // it only render once posts exist, so an empty feed would otherwise dead-end).
+    let chainSeen = false;
     try {
       const params = new URLSearchParams({ action: 'feed', tier: tierRef.current });
       if (cursorRef.current) params.set('cursor', String(cursorRef.current));
@@ -130,19 +138,26 @@ export default function HomePage() {
           const known = new Set(prev.map((p: Post) => p.id));
           return [...prev, ...data.posts.filter((p: Post) => !known.has(p.id))];
         });
+        deliveredRef.current += data.posts.length;
         cursorRef.current = data.next_cursor ?? null;
 
         if (data.has_more) {
           hasMoreRef.current = true;
           setHasMore(true);
         } else if (tierRef.current === 'unseen') {
-          // Unseen exhausted → advance to the seen backfill tier. Don't fetch yet:
-          // desktop shows a "Load older posts" button, mobile auto-loads below.
+          // Unseen exhausted → advance to the seen backfill tier.
           tierRef.current = 'seen';
           cursorRef.current = null;
           hasMoreRef.current = true; // provisional; the first seen page confirms
           setTier('seen');
           setHasMore(true);
+          // If nothing has been delivered yet, the empty-state renders (no
+          // sentinel, no button) and the seen tier would never load. This is the
+          // common case for a returning user — and always for your own just-posted
+          // content, which is recorded as seen on creation. Pull the first seen
+          // page right now. Otherwise desktop waits for the button, mobile for the
+          // sentinel, exactly as before.
+          if (deliveredRef.current === 0) chainSeen = true;
         } else {
           hasMoreRef.current = false;
           setHasMore(false);
@@ -150,8 +165,13 @@ export default function HomePage() {
       }
     } catch { /* non-blocking */ }
     setLoadingFeed(false);
-    setInitialLoading(false);
     loadingFeedRef.current = false;
+    if (chainSeen) {
+      // Keep the loader up (don't flash the empty state) while the seen page loads.
+      loadMore();
+    } else {
+      setInitialLoading(false);
+    }
   }, []);
 
   // Reset to a fresh unseen feed (mount + whenever the filter changes).
@@ -159,6 +179,7 @@ export default function HomePage() {
     tierRef.current = 'unseen';
     cursorRef.current = null;
     hasMoreRef.current = true;
+    deliveredRef.current = 0;
     setTier('unseen');
     setHasMore(true);
     setInitialLoading(true);
