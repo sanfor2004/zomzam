@@ -145,8 +145,6 @@ zomzam.com/
 │   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, throttled, never throws; recipient defaults to 2004.Sanfor@gmail.com)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
-│   │   ├── facebook-oauth.ts    # Facebook Sign-In/Sign-Up (server): verify JS-SDK access token (/debug_token) + Graph API profile fetch
-│   │   ├── facebook-sdk.ts      # Facebook Sign-In/Sign-Up (client): browser-only JS SDK loader + FB.login() → access token
 │   │   ├── db.ts                # MySQL connection pool + transaction helpers
 │   │   ├── gsap.ts               # Single source of truth for GSAP + plugin registration
 │   │   ├── notion.ts             # Notion API client for CRM lead sync
@@ -208,7 +206,6 @@ zomzam.com/
 | `/api/auth` | `register`, `login`, `logout`, `check`, `update_settings` | Session lifecycle and account settings. |
 | `/api/auth/forgot-password` / `/reset-password` | — | Token-based password recovery, outside the session. |
 | `/api/auth/oauth/google` / `/oauth/google/callback` | — | Google Sign-In: redirects to Google's consent screen, then verifies the returned `id_token` (`jose` remote JWKS) and mints a `ZOMZAM_SESSION` cookie. |
-| `/api/auth/oauth/facebook` (POST) | — | Facebook Sign-In/Sign-Up: the browser runs the JS SDK's `FB.login()` and POSTs the returned access token here; the server verifies it (`/debug_token`, must be issued for our app), resolves the profile via the Graph API, and mints a `ZOMZAM_SESSION` cookie. |
 | `/api/profile` / `/api/profile/change-password` | — | Profile field updates, avatar upload (`sharp` -> Vercel Blob), authenticated password change. |
 | `/api/dashboard` | — | Aggregates Time/Money metrics for the primary dashboard. |
 | `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
@@ -257,14 +254,6 @@ NODE_ENV=development
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/google/callback
-
-# Facebook Sign-In/Sign-Up (JS SDK) — Facebook Login product from
-# https://developers.facebook.com/apps/ (add your domain under "Allowed
-# Domains for the JavaScript SDK"). NEXT_PUBLIC_* is the public app id loaded
-# by the browser; the secret stays server-side for /debug_token verification.
-NEXT_PUBLIC_FACEBOOK_APP_ID=
-FACEBOOK_CLIENT_ID=
-FACEBOOK_CLIENT_SECRET=
 
 # File uploads — Vercel Blob store (Storage -> Create Database -> Blob in the
 # Vercel dashboard auto-injects this in production). For local dev, run
@@ -334,7 +323,6 @@ sequenceDiagram
 ### Authentication Core Code:
 * **Session Tokens**: [session.ts](file:///c:/www/zomzam.com/src/lib/session.ts) is the single place a `jose` JWT is signed/verified (Edge proxy + Node routes). [api-auth.ts](file:///c:/www/zomzam.com/src/lib/api-auth.ts) exposes the `withAuth()`/`withError()` route gates and `getSessionUser()`, which also enforces `is_active` + `token_version` revocation. [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) is now bcrypt-only.
 * **Google Sign-In**: [google-oauth.ts](file:///c:/www/zomzam.com/src/lib/google-oauth.ts) builds the consent-screen URL and exchanges the returned code for an `id_token`, verified against Google's live JWKS via `jose`'s `createRemoteJWKSet` — no extra OAuth dependency needed. `/api/auth/oauth/google` sets a short-lived `state` + `redirect` cookie pair (CSRF check) before redirecting to Google; `/api/auth/oauth/google/callback` verifies `state`, then calls `findOrCreateGoogleUser()` ([user.ts](file:///c:/www/zomzam.com/src/lib/models/user.ts)) to link-by-verified-email or create a password-less account before minting the same `ZOMZAM_SESSION` cookie as credential login.
-* **Facebook Sign-In/Sign-Up** (JS SDK): [facebook-sdk.ts](file:///c:/www/zomzam.com/src/lib/facebook-sdk.ts) loads Facebook's browser SDK once and runs `FB.login()` to obtain a short-lived user access token client-side; the `/sign` page POSTs that token to `/api/auth/oauth/facebook`. [facebook-oauth.ts](file:///c:/www/zomzam.com/src/lib/facebook-oauth.ts) verifies it server-side via `/debug_token` (must be valid **and** issued for our `app_id` — the token is untrusted browser input) before resolving the profile (`id`, `email`, `name`, `picture`) through the Graph API. The route then calls `findOrCreateFacebookUser()` ([user.ts](file:///c:/www/zomzam.com/src/lib/models/user.ts)) to link-by-email or create a password-less account before minting the `ZOMZAM_SESSION` cookie. Users who decline the `email` permission get a `no_email` guidance message instead of a half-created account; a dismissed login dialog is treated as a silent no-op.
 * **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) protects every page by **default-deny** — only an explicit public allowlist (`/`, `/sign`, `/forgot-password`, `/u`, `/p`, `/ui-kit`, `/pricing`) is reachable without a session; everything else redirects to `/sign`. So a newly added page can never be accidentally left unguarded. It verifies tokens via the shared edge-safe `verifySession` (`jose`) without triggering Node-only environment crashes; API authorization itself lives in `withAuth()` at the route layer, not the proxy.
 
 ---

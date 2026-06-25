@@ -229,67 +229,6 @@ export async function findOrCreateGoogleUser(profile: GoogleProfileInput) {
   };
 }
 
-export interface FacebookProfileInput {
-  facebookId: string;
-  email: string;
-  name?: string;
-  picture?: string;
-}
-
-/**
- * Finds the user tied to this Facebook account, links an existing email
- * account on first Facebook sign-in, or creates a brand-new password-less
- * account. Email is trusted for linking because Facebook only hands back the
- * `email` field for accounts it has already confirmed (the caller checks for
- * its presence before calling this).
- */
-export async function findOrCreateFacebookUser(profile: FacebookProfileInput) {
-  const byFacebookId = await queryOne<UserRow>('SELECT * FROM users WHERE facebook_id = ? LIMIT 1', [
-    profile.facebookId,
-  ]);
-  if (byFacebookId) {
-    if (byFacebookId.is_active === 0) {
-      return { success: false, message: 'This account has been deactivated.' };
-    }
-    await execute(`UPDATE users SET last_login_at = NOW() WHERE id = ?`, [byFacebookId.id]);
-    const { password, ...safeUser } = byFacebookId;
-    return { success: true, message: 'Login successful', user: normalizeAvatar(safeUser) };
-  }
-
-  const byEmail = await queryOne<UserRow>('SELECT * FROM users WHERE email = ? LIMIT 1', [profile.email]);
-  if (byEmail) {
-    if (byEmail.is_active === 0) {
-      return { success: false, message: 'This account has been deactivated.' };
-    }
-    await execute(`UPDATE users SET facebook_id = ?, last_login_at = NOW() WHERE id = ?`, [
-      profile.facebookId,
-      byEmail.id,
-    ]);
-    const { password, ...safeUser } = byEmail;
-    return { success: true, message: 'Login successful', user: normalizeAvatar(safeUser) };
-  }
-
-  const username = await uniqueUsername(usernameFromEmail(profile.email));
-  const res = await execute(
-    `INSERT INTO users (username, email, facebook_id, avatar, is_verified, last_login_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 1, NOW(), NOW(), NOW())`,
-    [username, profile.email, profile.facebookId, profile.picture || null]
-  );
-
-  return {
-    success: true,
-    message: 'Account created successfully',
-    user: normalizeAvatar({
-      id: res.insertId,
-      username,
-      email: profile.email,
-      avatar: profile.picture || null,
-      role: 'user' as const,
-      token_version: 0,
-    }),
-  };
-}
-
 export async function updateOnlineStatus(userId: number, isIdle: number = 0) {
   try {
     await execute(

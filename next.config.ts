@@ -11,14 +11,13 @@ const nextConfig: NextConfig = {
     // Avatar/post-image uploads (sharp → Vercel Blob, see lib/uploads.ts) live
     // on Blob's own subdomain. The db:seed script assigns pravatar.cc URLs —
     // allow that host so seeded dev data renders through next/image instead of
-    // throwing "hostname not configured". OAuth sign-in (Google/Facebook)
-    // stores the provider's profile-picture URL verbatim in `users.avatar`, so
-    // their photo CDNs need the same allowance. Add other hosts here if the
+    // throwing "hostname not configured". OAuth sign-in (Google) stores the
+    // provider's profile-picture URL verbatim in `users.avatar`, so its photo
+    // CDN needs the same allowance. Add other hosts here if the
     // upload pipeline ever stores remote URLs from a new provider.
     remotePatterns: [
       { protocol: "https", hostname: "i.pravatar.cc" },
       { protocol: "https", hostname: "*.googleusercontent.com" },
-      { protocol: "https", hostname: "platform-lookaside.fbsbx.com" },
       { protocol: "https", hostname: "*.public.blob.vercel-storage.com" },
     ],
   },
