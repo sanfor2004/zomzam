@@ -6,6 +6,8 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw } from 'lucide-react';
+import { FollowButton } from '@/components/social/FollowButton';
+import { SignInPrompt } from '@/components/social/SignInPrompt';
 
 interface Post {
   id: number;
@@ -24,6 +26,9 @@ interface Post {
   like_count: number;
   comment_count: number;
   liked_by_me: boolean;
+  bookmarked_by_me?: boolean;
+  is_following?: boolean;
+  is_friend?: boolean;
 }
 
 interface Comment {
@@ -85,6 +90,8 @@ export default function PostDetail({
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  // Public page: an anonymous tap on follow/bookmark/repost opens this prompt.
+  const [signInOpen, setSignInOpen] = useState(false);
 
   // Favor economy: ask resolution state is mutable here (owner accepts/resolves).
   const [acceptedId, setAcceptedId] = useState<number | null>(post.accepted_answer_id ?? null);
@@ -200,6 +207,8 @@ export default function PostDetail({
   return (
     <div ref={containerRef} className="space-y-5">
 
+      <SignInPrompt open={signInOpen} onClose={() => setSignInOpen(false)} action="follow people, save & repost" />
+
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: BREADCRUMB
           Contains: Back link to author profile
@@ -262,13 +271,25 @@ export default function PostDetail({
               </div>
             )}
           </div>
-          <time className="text-xs text-slate-500 flex-shrink-0 tabular-nums">
-            {new Date(post.created_at).toLocaleDateString(undefined, {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            })}
-          </time>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            {/* Follow: non-owner, non-friend only. Anonymous → sign-in prompt. */}
+            {!isOwner && !post.is_friend && (
+              <FollowButton
+                targetUserId={post.user_id}
+                initialIsFollowing={!!post.is_following}
+                viewerId={viewerId}
+                onRequireSignIn={() => setSignInOpen(true)}
+                size="md"
+              />
+            )}
+            <time className="text-xs text-slate-500 tabular-nums">
+              {new Date(post.created_at).toLocaleDateString(undefined, {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric',
+              })}
+            </time>
+          </div>
         </div>
 
         {/* Post content */}

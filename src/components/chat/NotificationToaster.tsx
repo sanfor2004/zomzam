@@ -24,6 +24,8 @@ function describe(n: NotificationPayload): { title: string; description: string 
       return { title: who, description: d.skill_tag ? `needs help with ${d.skill_tag}` : 'posted a help request' };
     case 'answer_accepted':
       return { title: who, description: 'accepted your answer 🎉' };
+    case 'new_follower':
+      return { title: who, description: 'started following you' };
     default:
       return { title: who, description: d.message || 'sent you a notification' };
   }

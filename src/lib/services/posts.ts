@@ -497,7 +497,9 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
            (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
            (SELECT COUNT(*) FROM post_comments  WHERE post_id = p.id) AS comment_count,
            (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
-           (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me
+           (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me,
+           (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
+           (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend
     FROM posts p
     JOIN users u ON u.id = p.user_id`;
 
@@ -518,8 +520,12 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     ? `EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`
     : `NOT EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`;
 
-  // ? order so far: liked_by_me(1), bookmarked_by_me(1), visibility(5), seen(1).
-  const baseParams: any[] = [userId, userId, userId, userId, userId, userId, userId, userId];
+  // ? order so far: liked_by_me(1), bookmarked_by_me(1), is_following(1),
+  // is_friend(2), visibility(5), seen(1) = 11.
+  const baseParams: any[] = [
+    userId, userId, userId, userId, userId, // liked, bookmarked, is_following, is_friend×2
+    userId, userId, userId, userId, userId, userId, // visibility(5) + seen(1)
+  ];
 
   // Optional help views, in SQL so they stay keyset-stable.
   let filterSql = '';
@@ -591,6 +597,8 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
       comment_count: parseInt(rest.comment_count || 0),
       liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
       bookmarked_by_me: parseInt(rest.bookmarked_by_me || 0) > 0,
+      is_following: parseInt(rest.is_following || 0) > 0,
+      is_friend: parseInt(rest.is_friend || 0) > 0,
       top_comments: [] as any[],
     };
   });
@@ -634,8 +642,9 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
            ))
       )`;
 
-  // ? order: liked_by_me(1), bookmark filter(1), visibility(5), keyset(0..1).
-  const params: number[] = [userId, userId, userId, userId, userId, userId, userId];
+  // ? order: liked_by_me(1), is_following(1), is_friend(2), bookmark filter(1),
+  // visibility(5), keyset(0..1).
+  const params: number[] = [userId, userId, userId, userId, userId, userId, userId, userId, userId, userId];
   let keysetSql = '';
   if (cursor) { keysetSql = ` AND b.id < ?`; params.push(cursor); }
 
@@ -647,6 +656,8 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
             (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
             (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
             (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
+            (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
+            (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
             1 AS bookmarked_by_me
      FROM post_bookmarks b
      JOIN posts p ON p.id = b.post_id
@@ -672,6 +683,8 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
       comment_count: parseInt(rest.comment_count || 0),
       liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
       bookmarked_by_me: true,
+      is_following: parseInt(rest.is_following || 0) > 0,
+      is_friend: parseInt(rest.is_friend || 0) > 0,
       top_comments: [] as any[],
     };
   });

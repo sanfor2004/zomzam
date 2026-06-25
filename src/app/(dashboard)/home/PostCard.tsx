@@ -11,6 +11,7 @@ import {
   HelpCircle, Trophy, CheckCircle2, Hash,
 } from 'lucide-react';
 import { Button, Tooltip, ShareButton, useToast, Modal } from '@/components/ui';
+import { FollowButton } from '@/components/social/FollowButton';
 import { PostComposer } from './PostComposer';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
@@ -259,7 +260,23 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 {isOwn ? (
                   <span className="text-xs text-slate-600 flex-shrink-0">· {relativeTime(post.created_at)}</span>
                 ) : (
-                  <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
+                  <>
+                    {/* Follow: shown for non-friends only; reflects/​toggles follow
+                        state in place. Friends never see it (they already connect). */}
+                    {!post.is_friend && (
+                      <span className="ml-auto flex items-center gap-2">
+                        <FollowButton
+                          targetUserId={post.user_id}
+                          initialIsFollowing={!!post.is_following}
+                          viewerId={currentUser?.id ?? 0}
+                        />
+                        <span className="text-xs text-slate-600 flex-shrink-0">{relativeTime(post.created_at)}</span>
+                      </span>
+                    )}
+                    {post.is_friend && (
+                      <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
+                    )}
+                  </>
                 )}
               </div>
 

@@ -46,17 +46,21 @@ export default async function PostPage({ params }: PageProps) {
   // Anonymous viewers are allowed → null
   const viewer = await getSessionUser();
 
+  const vid = viewer?.id ?? 0;
   const post = await queryOne<any>(
     `SELECT p.id, p.user_id, p.content_html, p.image_path, p.created_at,
             p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at,
             u.username, u.first_name, u.last_name, u.avatar,
-            (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
-            (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
-            (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id AND user_id = ?) AS liked_by_me
+            (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
+            (SELECT COUNT(*) FROM post_comments  WHERE post_id = p.id) AS comment_count,
+            (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
+            (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me,
+            (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
+            (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend
      FROM posts p
      JOIN users u ON u.id = p.user_id
      WHERE p.id = ?`,
-    [viewer?.id ?? 0, postIdNum]
+    [vid, vid, vid, vid, vid, postIdNum]
   );
 
   if (!post) return notFound();
@@ -78,6 +82,9 @@ export default async function PostPage({ params }: PageProps) {
     like_count: parseInt(post.like_count ?? 0),
     comment_count: parseInt(post.comment_count ?? 0),
     liked_by_me: parseInt(post.liked_by_me ?? 0) > 0,
+    bookmarked_by_me: parseInt(post.bookmarked_by_me ?? 0) > 0,
+    is_following: parseInt(post.is_following ?? 0) > 0,
+    is_friend: parseInt(post.is_friend ?? 0) > 0,
   };
 
   const normalizedComments = comments.map((c: any) => ({
