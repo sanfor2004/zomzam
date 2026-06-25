@@ -175,6 +175,10 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
           } else if (order_name === 'new_message') {
             const customEvent = new CustomEvent('zz-new-message', { detail: params });
             window.dispatchEvent(customEvent);
+          } else if (order_name === 'typing') {
+            // Transient "peer is typing" ping — handled by MessagesContext, which
+            // shows the three-dot bubble and auto-expires it.
+            window.dispatchEvent(new CustomEvent('zz-typing', { detail: params }));
           } else if (order_name === 'new_post') {
             // Someone in the viewer's network posted — let the feed surface a
             // soft "check for new posts" pill instead of yanking the scroll.

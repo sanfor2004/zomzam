@@ -206,6 +206,21 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true, message, conversation_id: conversationId });
     }
 
+    case 'typing': {
+      // Transient "peer is typing" ping. Fire-and-forget: it writes nothing to
+      // the messages table — it only appends a `typing` order to the recipient's
+      // SSE queue (touchLastSeen=false, so it never flips the recipient online).
+      // The client throttles these to ~once/2.5s and auto-expires the indicator,
+      // so there's no explicit "stopped typing" signal to send.
+      const recipientId = parseInt(body.recipient_id || 0);
+      if (!recipientId || recipientId === user.id) {
+        return NextResponse.json({ success: false, message: 'Invalid recipient' }, { status: 400 });
+      }
+
+      await pushStreamOrder(recipientId, 'typing', { sender_id: user.id }, false);
+      return NextResponse.json({ success: true });
+    }
+
     case 'mark_read': {
       const conversationId = parseInt(body.conversation_id || 0);
       if (!conversationId) {

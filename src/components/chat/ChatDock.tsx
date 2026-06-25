@@ -37,17 +37,18 @@ export function ChatDock() {
 }
 
 function ChatWindowCard({ win }: { win: ChatWindow }) {
-  const { closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead } = useMessages();
+  const { closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping } = useMessages();
   const myId = useMyId();
   const endRef = useRef<HTMLDivElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const otherId = win.otherUser.id;
   const name = displayName(win.otherUser);
 
-  // Keep the newest message in view as the thread grows or the window expands.
+  // Keep the newest message in view as the thread grows, the window expands, or
+  // the peer's typing bubble appears.
   useEffect(() => {
     if (!win.minimized) endRef.current?.scrollIntoView({ block: 'end' });
-  }, [win.messages, win.minimized]);
+  }, [win.messages, win.minimized, win.peerTyping]);
 
   // Presence: online & idle → amber, online & active → emerald, offline → slate.
   const isIdle = Boolean(win.otherUser.is_online && win.otherUser.is_idle);
@@ -146,6 +147,18 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
                 );
               })
             )}
+
+            {/* ── Typing indicator (peer is composing) ── */}
+            {win.peerTyping && (
+              <div className="flex justify-start" aria-label={`${name} is typing`}>
+                <div className="bg-slate-800/70 rounded-2xl rounded-bl-md px-3.5 py-2.5 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
+                </div>
+              </div>
+            )}
+
             <div ref={endRef} />
           </div>
 
@@ -190,7 +203,10 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             <input
               type="text"
               value={win.text}
-              onChange={(e) => setDraft(otherId, e.target.value)}
+              onChange={(e) => {
+                setDraft(otherId, e.target.value);
+                if (e.target.value.trim()) notifyTyping(otherId);
+              }}
               onFocus={() => markConversationRead(otherId)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(otherId); }

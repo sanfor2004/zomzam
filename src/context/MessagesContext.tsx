@@ -65,6 +65,8 @@ export interface ChatWindow {
   minimized: boolean;
   /** True while a peek-loaded window still has unread messages not yet marked read. */
   unread: boolean;
+  /** True while the peer is actively typing — drives the three-dot bubble. Auto-expires. */
+  peerTyping?: boolean;
 }
 
 interface MessagesContextType {
@@ -78,6 +80,8 @@ interface MessagesContextType {
   setDraft: (otherId: number, text: string) => void;
   sendMessage: (otherId: number) => Promise<void>;
   markConversationRead: (otherId: number) => void;
+  /** Tell the peer we're typing — throttled, fire-and-forget. */
+  notifyTyping: (otherId: number) => void;
 }
 
 const MessagesContext = createContext<MessagesContextType | undefined>(undefined);
@@ -176,6 +180,24 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     setWindows((prev) => prev.map((w) => (w.otherUser.id === otherId ? { ...w, text } : w)));
   }, []);
 
+  // ── Outgoing typing pings ───────────────────────────────────
+  // Throttle to at most one POST per peer every 2.5s. The recipient's indicator
+  // auto-expires ~4s after the last ping (see the zz-typing listener below), so a
+  // steady stream of keystrokes keeps it alive and a pause lets it fade — no
+  // explicit "stopped typing" message is needed.
+  const typingThrottleRef = useRef<Map<number, number>>(new Map());
+  const notifyTyping = useCallback((otherId: number) => {
+    const now = Date.now();
+    const last = typingThrottleRef.current.get(otherId) || 0;
+    if (now - last < 2500) return;
+    typingThrottleRef.current.set(otherId, now);
+    fetch('/api/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'typing', recipient_id: otherId }),
+    }).catch(() => {});
+  }, []);
+
   const markConversationRead = useCallback((otherId: number) => {
     setWindows((prev) => prev.map((w) => {
       if (w.otherUser.id !== otherId || !w.unread) return w;
@@ -257,12 +279,13 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
         setWindows((prev) => prev.map((w) => {
           if (w.otherUser.id !== senderId) return w;
           const messages = [...w.messages, message];
+          // A delivered message ends any "typing" state from that peer.
           // Window open & expanded → user is looking, mark read. Minimized → flag unread.
           if (!w.minimized) {
             markConversationReadApi(conversation_id);
-            return { ...w, messages, conversationId: conversation_id, unread: false };
+            return { ...w, messages, conversationId: conversation_id, unread: false, peerTyping: false };
           }
-          return { ...w, messages, conversationId: conversation_id, unread: true };
+          return { ...w, messages, conversationId: conversation_id, unread: true, peerTyping: false };
         }));
       } else if (sender) {
         // Auto-pop a fresh window for the sender, loaded WITHOUT marking read.
@@ -297,6 +320,37 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('zz-new-message', onNewMessage);
   }, [hydrateWindow, loadContacts, markConversationReadApi]);
 
+  // ── Incoming typing indicator ───────────────────────────────
+  // Flip `peerTyping` on the matching open window and (re)arm a ~4s auto-expire
+  // timer. We only show it for windows that are already open — a typing ping
+  // never pops a new window (that would be noisy); the message itself will.
+  const typingTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
+  useEffect(() => {
+    const timers = typingTimersRef.current;
+    const onTyping = (e: Event) => {
+      const { sender_id } = (e as CustomEvent).detail || {};
+      if (!sender_id) return;
+
+      setWindows((prev) => {
+        if (!prev.some((w) => w.otherUser.id === sender_id)) return prev;
+        return prev.map((w) => (w.otherUser.id === sender_id ? { ...w, peerTyping: true } : w));
+      });
+
+      const existing = timers.get(sender_id);
+      if (existing) clearTimeout(existing);
+      timers.set(sender_id, setTimeout(() => {
+        setWindows((prev) => prev.map((w) => (w.otherUser.id === sender_id ? { ...w, peerTyping: false } : w)));
+        timers.delete(sender_id);
+      }, 4000));
+    };
+    window.addEventListener('zz-typing', onTyping);
+    return () => {
+      window.removeEventListener('zz-typing', onTyping);
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
+  }, []);
+
   // ── Bootstrap + presence freshness ──────────────────────────
   // Initial load, then a light poll every 20s keeps presence dots and the
   // last-chatted ordering fresh (SSE delivers messages instantly; this is just
@@ -314,8 +368,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<MessagesContextType>(() => ({
     contacts, unreadTotal, windows,
-    loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead,
-  }), [contacts, unreadTotal, windows, loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead]);
+    loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping,
+  }), [contacts, unreadTotal, windows, loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping]);
 
   // Expose the current user id to consumers that render message bubbles.
   return (
