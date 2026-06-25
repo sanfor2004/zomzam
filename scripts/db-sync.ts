@@ -271,6 +271,15 @@ const schema: Record<string, Record<string, string>> = {
     seen: 'TINYINT(1) NOT NULL DEFAULT 1',          // true/false read flag (room for "delivered, not seen" later)
     seen_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Private saved-posts: one row per (user, post). Its presence means the viewer
+  // bookmarked that post; the /saved page reverse-chrons these (visibility
+  // re-checked at read time so a since-hidden post never leaks).
+  post_bookmarks: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   // Append-only log the future credits engine consumes (NOT a ledger): one row
   // each time an asker accepts an answer. No balance is ever touched here.
   helpful_events: {
@@ -310,6 +319,10 @@ const indexes: Record<string, Record<string, string>> = {
   post_views: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',  // upsert target for mark_seen
     idx_user_seen: 'INDEX idx_user_seen (user_id, seen)',          // "my unseen" NOT EXISTS filter
+  },
+  post_bookmarks: {
+    uq_user_post: 'UNIQUE INDEX uq_user_post (user_id, post_id)',  // toggle target + one-per-user
+    idx_user_id: 'INDEX idx_user_id (user_id, id)',                // newest-saved-first keyset
   },
 };
 

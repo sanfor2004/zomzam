@@ -14,7 +14,7 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { RightSidebar } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, Bookmark, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +56,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // Flat icon nav used in collapsed mode (groups → their primary page).
   const collapsedNav: { Icon: LucideIcon; label: string; path: string; badge?: number }[] = [
     { Icon: Home, label: t('nav_home') || 'Home', path: '/home' },
+    { Icon: Bookmark, label: 'Saved', path: '/saved' },
     { Icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadTotal },
     { Icon: Clock, label: t('nav_time') || 'Time', path: '/time/execution' },
     { Icon: DollarSign, label: t('nav_money') || 'Money', path: '/money/dashboard' },
@@ -130,6 +131,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // desktop sidebar minus the parked CRM/Dashboard suites.
   const mobileNavLinks: { label: string; path: string; Icon: LucideIcon }[] = [
     { label: t('nav_home') || 'Home', path: '/home', Icon: Home },
+    { label: 'Saved Posts', path: '/saved', Icon: Bookmark },
     { label: 'Pomodoro Focus', path: '/time/execution', Icon: Clock },
     { label: 'Task Board', path: '/time/tasks', Icon: ListChecks },
     { label: 'Ledger Overview', path: '/money/dashboard', Icon: DollarSign },
@@ -300,6 +302,15 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           >
             <Home className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_home') || 'Home'}</span>
+          </Button>
+
+          {/* Saved */}
+          <Button variant="unstyled"
+            onClick={() => router.push('/saved')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/saved')}`}
+          >
+            <Bookmark className="w-5 h-5 flex-shrink-0" />
+            <span>Saved</span>
           </Button>
 
           {/* Messages */}

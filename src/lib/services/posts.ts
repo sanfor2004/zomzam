@@ -346,6 +346,23 @@ export async function toggleLike(userId: number, postId: number): Promise<{ like
   return { liked: true };
 }
 
+/**
+ * Toggle a private bookmark on a post. One row per (user, post) — its presence
+ * means saved. Id-scoped to the session user (a viewer can only ever toggle their
+ * own bookmark). No visibility check here: a saved row for a now-hidden post is
+ * harmless because getSaved re-applies the feed visibility rule at read time.
+ */
+export async function toggleBookmark(userId: number, postId: number): Promise<{ bookmarked: boolean }> {
+  if (!postId) throw new HttpError(400, 'post_id required');
+  const existing = await queryOne(`SELECT id FROM post_bookmarks WHERE post_id = ? AND user_id = ?`, [postId, userId]);
+  if (existing) {
+    await execute(`DELETE FROM post_bookmarks WHERE post_id = ? AND user_id = ?`, [postId, userId]);
+    return { bookmarked: false };
+  }
+  await execute(`INSERT INTO post_bookmarks (post_id, user_id) VALUES (?, ?)`, [postId, userId]);
+  return { bookmarked: true };
+}
+
 export async function toggleCommentVote(userId: number, commentId: number): Promise<{ upvoted: boolean }> {
   if (!commentId) throw new HttpError(400, 'comment_id required');
   const existing = await queryOne(`SELECT id FROM comment_votes WHERE comment_id = ? AND user_id = ?`, [commentId, userId]);
@@ -477,9 +494,10 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
            u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
-           (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
-           (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
-           (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id AND user_id = ?) AS liked_by_me
+           (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
+           (SELECT COUNT(*) FROM post_comments  WHERE post_id = p.id) AS comment_count,
+           (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
+           (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me
     FROM posts p
     JOIN users u ON u.id = p.user_id`;
 
@@ -500,8 +518,8 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     ? `EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`
     : `NOT EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`;
 
-  // ? order so far: liked_by_me(1), visibility(5), seen(1).
-  const baseParams: any[] = [userId, userId, userId, userId, userId, userId, userId];
+  // ? order so far: liked_by_me(1), bookmarked_by_me(1), visibility(5), seen(1).
+  const baseParams: any[] = [userId, userId, userId, userId, userId, userId, userId, userId];
 
   // Optional help views, in SQL so they stay keyset-stable.
   let filterSql = '';
@@ -572,6 +590,7 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
       like_count: parseInt(rest.like_count || 0),
       comment_count: parseInt(rest.comment_count || 0),
       liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
+      bookmarked_by_me: parseInt(rest.bookmarked_by_me || 0) > 0,
       top_comments: [] as any[],
     };
   });
@@ -584,6 +603,82 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     : null;
 
   return { posts: normalized, next_cursor, has_more: hasMore, tier };
+}
+
+export interface GetSavedOptions {
+  cursor?: number | null; // keyset on post_bookmarks.id (newest-saved-first)
+  limit?: number;
+}
+
+/**
+ * The viewer's bookmarked posts, newest-saved-first, keyset-paginated on
+ * post_bookmarks.id. Re-applies the SAME visibility rule as the feed (public,
+ * own, or friends/follows-only that the viewer still has access to) — so a post
+ * the viewer has since lost access to, or that was deleted, silently drops out
+ * instead of leaking (the INNER JOIN already excludes deleted posts). All rows
+ * are bookmarked by definition, so bookmarked_by_me is a literal 1.
+ */
+export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
+  const limit = Math.min(Math.max(1, opts.limit ?? 10), 20);
+  const cursor = opts.cursor && opts.cursor > 0 ? opts.cursor : null;
+
+  const VISIBILITY = `(
+        p.visibility = 'public'
+        OR p.user_id = ?
+        OR (p.visibility = 'friends' AND p.user_id IN (
+             SELECT addressee_id FROM user_connections
+               WHERE requester_id = ? AND type = 'follow' AND status = 'accepted'
+             UNION
+             SELECT IF(requester_id = ?, addressee_id, requester_id) FROM user_connections
+               WHERE (requester_id = ? OR addressee_id = ?) AND type = 'friend' AND status = 'accepted'
+           ))
+      )`;
+
+  // ? order: liked_by_me(1), bookmark filter(1), visibility(5), keyset(0..1).
+  const params: number[] = [userId, userId, userId, userId, userId, userId, userId];
+  let keysetSql = '';
+  if (cursor) { keysetSql = ` AND b.id < ?`; params.push(cursor); }
+
+  const rows = await query(
+    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
+            u.username, u.first_name, u.last_name, u.avatar,
+            b.id AS bookmark_id,
+            (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
+            (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
+            (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
+            1 AS bookmarked_by_me
+     FROM post_bookmarks b
+     JOIN posts p ON p.id = b.post_id
+     JOIN users u ON u.id = p.user_id
+     WHERE b.user_id = ? AND ${VISIBILITY}${keysetSql}
+     ORDER BY b.id DESC LIMIT ${limit}`,
+    params
+  );
+
+  const hasMore = rows.length === limit;
+  // Next cursor is the smallest bookmark id in this page (keyset on b.id DESC).
+  // Read from the raw rows before bookmark_id is dropped from the wire shape.
+  const next_cursor = hasMore && rows.length
+    ? Math.min(...rows.map((r) => Number(r.bookmark_id)))
+    : null;
+
+  const normalized = rows.map((p) => {
+    const { bookmark_id, ...rest } = p;
+    void bookmark_id; // internal keyset field — excluded from the wire shape
+    return {
+      ...normalizeAvatar(rest),
+      like_count: parseInt(rest.like_count || 0),
+      comment_count: parseInt(rest.comment_count || 0),
+      liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
+      bookmarked_by_me: true,
+      top_comments: [] as any[],
+    };
+  });
+
+  await embedTopComments(userId, normalized);
+
+  return { posts: normalized, next_cursor, has_more: hasMore };
 }
 
 /**

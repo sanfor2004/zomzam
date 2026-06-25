@@ -109,6 +109,9 @@ export const POST = withAuth(async (request, user) => {
     case 'like':
       return NextResponse.json({ success: true, ...await posts.toggleLike(user.id, parseInt(body.post_id || 0)) });
 
+    case 'bookmark':
+      return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
+
     case 'comment_vote':
       return NextResponse.json({ success: true, ...await posts.toggleCommentVote(user.id, parseInt(body.comment_id || 0)) });
 
@@ -163,6 +166,15 @@ export const GET = withAuth(async (request, user) => {
           limit,
           filter: searchParams.get('filter') || undefined,
         }),
+      });
+    }
+
+    case 'saved': {
+      // The viewer's bookmarked posts, newest-saved-first, keyset on bookmark id.
+      const cursor = parseInt(searchParams.get('cursor') || '0') || null;
+      return NextResponse.json({
+        success: true,
+        ...await posts.getSaved(user.id, { cursor, limit }),
       });
     }
 

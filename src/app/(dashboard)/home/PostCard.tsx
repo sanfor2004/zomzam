@@ -7,7 +7,7 @@ import Image from 'next/image';
 import { gsap } from '@/lib/gsap';
 import {
   Loader2, Heart, MessageCircle, Trash2,
-  Check, ArrowBigUp, Pencil,
+  Check, ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
   HelpCircle, Trophy, CheckCircle2, Hash,
 } from 'lucide-react';
 import { Button, Tooltip, ShareButton, useToast, Modal } from '@/components/ui';
@@ -21,11 +21,14 @@ import {
 // list). memo'd so composer keystrokes (and other host-page state churn) don't
 // re-render every mounted card — only cards whose own props actually change
 // re-render. Relies on `onDelete`/`onEdited` being stable useCallbacks in the host.
-export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, currentUser, friends, observe }: {
+export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, onUnbookmark, currentUser, friends, observe }: {
   post: Post;
   isOwn: boolean;
   onDelete: (id: number) => void;
   onEdited: (post: Post) => void;
+  /** Called when the viewer un-bookmarks. The /saved page passes this to drop
+   *  the card from the list; the feed omits it (the card stays, icon just empties). */
+  onUnbookmark?: (id: number) => void;
   currentUser: CurrentUser | null;
   friends: MentionUser[];
   observe: (el: HTMLElement | null, postId: number) => void;
@@ -39,6 +42,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [postDeleting, setPostDeleting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [bookmarked, setBookmarked] = useState(!!post.bookmarked_by_me);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
@@ -141,6 +145,21 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
       tl.to(heartIconRef.current, { scale: 1.5, duration: 0.12, ease: 'power2.out' })
         .to(heartIconRef.current, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
     });
+  };
+
+  // Optimistic private bookmark toggle. On the /saved page an un-bookmark drops
+  // the card via onUnbookmark; in the feed the icon just empties.
+  const toggleBookmark = async () => {
+    const next = !bookmarked;
+    setBookmarked(next);
+    try {
+      await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bookmark', post_id: post.id }),
+      });
+      if (!next) onUnbookmark?.(post.id);
+    } catch { /* non-blocking */ }
   };
 
   return (
@@ -332,12 +351,28 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             </Tooltip>
           </div>
 
-          {/* Right: Share */}
-          <ShareButton
-            url={`/p/${post.id}`}
-            shareTitle={`${name} on Zomzam`}
-            className="text-slate-400 hover:text-slate-200 transition-colors"
-          />
+          {/* Right group: Bookmark + Share (icon-only, no counts) */}
+          <div className="flex items-center gap-4">
+            <Tooltip content={bookmarked ? 'Saved' : 'Save'}>
+              <Button
+                variant="unstyled"
+                onClick={toggleBookmark}
+                aria-label={bookmarked ? 'Remove from saved' : 'Save post'}
+                aria-pressed={bookmarked}
+                className={`flex items-center transition-colors ${
+                  bookmarked ? 'text-primary-500' : 'text-slate-400 hover:text-primary-400'
+                }`}
+              >
+                {bookmarked ? <BookmarkCheck className="w-4 h-4" fill="currentColor" /> : <Bookmark className="w-4 h-4" />}
+              </Button>
+            </Tooltip>
+
+            <ShareButton
+              url={`/p/${post.id}`}
+              shareTitle={`${name} on Zomzam`}
+              className="text-slate-400 hover:text-slate-200 transition-colors"
+            />
+          </div>
         </div>
       </div>
 
