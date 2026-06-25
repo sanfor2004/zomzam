@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Users, X, MessagesSquare, MessageSquarePlus, Search, UserPlus, Check } from 'lucide-react';
+import { Users, X, MessagesSquare, MessageSquarePlus, Search, UserPlus, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button, Input, Tooltip } from '@/components/ui';
 import { useMessages, useMyId, type ChatContact, type ChatUser } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
@@ -318,17 +318,95 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/** Collapsed mode: a slim strip of avatars — people you're chatting with, then
+ *  online friends. Click opens a chat. */
+function CollapsedRail() {
+  const { contacts, openChat } = useMessages();
+  const router = useRouter();
+
+  const threads = contacts.filter((c) => c.conversation_id);
+  const online = contacts.filter((c) => c.is_online && !c.conversation_id);
+  const shown = [...threads, ...online].slice(0, 16);
+
+  return (
+    <div className="flex flex-col items-center gap-2 py-2">
+      <button
+        type="button"
+        onClick={() => router.push('/messages')}
+        title="Open Messenger"
+        aria-label="Open Messenger"
+        className="w-10 h-10 rounded-2xl bg-white/[0.05] hover:bg-primary-500/15 text-slate-400 hover:text-primary-400 flex items-center justify-center transition-colors"
+      >
+        <MessagesSquare className="w-4 h-4" />
+      </button>
+      {shown.length > 0 && <div className="w-8 h-px bg-slate-800/80 my-1" />}
+      {shown.map((c) => (
+        <button
+          key={c.other_id}
+          type="button"
+          onClick={() => openChat(toChatUser(c), c.conversation_id)}
+          title={`${displayName(c)}${c.is_online ? (c.is_idle ? ' · Away' : ' · Active now') : ''}`}
+          className="relative"
+        >
+          <Image
+            src={c.avatar || '/Assets/Img/default-avatar.png'}
+            alt={displayName(c)}
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-2xl object-cover border border-slate-800 hover:border-primary-500/40 transition-colors"
+          />
+          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface-dark ${DOT[bucketOf(c)]}`} />
+          {c.unread_count > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-surface-dark">
+              {c.unread_count}
+            </span>
+          )}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function RightSidebar() {
   const { unreadTotal, windows } = useMessages();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Collapsible (icon/avatar-only) — persisted like the left rail.
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { setCollapsed(localStorage.getItem('zz-right-collapsed') === '1'); } catch {}
+  }, []);
+  const toggle = () => setCollapsed((v) => {
+    const next = !v;
+    try { localStorage.setItem('zz-right-collapsed', next ? '1' : '0'); } catch {}
+    return next;
+  });
+
   return (
     <>
       {/* ── Desktop column ── */}
-      <aside className="hidden lg:block w-72 flex-shrink-0 m-2.5 relative z-10">
-        <div className="h-[calc(100vh-20px)] overflow-y-auto pr-0.5">
-          <SidebarBody />
+      <aside className={`hidden lg:flex flex-col ${collapsed ? 'w-[76px]' : 'w-72'} h-[calc(100vh-20px)] flex-shrink-0 my-2.5 mr-2.5 relative z-10 transition-all duration-300`}>
+        <div className="flex-1 overflow-y-auto no-scrollbar">
+          {collapsed ? <CollapsedRail /> : <SidebarBody />}
         </div>
+
+        {/* Collapse toggle */}
+        <button
+          type="button"
+          onClick={toggle}
+          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={collapsed ? 'Expand' : 'Collapse'}
+          className={`mt-1 flex items-center gap-2 rounded-xl px-3 py-2 text-slate-500 hover:text-white hover:bg-white/[0.05] transition-colors ${collapsed ? 'justify-center' : 'justify-start'}`}
+        >
+          {collapsed ? (
+            <ChevronLeft className="w-5 h-5" />
+          ) : (
+            <>
+              <ChevronRight className="w-5 h-5" />
+              <span className="text-xs font-semibold">Collapse</span>
+            </>
+          )}
+        </button>
       </aside>
 
       {/* ── Mobile toggle (FAB) — hidden while a chat window occupies the corner ── */}

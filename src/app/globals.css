@@ -103,6 +103,17 @@
   100% { background-position: 200% 0; }
 }
 
+/* Scrollable region that still scrolls (wheel/touch/keys) but hides the visible
+   scrollbar — used by the side rails so a tall friends/messages list doesn't show
+   an ugly overflow scrollbar. */
+.no-scrollbar {
+  -ms-overflow-style: none;     /* IE/Edge */
+  scrollbar-width: none;        /* Firefox */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;                /* Chrome/Safari */
+}
+
 /* ──────────────────────────────────────────────────────────
    Win-post shine: a one-shot diagonal sheen that sweeps across a `win` post
    card when it mounts — a calm, premium replacement for the old confetti burst.
