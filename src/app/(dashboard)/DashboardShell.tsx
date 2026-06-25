@@ -238,21 +238,22 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AMBIENT BACKGROUND
-          Contains: Fixed full-bleed static gradient behind all content.
-          Replaces the former LiquidEther WebGL fluid sim (P3 perf pass): that
-          ran a non-stop requestAnimationFrame fluid solver (~11s TBT, on every
-          route, mobile and desktop) for an 18%-opacity effect almost nobody
-          could see. This gradient is zero-cost — no JS, no compositor work, no
-          battery drain. A faint slate lift up top + a soft bottom vignette add
-          depth without any glow. pointer-events-none keeps the UI interactive.
+          One cohesive, full-bleed linear gradient shared by EVERY dashboard
+          route (the shell wraps them all), so the whole app reads as a single
+          surface instead of a flat slab. Top is a hair lighter + a faint warm
+          Zomzam-orange spotlight; it deepens toward the bottom for depth. Fixed
+          + zero-cost (no JS/WebGL — the old LiquidEther fluid sim was removed in
+          the P3 perf pass). pointer-events-none keeps the UI interactive.
+          Translucent sidebars (surface-dark/90) sit over it and pick up the
+          gradient, tying the chrome to the page.
           ────────────────────────────────────────────────────────── */}
       <div
         aria-hidden="true"
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(120% 80% at 50% 0%, rgba(123,116,129,0.06) 0%, transparent 55%), ' +
-            'linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.22) 100%)',
+            'radial-gradient(110% 55% at 50% 0%, rgba(238,87,18,0.05) 0%, transparent 55%), ' +
+            'linear-gradient(180deg, #15171d 0%, #111318 52%, #0b0d11 100%)',
         }}
       />
 
