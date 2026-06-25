@@ -11,7 +11,7 @@ import { MoneyProvider } from '@/context/MoneyContext';
 import { CurrentUserProvider } from '@/context/CurrentUserContext';
 import { MessagesProvider, useMessages, type ChatContact } from '@/context/MessagesContext';
 import { ChatDock } from '@/components/chat/ChatDock';
-import { PresenceRail } from '@/components/chat/PresenceRail';
+import { RightSidebar } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
 import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, type LucideIcon } from 'lucide-react';
@@ -716,10 +716,11 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
       </div>
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: PRESENCE RAIL (right)
-          Live friends online/away/offline list (desktop column + mobile drawer).
+          DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR (global)
+          Messages + Active Now (presence) + Suggested. Desktop column + mobile
+          drawer. Lifted out of /home so it's a persistent right navbar.
           ────────────────────────────────────────────────────────── */}
-      <PresenceRail />
+      <RightSidebar />
 
       {/* Global overlays: docked chat windows + live notification toasts. */}
       <ChatDock />

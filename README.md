@@ -123,7 +123,7 @@ zomzam.com/
 │   │
 │   ├── components/
 │   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + index.ts barrel
-│   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), PresenceRail (friends online/away/offline), NotificationToaster (live toast)
+│   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), RightSidebar (persistent right nav: Messages + Active Now presence + Suggested), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
 │   │   ├── ErrorReporter.tsx    # Global client error listener (uncaught errors + unhandled rejections → /api/report-error)
 │   │   └── Silk.tsx              # React Three Fiber shader background (landing page, desktop-gated)
@@ -173,7 +173,7 @@ zomzam.com/
 | `/sign` | Public (redirects away if logged in) | Unified Sign In / Sign Up split-screen, OrbitRings ambient background. |
 | `/forgot-password` | Public | Request a password-reset token. |
 | `/pricing` | Public | Plans & pricing — the free social core vs the paid Pro/Agency tiers that unlock the CRM + Leads suite; monthly/annual toggle, subscribe CTAs. |
-| `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill), right sidebar. |
+| `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill). The social right sidebar (Messages / Active Now / Suggested) is now global in the shell, not per-page. |
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
 | `/p/[postId]` | Protected | Permalink view for a single post (deep-linkable from the feed). |
 | `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |

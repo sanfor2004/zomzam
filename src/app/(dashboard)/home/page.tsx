@@ -8,64 +8,24 @@ import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Loader2, Heart, MessageCircle, Trash2,
-  UserPlus, Check, Users, ArrowBigUp, Pencil,
-  MessageSquarePlus, Search, MessagesSquare,
+  Check, ArrowBigUp, Pencil, MessagesSquare,
   HelpCircle, Trophy, CheckCircle2, Hash, Sparkles, ArrowUp,
 } from 'lucide-react';
-import { Button, Tooltip, ShareButton, useToast, Modal, Input } from '@/components/ui';
-import { useMessages, type ChatContact } from '@/context/MessagesContext';
+import { Button, Tooltip, ShareButton, useToast, Modal } from '@/components/ui';
 import { PostComposer } from './PostComposer';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
 } from './shared';
 
-interface SuggestedUser {
-  id: number;
-  username: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar: string;
-  bio?: string | null;
-  matching_tags?: string[];
-}
-
 export default function HomePage() {
-  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  // friends is still needed for the composer's @mention autocomplete + edit modal.
   const [friends, setFriends] = useState<MentionUser[]>([]);
-  const [peopleSuggestions, setPeopleSuggestions] = useState<SuggestedUser[]>([]);
-  const [sentRequests, setSentRequests] = useState<Set<number>>(new Set());
-
-  // ── Direct messages ─────────────────────────────────────────
-  // Messaging now lives in the global MessagesContext (topbar dropdown, ChatDock,
-  // presence rail all share it). The /home panel is just another view: it lists
-  // existing conversations and opens a docked chat window on click.
-  const { contacts, openChat } = useMessages();
-  const [messagesSearch, setMessagesSearch] = useState('');
 
   // ── New-posts pill ──────────────────────────────────────────
   // Live SSE `zz-new-post` signals from people in the network bump this counter;
   // a soft pill offers to refresh instead of yanking the user's scroll position.
   const [newPostsCount, setNewPostsCount] = useState(0);
-
-  const openContactChat = useCallback((c: ChatContact) => {
-    openChat(
-      {
-        id: c.other_id,
-        username: c.username,
-        first_name: c.first_name,
-        last_name: c.last_name,
-        avatar: c.avatar,
-        online_label: c.online_label,
-        is_online: c.is_online,
-      },
-      c.conversation_id,
-    );
-  }, [openChat]);
-
-  // Friends we already share a conversation with (already ordered most-recent
-  // first by the API), for the /home Messages panel.
-  const messageThreads = contacts.filter((c) => c.conversation_id);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -115,26 +75,7 @@ export default function HomePage() {
         if (data.success) setFriends(data.friends || []);
       } catch { /* non-blocking */ }
     })();
-
-    (async () => {
-      try {
-        const res = await fetch('/api/social?action=discover');
-        const data = await res.json();
-        if (data.success) setPeopleSuggestions((data.users || []).slice(0, 5));
-      } catch { /* non-blocking */ }
-    })();
   }, []);
-
-  const handleAddFriend = async (userId: number) => {
-    setSentRequests((prev) => new Set(prev).add(userId));
-    try {
-      await fetch('/api/social', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'friend_request', user_id: userId }),
-      });
-    } catch { /* non-blocking */ }
-  };
 
   // ── Feed loading ────────────────────────────────────────────
   const loadFeed = useCallback(async (offset = 0) => {
@@ -220,14 +161,15 @@ export default function HomePage() {
         DEVELOPMENT NAVIGATOR: HOME / COMMUNITY FEED
         Contains: Post composer, infinite-scroll feed, right sidebar
         ────────────────────────────────────────────────────────── */
-    <div ref={containerRef} className="max-w-6xl mx-auto relative animate-in">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: MAIN FEED COLUMN
-            Contains: Composer card, post feed with infinite scroll
-            ────────────────────────────────────────────────────────── */}
-        <div ref={feedRef} className="lg:col-span-2 space-y-4">
+    <div ref={containerRef} className="max-w-2xl mx-auto relative animate-in">
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: MAIN FEED (single column)
+          Contains: Composer card, post feed with infinite scroll. The social
+          right sidebar (Messages / Active Now / Suggested) now lives globally
+          in the dashboard shell (RightSidebar), not per-page here.
+          ────────────────────────────────────────────────────────── */}
+      <div>
+        <div ref={feedRef} className="space-y-4">
 
           <div id="post-composer">
             <PostComposer currentUser={currentUser} friends={friends} onPosted={handlePostCreated} />
@@ -322,232 +264,6 @@ export default function HomePage() {
             </>
           )}
         </div>
-
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR
-            Contains: Messages panel, My Friends list, Suggested For You
-            ────────────────────────────────────────────────────────── */}
-        <aside className="hidden lg:block self-start lg:sticky lg:top-0">
-          <div className="space-y-4">
-
-            {/* ──────────────────────────────────────────────────────────
-                DEVELOPMENT NAVIGATOR: MESSAGES PANEL
-                Contains: header + compose button, search, conversation list
-                ────────────────────────────────────────────────────────── */}
-            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <MessagesSquare className="w-4 h-4 text-slate-400" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Messages
-                  </h3>
-                  {messageThreads.some((c) => c.unread_count > 0) && (
-                    <span className="text-[10px] font-bold bg-primary-500 text-white px-1.5 py-0.5 rounded-full">
-                      {messageThreads.reduce((sum, c) => sum + c.unread_count, 0)}
-                    </span>
-                  )}
-                </div>
-                <Tooltip content="Open Messenger">
-                  <Button
-                    variant="unstyled"
-                    onClick={() => router.push('/messages')}
-                    aria-label="Open Messenger"
-                    className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary-400 hover:bg-white/[0.04] transition-colors"
-                  >
-                    <MessageSquarePlus className="w-4 h-4" />
-                  </Button>
-                </Tooltip>
-              </div>
-
-              {messageThreads.length > 0 && (
-                <Input
-                  size="sm"
-                  value={messagesSearch}
-                  onChange={(e) => setMessagesSearch(e.target.value)}
-                  placeholder="Search messages..."
-                  leftIcon={<Search className="w-3.5 h-3.5" />}
-                  containerClassName="mb-3"
-                />
-              )}
-
-              {messageThreads.length === 0 ? (
-                <p className="text-xs text-slate-600 text-center py-4">
-                  No conversations yet — start one from your friends.
-                </p>
-              ) : (
-                <div className="space-y-1 -mx-1.5">
-                  {messageThreads
-                    .filter((c) => {
-                      const q = messagesSearch.trim().toLowerCase();
-                      if (!q) return true;
-                      return displayName(c).toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
-                    })
-                    .map((c) => (
-                      <button
-                        key={c.other_id}
-                        onClick={() => openContactChat(c)}
-                        className="w-full flex items-center gap-3 text-left rounded-xl px-1.5 py-1.5 hover:bg-white/[0.03] transition-colors"
-                      >
-                        <div className="relative flex-shrink-0">
-                          <Image
-                            src={c.avatar || '/Assets/Img/default-avatar.png'}
-                            alt={displayName(c)}
-                            width={36}
-                            height={36}
-                            className="w-9 h-9 rounded-xl object-cover border border-slate-800"
-                          />
-                          <span
-                            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${
-                              c.is_online ? 'bg-emerald-500' : 'bg-slate-600'
-                            }`}
-                          />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <p className={`text-xs truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-300'}`}>
-                              {displayName(c)}
-                            </p>
-                            {c.last_message_at && (
-                              <span className="text-[10px] text-slate-600 flex-shrink-0">{relativeTime(c.last_message_at)}</span>
-                            )}
-                          </div>
-                          {c.last_message && (
-                            <p className={`text-[11px] truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
-                              {c.last_sender_id === currentUser?.id ? 'You: ' : ''}{c.last_message}
-                            </p>
-                          )}
-                        </div>
-                        {c.unread_count > 0 && (
-                          <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
-                            {c.unread_count}
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-
-            {/* My Friends */}
-            <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-slate-400" />
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    My Friends
-                  </h3>
-                  {friends.length > 0 && (
-                    <span className="text-[10px] font-bold bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full">
-                      {friends.length}
-                    </span>
-                  )}
-                </div>
-                <Link
-                  href="/community/friends"
-                  className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
-                >
-                  View All
-                </Link>
-              </div>
-
-              {friends.length === 0 ? (
-                <p className="text-xs text-slate-600 text-center py-4">
-                  No friends yet — discover people below.
-                </p>
-              ) : (
-                <div className="flex flex-wrap gap-2 py-1">
-                  {friends.slice(0, 7).map((f) => (
-                    <Tooltip key={f.id} content={`${displayName(f)} · ${f.online_label || 'Offline'}`}>
-                      <Link href={`/u/${f.username}`} className="relative flex-shrink-0">
-                        <Image
-                          src={f.avatar || '/Assets/Img/default-avatar.png'}
-                          alt={displayName(f)}
-                          width={40}
-                          height={40}
-                          className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/40 transition-colors"
-                        />
-                        <span
-                          className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#111318] ${
-                            f.is_online ? 'bg-emerald-500' : 'bg-slate-600'
-                          }`}
-                        />
-                      </Link>
-                    </Tooltip>
-                  ))}
-                  {friends.length > 7 && (
-                    <Link
-                      href="/community/friends"
-                      className="w-10 h-10 rounded-xl bg-slate-800/60 border border-slate-700/60 flex items-center justify-center text-[10px] font-bold text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors flex-shrink-0"
-                    >
-                      +{friends.length - 7}
-                    </Link>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* ──────────────────────────────────────────────────────────
-                DEVELOPMENT NAVIGATOR: SUGGESTED FOR YOU
-                Contains: header + see-all link, suggested-user rows
-                ────────────────────────────────────────────────────────── */}
-            {peopleSuggestions.length > 0 && (
-              <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Suggested For You
-                  </h3>
-                  <Link
-                    href="/community/discover"
-                    className="text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
-                  >
-                    See all
-                  </Link>
-                </div>
-
-                <div className="space-y-3">
-                  {peopleSuggestions.map((u) => (
-                    <div key={u.id} className="flex items-center gap-3">
-                      <Link href={`/u/${u.username}`} className="flex-shrink-0">
-                        <Image
-                          src={u.avatar || '/Assets/Img/default-avatar.png'}
-                          alt=""
-                          width={36}
-                          height={36}
-                          className="w-9 h-9 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
-                        />
-                      </Link>
-                      <div className="flex-1 min-w-0">
-                        <Link href={`/u/${u.username}`}>
-                          <p className="text-xs font-bold text-slate-200 truncate hover:text-white transition-colors">
-                            {displayName(u)}
-                          </p>
-                        </Link>
-                        <p className="text-[10px] text-slate-600 truncate">@{u.username}</p>
-                      </div>
-                      <Button
-                        variant="unstyled"
-                        onClick={() => handleAddFriend(u.id)}
-                        disabled={sentRequests.has(u.id)}
-                        title={sentRequests.has(u.id) ? 'Request sent' : 'Add friend'}
-                        className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all disabled:cursor-default ${
-                          sentRequests.has(u.id)
-                            ? 'bg-emerald-500/10 text-emerald-400'
-                            : 'bg-primary-500/10 text-primary-500 hover:bg-primary-500/20'
-                        }`}
-                      >
-                        {sentRequests.has(u.id)
-                          ? <><Check className="w-3 h-3" /> Sent</>
-                          : <><UserPlus className="w-3 h-3" /> Add</>}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          </div>
-        </aside>
-
       </div>
     </div>
   );
