@@ -12,7 +12,6 @@ import {
   MessageSquarePlus, Search, MessagesSquare,
   HelpCircle, Trophy, CheckCircle2, Hash, Sparkles, ArrowUp,
 } from 'lucide-react';
-import confetti from 'canvas-confetti';
 import { Button, Tooltip, ShareButton, useToast, Modal, Input } from '@/components/ui';
 import { useMessages, type ChatContact } from '@/context/MessagesContext';
 import { PostComposer } from './PostComposer';
@@ -630,19 +629,9 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, curre
     ? [...topComments].sort((a, b) => Number(b.id === acceptedId) - Number(a.id === acceptedId))
     : topComments;
 
-  // Win posts celebrate on first paint — a short confetti burst from the card,
-  // honoring reduced-motion (canvas-confetti's own guard + an explicit check).
-  useEffect(() => {
-    if (!isWin) return;
-    if (typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const rect = cardRef.current?.getBoundingClientRect();
-    const origin = rect
-      ? { x: (rect.left + rect.width / 2) / window.innerWidth, y: Math.max(0, (rect.top + 40) / window.innerHeight) }
-      : { x: 0.5, y: 0.3 };
-    confetti({ particleCount: 60, spread: 70, startVelocity: 28, scalar: 0.9, origin, disableForReducedMotion: true });
-    // Fire once when the win card mounts.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Win posts celebrate with a CSS shine sweep on first paint (see `.win-shine`
+  // in globals.css) — calmer than the old confetti burst and zero-JS. The sweep
+  // honors prefers-reduced-motion via the media query in the stylesheet.
 
   // Disarm the armed delete wedge on outside-click or Escape — the cross-device
   // replacement for the old pointer-leave disarm (touch never had a "leave").
@@ -729,6 +718,10 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, curre
         ref={cardRef}
         className="relative z-[3] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg"
       >
+        {/* Win celebration: a one-shot diagonal shine sweep clipped to the card
+            (replaces the old confetti burst). CSS-only, reduced-motion-safe. */}
+        {isWin && <span aria-hidden className="win-shine" />}
+
         {/* Left-edge type accent — a thin pill on the card's left edge (ask /
             resolved / win only). Scoped to the card so it never stretches down
             past the comments. Rendered above the card background (positive z)
