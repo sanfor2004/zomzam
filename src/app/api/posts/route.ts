@@ -122,6 +122,12 @@ export const POST = withAuth(async (request, user) => {
       await posts.deletePost(user.id, parseInt(body.post_id || 0));
       return NextResponse.json({ success: true });
 
+    case 'mark_seen': {
+      // Chat-style read receipt: batch-mark posts the viewer has scrolled past.
+      const ids = Array.isArray(body.post_ids) ? body.post_ids : [];
+      return NextResponse.json({ success: true, ...await posts.markPostsSeen(user.id, ids) });
+    }
+
     case 'comment': {
       const comment = await posts.addComment(
         user.id,
@@ -140,12 +146,25 @@ export const POST = withAuth(async (request, user) => {
 export const GET = withAuth(async (request, user) => {
   const { searchParams } = new URL(request.url);
   const action = searchParams.get('action');
-  const offset = Math.max(0, parseInt(searchParams.get('offset') || '0'));
   const limit = Math.min(parseInt(searchParams.get('limit') || '10'), 20);
 
   switch (action) {
-    case 'feed':
-      return NextResponse.json({ success: true, ...await posts.getFeed(user.id, offset, limit, searchParams.get('filter') || undefined) });
+    case 'feed': {
+      // Tiered, keyset-paginated feed: unseen posts first, then seen backfill.
+      // `cursor` is the smallest post id already delivered (see getFeed); absent
+      // ⇒ first page of the requested tier.
+      const tier = searchParams.get('tier') === 'seen' ? 'seen' : 'unseen';
+      const cursor = parseInt(searchParams.get('cursor') || '0') || null;
+      return NextResponse.json({
+        success: true,
+        ...await posts.getFeed(user.id, {
+          tier,
+          cursor,
+          limit,
+          filter: searchParams.get('filter') || undefined,
+        }),
+      });
+    }
 
     case 'comments':
       return NextResponse.json({ success: true, comments: await posts.getComments(user.id, parseInt(searchParams.get('post_id') || '0')) });

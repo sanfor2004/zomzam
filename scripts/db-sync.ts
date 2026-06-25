@@ -260,6 +260,16 @@ const schema: Record<string, Record<string, string>> = {
     user_id: 'INT NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Chat-style read receipts for the feed: one row per (post, viewer). Its
+  // presence with seen=1 means the viewer has already seen that post, so the
+  // feed can serve unseen posts first and backfill seen ones (see getFeed).
+  post_views: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    seen: 'TINYINT(1) NOT NULL DEFAULT 1',          // true/false read flag (room for "delivered, not seen" later)
+    seen_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   // Append-only log the future credits engine consumes (NOT a ledger): one row
   // each time an asker accepts an answer. No balance is ever touched here.
   helpful_events: {
@@ -295,6 +305,10 @@ const indexes: Record<string, Record<string, string>> = {
   comment_votes: {
     uq_comment_user: 'UNIQUE INDEX uq_comment_user (comment_id, user_id)',
     idx_comment_id: 'INDEX idx_comment_id (comment_id)',
+  },
+  post_views: {
+    uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',  // upsert target for mark_seen
+    idx_user_seen: 'INDEX idx_user_seen (user_id, seen)',          // "my unseen" NOT EXISTS filter
   },
 };
 

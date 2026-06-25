@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Button, Tooltip, ShareButton, useToast, Modal } from '@/components/ui';
 import { PostComposer } from './PostComposer';
+import { usePostSeenTracker } from './usePostSeenTracker';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
 } from './shared';
@@ -29,12 +30,33 @@ export default function HomePage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Feed state
+  // ── Feed state ──────────────────────────────────────────────
+  // Chat-style read model: the feed serves UNSEEN posts first (newest-first,
+  // keyset-paginated by the smallest post id already delivered), then backfills
+  // SEEN posts. `tier` tracks which progression we're in; `cursor` is that id.
   const [posts, setPosts] = useState<Post[]>([]);
   const [feedFilter, setFeedFilter] = useState<'all' | 'help' | 'help_matches'>('all');
+  const [tier, setTier] = useState<'unseen' | 'seen'>('unseen');
   const [hasMore, setHasMore] = useState(true);
   const [loadingFeed, setLoadingFeed] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  // Desktop = fine pointer + wide viewport. Drives the end-of-feed UX: unseen
+  // always auto-loads; once exhausted, the SEEN tier auto-loads on mobile but
+  // waits for a "Load older posts" click on desktop (less jarring with a mouse).
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  // Seen-tracker: marks cards as read on viewport dwell (see usePostSeenTracker).
+  const { observe } = usePostSeenTracker();
+
+  // Mirror mutable values into refs so the stable IntersectionObserver / loader
+  // callbacks always read fresh state without being torn down each change.
+  const loadingFeedRef = useRef(false);
+  const tierRef = useRef<'unseen' | 'seen'>('unseen');
+  const cursorRef = useRef<number | null>(null);
+  const hasMoreRef = useRef(true);
+  const feedFilterRef = useRef(feedFilter);
+  const isDesktopRef = useRef(isDesktop);
+  useEffect(() => { isDesktopRef.current = isDesktop; }, [isDesktop]);
 
   // Stable handlers so memo(PostCard) isn't invalidated every render. setPosts is
   // referentially stable, so these callbacks never need to change.
@@ -43,6 +65,7 @@ export default function HomePage() {
   }, []);
 
   // Prepend a freshly-created post (from the composer) to the top of the feed.
+  // The author has already been recorded as having seen it server-side.
   const handlePostCreated = useCallback((post: Post) => {
     setPosts((prev) => [post, ...prev]);
   }, []);
@@ -53,7 +76,6 @@ export default function HomePage() {
   }, []);
 
   const bottomRef = useRef<HTMLDivElement>(null);
-  const loadingFeedRef = useRef(false);
   const feedRef = useRef<HTMLDivElement>(null);
   // pageRef reuses containerRef (same DOM node, usePageEntrance uses it as animation scope)
   usePageEntrance(containerRef, [posts.length]);
@@ -77,65 +99,127 @@ export default function HomePage() {
     })();
   }, []);
 
+  // ── Desktop vs mobile (pointer + width) ─────────────────────
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   // ── Feed loading ────────────────────────────────────────────
-  const loadFeed = useCallback(async (offset = 0) => {
-    if (loadingFeedRef.current) return;
+  // One loader for both tiers. Reads tier/cursor from refs so it can be a single
+  // stable callback. When the unseen tier runs dry it advances to the seen tier
+  // (without fetching yet) so desktop can gate the first seen page behind a button.
+  const loadMore = useCallback(async () => {
+    if (loadingFeedRef.current || !hasMoreRef.current) return;
     loadingFeedRef.current = true;
     setLoadingFeed(true);
     try {
-      const filterParam = feedFilter !== 'all' ? `&filter=${feedFilter}` : '';
-      const res = await fetch(`/api/posts?action=feed&offset=${offset}${filterParam}`);
+      const params = new URLSearchParams({ action: 'feed', tier: tierRef.current });
+      if (cursorRef.current) params.set('cursor', String(cursorRef.current));
+      if (feedFilterRef.current !== 'all') params.set('filter', feedFilterRef.current);
+
+      const res = await fetch(`/api/posts?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
+        const isFirstPage = !cursorRef.current;
         setPosts((prev) => {
-          if (!offset) return data.posts;
-          // Dedupe in case a locally-prepended post shifts the server offset.
-          const seen = new Set(prev.map((p: Post) => p.id));
-          return [...prev, ...data.posts.filter((p: Post) => !seen.has(p.id))];
+          if (isFirstPage && tierRef.current === 'unseen' && prev.length === 0) return data.posts;
+          const known = new Set(prev.map((p: Post) => p.id));
+          return [...prev, ...data.posts.filter((p: Post) => !known.has(p.id))];
         });
-        setHasMore(data.has_more);
+        cursorRef.current = data.next_cursor ?? null;
+
+        if (data.has_more) {
+          hasMoreRef.current = true;
+          setHasMore(true);
+        } else if (tierRef.current === 'unseen') {
+          // Unseen exhausted → advance to the seen backfill tier. Don't fetch yet:
+          // desktop shows a "Load older posts" button, mobile auto-loads below.
+          tierRef.current = 'seen';
+          cursorRef.current = null;
+          hasMoreRef.current = true; // provisional; the first seen page confirms
+          setTier('seen');
+          setHasMore(true);
+        } else {
+          hasMoreRef.current = false;
+          setHasMore(false);
+        }
       }
     } catch { /* non-blocking */ }
     setLoadingFeed(false);
     setInitialLoading(false);
     loadingFeedRef.current = false;
-  }, [feedFilter]);
+  }, []);
 
-  // Reloading from offset 0 happens automatically: changing feedFilter gives
-  // loadFeed a new identity, re-firing this effect.
-  useEffect(() => { loadFeed(); }, [loadFeed]);
+  // Reset to a fresh unseen feed (mount + whenever the filter changes).
+  const resetAndLoad = useCallback(() => {
+    tierRef.current = 'unseen';
+    cursorRef.current = null;
+    hasMoreRef.current = true;
+    setTier('unseen');
+    setHasMore(true);
+    setInitialLoading(true);
+    setPosts([]);
+    loadMore();
+  }, [loadMore]);
 
-  // ── New-posts pill ──────────────────────────────────────────
+  useEffect(() => {
+    feedFilterRef.current = feedFilter;
+    resetAndLoad();
+  }, [feedFilter, resetAndLoad]);
+
+  // ── New-posts pill + merge-on-refresh ───────────────────────
   // SSE delivers `zz-new-post` when someone in the network posts. We only count
-  // it (a soft signal) so the user's scroll isn't disturbed; clicking the pill
-  // reloads the freshest feed from the top and scrolls up.
+  // it (a soft signal) so the user's scroll isn't disturbed.
   useEffect(() => {
     const onNewPost = () => setNewPostsCount((c) => c + 1);
     window.addEventListener('zz-new-post', onNewPost);
     return () => window.removeEventListener('zz-new-post', onNewPost);
   }, []);
 
-  const refreshFeed = useCallback(() => {
+  // Clicking the pill fetches the freshest unseen page and MERGES it onto the top
+  // of the feed (preserving everything already scrolled), rather than wiping and
+  // reloading from scratch. The merged-in posts are themselves unseen, so they
+  // get marked read as the user scrolls back over them.
+  const refreshUnseen = useCallback(async () => {
     setNewPostsCount(0);
-    loadFeed(0);
+    try {
+      const params = new URLSearchParams({ action: 'feed', tier: 'unseen' });
+      if (feedFilterRef.current !== 'all') params.set('filter', feedFilterRef.current);
+      const res = await fetch(`/api/posts?${params.toString()}`);
+      const data = await res.json();
+      if (data.success) {
+        setPosts((prev) => {
+          const known = new Set(prev.map((p: Post) => p.id));
+          const fresh = data.posts.filter((p: Post) => !known.has(p.id));
+          return fresh.length ? [...fresh, ...prev] : prev;
+        });
+      }
+    } catch { /* non-blocking */ }
     feedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, [loadFeed]);
+  }, []);
 
   // ── Infinite scroll sentinel ────────────────────────────────
+  // Auto-loads the unseen tier always; auto-loads the seen tier only on mobile
+  // (desktop pulls older posts via an explicit button). Re-created when the feed
+  // length / tier / hasMore / device changes so it re-evaluates an in-view sentinel.
   useEffect(() => {
     const sentinel = bottomRef.current;
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting && hasMore && !loadingFeedRef.current) {
-          loadFeed(posts.length);
-        }
+        if (!entry.isIntersecting || !hasMoreRef.current || loadingFeedRef.current) return;
+        if (tierRef.current === 'seen' && isDesktopRef.current) return; // desktop seen = manual
+        loadMore();
       },
       { threshold: 0.1 }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [posts, hasMore, loadFeed]);
+  }, [posts.length, hasMore, tier, isDesktop, loadMore]);
 
   useGSAP(() => {
     if (initialLoading || posts.length === 0) return;
@@ -213,7 +297,7 @@ export default function HomePage() {
             <div className="sticky top-2 z-20 flex justify-center pointer-events-none">
               <Button
                 variant="unstyled"
-                onClick={refreshFeed}
+                onClick={refreshUnseen}
                 className="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-xs font-bold shadow-lg shadow-primary-500/30 transition-colors animate-in slide-in-from-top"
               >
                 <ArrowUp className="w-3.5 h-3.5" />
@@ -246,6 +330,7 @@ export default function HomePage() {
                   onEdited={handlePostEdited}
                   currentUser={currentUser}
                   friends={friends}
+                  observe={observe}
                 />
               ))}
 
@@ -255,6 +340,24 @@ export default function HomePage() {
               {loadingFeed && (
                 <div className="flex justify-center py-6">
                   <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
+                </div>
+              )}
+
+              {/* ──────────────────────────────────────────────────────────
+                  DEVELOPMENT NAVIGATOR: END OF UNSEEN → SEEN BACKFILL
+                  Once unseen posts run out we enter the seen tier. Desktop pulls
+                  older posts via this explicit button; mobile auto-loads them.
+                  ────────────────────────────────────────────────────────── */}
+              {tier === 'seen' && hasMore && isDesktop && !loadingFeed && (
+                <div className="flex justify-center py-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={loadMore}
+                    className="rounded-full"
+                  >
+                    Load older posts
+                  </Button>
                 </div>
               )}
 
@@ -273,13 +376,14 @@ export default function HomePage() {
 // memo'd so composer keystrokes (and other HomePage state churn) don't re-render
 // every mounted card — only cards whose own props actually change re-render.
 // Relies on `onDelete`/`onEdited` being stable useCallbacks in HomePage.
-const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, currentUser, friends }: {
+const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, currentUser, friends, observe }: {
   post: Post;
   isOwn: boolean;
   onDelete: (id: number) => void;
   onEdited: (post: Post) => void;
   currentUser: CurrentUser | null;
   friends: MentionUser[];
+  observe: (el: HTMLElement | null, postId: number) => void;
 }) {
   const name = displayName(post);
   const { toast } = useToast();
@@ -293,6 +397,10 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, curre
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
+
+  // Register this card's outer node with the feed-wide seen-tracker (read receipt
+  // on viewport dwell). Stable per card so memo isn't invalidated each render.
+  const seenRef = useCallback((el: HTMLElement | null) => observe(el, post.id), [observe, post.id]);
 
   const topComments = post.top_comments ?? [];
 
@@ -392,6 +500,7 @@ const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, curre
 
   return (
     <div
+      ref={seenRef}
       id={`post-${post.id}`}
       data-entrance="card"
       className="post-item relative"

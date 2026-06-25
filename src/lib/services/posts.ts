@@ -97,6 +97,15 @@ export async function createPost(userId: number, input: CreatePostInput) {
     [userId, content_html, visibility, image_path, type, skill_tag]
   );
 
+  // The author has implicitly seen their own post — record it so the unseen-first
+  // feed never surfaces it back to them as a "new post" (it's already prepended
+  // client-side). Mirrors the chat read-receipt model (see markPostsSeen).
+  await execute(
+    `INSERT INTO post_views (post_id, user_id, seen) VALUES (?, ?, 1)
+     ON DUPLICATE KEY UPDATE seen = 1`,
+    [result.insertId, userId]
+  );
+
   const post = await queryOne(
     `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
             p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
@@ -427,27 +436,56 @@ export async function addComment(userId: number, postId: number, rawContent: str
   return { ...normalizeAvatar(comment), upvote_count: 0, upvoted_by_me: false };
 }
 
-const FEED_WINDOW = 300; // candidate pool ranked in-memory
+const SCORED_WINDOW = 300; // candidate pool ranked in-memory for the landing page
+
+export type FeedTier = 'unseen' | 'seen';
+
+export interface GetFeedOptions {
+  tier?: FeedTier;
+  cursor?: number | null; // keyset on posts.id (BIGINT AUTO_INCREMENT ⇒ monotonic with recency)
+  limit?: number;
+  filter?: string;
+}
 
 /**
- * The home feed: every PUBLIC post plus the viewer's own and friends-/follows-only
- * posts, ranked by how well the in-post hashtags match the viewer's profile tags,
- * then recency, with top-2 root comments embedded per post.
+ * The home feed, chat-style: serve UNSEEN posts first, then backfill SEEN ones.
+ * "Seen" is a post_views row (seen=1) for this viewer — see markPostsSeen.
+ *
+ * Ordering / pagination contract:
+ *  • Cursor is a single integer — the smallest posts.id already delivered. Since
+ *    id is AUTO_INCREMENT, `id DESC` is recency order and `id < cursor` is a
+ *    stable keyset page that never duplicates or skips under concurrent
+ *    mark-seen (marking only ever removes rows from the unseen set, it never
+ *    reshuffles the id-ordered tail).
+ *  • Relevance scoring (tag match + ask freshness) is applied ONLY to the very
+ *    first unseen "all" page (the landing screen). Every deeper page, the seen
+ *    tier, and the help filters are plain recency keyset — keeping them stable.
+ *  • Help filters are expressed in SQL (skill_tag is stored slugified, exactly
+ *    like the viewer's tags) so they compose with keyset pagination.
  */
-export async function getFeed(userId: number, offset: number, limit: number, filter?: string) {
-  const me = await queryOne<{ tags: any }>(`SELECT tags FROM users WHERE id = ?`, [userId]);
-  const viewerTags = new Set(parseTagList(me?.tags));
+export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
+  const tier: FeedTier = opts.tier === 'seen' ? 'seen' : 'unseen';
+  const limit = Math.min(Math.max(1, opts.limit ?? 10), 20);
+  const cursor = opts.cursor && opts.cursor > 0 ? opts.cursor : null;
+  const filter = opts.filter;
 
-  const candidates = await query(
-    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
-            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
-            u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
-            (SELECT COUNT(*) FROM post_likes   WHERE post_id = p.id) AS like_count,
-            (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
-            (SELECT COUNT(*) FROM post_likes   WHERE post_id = p.id AND user_id = ?) AS liked_by_me
-     FROM posts p
-     JOIN users u ON u.id = p.user_id
-     WHERE p.visibility = 'public'
+  const me = await queryOne<{ tags: any }>(`SELECT tags FROM users WHERE id = ?`, [userId]);
+  const viewerTags = parseTagList(me?.tags);
+  const viewerTagSet = new Set(viewerTags);
+
+  const SELECT = `
+    SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+           p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
+           u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
+           (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
+           (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
+           (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id AND user_id = ?) AS liked_by_me
+    FROM posts p
+    JOIN users u ON u.id = p.user_id`;
+
+  // What this viewer may see: public, own, or friends/follows-only posts.
+  const VISIBILITY = `(
+        p.visibility = 'public'
         OR p.user_id = ?
         OR (p.visibility = 'friends' AND p.user_id IN (
              SELECT addressee_id FROM user_connections
@@ -456,49 +494,78 @@ export async function getFeed(userId: number, offset: number, limit: number, fil
              SELECT IF(requester_id = ?, addressee_id, requester_id) FROM user_connections
                WHERE (requester_id = ? OR addressee_id = ?) AND type = 'friend' AND status = 'accepted'
            ))
-     ORDER BY p.created_at DESC
-     LIMIT ${FEED_WINDOW}`,
-    [userId, userId, userId, userId, userId, userId]
-  );
+      )`;
 
-  // Optional help views: 'help' = all asks; 'help_matches' = open asks whose
-  // skill_tag is one of the viewer's tags.
-  let pool = candidates;
+  const SEEN = tier === 'seen'
+    ? `EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`
+    : `NOT EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`;
+
+  // ? order so far: liked_by_me(1), visibility(5), seen(1).
+  const baseParams: any[] = [userId, userId, userId, userId, userId, userId, userId];
+
+  // Optional help views, in SQL so they stay keyset-stable.
+  let filterSql = '';
+  const filterParams: any[] = [];
   if (filter === 'help') {
-    pool = candidates.filter((p) => p.type === 'ask');
+    filterSql = ` AND p.type = 'ask'`;
   } else if (filter === 'help_matches') {
-    pool = candidates.filter(
-      (p) => p.type === 'ask' && !p.resolved_at && p.skill_tag && viewerTags.has(slugifyTag(p.skill_tag))
-    );
+    // Open asks whose skill_tag matches one of the viewer's tags. No tags ⇒ none.
+    if (viewerTags.length === 0) return { posts: [], next_cursor: null, has_more: false, tier };
+    const ph = viewerTags.map(() => '?').join(',');
+    filterSql = ` AND p.type = 'ask' AND p.resolved_at IS NULL AND p.skill_tag IN (${ph})`;
+    filterParams.push(...viewerTags);
   }
 
-  // Score: in-post hashtags weigh heaviest, author's profile tags break ties.
-  // Open asks float up (skill-matched highest) on a 3-day time-decay so help
-  // requests get seen while fresh; resolved asks settle below. Then most-recent
-  // wins; id is the final deterministic tiebreaker so offset pagination stays
-  // stable between requests.
-  const scored = pool
-    .map((p) => {
-      const postMatches = extractPostTags(p.content_html).filter((t) => viewerTags.has(t)).length;
-      const authorMatches = parseTagList(p.author_tags).filter((t) => viewerTags.has(t)).length;
-      let score = postMatches * 10 + authorMatches;
-      if (p.type === 'ask' && !p.resolved_at) {
-        const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3.6e6;
-        const decay = Math.max(0, 1 - ageHours / 72);
-        const skillMatch = p.skill_tag && viewerTags.has(slugifyTag(p.skill_tag));
-        score += (skillMatch ? 30 : 8) * decay;
-      } else if (p.type === 'ask' && p.resolved_at) {
-        score -= 5;
-      }
-      return { p, score };
-    })
-    .sort((a, b) =>
-      b.score - a.score ||
-      new Date(b.p.created_at).getTime() - new Date(a.p.created_at).getTime() ||
-      Number(b.p.id) - Number(a.p.id)
-    );
+  const isScoredFirstPage = tier === 'unseen' && !cursor && !filter;
 
-  const normalized = scored.slice(offset, offset + limit).map(({ p }) => {
+  let rows: any[];
+  let hasMore: boolean;
+
+  if (isScoredFirstPage) {
+    // Landing screen: rank a recency window in-memory by tag relevance + ask
+    // freshness, then take the top `limit`.
+    const window = await query(
+      `${SELECT} WHERE ${VISIBILITY} AND ${SEEN} ORDER BY p.id DESC LIMIT ${SCORED_WINDOW}`,
+      baseParams
+    );
+    const scored = window
+      .map((p) => {
+        const postMatches = extractPostTags(p.content_html).filter((t) => viewerTagSet.has(t)).length;
+        const authorMatches = parseTagList(p.author_tags).filter((t) => viewerTagSet.has(t)).length;
+        let score = postMatches * 10 + authorMatches;
+        if (p.type === 'ask' && !p.resolved_at) {
+          const ageHours = (Date.now() - new Date(p.created_at).getTime()) / 3.6e6;
+          const decay = Math.max(0, 1 - ageHours / 72);
+          const skillMatch = p.skill_tag && viewerTagSet.has(slugifyTag(p.skill_tag));
+          score += (skillMatch ? 30 : 8) * decay;
+        } else if (p.type === 'ask' && p.resolved_at) {
+          score -= 5;
+        }
+        return { p, score };
+      })
+      .sort((a, b) =>
+        b.score - a.score ||
+        Number(b.p.id) - Number(a.p.id)
+      );
+    rows = scored.slice(0, limit).map((s) => s.p);
+    hasMore = scored.length > limit;
+  } else {
+    // Recency keyset page (deeper unseen, the whole seen tier, and filtered views).
+    let keysetSql = '';
+    const keysetParams: any[] = [];
+    if (cursor) {
+      keysetSql = ` AND p.id < ?`;
+      keysetParams.push(cursor);
+    }
+    rows = await query(
+      `${SELECT} WHERE ${VISIBILITY} AND ${SEEN}${filterSql}${keysetSql}
+       ORDER BY p.id DESC LIMIT ${limit}`,
+      [...baseParams, ...filterParams, ...keysetParams]
+    );
+    hasMore = rows.length === limit;
+  }
+
+  const normalized = rows.map((p) => {
     const { author_tags, ...rest } = p;
     return {
       ...normalizeAvatar(rest),
@@ -511,7 +578,36 @@ export async function getFeed(userId: number, offset: number, limit: number, fil
 
   await embedTopComments(userId, normalized);
 
-  return { posts: normalized, has_more: offset + limit < scored.length };
+  // Cursor for the next page is the smallest id we just delivered.
+  const next_cursor = hasMore && normalized.length
+    ? Math.min(...normalized.map((p) => Number(p.id)))
+    : null;
+
+  return { posts: normalized, next_cursor, has_more: hasMore, tier };
+}
+
+/**
+ * Chat-style read receipt: mark a batch of posts as seen by this viewer. Upserts
+ * one post_views row per (post, viewer) so the unseen-first feed stops surfacing
+ * them. Bounded (≤50/call) and id-sanitized; visibility isn't re-checked because
+ * a seen row for an invisible post is harmless. Returns how many were marked.
+ */
+export async function markPostsSeen(userId: number, postIds: number[]): Promise<{ marked: number }> {
+  const ids = Array.from(
+    new Set((postIds || []).map((n) => parseInt(String(n), 10)).filter((n) => Number.isInteger(n) && n > 0))
+  ).slice(0, 50);
+  if (ids.length === 0) return { marked: 0 };
+
+  const values = ids.map(() => '(?, ?, 1)').join(', ');
+  const params: any[] = [];
+  for (const id of ids) params.push(id, userId);
+
+  await execute(
+    `INSERT INTO post_views (post_id, user_id, seen) VALUES ${values}
+     ON DUPLICATE KEY UPDATE seen = 1, seen_at = CURRENT_TIMESTAMP`,
+    params
+  );
+  return { marked: ids.length };
 }
 
 // Embed the top-2 root comments per post in one windowed query (rn <= 2), then
