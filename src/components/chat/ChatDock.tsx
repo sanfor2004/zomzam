@@ -1,10 +1,21 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { Loader2, Send, X, Minus } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, Send, X, Minus, Smile } from 'lucide-react';
 import { useMessages, useMyId, type ChatWindow } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
+
+// A compact, curated emoji set for the quick-insert picker — no external lib
+// (none installed; see CLAUDE.md §5). Covers the common reactions people reach
+// for in a chat without the weight of a full emoji-mart dependency.
+const QUICK_EMOJIS = [
+  '😀', '😂', '🙂', '😉', '😍', '😎', '🤩', '😘',
+  '🤔', '😴', '😅', '😭', '😡', '🥳', '😱', '🤯',
+  '👍', '👎', '👏', '🙏', '💪', '🤝', '👋', '🔥',
+  '❤️', '🧡', '💯', '✨', '🎉', '🚀', '☕', '✅',
+];
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: GLOBAL CHAT DOCK
@@ -29,6 +40,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
   const { closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead } = useMessages();
   const myId = useMyId();
   const endRef = useRef<HTMLDivElement>(null);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const otherId = win.otherUser.id;
   const name = displayName(win.otherUser);
 
@@ -37,7 +49,17 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
     if (!win.minimized) endRef.current?.scrollIntoView({ block: 'end' });
   }, [win.messages, win.minimized]);
 
-  const presence = win.otherUser.online_label || (win.otherUser.is_online ? 'Online' : 'Offline');
+  // Presence: online & idle → amber, online & active → emerald, offline → slate.
+  const isIdle = Boolean(win.otherUser.is_online && win.otherUser.is_idle);
+  const dotColor = win.otherUser.is_online ? (isIdle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600';
+  const presence = isIdle
+    ? 'Away'
+    : win.otherUser.online_label || (win.otherUser.is_online ? 'Active now' : 'Offline');
+
+  const insertEmoji = (emoji: string) => {
+    setDraft(otherId, win.text + emoji);
+    setEmojiOpen(false);
+  };
 
   return (
     <div className="pointer-events-auto w-[320px] max-w-[calc(100vw-2rem)] bg-[#1A1D24] border border-slate-800/70 rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
@@ -55,15 +77,20 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             className="w-8 h-8 rounded-lg object-cover border border-slate-800"
           />
           <span
-            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${
-              win.otherUser.is_online ? 'bg-emerald-500' : 'bg-slate-600'
-            }`}
+            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${dotColor}`}
           />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-white truncate flex items-center gap-1.5">
-            {name}
-            {win.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />}
+            <Link
+              href={`/u/${win.otherUser.username}`}
+              onClick={(e) => e.stopPropagation()}
+              className="truncate hover:text-primary-400 hover:underline underline-offset-2 transition-colors"
+              title={`View ${name}'s profile`}
+            >
+              {name}
+            </Link>
+            {win.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse flex-shrink-0" />}
           </p>
           <p className="text-[10px] text-slate-500 truncate">{presence}</p>
         </div>
@@ -122,7 +149,44 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             <div ref={endRef} />
           </div>
 
-          <div className="flex items-center gap-2 p-2.5 border-t border-slate-800/60">
+          <div className="relative flex items-center gap-2 p-2.5 border-t border-slate-800/60">
+            {/* ── Emoji picker ── */}
+            {emojiOpen && (
+              <>
+                {/* Click-away scrim — closes the picker on any outside tap. */}
+                <button
+                  type="button"
+                  aria-label="Close emoji picker"
+                  className="fixed inset-0 z-[1] cursor-default"
+                  onClick={() => setEmojiOpen(false)}
+                />
+                <div className="absolute bottom-full left-2.5 mb-2 z-[2] w-[232px] bg-[#1A1D24] border border-slate-800/70 rounded-2xl shadow-2xl p-2 grid grid-cols-8 gap-0.5">
+                  {QUICK_EMOJIS.map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => insertEmoji(emoji)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg text-base hover:bg-white/[0.06] transition-colors"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setEmojiOpen((v) => !v)}
+              aria-label="Insert emoji"
+              aria-expanded={emojiOpen}
+              className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+                emojiOpen ? 'text-primary-400 bg-primary-500/10' : 'text-slate-400 hover:text-primary-400 hover:bg-white/[0.05]'
+              }`}
+            >
+              <Smile className="w-4 h-4" />
+            </button>
+
             <input
               type="text"
               value={win.text}
@@ -140,7 +204,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
               onClick={() => sendMessage(otherId)}
               disabled={!win.text.trim() || win.sending}
               aria-label="Send"
-              className="flex-shrink-0 w-9 h-9 rounded-xl bg-primary-500 hover:bg-primary-600 disabled:opacity-40 disabled:cursor-default text-white flex items-center justify-center transition-colors"
+              className="flex-shrink-0 w-9 h-9 rounded-full text-primary-500 hover:text-primary-400 hover:bg-primary-500/10 disabled:opacity-40 disabled:cursor-default disabled:hover:bg-transparent flex items-center justify-center transition-colors"
             >
               {win.sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </button>

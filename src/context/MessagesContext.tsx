@@ -52,6 +52,7 @@ export interface ChatUser {
   avatar: string;
   online_label?: string;
   is_online?: boolean;
+  is_idle?: boolean;
 }
 
 export interface ChatWindow {

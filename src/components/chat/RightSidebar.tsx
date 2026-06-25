@@ -41,6 +41,7 @@ function toChatUser(c: ChatContact): ChatUser {
     avatar: c.avatar,
     online_label: c.online_label,
     is_online: c.is_online,
+    is_idle: c.is_idle,
   };
 }
 
