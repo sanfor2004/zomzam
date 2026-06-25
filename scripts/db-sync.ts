@@ -2,10 +2,14 @@ import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
 
-// Manual .env parser for scripts running directly via tsx without external dotenv dependency
+// Manual .env parser for scripts running directly via tsx without external
+// dotenv dependency. Loads `.env` then `.env.local`, with `.env.local` taking
+// precedence — mirroring Next.js's load order so the script and the app read
+// the same values regardless of which file a secret lives in.
 function loadEnv() {
-  const envPath = path.resolve(process.cwd(), '.env');
-  if (fs.existsSync(envPath)) {
+  for (const file of ['.env', '.env.local']) {
+    const envPath = path.resolve(process.cwd(), file);
+    if (!fs.existsSync(envPath)) continue;
     const envContent = fs.readFileSync(envPath, 'utf8');
     envContent.split('\n').forEach((line) => {
       const trimmed = line.trim();
@@ -281,6 +285,17 @@ const schema: Record<string, Record<string, string>> = {
     asker_user_id: 'INT UNSIGNED NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Emoji reactions on direct messages. One reaction per (message, user) —
+  // reacting again replaces the emoji, reacting with the same emoji toggles it
+  // off (Messenger-style). Scoped/authorized at the API by walking the message's
+  // conversation participants.
+  message_reactions: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    message_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT UNSIGNED NOT NULL',
+    emoji: 'VARCHAR(16) NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   // Shared-backend rate limiter (src/lib/rate-limit.ts). One append-only row per
   // attempt, keyed by an opaque `bucket` (e.g. "login:1.2.3.4"). Lives in the DB,
   // not process memory, because Vercel's serverless functions are ephemeral +
@@ -326,6 +341,10 @@ const indexes: Record<string, Record<string, string>> = {
   rate_limit_events: {
     // The count-within-window + per-bucket purge both filter by (bucket, time).
     idx_bucket_time: 'INDEX idx_bucket_time (bucket, created_at_ms)',
+  },
+  message_reactions: {
+    uq_message_user: 'UNIQUE INDEX uq_message_user (message_id, user_id)',  // one reaction per user per message (upsert target)
+    idx_message_id: 'INDEX idx_message_id (message_id)',                    // load all reactions for a thread's messages
   },
 };
 
