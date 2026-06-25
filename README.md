@@ -221,7 +221,7 @@ zomzam.com/
 | `/api/messages` | `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read`, `typing` (transient peer-is-typing ping, no DB write) | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
-| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, and the `new_post` feed-pill fan-out). |
+| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, the `message_read` "Seen" receipt, and the `new_post` feed-pill fan-out). |
 
 ---
 

@@ -235,10 +235,24 @@ export const POST = withAuth(async (request, user) => {
         return NextResponse.json({ success: false, message: 'Conversation not found' }, { status: 404 });
       }
 
-      await execute(
+      const res = await execute(
         `UPDATE messages SET read_at = NOW() WHERE conversation_id = ? AND sender_id != ? AND read_at IS NULL`,
         [conversationId, user.id]
       );
+
+      // If we actually flipped messages to read, tell their sender live so their
+      // chat dock can show "Seen" without a poll. The sender is the *other*
+      // participant. touchLastSeen=false: a read receipt isn't the sender's own
+      // activity and must not flip their presence.
+      if (res.affectedRows > 0) {
+        const senderId = conversation.user_one_id === user.id
+          ? conversation.user_two_id
+          : conversation.user_one_id;
+        await pushStreamOrder(senderId, 'message_read', {
+          conversation_id: conversationId,
+          reader_id: user.id,
+        }, false);
+      }
 
       return NextResponse.json({ success: true });
     }
