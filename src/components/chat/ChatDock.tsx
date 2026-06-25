@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2, Send, X, Minus, Smile } from 'lucide-react';
+import { Loader2, Send, X, Minus, ChevronUp, Smile } from 'lucide-react';
 import { useMessages, useMyId, type ChatWindow } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
 
@@ -37,7 +37,7 @@ export function ChatDock() {
 }
 
 function ChatWindowCard({ win }: { win: ChatWindow }) {
-  const { closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping } = useMessages();
+  const { contacts, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping } = useMessages();
   const myId = useMyId();
   const endRef = useRef<HTMLDivElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -50,12 +50,16 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
     if (!win.minimized) endRef.current?.scrollIntoView({ block: 'end' });
   }, [win.messages, win.minimized, win.peerTyping]);
 
-  // Presence: online & idle → amber, online & active → emerald, offline → slate.
-  const isIdle = Boolean(win.otherUser.is_online && win.otherUser.is_idle);
-  const dotColor = win.otherUser.is_online ? (isIdle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600';
-  const presence = isIdle
-    ? 'Away'
-    : win.otherUser.online_label || (win.otherUser.is_online ? 'Active now' : 'Offline');
+  // Live presence: the window's `otherUser` is a snapshot from when the chat was
+  // opened and never refreshes on its own. Overlay the matching contact, which
+  // the 20s contacts poll + heartbeat keep fresh, so the dot/label track reality.
+  const live = contacts.find((c) => c.other_id === otherId);
+  const isOnline = live?.is_online ?? win.otherUser.is_online ?? false;
+  const isIdle = Boolean(isOnline && (live?.is_idle ?? win.otherUser.is_idle));
+  const onlineLabel = live?.online_label ?? win.otherUser.online_label;
+  // online & idle → amber, online & active → emerald, offline → slate.
+  const dotColor = isOnline ? (isIdle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600';
+  const presence = isIdle ? 'Away' : (onlineLabel || (isOnline ? 'Active now' : 'Offline'));
 
   const insertEmoji = (emoji: string) => {
     setDraft(otherId, win.text + emoji);
@@ -64,11 +68,8 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
 
   return (
     <div className="pointer-events-auto w-[320px] max-w-[calc(100vw-2rem)] bg-[#1A1D24] border border-slate-800/70 rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
-      {/* ── Header ── */}
-      <div
-        className="flex items-center gap-2.5 px-3 py-2.5 bg-slate-900/60 border-b border-slate-800/60 cursor-pointer"
-        onClick={() => toggleMinimize(otherId)}
-      >
+      {/* ── Header (not click-to-minimize: use the explicit control on the right) ── */}
+      <div className="flex items-center gap-2.5 px-3 py-2.5 bg-slate-900/60 border-b border-slate-800/60">
         <div className="relative flex-shrink-0">
           <Image
             src={win.otherUser.avatar || '/Assets/Img/default-avatar.png'}
@@ -85,7 +86,6 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
           <p className="text-xs font-bold text-white truncate flex items-center gap-1.5">
             <Link
               href={`/u/${win.otherUser.username}`}
-              onClick={(e) => e.stopPropagation()}
               className="truncate hover:text-primary-400 hover:underline underline-offset-2 transition-colors"
               title={`View ${name}'s profile`}
             >
@@ -97,16 +97,18 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
         </div>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); toggleMinimize(otherId); }}
+          onClick={() => toggleMinimize(otherId)}
           aria-label={win.minimized ? 'Expand chat' : 'Minimize chat'}
+          title={win.minimized ? 'Expand' : 'Minimize'}
           className="text-slate-500 hover:text-slate-200 transition-colors p-1"
         >
-          <Minus className="w-4 h-4" />
+          {win.minimized ? <ChevronUp className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
         </button>
         <button
           type="button"
-          onClick={(e) => { e.stopPropagation(); closeChat(otherId); }}
+          onClick={() => closeChat(otherId)}
           aria-label="Close chat"
+          title="Close"
           className="text-slate-500 hover:text-red-400 transition-colors p-1"
         >
           <X className="w-4 h-4" />
