@@ -14,7 +14,7 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { PresenceRail } from '@/components/chat/PresenceRail';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, X, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 
@@ -552,27 +552,20 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             ────────────────────────────────────────────────────────── */}
         <header className="relative h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-6 z-40">
           <div className="flex items-center gap-4">
-            <Button variant="unstyled"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 text-slate-500 hover:text-white hover:bg-slate-800 rounded-xl"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+            {/* Mobile-only logo on the LEFT → home. Desktop has the logo in the
+                sidebar, so this is gated md:hidden. The mobile menu toggle now
+                lives in a bottom-left FAB (mirrors the bottom-right presence FAB). */}
+            <Link
+              href="/home"
+              aria-label={t('nav_home') || 'Home'}
+              className="md:hidden"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </Button>
+              <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7" />
+            </Link>
             <h2 className="text-sm font-bold text-slate-400 hidden md:block">
               {pathname === '/dashboard' ? 'Welcome Back' : 'Zomzam Workspace'}
             </h2>
           </div>
-
-          {/* Mobile-only centered logo → home. Desktop already has the logo
-              in the sidebar, so this is gated md:hidden. */}
-          <Link
-            href="/home"
-            aria-label={t('nav_home') || 'Home'}
-            className="md:hidden absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-          >
-            <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7" />
-          </Link>
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: TOPBAR ACTIONS
@@ -731,6 +724,18 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
       {/* Global overlays: docked chat windows + live notification toasts. */}
       <ChatDock />
       <NotificationToaster />
+
+      {/* Mobile menu FAB (bottom-LEFT) — mirrors the presence rail FAB at
+          bottom-right. Hidden while the sheet is open (it covers this corner);
+          the sheet closes via backdrop tap or swipe-down. */}
+      <Button
+        variant="unstyled"
+        onClick={() => setMobileMenuOpen(true)}
+        aria-label="Open menu"
+        className={`${mobileMenuOpen ? 'hidden' : 'md:hidden'} fixed bottom-5 left-5 z-[80] w-12 h-12 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-2xl shadow-primary-500/30 flex items-center justify-center transition-colors`}
+      >
+        <Menu className="w-5 h-5" />
+      </Button>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: MOBILE NAV BOTTOM SHEET
