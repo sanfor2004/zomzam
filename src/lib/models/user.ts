@@ -326,38 +326,31 @@ export async function pushStreamOrder(
   touchLastSeen = true
 ) {
   try {
-    const row = await queryOne<{ stream_queue: string }>(
-      `SELECT stream_queue FROM user_online_status WHERE user_id = ?`,
-      [userId]
-    );
-
-    // No-touch fan-out to a user who has never connected: nothing to deliver to.
-    if (!touchLastSeen && !row) return false;
-
-    let queue: any[] = [];
-    if (row?.stream_queue) {
-      try {
-        queue = JSON.parse(row.stream_queue);
-        if (!Array.isArray(queue)) queue = [];
-      } catch {
-        queue = [];
-      }
-    }
-
-    queue.push({ order_name: orderName, params });
-    const jsonStr = JSON.stringify(queue);
+    // Append in a SINGLE atomic statement (JSON_ARRAY_APPEND) instead of the old
+    // SELECT-then-write: one DB round-trip instead of two (latency), and no
+    // read-modify-write race where two concurrent pushes clobber each other's order.
+    const orderJson = JSON.stringify({ order_name: orderName, params });
 
     if (touchLastSeen) {
+      // Targeted, user-initiated push: create the row if missing, else append and
+      // refresh last_seen (the user is genuinely active relative to this action).
       await execute(
         `INSERT INTO user_online_status (user_id, stream_queue, last_seen)
-         VALUES (?, ?, NOW())
-         ON DUPLICATE KEY UPDATE stream_queue = ?, last_seen = NOW()`,
-        [userId, jsonStr, jsonStr]
+         VALUES (?, JSON_ARRAY(CAST(? AS JSON)), NOW())
+         ON DUPLICATE KEY UPDATE
+           stream_queue = JSON_ARRAY_APPEND(COALESCE(stream_queue, JSON_ARRAY()), '$', CAST(? AS JSON)),
+           last_seen = NOW()`,
+        [userId, orderJson, orderJson]
       );
     } else {
+      // Broadcast/delivery (DM, notification, fan-out): append only to an EXISTING
+      // row and never touch last_seen — doing so would falsely flip the recipient
+      // "online". A user who never connected has no row, so this is a no-op.
       await execute(
-        `UPDATE user_online_status SET stream_queue = ? WHERE user_id = ?`,
-        [jsonStr, userId]
+        `UPDATE user_online_status
+         SET stream_queue = JSON_ARRAY_APPEND(COALESCE(stream_queue, JSON_ARRAY()), '$', CAST(? AS JSON))
+         WHERE user_id = ?`,
+        [orderJson, userId]
       );
     }
     return true;

@@ -157,16 +157,20 @@ export const POST = withAuth(async (request, user) => {
         return NextResponse.json({ success: false, message: 'Message cannot be empty' }, { status: 400 });
       }
 
-      const recipient = await getUserById(recipientId);
+      // These three reads are independent — run them in parallel instead of three
+      // sequential DB round-trips (recipient existence, block check, my own row).
+      const [recipient, blocked, me] = await Promise.all([
+        getUserById(recipientId),
+        queryOne(
+          `SELECT id FROM user_connections WHERE type = 'friend' AND status = 'blocked'
+           AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
+          [user.id, recipientId, recipientId, user.id]
+        ),
+        getUserById(user.id),
+      ]);
       if (!recipient) {
         return NextResponse.json({ success: false, message: 'Recipient not found' }, { status: 404 });
       }
-
-      const blocked = await queryOne(
-        `SELECT id FROM user_connections WHERE type = 'friend' AND status = 'blocked'
-         AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
-        [user.id, recipientId, recipientId, user.id]
-      );
       if (blocked) {
         return NextResponse.json({ success: false, message: 'You can\'t message this user' }, { status: 403 });
       }
@@ -177,7 +181,6 @@ export const POST = withAuth(async (request, user) => {
         `INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)`,
         [conversationId, user.id, content]
       );
-      await execute(`UPDATE conversations SET last_message_at = NOW() WHERE id = ?`, [conversationId]);
 
       const message = {
         id: res.insertId,
@@ -188,16 +191,17 @@ export const POST = withAuth(async (request, user) => {
         created_at: new Date().toISOString(),
       };
 
-      const me = await getUserById(user.id);
-      // touchLastSeen=false: delivering a message to the recipient must NOT bump
-      // their last_seen — doing so falsely flips them "online" on presence rails
-      // until the next poll re-reads their stale timestamp (the online→offline
-      // flicker). Their real presence is maintained by their own heartbeat/SSE loop.
-      await pushStreamOrder(recipientId, 'new_message', {
-        conversation_id: conversationId,
-        message,
-        sender: me ? normalizeUser(me) : { id: user.id, username: user.username },
-      }, false);
+      // Side effects that don't shape the response — run together. touchLastSeen=false:
+      // delivering to the recipient must NOT bump their last_seen (would falsely flip
+      // them "online" until the next presence poll re-reads the stale timestamp).
+      await Promise.all([
+        execute(`UPDATE conversations SET last_message_at = NOW() WHERE id = ?`, [conversationId]),
+        pushStreamOrder(recipientId, 'new_message', {
+          conversation_id: conversationId,
+          message,
+          sender: me ? normalizeUser(me) : { id: user.id, username: user.username },
+        }, false),
+      ]);
 
       return NextResponse.json({ success: true, message, conversation_id: conversationId });
     }

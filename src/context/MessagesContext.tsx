@@ -187,9 +187,25 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const sendMessage = useCallback(async (otherId: number) => {
     const win = windowsRef.current.find((w) => w.otherUser.id === otherId);
     const content = win?.text.trim();
-    if (!win || !content || win.sending) return;
+    if (!win || !content) return;
 
-    setWindows((prev) => prev.map((w) => (w.otherUser.id === otherId ? { ...w, sending: true } : w)));
+    // Optimistic UI: render the bubble and clear the input IMMEDIATELY with a
+    // temporary (negative) id, so the message never waits on the network round-trip.
+    // The POST reconciles in the background — swap the temp for the real row on
+    // success, or roll it back (and restore the text) on failure.
+    const tempId = -Date.now();
+    const optimistic: ThreadMessage = {
+      id: tempId,
+      conversation_id: win.conversationId ?? 0,
+      sender_id: me.id,
+      content,
+      read_at: null,
+      created_at: new Date().toISOString(),
+    };
+    setWindows((prev) => prev.map((w) =>
+      w.otherUser.id === otherId ? { ...w, messages: [...w.messages, optimistic], text: '' } : w
+    ));
+
     try {
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -200,17 +216,30 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       if (data.success) {
         setWindows((prev) => prev.map((w) =>
           w.otherUser.id === otherId
-            ? { ...w, messages: [...w.messages, data.message], conversationId: data.conversation_id, text: '', sending: false }
+            ? {
+                ...w,
+                conversationId: data.conversation_id,
+                messages: w.messages.map((m) => (m.id === tempId ? data.message : m)),
+              }
             : w
         ));
         loadContacts();
       } else {
-        setWindows((prev) => prev.map((w) => (w.otherUser.id === otherId ? { ...w, sending: false } : w)));
+        // Roll back: drop the optimistic bubble and put the text back to retry.
+        setWindows((prev) => prev.map((w) =>
+          w.otherUser.id === otherId
+            ? { ...w, messages: w.messages.filter((m) => m.id !== tempId), text: w.text || content }
+            : w
+        ));
       }
     } catch {
-      setWindows((prev) => prev.map((w) => (w.otherUser.id === otherId ? { ...w, sending: false } : w)));
+      setWindows((prev) => prev.map((w) =>
+        w.otherUser.id === otherId
+          ? { ...w, messages: w.messages.filter((m) => m.id !== tempId), text: w.text || content }
+          : w
+      ));
     }
-  }, [loadContacts]);
+  }, [loadContacts, me.id]);
 
   // ── Live delivery ───────────────────────────────────────────
   // A single global handler for the SSE-driven `zz-new-message` event: append to
