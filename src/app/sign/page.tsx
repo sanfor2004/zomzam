@@ -12,6 +12,7 @@ import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import { Alert } from '@/components/ui/Alert';
 import { Button, Input, Divider, SegmentedSwitch } from '@/components/ui';
 import { gsap, useGSAP, SplitText } from '@/lib/gsap';
+import { facebookLogin, FB_LOGIN_CANCELLED } from '@/lib/facebook-sdk';
 
 function oauthErrorMessage(code: string): string {
   switch (code) {
@@ -40,6 +41,7 @@ function SignPageContent() {
   const [langOpen, setLangOpen] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fbLoading, setFbLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const [username, setUsername] = useState('');
@@ -73,9 +75,37 @@ function SignPageContent() {
     window.location.href = `/api/auth/oauth/google?redirect=${encodeURIComponent(redirect)}`;
   };
 
-  const handleFacebookSignIn = () => {
-    const redirect = searchParams.get('redirect') || '/home';
-    window.location.href = `/api/auth/oauth/facebook?redirect=${encodeURIComponent(redirect)}`;
+  // JS SDK flow: FB.login() returns a short-lived access token in the browser,
+  // which we POST to the backend for server-side verification before a session
+  // is minted — no full-page redirect/callback round trip.
+  const handleFacebookSignIn = async () => {
+    if (fbLoading) return;
+    setMessage(null);
+    setFbLoading(true);
+    try {
+      const accessToken = await facebookLogin();
+      const res = await fetch('/api/auth/oauth/facebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accessToken }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMessage({ type: 'success', text: 'Authentication successful. Redirecting...' });
+        const redirect = searchParams.get('redirect') || '/home';
+        router.push(redirect);
+        router.refresh();
+      } else {
+        setMessage({ type: 'error', text: oauthErrorMessage(data.error || 'oauth_failed') });
+        setFbLoading(false);
+      }
+    } catch (err) {
+      // A dismissed login dialog is a no-op, not an error worth surfacing.
+      if ((err as Error).message !== FB_LOGIN_CANCELLED) {
+        setMessage({ type: 'error', text: oauthErrorMessage('oauth_failed') });
+      }
+      setFbLoading(false);
+    }
   };
 
   // ──────────────────────────────────────────────────────────
@@ -357,12 +387,18 @@ function SignPageContent() {
             <button
               type="button"
               onClick={handleFacebookSignIn}
-              className="flex items-center justify-center gap-2 py-2.5 bg-white/[0.04] border border-white/[0.07] rounded-xl text-[13px] font-semibold text-slate-300 hover:bg-white/[0.07] hover:border-white/[0.13] hover:text-white transition-all duration-150"
+              disabled={fbLoading}
+              aria-busy={fbLoading}
+              className="flex items-center justify-center gap-2 py-2.5 bg-white/[0.04] border border-white/[0.07] rounded-xl text-[13px] font-semibold text-slate-300 hover:bg-white/[0.07] hover:border-white/[0.13] hover:text-white transition-all duration-150 disabled:opacity-60 disabled:pointer-events-none"
             >
-              <svg viewBox="0 0 24 24" className="w-[15px] h-[15px] flex-shrink-0" aria-hidden="true">
-                <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-              Facebook
+              {fbLoading ? (
+                <span className="w-[15px] h-[15px] flex-shrink-0 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" aria-hidden="true" />
+              ) : (
+                <svg viewBox="0 0 24 24" className="w-[15px] h-[15px] flex-shrink-0" aria-hidden="true">
+                  <path fill="#1877F2" d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                </svg>
+              )}
+              {fbLoading ? 'Connecting…' : 'Facebook'}
             </button>
           </div>
 
