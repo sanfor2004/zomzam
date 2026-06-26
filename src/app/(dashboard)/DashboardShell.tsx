@@ -17,6 +17,7 @@ import { DropdownMenu } from '@/components/ui/Dropdown';
 import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, Bookmark, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
+import { describeNotification, notifTimeAgo } from '@/lib/notifications';
 
 function DashboardLayoutContent({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   const { t } = useTranslation();
@@ -754,30 +755,58 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
                   </span>
                 )}
               </div>
-              <div className="max-h-60 overflow-y-auto py-1">
+              <div className="max-h-80 overflow-y-auto py-1">
                 {notifications.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-6 italic">No notifications yet.</p>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="px-4 py-3 hover:bg-slate-800/30 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 cursor-pointer"
-                    >
-                      <Image
-                        src={n.data?.from_avatar || '/Assets/Img/default-avatar.png'}
-                        alt=""
-                        width={32}
-                        height={32}
-                        className="w-8 h-8 rounded-full object-cover mt-0.5"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs">
-                          <span className="font-bold">{n.data?.from_username}</span> {n.data?.message || 'sent you a message'}
-                        </p>
-                      </div>
-                      {!n.is_read && <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2"></span>}
-                    </div>
-                  ))
+                  notifications.map((n) => {
+                    const view = describeNotification(n);
+                    const when = notifTimeAgo(n.created_at);
+                    // Each row deep-links to where it actually happened (the post,
+                    // the follower's profile, the inbox). Rows without a known
+                    // destination fall back to a static, non-navigating element so
+                    // a dead click never lands the user on a 404.
+                    const RowTag: any = view.href ? Link : 'div';
+                    const rowProps = view.href
+                      ? { href: view.href, onClick: () => setNotifDropdownOpen(false) }
+                      : {};
+                    return (
+                      <RowTag
+                        key={n.id}
+                        {...rowProps}
+                        className={cn(
+                          'group px-4 py-3 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 transition-colors',
+                          view.href ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default',
+                          !n.is_read && 'bg-primary-500/[0.04]',
+                        )}
+                      >
+                        <div className="relative flex-shrink-0 mt-0.5">
+                          <Image
+                            src={view.avatar}
+                            alt=""
+                            width={36}
+                            height={36}
+                            className="w-9 h-9 rounded-full object-cover"
+                          />
+                          <span
+                            aria-hidden
+                            className="absolute -bottom-1 -right-1 text-[11px] leading-none bg-surface-dark rounded-full px-0.5 ring-1 ring-slate-800"
+                          >
+                            {view.emoji}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-xs leading-snug', !n.is_read ? 'text-white' : 'text-slate-300')}>
+                            {view.text}
+                          </p>
+                          {when && <p className="text-[10px] text-slate-500 mt-0.5">{when}</p>}
+                        </div>
+                        {!n.is_read && (
+                          <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
+                        )}
+                      </RowTag>
+                    );
+                  })
                 )}
               </div>
             </div>

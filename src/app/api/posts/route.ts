@@ -12,12 +12,21 @@ async function notifyRepostAuthor(
   actorUsername: string,
 ) {
   if (!origAuthorId || origAuthorId === actorId || !origPostId) return;
-  await createNotification(origAuthorId, 'reposted', {
-    from_user_id: actorId,
-    by_user: actorUsername,
-    post_id: origPostId,
-    message: 'reposted your post',
-  });
+  // Batch by post: repeat reposters on the same post collapse into one roster
+  // row ("X and N others reposted your post") instead of spamming N rows — and
+  // a re-repost from the same actor is deduped, not re-counted.
+  await createNotification(
+    origAuthorId,
+    'reposted',
+    {
+      from_user_id: actorId,
+      from_username: actorUsername,
+      by_user: actorUsername,
+      post_id: origPostId,
+      message: 'reposted your post',
+    },
+    { aggregate: true, aggregateKey: 'post_id' }
+  );
 }
 
 // Thin dispatch layer: authenticate, parse the request body (post creation is

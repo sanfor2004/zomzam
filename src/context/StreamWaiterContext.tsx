@@ -53,8 +53,10 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
   // is what lets the memoized context values keep stable identity.
   const isIdleRef = useRef(isIdle);
   const viewingUserIdRef = useRef(viewingUserId);
+  const notificationsRef = useRef(notifications);
   useEffect(() => { isIdleRef.current = isIdle; }, [isIdle]);
   useEffect(() => { viewingUserIdRef.current = viewingUserId; }, [viewingUserId]);
+  useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
 
   const loadNotifications = useCallback(async () => {
     try {
@@ -164,11 +166,19 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
           } else if (order_name === 'update_viewed_user_status') {
             setViewedUserStatus(params);
           } else if (order_name === 'new_notification') {
-            // Trigger local toast notification and reload
-            const customEvent = new CustomEvent('new-notification', { detail: params });
-            window.dispatchEvent(customEvent);
-            setNotificationsCount((c) => c + 1);
-            setNotifications((n) => [params, ...n]);
+            // Trigger local toast notification.
+            window.dispatchEvent(new CustomEvent('new-notification', { detail: params }));
+            // The server reuses a notification's id when it coalesces actors
+            // into an existing roster (batching), so replace any same-id row in
+            // place and re-float it — never duplicate. Only bump the unread
+            // badge when the row wasn't already counted as unread.
+            const prior = notificationsRef.current.find((x) => x.id === params.id);
+            const alreadyUnread = prior && !prior.is_read;
+            setNotifications((list) => [
+              { ...params, is_read: 0 },
+              ...list.filter((x) => x.id !== params.id),
+            ]);
+            if (!alreadyUnread) setNotificationsCount((c) => c + 1);
           } else if (order_name === 'social_update') {
             const customEvent = new CustomEvent('zz-social-update', { detail: params });
             window.dispatchEvent(customEvent);
