@@ -67,15 +67,6 @@ export default async function PostPage({ params }: PageProps) {
 
   if (!post) return notFound();
 
-  // Minimal viewer profile for the quote composer (avatar + name). Only fetched
-  // when signed in; anonymous viewers can't repost (the button prompts sign-in).
-  const currentUser = viewer
-    ? await queryOne<any>(
-        `SELECT id, username, first_name, last_name, avatar FROM users WHERE id = ?`,
-        [viewer.id]
-      )
-    : null;
-
   const comments = await query<any>(
     `SELECT c.id, c.post_id, c.parent_id, c.content, c.created_at,
             u.username, u.first_name, u.last_name, u.avatar
@@ -99,10 +90,6 @@ export default async function PostPage({ params }: PageProps) {
     repost_count: parseInt(post.repost_count ?? 0),
     reposted_by_me: parseInt(post.reposted_by_me ?? 0) > 0,
   };
-
-  const normalizedCurrentUser = currentUser
-    ? { ...currentUser, avatar: currentUser.avatar || '/Assets/Img/default-avatar.png' }
-    : null;
 
   const normalizedComments = comments.map((c: any) => ({
     ...c,
@@ -153,7 +140,6 @@ export default async function PostPage({ params }: PageProps) {
           post={normalizedPost}
           initialComments={normalizedComments}
           viewerId={viewer?.id ?? null}
-          currentUser={normalizedCurrentUser}
         />
       </main>
 

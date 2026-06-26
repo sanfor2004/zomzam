@@ -1,23 +1,13 @@
 'use client';
-import { Button, Modal, Dropdown } from '@/components/ui';
+import { Button } from '@/components/ui';
 
 import React, { useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2, MessageSquareQuote } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2 } from 'lucide-react';
 import { FollowButton } from '@/components/social/FollowButton';
 import { SignInPrompt } from '@/components/social/SignInPrompt';
-import type { CurrentUser, Post as FeedPost } from '@/app/(dashboard)/home/shared';
-
-// The quote composer is the heavy feed component (contentEditable + gsap). Load
-// it lazily so it never weighs down the public permalink's initial bundle — it
-// only mounts when a signed-in viewer opens "Repost with comment".
-const PostComposer = dynamic(
-  () => import('@/app/(dashboard)/home/PostComposer').then((m) => m.PostComposer),
-  { ssr: false, loading: () => <div className="py-8 text-center text-xs text-slate-500"><Loader2 className="w-4 h-4 animate-spin inline" /></div> }
-);
 
 interface Post {
   id: number;
@@ -89,12 +79,10 @@ export default function PostDetail({
   post,
   initialComments,
   viewerId,
-  currentUser,
 }: {
   post: Post;
   initialComments: Comment[];
   viewerId: number | null;
-  currentUser: CurrentUser | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   usePageEntrance(containerRef);
@@ -110,10 +98,10 @@ export default function PostDetail({
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked_by_me);
   const [reposted, setReposted] = useState(!!post.reposted_by_me);
   const [repostCount, setRepostCount] = useState(post.repost_count ?? 0);
-  const [repostMenuOpen, setRepostMenuOpen] = useState(false);
-  const [quoteOpen, setQuoteOpen] = useState(false);
   // Public-only repost (F2.4); the permalink hero only ever shows a single post,
   // so the repost target is this post's id (the service collapses any chain).
+  // ponytail: plain repost only here — quote-with-comment lives on the feed card,
+  // one click away, so the public route never loads the heavy composer bundle.
   const canRepost = (post.visibility ?? 'public') === 'public';
 
   // Favor economy: ask resolution state is mutable here (owner accepts/resolves).
@@ -202,7 +190,6 @@ export default function PostDetail({
 
   // Plain repost toggle (optimistic). Anonymous → sign-in prompt.
   const togglePlainRepost = async () => {
-    setRepostMenuOpen(false);
     if (!viewerId) { setSignInOpen(true); return; }
     const next = !reposted;
     setReposted(next);
@@ -219,12 +206,6 @@ export default function PostDetail({
       setReposted(!next);
       setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
     }
-  };
-
-  const openQuote = () => {
-    setRepostMenuOpen(false);
-    if (!viewerId) { setSignInOpen(true); return; }
-    setQuoteOpen(true);
   };
 
   const handleShare = async () => {
@@ -396,37 +377,20 @@ export default function PostDetail({
             </span>
           </div>
 
-          {/* Repost — public-only. Menu: instant plain repost / repost with a comment. */}
+          {/* Repost — public-only, plain toggle (optimistic). */}
           {canRepost && (
-            <Dropdown
-              mode="menu"
-              open={repostMenuOpen}
-              onClose={() => setRepostMenuOpen(false)}
-              align="left"
-              dropdownClassName="min-w-[15rem] p-1.5 space-y-0.5"
-              trigger={
-                <Button
-                  variant="unstyled"
-                  onClick={() => setRepostMenuOpen((o) => !o)}
-                  aria-label="Repost"
-                  aria-haspopup="menu"
-                  aria-expanded={repostMenuOpen}
-                  className={`flex items-center gap-2 text-sm font-semibold transition-colors ${
-                    reposted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'
-                  }`}
-                >
-                  <Repeat2 className="w-[18px] h-[18px]" />
-                  <span>{repostCount > 0 ? repostCount : ''} {reposted ? 'Reposted' : 'Repost'}</span>
-                </Button>
-              }
+            <Button
+              variant="unstyled"
+              onClick={togglePlainRepost}
+              aria-label={reposted ? 'Undo repost' : 'Repost'}
+              aria-pressed={reposted}
+              className={`flex items-center gap-2 text-sm font-semibold transition-colors ${
+                reposted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'
+              }`}
             >
-              <Dropdown.Item leading={<Repeat2 className="w-4 h-4" />} onClick={togglePlainRepost}>
-                {reposted ? 'Undo repost' : 'Repost'}
-              </Dropdown.Item>
-              <Dropdown.Item leading={<MessageSquareQuote className="w-4 h-4" />} onClick={openQuote}>
-                Repost with comment
-              </Dropdown.Item>
-            </Dropdown>
+              <Repeat2 className="w-[18px] h-[18px]" />
+              <span>{repostCount > 0 ? repostCount : ''} {reposted ? 'Reposted' : 'Repost'}</span>
+            </Button>
           )}
 
           <div className="flex items-center gap-6 ml-auto">
@@ -453,25 +417,6 @@ export default function PostDetail({
             </Button>
           </div>
         </div>
-
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: QUOTE REPOST MODAL (permalink)
-            Contains: Kit Modal hosting the lazy PostComposer in `quoting` mode;
-            on success routes the viewer to the new quote's permalink
-            ────────────────────────────────────────────────────────── */}
-        {quoteOpen && (
-          <Modal isOpen={quoteOpen} onClose={() => setQuoteOpen(false)} title="Repost with comment">
-            <PostComposer
-              currentUser={currentUser}
-              friends={[]}
-              onPosted={() => {}}
-              quoting={{
-                original: post as unknown as FeedPost,
-                onPosted: (created) => { setQuoteOpen(false); window.location.href = `/p/${created.id}`; },
-              }}
-            />
-          </Modal>
-        )}
       </div>
 
       {/* ──────────────────────────────────────────────────────────

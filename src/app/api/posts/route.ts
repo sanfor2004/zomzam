@@ -3,6 +3,24 @@ import { withAuth } from '@/lib/api-auth';
 import * as posts from '@/lib/services/posts';
 import { createNotification, pushStreamOrder } from '@/lib/models/user';
 
+// Notify a repost's original author (both the plain-repost and quote paths land
+// here). Skips a self-repost. The nested original — with its author id — rides on
+// the normalized post the service returns; a tombstoned/absent original is a no-op.
+async function notifyRepostAuthor(
+  post: { repost_of?: { id: number; user_id: number } | null },
+  actorId: number,
+  actorUsername: string,
+) {
+  const origAuthor = post.repost_of?.user_id;
+  if (!origAuthor || origAuthor === actorId) return;
+  await createNotification(origAuthor, 'reposted', {
+    from_user_id: actorId,
+    by_user: actorUsername,
+    post_id: post.repost_of!.id,
+    message: 'reposted your post',
+  });
+}
+
 // Thin dispatch layer: authenticate, parse the request body (post creation is
 // multipart/form-data because it may carry an image File; every other action is
 // JSON), delegate to the posts service, shape the response. Business logic lives
@@ -70,19 +88,8 @@ export const POST = withAuth(async (request, user) => {
           )
         );
       }
-      // A quote repost notifies the original's author (skip a self-repost). The
-      // nested original (with its author id) rides on the normalized post.
-      {
-        const origAuthor = post.repost_of?.user_id;
-        if (origAuthor && origAuthor !== user.id) {
-          await createNotification(origAuthor, 'reposted', {
-            from_user_id: user.id,
-            by_user: user.username,
-            post_id: post.repost_of!.id,
-            message: 'reposted your post',
-          });
-        }
-      }
+      // A quote repost notifies the original's author (skip a self-repost).
+      await notifyRepostAuthor(post, user.id, user.username);
       return NextResponse.json({ success: true, post });
     }
 
@@ -138,15 +145,7 @@ export const POST = withAuth(async (request, user) => {
             pushStreamOrder(rid, 'new_post', { post_id: post.id, by_user: user.username }, false)
           )
         );
-        const origAuthor = post.repost_of?.user_id;
-        if (origAuthor && origAuthor !== user.id) {
-          await createNotification(origAuthor, 'reposted', {
-            from_user_id: user.id,
-            by_user: user.username,
-            post_id: post.repost_of!.id,
-            message: 'reposted your post',
-          });
-        }
+        await notifyRepostAuthor(post, user.id, user.username);
       }
       return NextResponse.json({ success: true, reposted, post });
     }

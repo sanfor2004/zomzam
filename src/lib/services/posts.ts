@@ -585,6 +585,22 @@ function feedColParams(userId: number): number[] {
   return [userId, userId, userId, userId, userId, userId];
 }
 
+// What a viewer may see: public, their own, or friends/follows-only posts whose
+// author they're connected to. One source of truth for the feed AND /saved (and
+// any future feed-style read) so the visibility rule can never drift between
+// them. Five `?`, all the viewer's id: own-check, follow-IN, friend-IF×1, friend-WHERE×2.
+const FEED_VISIBILITY = `(
+        p.visibility = 'public'
+        OR p.user_id = ?
+        OR (p.visibility = 'friends' AND p.user_id IN (
+             SELECT addressee_id FROM user_connections
+               WHERE requester_id = ? AND type = 'follow' AND status = 'accepted'
+             UNION
+             SELECT IF(requester_id = ?, addressee_id, requester_id) FROM user_connections
+               WHERE (requester_id = ? OR addressee_id = ?) AND type = 'friend' AND status = 'accepted'
+           ))
+      )`;
+
 /**
  * Shape one raw FEED_COLUMNS row into the wire Post. Builds the nested repost
  * original from the orig_* columns: a value of `undefined` ⇒ not a repost; `null`
@@ -692,19 +708,7 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
   const viewerTagSet = new Set(viewerTags);
 
   const SELECT = `SELECT ${FEED_COLUMNS} ${FEED_FROM}`;
-
-  // What this viewer may see: public, own, or friends/follows-only posts.
-  const VISIBILITY = `(
-        p.visibility = 'public'
-        OR p.user_id = ?
-        OR (p.visibility = 'friends' AND p.user_id IN (
-             SELECT addressee_id FROM user_connections
-               WHERE requester_id = ? AND type = 'follow' AND status = 'accepted'
-             UNION
-             SELECT IF(requester_id = ?, addressee_id, requester_id) FROM user_connections
-               WHERE (requester_id = ? OR addressee_id = ?) AND type = 'friend' AND status = 'accepted'
-           ))
-      )`;
+  const VISIBILITY = FEED_VISIBILITY;
 
   const SEEN = tier === 'seen'
     ? `EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`
@@ -819,17 +823,7 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
     LEFT JOIN posts orig ON orig.id = p.repost_of
     LEFT JOIN users ou ON ou.id = orig.user_id`;
 
-  const VISIBILITY = `(
-        p.visibility = 'public'
-        OR p.user_id = ?
-        OR (p.visibility = 'friends' AND p.user_id IN (
-             SELECT addressee_id FROM user_connections
-               WHERE requester_id = ? AND type = 'follow' AND status = 'accepted'
-             UNION
-             SELECT IF(requester_id = ?, addressee_id, requester_id) FROM user_connections
-               WHERE (requester_id = ? OR addressee_id = ?) AND type = 'friend' AND status = 'accepted'
-           ))
-      )`;
+  const VISIBILITY = FEED_VISIBILITY;
 
   // ? order: FEED_COLUMNS viewer cols (6), bookmark filter(1), visibility(5),
   // keyset(0..1).
