@@ -121,6 +121,17 @@ test('createPost rejects an empty post (no text, no image) with HttpError 400', 
   assert.equal(db.execute.mock.calls.length, 0);
 });
 
+test('createPost normal-post fetch omits repost_of so a fresh post never mis-renders as a tombstone', async () => {
+  // Regression (2026-06-26): the create return selected p.repost_of, which is
+  // NULL for a normal post; PostCard reads `repost_of !== undefined`, so the null
+  // flagged a brand-new post as a deleted-original repost ("You reposted" +
+  // "This post is no longer available") until a refresh re-fetched via the feed.
+  db.queryOne.mock.mockImplementation(async () => ({ id: 1, user_id: USER_ID, avatar: null }));
+  await posts.createPost(USER_ID, { contentHtml: '<p>hi</p>', visibility: 'public', imageFile: null });
+  const fetchCall = db.queryOne.mock.calls.find((c) => /0 AS like_count/.test(c.arguments[0] as string))!;
+  assert.doesNotMatch(fetchCall.arguments[0] as string, /repost_of/, 'a normal create return must not carry repost_of');
+});
+
 // ── Favor economy: accept_answer bridge + resolve_ask ────────────────────────
 
 test('acceptAnswer resolves the ask, logs a helpful_event, and returns the helper id', async () => {

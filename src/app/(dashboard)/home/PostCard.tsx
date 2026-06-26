@@ -219,7 +219,10 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
       ref={seenRef}
       id={`post-${post.id}`}
       data-entrance="card"
-      className="post-item relative"
+      // Lift above sibling cards while the repost menu is open so its dropdown
+      // panel (which overflows the card's bottom edge) isn't painted over by the
+      // next post in the feed.
+      className={`post-item relative ${repostMenuOpen ? 'z-30' : ''}`}
     >
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST CARD — MAIN GLASS CARD

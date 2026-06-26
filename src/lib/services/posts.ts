@@ -130,9 +130,12 @@ export async function createPost(userId: number, input: CreatePostInput) {
     return await fetchFeedPostById(userId, result.insertId);
   }
 
+  // A plain post is never a repost, so repost_of is deliberately omitted (NOT
+  // selected as null): PostCard reads `repost_of !== undefined` to decide a row
+  // is a repost, so a null here would mis-render a fresh post as a tombstone.
   const post = await queryOne(
     `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
-            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at, p.repost_of,
+            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
             u.username, u.first_name, u.last_name, u.avatar,
             0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
      FROM posts p JOIN users u ON u.id = p.user_id
