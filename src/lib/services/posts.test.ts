@@ -452,7 +452,9 @@ test('toggleRepost creates a plain repost of a public original, scoped to the us
   assert.equal(res.reposted, true);
   const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
   assert.match(insert.arguments[0] as string, /content_html, visibility, image_path, type, skill_tag, repost_of/);
-  assert.deepEqual(insert.arguments[1], [USER_ID, 5], 'author = session user, repost_of = root id');
+  const params = insert.arguments[1] as any[];
+  assert.match(params[0], /^[a-f0-9]{32}$/, 'generated opaque public_id leads the insert');
+  assert.deepEqual(params.slice(1), [USER_ID, 5], 'author = session user, repost_of = root id');
 });
 
 test('toggleRepost on an existing plain repost removes it (un-repost), scoped to the user', async () => {
@@ -493,7 +495,7 @@ test('toggleRepost collapses to the root when the target is itself a repost', as
 
   assert.deepEqual(db.queryOne.mock.calls[1].arguments[1], [3], 'root resolved from the target\'s repost_of');
   const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
-  assert.equal((insert.arguments[1] as any[])[1], 3, 'repost_of points at the true root, never a chain');
+  assert.equal((insert.arguments[1] as any[])[2], 3, 'repost_of points at the true root, never a chain');
 });
 
 test('toggleRepost allows a self-repost (root authored by the same user)', async () => {
@@ -507,14 +509,15 @@ test('toggleRepost allows a self-repost (root authored by the same user)', async
   assert.equal(res.reposted, true, 'self-repost is permitted at the service layer');
 });
 
-test('toggleRepost returns the original author + id to notify (a plain repost never enters the feed)', async () => {
+test('toggleRepost returns the original author + id + public_id to notify (a plain repost never enters the feed)', async () => {
+  const rootPublicId = 'a'.repeat(32);
   seedQueryOne(
     { id: 5, repost_of: null },
-    { id: 5, user_id: 9, visibility: 'public' },
+    { id: 5, public_id: rootPublicId, user_id: 9, visibility: 'public' },
     null,
   );
   const res = await posts.toggleRepost(USER_ID, 5);
-  assert.deepEqual(res, { reposted: true, originalAuthorId: 9, originalId: 5 });
+  assert.deepEqual(res, { reposted: true, originalAuthorId: 9, originalId: 5, originalPublicId: rootPublicId });
 });
 
 test('toggleRepost matches only the empty IMAGE-LESS pointer (an image-only quote is not a plain repost)', async () => {
@@ -542,7 +545,7 @@ test('createPost quote accepts an image-only quote (no text)', async () => {
   await posts.createPost(USER_ID, { contentHtml: '', visibility: 'public', imageFile: { size: 100 } as any, repostOf: 5 });
   assert.equal(uploads.processImageUpload.mock.calls.length, 1, 'the quote\'s own image is processed');
   const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
-  assert.equal((insert.arguments[1] as any[])[6], 5, 'repost_of = root id');
+  assert.equal((insert.arguments[1] as any[])[7], 5, 'repost_of = root id');
 });
 
 // ── Repost: quote (createPost with repostOf) ─────────────────────────────────
@@ -558,12 +561,13 @@ test('createPost quote stores repost_of + content and forces public/status', asy
 
   const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
   const params = insert.arguments[1] as any[];
-  // (user_id, content_html, visibility, image_path, type, skill_tag, repost_of)
-  assert.equal(params[0], USER_ID);
-  assert.match(params[1], /nice work/);
-  assert.equal(params[2], 'public', 'a quote is always public');
-  assert.equal(params[4], 'status', 'a quote is always a status');
-  assert.equal(params[6], 5, 'repost_of = root id');
+  // (public_id, user_id, content_html, visibility, image_path, type, skill_tag, repost_of)
+  assert.match(params[0], /^[a-f0-9]{32}$/, 'generated opaque public_id leads the insert');
+  assert.equal(params[1], USER_ID);
+  assert.match(params[2], /nice work/);
+  assert.equal(params[3], 'public', 'a quote is always public');
+  assert.equal(params[5], 'status', 'a quote is always a status');
+  assert.equal(params[7], 5, 'repost_of = root id');
 });
 
 test('createPost quote rejects empty text (400) before touching the DB', async () => {

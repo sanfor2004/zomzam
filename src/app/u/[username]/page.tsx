@@ -101,6 +101,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // the ORIGINAL's numbers. Quote reposts and normal posts render as themselves.
   type ProfilePost = {
     id: number;            // the post the card links to (original for a plain repost)
+    public_id: string;     // opaque id the permalink is keyed on (original's for a plain repost)
     content_html: string;  // what to preview (original's text for a plain repost)
     visibility: string;
     created_at: string;
@@ -111,10 +112,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
   let posts: ProfilePost[] = [];
   try {
     const rows = await query<any>(
-      `SELECT p.id, p.content_html, p.image_path, p.visibility, p.created_at, p.repost_of,
+      `SELECT p.id, p.public_id, p.content_html, p.image_path, p.visibility, p.created_at, p.repost_of,
               (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
               (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
-              orig.id AS orig_id, orig.content_html AS orig_content_html, orig.visibility AS orig_visibility,
+              orig.id AS orig_id, orig.public_id AS orig_public_id, orig.content_html AS orig_content_html, orig.visibility AS orig_visibility,
               (SELECT COUNT(*) FROM post_likes    WHERE post_id = orig.id) AS orig_like_count,
               (SELECT COUNT(*) FROM post_comments WHERE post_id = orig.id) AS orig_comment_count
        FROM posts p
@@ -132,6 +133,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
           if (!p.orig_id) return null;
           return {
             id: Number(p.orig_id),
+            public_id: p.orig_public_id,
             content_html: p.orig_content_html,
             visibility: p.orig_visibility || 'public', // reposts are public-only
             created_at: p.created_at,
@@ -142,6 +144,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
         }
         return {
           id: Number(p.id),
+          public_id: p.public_id,
           content_html: p.content_html,
           visibility: p.visibility,
           created_at: p.created_at,
@@ -425,7 +428,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 return (
                   <Link
                     key={`${p.reposted ? 'r' : 'p'}${p.id}`}
-                    href={`/p/${p.id}`}
+                    href={`/p/${p.public_id}`}
                     data-entrance="list-item"
                     className="block bg-[#111318] border border-slate-800/60 rounded-2xl p-4 hover:border-primary-500/30 transition-colors"
                   >

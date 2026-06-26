@@ -459,7 +459,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             <Tooltip content="View comments">
               <Button
                 variant="unstyled"
-                onClick={() => router.push(`/p/${post.id}`)}
+                onClick={() => router.push(`/p/${post.public_id}`)}
                 aria-label="View comments on post"
                 className="flex items-center gap-1.5 text-xs font-semibold transition-colors text-slate-400 hover:text-sky-400"
               >
@@ -529,7 +529,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             </Tooltip>
 
             <ShareButton
-              url={`/p/${post.id}`}
+              url={`/p/${post.public_id}`}
               shareTitle={`${name} on Zomzam`}
               className="text-slate-400 hover:text-slate-200 transition-colors"
             />
@@ -719,7 +719,7 @@ function NestedOriginal({ original }: { original: Post }) {
   const isResolved = isAsk && !!original.resolved_at;
   return (
     <Link
-      href={`/p/${original.id}`}
+      href={`/p/${original.public_id}`}
       className="mt-2.5 block rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 transition-colors hover:border-white/[0.14] hover:bg-white/[0.04]"
     >
       <div className="flex items-center gap-2">

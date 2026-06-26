@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import DOMPurify from 'isomorphic-dompurify';
 import { query, queryOne, execute, transaction } from '@/lib/db';
 import { HttpError } from '@/lib/http-error';
@@ -21,6 +22,13 @@ function sanitizeHtml(html: string): string {
 
 function normalizeAvatar(row: any) {
   return { ...row, avatar: row.avatar || DEFAULT_AVATAR };
+}
+
+// Opaque public identifier for the /p/ permalink. MD5 of 16 random bytes — 32
+// hex chars, unguessable and NOT derived from the sequential post id, so the
+// permalink can't be walked (md5(1), md5(2), …) to enumerate or count posts.
+function newPublicId(): string {
+  return crypto.createHash('md5').update(crypto.randomBytes(16)).digest('hex');
 }
 
 // Normalize a tag to its hashtag slug form (the composer stores #UI/UX as
@@ -112,8 +120,8 @@ export async function createPost(userId: number, input: CreatePostInput) {
   if (hasImage) image_path = await processPostImage(input.imageFile!);
 
   const result = await execute(
-    `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag, repost_of) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [userId, content_html, visibility, image_path, type, skill_tag, repostRootId]
+    `INSERT INTO posts (public_id, user_id, content_html, visibility, image_path, type, skill_tag, repost_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [newPublicId(), userId, content_html, visibility, image_path, type, skill_tag, repostRootId]
   );
 
   // The author has implicitly seen their own post — record it so the unseen-first
@@ -135,7 +143,7 @@ export async function createPost(userId: number, input: CreatePostInput) {
   // selected as null): PostCard reads `repost_of !== undefined` to decide a row
   // is a repost, so a null here would mis-render a fresh post as a tombstone.
   const post = await queryOne(
-    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+    `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.visibility,
             p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
             u.username, u.first_name, u.last_name, u.avatar,
             0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
@@ -212,6 +220,7 @@ export async function editPost(userId: number, postId: number, input: EditPostIn
 
 export interface AcceptAnswerResult {
   postId: number;
+  postPublicId: string;
   commentId: number;
   resolvedAt: string;
 }
@@ -227,8 +236,8 @@ export interface AcceptAnswerResult {
 export async function acceptAnswer(userId: number, postId: number, commentId: number): Promise<{ result: AcceptAnswerResult; helperUserId: number }> {
   if (!postId || !commentId) throw new HttpError(400, 'post_id and comment_id required');
 
-  const post = await queryOne<{ id: number; type: string }>(
-    `SELECT id, type FROM posts WHERE id = ? AND user_id = ?`,
+  const post = await queryOne<{ id: number; public_id: string; type: string }>(
+    `SELECT id, public_id, type FROM posts WHERE id = ? AND user_id = ?`,
     [postId, userId]
   );
   if (!post) throw new HttpError(403, 'Not found or not yours');
@@ -253,7 +262,7 @@ export async function acceptAnswer(userId: number, postId: number, commentId: nu
     );
   });
 
-  return { result: { postId, commentId, resolvedAt }, helperUserId: answer.user_id };
+  return { result: { postId, postPublicId: post.public_id, commentId, resolvedAt }, helperUserId: answer.user_id };
 }
 
 /**
@@ -399,7 +408,7 @@ export async function toggleBookmark(userId: number, postId: number): Promise<{ 
  * already-public content. Throws 404 if the root is gone, 400 if it's not public.
  * Returns the root id + its author (to notify) — never the intermediate repost.
  */
-async function resolveRepostTarget(targetId: number): Promise<{ rootId: number; authorId: number }> {
+async function resolveRepostTarget(targetId: number): Promise<{ rootId: number; rootPublicId: string; authorId: number }> {
   if (!targetId) throw new HttpError(400, 'post_id required');
   const target = await queryOne<{ id: number; repost_of: number | null }>(
     `SELECT id, repost_of FROM posts WHERE id = ?`,
@@ -408,14 +417,14 @@ async function resolveRepostTarget(targetId: number): Promise<{ rootId: number; 
   if (!target) throw new HttpError(404, 'Post not found');
 
   const rootId = target.repost_of ? Number(target.repost_of) : Number(target.id);
-  const root = await queryOne<{ id: number; user_id: number; visibility: string }>(
-    `SELECT id, user_id, visibility FROM posts WHERE id = ?`,
+  const root = await queryOne<{ id: number; public_id: string; user_id: number; visibility: string }>(
+    `SELECT id, public_id, user_id, visibility FROM posts WHERE id = ?`,
     [rootId]
   );
   if (!root) throw new HttpError(404, 'Post not found');
   if (root.visibility !== 'public') throw new HttpError(400, 'Only public posts can be reposted');
 
-  return { rootId: Number(root.id), authorId: Number(root.user_id) };
+  return { rootId: Number(root.id), rootPublicId: root.public_id, authorId: Number(root.user_id) };
 }
 
 /**
@@ -429,8 +438,8 @@ async function resolveRepostTarget(targetId: number): Promise<{ rootId: number; 
  * the freshly-normalized repost row (with nested original) so the route can fan
  * out the live pill + notify; on un-repost returns `{ reposted: false }`.
  */
-export async function toggleRepost(userId: number, targetId: number): Promise<{ reposted: boolean; originalAuthorId?: number; originalId?: number }> {
-  const { rootId, authorId } = await resolveRepostTarget(targetId);
+export async function toggleRepost(userId: number, targetId: number): Promise<{ reposted: boolean; originalAuthorId?: number; originalId?: number; originalPublicId?: string }> {
+  const { rootId, rootPublicId, authorId } = await resolveRepostTarget(targetId);
 
   // A PLAIN repost is the empty pointer row: no text AND no image. An image-only
   // quote also has content_html='' but carries an image, so it must NOT match here.
@@ -446,9 +455,9 @@ export async function toggleRepost(userId: number, targetId: number): Promise<{ 
   }
 
   const result = await execute(
-    `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag, repost_of)
-     VALUES (?, '', 'public', NULL, 'status', NULL, ?)`,
-    [userId, rootId]
+    `INSERT INTO posts (public_id, user_id, content_html, visibility, image_path, type, skill_tag, repost_of)
+     VALUES (?, ?, '', 'public', NULL, 'status', NULL, ?)`,
+    [newPublicId(), userId, rootId]
   );
   await execute(
     `INSERT INTO post_views (post_id, user_id, seen) VALUES (?, ?, 1)
@@ -458,8 +467,9 @@ export async function toggleRepost(userId: number, targetId: number): Promise<{ 
 
   // A plain repost never enters the home feed (it only boosts the original +
   // shows on the reposter's profile), so there's no row to return for prepend —
-  // just the ids the route needs to notify the original's author.
-  return { reposted: true, originalAuthorId: authorId, originalId: rootId };
+  // just the ids the route needs to notify the original's author (the public_id
+  // drives the notification's deep link to the original).
+  return { reposted: true, originalAuthorId: authorId, originalId: rootId, originalPublicId: rootPublicId };
 }
 
 export async function toggleCommentVote(userId: number, commentId: number): Promise<{ upvoted: boolean }> {
@@ -562,7 +572,7 @@ const SCORED_WINDOW = 300; // candidate pool ranked in-memory for the landing pa
 // repost_count + reposted_by_me are keyed on COALESCE(p.repost_of, p.id) so a
 // repost card shows the ROOT original's tally and the viewer's toggle state.
 const FEED_COLUMNS = `
-    p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+    p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.visibility,
     p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at, p.repost_of,
     u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
     (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
@@ -573,7 +583,7 @@ const FEED_COLUMNS = `
     (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
     (SELECT COUNT(*) FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id)) AS repost_count,
     (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id) AND r.user_id = ? AND r.content_html = '' AND r.image_path IS NULL)) AS reposted_by_me,
-    orig.id AS orig_id, orig.user_id AS orig_user_id, orig.content_html AS orig_content_html,
+    orig.id AS orig_id, orig.public_id AS orig_public_id, orig.user_id AS orig_user_id, orig.content_html AS orig_content_html,
     orig.type AS orig_type, orig.skill_tag AS orig_skill_tag,
     orig.accepted_answer_id AS orig_accepted_answer_id, orig.resolved_at AS orig_resolved_at, orig.created_at AS orig_created_at,
     ou.username AS orig_username, ou.first_name AS orig_first_name, ou.last_name AS orig_last_name, ou.avatar AS orig_avatar,
@@ -620,6 +630,7 @@ function normalizeFeedRow(p: any) {
     ? (p.orig_id
         ? {
             id: Number(p.orig_id),
+            public_id: p.orig_public_id,
             user_id: Number(p.orig_user_id),
             username: p.orig_username,
             first_name: p.orig_first_name,
@@ -642,7 +653,7 @@ function normalizeFeedRow(p: any) {
 
   const {
     author_tags, bookmark_id,
-    orig_id, orig_user_id, orig_username, orig_first_name, orig_last_name, orig_avatar,
+    orig_id, orig_public_id, orig_user_id, orig_username, orig_first_name, orig_last_name, orig_avatar,
     orig_content_html, orig_type, orig_skill_tag,
     orig_accepted_answer_id, orig_resolved_at, orig_created_at,
     orig_like_count, orig_comment_count,
@@ -653,7 +664,7 @@ function normalizeFeedRow(p: any) {
   void author_tags; void bookmark_id; void orig_user_id; void orig_username; void orig_first_name;
   void orig_last_name; void orig_avatar; void orig_content_html; void orig_type;
   void orig_skill_tag; void orig_accepted_answer_id; void orig_resolved_at; void orig_created_at;
-  void orig_like_count; void orig_comment_count; void orig_id;
+  void orig_like_count; void orig_comment_count; void orig_id; void orig_public_id;
 
   return {
     ...normalizeAvatar(rest),

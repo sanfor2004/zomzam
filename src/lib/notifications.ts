@@ -62,7 +62,10 @@ export function describeNotification(n: NotificationRow): NotificationView {
 
   const username = d.actors?.[0]?.username || d.from_username || d.by_user;
   const profileHref = username ? `/u/${username}` : null;
-  const postHref = d.post_id ? `/p/${d.post_id}` : null;
+  // The permalink is keyed on the opaque public_id, not the numeric post_id, so
+  // notifications without one (legacy rows) simply don't deep-link rather than
+  // pointing at an id the route no longer resolves.
+  const postHref = d.public_id ? `/p/${d.public_id}` : null;
 
   switch (n.type) {
     case 'reposted':

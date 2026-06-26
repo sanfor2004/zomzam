@@ -235,6 +235,7 @@ const schema: Record<string, Record<string, string>> = {
   },
   posts: {
     id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    public_id: 'CHAR(32) NULL DEFAULT NULL',                         // opaque MD5 used in the public /p/ permalink (hides the sequential id)
     user_id: 'INT NOT NULL',
     content_html: 'TEXT NOT NULL',
     visibility: "ENUM('friends', 'public', 'exclusive') NOT NULL DEFAULT 'friends'",
@@ -331,6 +332,7 @@ const indexes: Record<string, Record<string, string>> = {
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
     idx_type_resolved: 'INDEX idx_type_resolved (type, resolved_at)',
     idx_repost_of: 'INDEX idx_repost_of (repost_of)',
+    uq_public_id: 'UNIQUE INDEX uq_public_id (public_id)',  // permalink lookup target + collision guard
   },
   post_likes: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',
@@ -450,6 +452,20 @@ async function syncDatabase() {
     }
   } catch (err) {
     console.error('Failed to update crm_projects.lead_id column:', err);
+  }
+
+  // Backfill opaque public_id for any pre-existing posts (rows created before the
+  // column existed). MD5 of the id + RAND() + UUID() so the value is unique and
+  // NOT derivable from the sequential id — old permalinks become non-enumerable
+  // too, not just new ones. New rows get their public_id from the app on insert.
+  try {
+    const [r] = await connection.query<any>(
+      `UPDATE posts SET public_id = MD5(CONCAT(id, '-', RAND(), '-', UUID()))
+       WHERE public_id IS NULL OR public_id = ''`
+    );
+    if (r.affectedRows > 0) console.log(`Backfilled public_id on ${r.affectedRows} existing post(s)`);
+  } catch (err) {
+    console.error('Failed to backfill posts.public_id:', err);
   }
 
   // Custom schema updates (making users.password nullable for Google-OAuth-only accounts)

@@ -41,7 +41,7 @@ The platform is divided into three major suites:
 * **Projects Hub** (`/crm/projects`): Delivery tracking for won client contracts, mapping development milestones (`Planning`, `Design`, `Feedback Review`, `Production Delivered`) to automated task-completion indicators.
 
 ### 4. 🌐 Preferences & Social Integration (Platform Core)
-* **Home Feed** (`/home`): A post composer (with `@mention` autocomplete popover) and a real-time feed of posts from the user's network, with like/comment/delete actions. Individual posts expand to a permalink view at `/p/[postId]`.
+* **Home Feed** (`/home`): A post composer (with `@mention` autocomplete popover) and a real-time feed of posts from the user's network, with like/comment/delete actions. Individual posts expand to a permalink view at `/p/[postId]`, where the id is an opaque MD5 (`public_id`), never the sequential numeric id.
 * **System Preferences** (`/settings`): Refactored to use unified UI selects for timezone adjustment (with live clock previews), multi-language configuration, and primary/secondary currency selections.
 * **Vanity Public Profiles** (`/u/[username]`): Public profile directories featuring real-time presence indicators (Online, Away, Offline) synchronized dynamically via Server-Sent Events (SSE) based on user mouse movements and idle timers.
 * **Social Connections** (`/community`): A member directory showing user availability, network contacts, follows, friend requests, and discovery suggestions.
@@ -176,7 +176,7 @@ zomzam.com/
 | `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill). The social right sidebar (Messages / Active Now / Suggested) is now global in the shell, not per-page. |
 | `/saved` | Protected | The viewer's bookmarked posts, newest-saved-first; renders the shared feed `PostCard`. Visibility is re-checked on read, so a since-hidden or deleted post drops out silently. |
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
-| `/p/[postId]` | Protected | Permalink view for a single post (deep-linkable from the feed). |
+| `/p/[postId]` | Public | Permalink view for a single post (deep-linkable from the feed). The `[postId]` segment is the post's opaque `public_id` (a 32-char MD5), **not** the sequential numeric id — so the permalink can't be walked to enumerate or count posts. The route only resolves a valid `public_id`; a numeric id 404s. |
 | `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
 | `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |
 | `/time/tasks` | Protected | Task checklist manager (priority, duration blocks, undoable deletes). |

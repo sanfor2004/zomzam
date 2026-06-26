@@ -8,13 +8,15 @@ import { createNotification, pushStreamOrder } from '@/lib/models/user';
 async function notifyRepostAuthor(
   origAuthorId: number | undefined,
   origPostId: number | undefined,
+  origPublicId: string | undefined,
   actorId: number,
   actorUsername: string,
 ) {
   if (!origAuthorId || origAuthorId === actorId || !origPostId) return;
   // Batch by post: repeat reposters on the same post collapse into one roster
   // row ("X and N others reposted your post") instead of spamming N rows — and
-  // a re-repost from the same actor is deduped, not re-counted.
+  // a re-repost from the same actor is deduped, not re-counted. public_id drives
+  // the notification's deep link to the (opaque) post permalink.
   await createNotification(
     origAuthorId,
     'reposted',
@@ -23,6 +25,7 @@ async function notifyRepostAuthor(
       from_username: actorUsername,
       by_user: actorUsername,
       post_id: origPostId,
+      public_id: origPublicId,
       message: 'reposted your post',
     },
     { aggregate: true, aggregateKey: 'post_id' }
@@ -90,6 +93,7 @@ export const POST = withAuth(async (request, user) => {
           recipients.map((rid) =>
             createNotification(rid, 'new_help_request', {
               post_id: post.id,
+              public_id: post.public_id,
               skill_tag: post.skill_tag,
               by_user: user.username,
             })
@@ -97,7 +101,7 @@ export const POST = withAuth(async (request, user) => {
         );
       }
       // A quote repost notifies the original's author (skip a self-repost).
-      await notifyRepostAuthor(post.repost_of?.user_id, post.repost_of?.id, user.id, user.username);
+      await notifyRepostAuthor(post.repost_of?.user_id, post.repost_of?.id, post.repost_of?.public_id, user.id, user.username);
       return NextResponse.json({ success: true, post });
     }
 
@@ -111,6 +115,7 @@ export const POST = withAuth(async (request, user) => {
       if (helperUserId !== user.id) {
         await createNotification(helperUserId, 'answer_accepted', {
           post_id: result.postId,
+          public_id: result.postPublicId,
           comment_id: result.commentId,
           by_user: user.username,
         });
@@ -147,9 +152,9 @@ export const POST = withAuth(async (request, user) => {
       // fan-out pill — there'd be no post to show), it only boosts the original
       // and shows on the reposter's profile. On a fresh repost, notify the
       // original author (skip self).
-      const { reposted, originalAuthorId, originalId } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
+      const { reposted, originalAuthorId, originalId, originalPublicId } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
       if (reposted) {
-        await notifyRepostAuthor(originalAuthorId, originalId, user.id, user.username);
+        await notifyRepostAuthor(originalAuthorId, originalId, originalPublicId, user.id, user.username);
       }
       return NextResponse.json({ success: true, reposted });
     }

@@ -41,6 +41,9 @@ export type PostType = 'status' | 'ask' | 'win';
 
 export interface Post {
   id: number;
+  // Opaque MD5 identifier used in the public /p/ permalink (hides the sequential
+  // numeric id). Internal mutations still key on the numeric `id`.
+  public_id: string;
   user_id: number;
   username: string;
   first_name: string | null;

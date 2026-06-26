@@ -4,11 +4,16 @@ import { describeNotification, notifTimeAgo, NOTIF_FALLBACK_AVATAR } from '@/lib
 
 // ── describeNotification: wording, batching, and deep-link routing ───────────
 
-test('reposted notification deep-links to the post and reads the single actor', () => {
-  const v = describeNotification({ id: 1, type: 'reposted', data: { from_username: 'alice', post_id: 9 } });
+test('reposted notification deep-links to the opaque public_id, not the numeric id', () => {
+  const v = describeNotification({ id: 1, type: 'reposted', data: { from_username: 'alice', post_id: 9, public_id: 'abc123def456abc123def456abc12345' } });
   assert.equal(v.text, 'alice reposted your post');
-  assert.equal(v.href, '/p/9');
+  assert.equal(v.href, '/p/abc123def456abc123def456abc12345');
   assert.equal(v.emoji, '🔁');
+});
+
+test('a post notification with no public_id (legacy row) does not deep-link to a numeric id', () => {
+  const v = describeNotification({ id: 1, type: 'reposted', data: { from_username: 'alice', post_id: 9 } });
+  assert.equal(v.href, null);
 });
 
 test('batched roster reads "X and N others" from actor_count', () => {
@@ -50,10 +55,10 @@ test('the lead actor in a roster is the avatar + profile, not the stale top-leve
   assert.equal(v.href, '/u/newest');
 });
 
-test('new_help_request shows the skill tag and links to the post', () => {
-  const v = describeNotification({ id: 1, type: 'new_help_request', data: { by_user: 'cy', skill_tag: 'react', post_id: 3 } });
+test('new_help_request shows the skill tag and links to the post via public_id', () => {
+  const v = describeNotification({ id: 1, type: 'new_help_request', data: { by_user: 'cy', skill_tag: 'react', post_id: 3, public_id: 'f'.repeat(32) } });
   assert.equal(v.text, 'cy needs help with #react');
-  assert.equal(v.href, '/p/3');
+  assert.equal(v.href, `/p/${'f'.repeat(32)}`);
 });
 
 test('unknown type falls back to the stored message; a "message" routes to the inbox', () => {
