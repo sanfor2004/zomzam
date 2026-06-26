@@ -1,10 +1,12 @@
 import { query, queryOne, execute } from '../db';
 import { hashPassword, comparePassword } from '../auth';
+import { canonicalEmail } from '../email';
 
 export interface UserRow {
   id: number;
   username: string;
   email: string;
+  email_canonical?: string | null;
   first_name: string | null;
   last_name: string | null;
   password?: string | null;
@@ -91,8 +93,11 @@ export async function registerUser(username: string, email: string, passwordPlai
     return { success: false, message: 'Username already exists' };
   }
 
-  // Check unique email
-  const existEmail = await queryOne('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+  // Reject a duplicate INBOX, not just an exact-string match — so the same Gmail
+  // entered with different dots/case/+tag can't open a second account (and later
+  // collide with the OAuth-linking path). See canonicalEmail.
+  const emailCanonical = canonicalEmail(email);
+  const existEmail = await queryOne('SELECT id FROM users WHERE email_canonical = ? LIMIT 1', [emailCanonical]);
   if (existEmail) {
     return { success: false, message: 'Email already exists' };
   }
@@ -100,8 +105,8 @@ export async function registerUser(username: string, email: string, passwordPlai
   const hashedPassword = await hashPassword(passwordPlain);
 
   const res = await execute(
-    `INSERT INTO users (username, email, password, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())`,
-    [cleanUsername, email, hashedPassword]
+    `INSERT INTO users (username, email, email_canonical, password, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())`,
+    [cleanUsername, email, emailCanonical, hashedPassword]
   );
 
   return {
@@ -120,9 +125,11 @@ export async function loginUser(identifier: string, passwordPlain: string) {
     return { success: false, message: 'Username/Email and password are required' };
   }
 
+  // Match on username, the exact email, OR the canonical inbox — so signing in
+  // with a different dotting/case of the same Gmail still finds the account.
   const user = await queryOne<UserRow>(
-    `SELECT * FROM users WHERE username = ? OR email = ? LIMIT 1`,
-    [identifier, identifier]
+    `SELECT * FROM users WHERE username = ? OR email = ? OR email_canonical = ? LIMIT 1`,
+    [identifier, identifier, canonicalEmail(identifier)]
   );
 
   if (!user) {
@@ -195,7 +202,11 @@ export async function findOrCreateGoogleUser(profile: GoogleProfileInput) {
     return { success: true, message: 'Login successful', user: normalizeAvatar(safeUser) };
   }
 
-  const byEmail = await queryOne<UserRow>('SELECT * FROM users WHERE email = ? LIMIT 1', [profile.email]);
+  // Link to an existing account by INBOX identity, not the exact string — so a
+  // password account registered as "2004.sanfor@gmail.com" links to the Google
+  // profile that returns "2004sanfor@gmail.com" instead of forking a duplicate.
+  const emailCanonical = canonicalEmail(profile.email);
+  const byEmail = await queryOne<UserRow>('SELECT * FROM users WHERE email_canonical = ? LIMIT 1', [emailCanonical]);
   if (byEmail) {
     if (byEmail.is_active === 0) {
       return { success: false, message: 'This account has been deactivated.' };
@@ -210,9 +221,9 @@ export async function findOrCreateGoogleUser(profile: GoogleProfileInput) {
 
   const username = await uniqueUsername(usernameFromEmail(profile.email));
   const res = await execute(
-    `INSERT INTO users (username, email, google_id, avatar, is_verified, last_login_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 1, NOW(), NOW(), NOW())`,
-    [username, profile.email, profile.googleId, profile.picture || null]
+    `INSERT INTO users (username, email, email_canonical, google_id, avatar, is_verified, last_login_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW(), NOW())`,
+    [username, profile.email, emailCanonical, profile.googleId, profile.picture || null]
   );
 
   return {

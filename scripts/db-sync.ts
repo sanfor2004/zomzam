@@ -1,6 +1,7 @@
 import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
+import { canonicalEmail } from '../src/lib/email';
 
 // Manual .env parser for scripts running directly via tsx without external
 // dotenv dependency. Loads `.env` then `.env.local`, with `.env.local` taking
@@ -30,6 +31,7 @@ const schema: Record<string, Record<string, string>> = {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     username: 'VARCHAR(50) NOT NULL UNIQUE',
     email: 'VARCHAR(255) NOT NULL UNIQUE',
+    email_canonical: 'VARCHAR(255) NULL DEFAULT NULL',            // inbox-identity key (lowercased, +tag/dot-folded) — see src/lib/email.ts
     first_name: 'VARCHAR(100) NULL',
     last_name: 'VARCHAR(100) NULL',
     password: 'VARCHAR(255) NULL',
@@ -327,6 +329,9 @@ const schema: Record<string, Record<string, string>> = {
 // sync can check INFORMATION_SCHEMA.STATISTICS and add only what is missing —
 // declarative + idempotent, the same contract as the column sync.
 const indexes: Record<string, Record<string, string>> = {
+  users: {
+    uq_email_canonical: 'UNIQUE INDEX uq_email_canonical (email_canonical)',  // one account per inbox (blocks dot/+tag/case duplicates)
+  },
   posts: {
     idx_user_id: 'INDEX idx_user_id (user_id)',
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
@@ -466,6 +471,29 @@ async function syncDatabase() {
     if (r.affectedRows > 0) console.log(`Backfilled public_id on ${r.affectedRows} existing post(s)`);
   } catch (err) {
     console.error('Failed to backfill posts.public_id:', err);
+  }
+
+  // Backfill email_canonical for pre-existing accounts (rows created before the
+  // column existed). Gmail-aware folding can't be expressed in pure SQL, so we
+  // compute it in JS. Per-row try/catch: if two legacy rows happen to fold to
+  // the same inbox, the unique index rejects the second — we log it rather than
+  // abort the whole sync (it flags a real duplicate to reconcile by hand).
+  try {
+    const [rows] = await connection.query<any[]>(
+      `SELECT id, email FROM users WHERE email_canonical IS NULL OR email_canonical = ''`
+    );
+    let filled = 0;
+    for (const r of rows) {
+      try {
+        await connection.query(`UPDATE users SET email_canonical = ? WHERE id = ?`, [canonicalEmail(r.email), r.id]);
+        filled++;
+      } catch (e: any) {
+        console.error(`  email_canonical collision for user ${r.id} (${r.email}) -> ${canonicalEmail(r.email)}:`, e.code || e.message);
+      }
+    }
+    if (filled > 0) console.log(`Backfilled email_canonical on ${filled} user(s)`);
+  } catch (err) {
+    console.error('Failed to backfill users.email_canonical:', err);
   }
 
   // Custom schema updates (making users.password nullable for Google-OAuth-only accounts)
