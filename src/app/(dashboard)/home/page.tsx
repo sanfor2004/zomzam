@@ -345,6 +345,7 @@ export default function HomePage() {
                   isOwn={currentUser?.username === post.username}
                   onDelete={handleDeletePost}
                   onEdited={handlePostEdited}
+                  onReposted={handlePostCreated}
                   currentUser={currentUser}
                   friends={friends}
                   observe={observe}

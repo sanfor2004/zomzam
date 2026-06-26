@@ -8,9 +8,9 @@ import { gsap } from '@/lib/gsap';
 import {
   Loader2, Heart, MessageCircle, Trash2,
   Check, ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
-  HelpCircle, Trophy, CheckCircle2, Hash,
+  HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
 } from 'lucide-react';
-import { Button, Tooltip, ShareButton, useToast, Modal } from '@/components/ui';
+import { Button, Tooltip, ShareButton, useToast, Modal, Dropdown } from '@/components/ui';
 import { FollowButton } from '@/components/social/FollowButton';
 import { PostComposer } from './PostComposer';
 import {
@@ -22,7 +22,7 @@ import {
 // list). memo'd so composer keystrokes (and other host-page state churn) don't
 // re-render every mounted card — only cards whose own props actually change
 // re-render. Relies on `onDelete`/`onEdited` being stable useCallbacks in the host.
-export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, onUnbookmark, currentUser, friends, observe }: {
+export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, onUnbookmark, onReposted, currentUser, friends, observe }: {
   post: Post;
   isOwn: boolean;
   onDelete: (id: number) => void;
@@ -30,6 +30,9 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   /** Called when the viewer un-bookmarks. The /saved page passes this to drop
    *  the card from the list; the feed omits it (the card stays, icon just empties). */
   onUnbookmark?: (id: number) => void;
+  /** Called with the freshly-created repost/quote so the host can prepend it to
+   *  the feed (optimistic). Omitted on /saved (a new repost isn't saved). */
+  onReposted?: (post: Post) => void;
   currentUser: CurrentUser | null;
   friends: MentionUser[];
   observe: (el: HTMLElement | null, postId: number) => void;
@@ -44,9 +47,27 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const [postDeleting, setPostDeleting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked_by_me);
+  const [reposted, setReposted] = useState(!!post.reposted_by_me);
+  const [repostCount, setRepostCount] = useState(post.repost_count ?? 0);
+  const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
 
   const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
+
+  // ── Repost shape ──────────────────────────────────────────────
+  // repost_of: undefined ⇒ this is an ordinary post; an object ⇒ a repost of a
+  // live original; null ⇒ a repost whose original was deleted (tombstone, F2.6).
+  const isRepost = post.repost_of !== undefined;
+  const original = post.repost_of ?? null;
+  // A quote carries the reposter's comment; a plain repost has empty content.
+  const quoteText = (post.content_html || '').trim();
+  // Repostable only when the effective root is public (F2.4): a normal card uses
+  // its own visibility; a repost card targets its (always-public) live original.
+  const canRepost = isRepost ? !!original : post.visibility === 'public';
+  // Reposting a repost collapses to the root — send the original's id when this
+  // card is itself a repost, else the post's own id (the service also collapses).
+  const repostTargetId = isRepost && original ? original.id : post.id;
 
   // Register this card's outer node with the feed-wide seen-tracker (read receipt
   // on viewport dwell). Stable per card so memo isn't invalidated each render.
@@ -163,6 +184,36 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     } catch { /* non-blocking */ }
   };
 
+  // Plain repost toggle (optimistic). A fresh repost is handed to the host via
+  // onReposted so it prepends to the feed; un-reposting just flips the icon.
+  const togglePlainRepost = async () => {
+    setRepostMenuOpen(false);
+    const next = !reposted;
+    setReposted(next);
+    setRepostCount((c) => Math.max(0, next ? c + 1 : c - 1));
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'repost', post_id: repostTargetId }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setReposted(!next);
+        setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
+      } else if (data.reposted && data.post) {
+        onReposted?.(data.post);
+      }
+    } catch {
+      setReposted(!next);
+      setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
+    }
+  };
+
+  // The quote target is the live original (its own card when this IS a repost,
+  // else this post). Tombstoned reposts (no original) can't be quoted.
+  const quoteOriginal = isRepost ? original : post;
+
   return (
     <div
       ref={seenRef}
@@ -232,7 +283,35 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
           </Modal>
         )}
 
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: QUOTE REPOST MODAL
+            Contains: Kit Modal hosting PostComposer in `quoting` mode — an
+            embedded read-only preview of the original above the editor; submits
+            a public quote and prepends it via onReposted
+            ────────────────────────────────────────────────────────── */}
+        {quoteOpen && quoteOriginal && (
+          <Modal isOpen={quoteOpen} onClose={() => setQuoteOpen(false)} title="Repost with comment">
+            <PostComposer
+              currentUser={currentUser}
+              friends={friends}
+              onPosted={() => {}}
+              quoting={{
+                original: quoteOriginal,
+                onPosted: (created) => { onReposted?.(created); setQuoteOpen(false); },
+              }}
+            />
+          </Modal>
+        )}
+
         <div className="p-5">
+          {/* ─── Repost attribution: "<reposter> reposted" (plain or quote) ─── */}
+          {isRepost && (
+            <div className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
+              <Repeat2 className="w-3.5 h-3.5" />
+              <span>{isOwn ? 'You' : name} reposted</span>
+            </div>
+          )}
+
           {/* ── Header + content ── */}
           <div className="flex gap-3">
             <Link href={`/u/${post.username}`} className="flex-shrink-0">
@@ -306,19 +385,35 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 </div>
               )}
 
-              <div
-                className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
-                dangerouslySetInnerHTML={{ __html: post.content_html }}
-              />
-              {post.image_path && (
-                <Image
-                  src={post.image_path}
-                  alt=""
-                  width={1200}
-                  height={800}
-                  sizes="(max-width: 1024px) 100vw, 600px"
-                  className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
-                />
+              {isRepost ? (
+                <>
+                  {/* Quote reposts carry the reposter's own comment above the
+                      embedded original; plain reposts have none. */}
+                  {quoteText && (
+                    <div
+                      className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                      dangerouslySetInnerHTML={{ __html: post.content_html }}
+                    />
+                  )}
+                  {original ? <NestedOriginal original={original} /> : <RepostTombstone />}
+                </>
+              ) : (
+                <>
+                  <div
+                    className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                    dangerouslySetInnerHTML={{ __html: post.content_html }}
+                  />
+                  {post.image_path && (
+                    <Image
+                      src={post.image_path}
+                      alt=""
+                      width={1200}
+                      height={800}
+                      sizes="(max-width: 1024px) 100vw, 600px"
+                      className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -366,6 +461,49 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 {post.comment_count > 0 && <span>{post.comment_count}</span>}
               </Button>
             </Tooltip>
+
+            {/* Repost — public-only (hidden on friends/exclusive). Opens a small
+                menu: instant plain repost (toggle) / repost with a comment. */}
+            {canRepost && (
+              <Dropdown
+                mode="menu"
+                open={repostMenuOpen}
+                onClose={() => setRepostMenuOpen(false)}
+                align="left"
+                dropdownClassName="min-w-[15rem] p-1.5 space-y-0.5"
+                trigger={
+                  <Tooltip content={reposted ? 'Reposted' : 'Repost'}>
+                    <Button
+                      variant="unstyled"
+                      onClick={() => setRepostMenuOpen((o) => !o)}
+                      aria-label="Repost"
+                      aria-haspopup="menu"
+                      aria-expanded={repostMenuOpen}
+                      className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+                        reposted ? 'text-emerald-500' : 'text-slate-400 hover:text-emerald-400'
+                      }`}
+                    >
+                      <Repeat2 className="w-4 h-4" />
+                      {repostCount > 0 && <span>{repostCount}</span>}
+                    </Button>
+                  </Tooltip>
+                }
+              >
+                <Dropdown.Item
+                  leading={<Repeat2 className="w-4 h-4" />}
+                  onClick={togglePlainRepost}
+                >
+                  {reposted ? 'Undo repost' : 'Repost'}
+                </Dropdown.Item>
+                <Dropdown.Item
+                  leading={<MessageSquareQuote className="w-4 h-4" />}
+                  onClick={() => { setRepostMenuOpen(false); setQuoteOpen(true); }}
+                  disabled={!quoteOriginal}
+                >
+                  Repost with comment
+                </Dropdown.Item>
+              </Dropdown>
+            )}
           </div>
 
           {/* Right group: Bookmark + Share (icon-only, no counts) */}
@@ -558,6 +696,82 @@ function CommentCard({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── Nested repost original ────────────────────────────────────
+// The embedded card shown inside a repost: the ORIGINAL author's avatar, name,
+// type badges, content and image. Rendered as a single Link to the original's
+// permalink — deliberately flat (no inner <a>/<button>) so it never nests
+// interactive elements, and so the whole block is one tap-to-open target.
+function NestedOriginal({ original }: { original: Post }) {
+  const name = displayName(original);
+  const type = original.type ?? 'status';
+  const isAsk = type === 'ask';
+  const isWin = type === 'win';
+  const isResolved = isAsk && !!original.resolved_at;
+  return (
+    <Link
+      href={`/p/${original.id}`}
+      className="mt-2.5 block rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5 transition-colors hover:border-white/[0.14] hover:bg-white/[0.04]"
+    >
+      <div className="flex items-center gap-2">
+        <Image
+          src={original.avatar || '/Assets/Img/default-avatar.png'}
+          alt={name}
+          width={28}
+          height={28}
+          className="w-7 h-7 rounded-lg object-cover border border-slate-800"
+        />
+        <span className="text-xs font-bold text-white truncate">{name}</span>
+        <span className="text-[11px] text-slate-500 truncate">@{original.username}</span>
+        <span className="text-[11px] text-slate-600 flex-shrink-0">· {relativeTime(original.created_at)}</span>
+      </div>
+
+      {(isAsk || isWin) && (
+        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+          {isAsk && (
+            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
+              isResolved ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-300'
+            }`}>
+              {isResolved ? <CheckCircle2 className="w-3 h-3" /> : <HelpCircle className="w-3 h-3" />}
+              {isResolved ? 'Resolved' : 'Help needed'}
+            </span>
+          )}
+          {isWin && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-primary-500/15 text-primary-400">
+              <Trophy className="w-3 h-3" /> Win
+            </span>
+          )}
+        </div>
+      )}
+
+      <div
+        className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+        dangerouslySetInnerHTML={{ __html: original.content_html }}
+      />
+      {original.image_path && (
+        <Image
+          src={original.image_path}
+          alt=""
+          width={1200}
+          height={800}
+          sizes="(max-width: 1024px) 100vw, 600px"
+          className="mt-2.5 w-full max-h-[24rem] object-cover rounded-xl border border-white/[0.06]"
+        />
+      )}
+    </Link>
+  );
+}
+
+// ── Tombstone for a deleted original ──────────────────────────
+// A repost whose original was deleted keeps the reposter's words but shows this
+// quiet placeholder where the embedded post used to be (F2.6 — reposts survive).
+function RepostTombstone() {
+  return (
+    <div className="mt-2.5 rounded-2xl border border-dashed border-white/[0.1] bg-white/[0.01] px-3.5 py-4 text-center text-xs text-slate-500">
+      This post is no longer available.
     </div>
   );
 }

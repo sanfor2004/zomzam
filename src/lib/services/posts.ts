@@ -49,6 +49,7 @@ export interface CreatePostInput {
   imageFile: File | null;
   type?: string;             // 'status' | 'ask' | 'win'
   skillTag?: string | null;  // ask routing tag, ignored for non-ask
+  repostOf?: number | null;  // set ⇒ this is a QUOTE repost of that post (root-collapsed)
 }
 
 const POST_TYPES = ['status', 'ask', 'win'];
@@ -77,24 +78,41 @@ async function processPostImage(file: File): Promise<string> {
 export async function createPost(userId: number, input: CreatePostInput) {
   const raw = (input.contentHtml || '').trim();
   const hasImage = !!(input.imageFile && input.imageFile.size > 0);
-  // A post needs either text or an image — image-only posts are valid.
-  if (!raw && !hasImage) {
+
+  // QUOTE repost branch: a quote carries the reposter's comment over a nested
+  // original. It collapses to the root, is forced public/status/no-skill, and —
+  // unlike a normal post — REQUIRES text (an empty quote is just a plain repost,
+  // which the toggle path handles instead). No image on a quote.
+  const isQuote = input.repostOf != null && Number(input.repostOf) > 0;
+  let repostRootId: number | null = null;
+  if (isQuote) {
+    if (!raw) throw new HttpError(400, 'A quote repost needs a comment');
+    const { rootId } = await resolveRepostTarget(Number(input.repostOf));
+    repostRootId = rootId;
+  } else if (!raw && !hasImage) {
+    // A normal post needs either text or an image — image-only posts are valid.
     throw new HttpError(400, 'Content or image required');
   }
 
   const content_html = sanitizeHtml(raw);
   const allowedVisibility = ['friends', 'public', 'exclusive'];
-  const visibility = allowedVisibility.includes(input.visibility) ? input.visibility : 'friends';
-  const type = POST_TYPES.includes(input.type ?? '') ? input.type! : 'status';
-  // Only asks carry a routing tag; slugify-cap to the column width.
-  const skill_tag = type === 'ask' && input.skillTag ? slugifyTag(input.skillTag).slice(0, 50) || null : null;
+  // A quote is always public (it republishes already-public content); a normal
+  // post honors the requested visibility.
+  const visibility = isQuote
+    ? 'public'
+    : allowedVisibility.includes(input.visibility) ? input.visibility : 'friends';
+  const type = isQuote ? 'status' : POST_TYPES.includes(input.type ?? '') ? input.type! : 'status';
+  // Only asks carry a routing tag; slugify-cap to the column width. Quotes never do.
+  const skill_tag = !isQuote && type === 'ask' && input.skillTag
+    ? slugifyTag(input.skillTag).slice(0, 50) || null
+    : null;
 
   let image_path: string | null = null;
-  if (hasImage) image_path = await processPostImage(input.imageFile!);
+  if (hasImage && !isQuote) image_path = await processPostImage(input.imageFile!);
 
   const result = await execute(
-    `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag) VALUES (?, ?, ?, ?, ?, ?)`,
-    [userId, content_html, visibility, image_path, type, skill_tag]
+    `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag, repost_of) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [userId, content_html, visibility, image_path, type, skill_tag, repostRootId]
   );
 
   // The author has implicitly seen their own post — record it so the unseen-first
@@ -106,9 +124,15 @@ export async function createPost(userId: number, input: CreatePostInput) {
     [result.insertId, userId]
   );
 
+  // A quote needs the full feed shape (nested original) so the card renders the
+  // embedded post immediately; a plain post has no nested original to hydrate.
+  if (isQuote) {
+    return await fetchFeedPostById(userId, result.insertId);
+  }
+
   const post = await queryOne(
     `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
-            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
+            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at, p.repost_of,
             u.username, u.first_name, u.last_name, u.avatar,
             0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
      FROM posts p JOIN users u ON u.id = p.user_id
@@ -363,6 +387,73 @@ export async function toggleBookmark(userId: number, postId: number): Promise<{ 
   return { bookmarked: true };
 }
 
+/**
+ * Resolve the true root original a repost should point at. If the target is
+ * itself a repost, collapse to ITS original — `repost_of` never forms a chain
+ * (F2.7). Enforces the public-only rule on the ROOT (F2.4): only a
+ * `visibility='public'` original can be reposted, so a stranger only ever sees
+ * already-public content. Throws 404 if the root is gone, 400 if it's not public.
+ * Returns the root id + its author (to notify) — never the intermediate repost.
+ */
+async function resolveRepostTarget(targetId: number): Promise<{ rootId: number; authorId: number }> {
+  if (!targetId) throw new HttpError(400, 'post_id required');
+  const target = await queryOne<{ id: number; repost_of: number | null }>(
+    `SELECT id, repost_of FROM posts WHERE id = ?`,
+    [targetId]
+  );
+  if (!target) throw new HttpError(404, 'Post not found');
+
+  const rootId = target.repost_of ? Number(target.repost_of) : Number(target.id);
+  const root = await queryOne<{ id: number; user_id: number; visibility: string }>(
+    `SELECT id, user_id, visibility FROM posts WHERE id = ?`,
+    [rootId]
+  );
+  if (!root) throw new HttpError(404, 'Post not found');
+  if (root.visibility !== 'public') throw new HttpError(400, 'Only public posts can be reposted');
+
+  return { rootId: Number(root.id), authorId: Number(root.user_id) };
+}
+
+/**
+ * Toggle a PLAIN repost (empty-comment pointer row) of a post. Resolves the root
+ * first (collapse + public-only guard), then mirrors toggleLike's check-then
+ * insert/delete — but on the `posts` table itself, since a repost IS a post.
+ * Plain uniqueness (one per (user, root)) is enforced here in app logic because a
+ * DB UNIQUE can't express it: quote reposts legitimately share (user, repost_of)
+ * (F2.3). Self-repost is allowed. On insert the author's post_views seen=1 row is
+ * recorded (mirrors createPost) so the unseen feed never echoes it back. Returns
+ * the freshly-normalized repost row (with nested original) so the route can fan
+ * out the live pill + notify; on un-repost returns `{ reposted: false }`.
+ */
+export async function toggleRepost(userId: number, targetId: number): Promise<{ reposted: boolean; post?: any }> {
+  const { rootId } = await resolveRepostTarget(targetId);
+
+  const existing = await queryOne<{ id: number }>(
+    `SELECT id FROM posts WHERE repost_of = ? AND user_id = ? AND content_html = ''`,
+    [rootId, userId]
+  );
+  if (existing) {
+    // Un-repost: remove only this user's plain pointer row. No comments/likes/
+    // image ever attach to a plain repost, so a direct DELETE is sufficient.
+    await execute(`DELETE FROM posts WHERE id = ? AND user_id = ?`, [existing.id, userId]);
+    return { reposted: false };
+  }
+
+  const result = await execute(
+    `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag, repost_of)
+     VALUES (?, '', 'public', NULL, 'status', NULL, ?)`,
+    [userId, rootId]
+  );
+  await execute(
+    `INSERT INTO post_views (post_id, user_id, seen) VALUES (?, ?, 1)
+     ON DUPLICATE KEY UPDATE seen = 1`,
+    [result.insertId, userId]
+  );
+
+  const post = await fetchFeedPostById(userId, result.insertId);
+  return { reposted: true, post };
+}
+
 export async function toggleCommentVote(userId: number, commentId: number): Promise<{ upvoted: boolean }> {
   if (!commentId) throw new HttpError(400, 'comment_id required');
   const existing = await queryOne(`SELECT id FROM comment_votes WHERE comment_id = ? AND user_id = ?`, [commentId, userId]);
@@ -455,6 +546,116 @@ export async function addComment(userId: number, postId: number, rawContent: str
 
 const SCORED_WINDOW = 300; // candidate pool ranked in-memory for the landing page
 
+// ── Shared feed-row SQL ───────────────────────────────────────
+// The per-post column list used by the feed, the /saved page, and single-post
+// fetches, so every surface returns an identically-shaped Post (incl. the nested
+// repost original). Six `?` placeholders, in order: liked_by_me, bookmarked_by_me,
+// is_following, is_friend (×2), reposted_by_me — supply them with feedColParams().
+// repost_count + reposted_by_me are keyed on COALESCE(p.repost_of, p.id) so a
+// repost card shows the ROOT original's tally and the viewer's toggle state.
+const FEED_COLUMNS = `
+    p.id, p.user_id, p.content_html, p.image_path, p.visibility,
+    p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at, p.repost_of,
+    u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
+    (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
+    (SELECT COUNT(*) FROM post_comments  WHERE post_id = p.id) AS comment_count,
+    (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
+    (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me,
+    (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
+    (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
+    (SELECT COUNT(*) FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id)) AS repost_count,
+    (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id) AND r.user_id = ? AND r.content_html = '')) AS reposted_by_me,
+    orig.id AS orig_id, orig.user_id AS orig_user_id, orig.content_html AS orig_content_html,
+    orig.image_path AS orig_image_path, orig.type AS orig_type, orig.skill_tag AS orig_skill_tag,
+    orig.accepted_answer_id AS orig_accepted_answer_id, orig.resolved_at AS orig_resolved_at, orig.created_at AS orig_created_at,
+    ou.username AS orig_username, ou.first_name AS orig_first_name, ou.last_name AS orig_last_name, ou.avatar AS orig_avatar,
+    (SELECT COUNT(*) FROM post_likes    WHERE post_id = orig.id) AS orig_like_count,
+    (SELECT COUNT(*) FROM post_comments WHERE post_id = orig.id) AS orig_comment_count`;
+
+// The feed FROM/JOINs: the post, its author, and (when this row is a repost) the
+// LEFT-joined original + its author (null ⇒ original deleted ⇒ tombstone).
+const FEED_FROM = `
+    FROM posts p
+    JOIN users u ON u.id = p.user_id
+    LEFT JOIN posts orig ON orig.id = p.repost_of
+    LEFT JOIN users ou ON ou.id = orig.user_id`;
+
+/** The six per-viewer `?` params FEED_COLUMNS expects, in column order. */
+function feedColParams(userId: number): number[] {
+  return [userId, userId, userId, userId, userId, userId];
+}
+
+/**
+ * Shape one raw FEED_COLUMNS row into the wire Post. Builds the nested repost
+ * original from the orig_* columns: a value of `undefined` ⇒ not a repost; `null`
+ * ⇒ a repost whose original was deleted (render a tombstone); an object ⇒ the
+ * live original. Strips the raw orig_ / author_tags / bookmark_id helper columns.
+ */
+function normalizeFeedRow(p: any) {
+  const repost_of = p.repost_of
+    ? (p.orig_id
+        ? {
+            id: Number(p.orig_id),
+            user_id: Number(p.orig_user_id),
+            username: p.orig_username,
+            first_name: p.orig_first_name,
+            last_name: p.orig_last_name,
+            avatar: p.orig_avatar || DEFAULT_AVATAR,
+            content_html: p.orig_content_html,
+            image_path: p.orig_image_path,
+            type: p.orig_type,
+            skill_tag: p.orig_skill_tag,
+            accepted_answer_id: p.orig_accepted_answer_id,
+            resolved_at: p.orig_resolved_at,
+            created_at: p.orig_created_at,
+            like_count: parseInt(p.orig_like_count || 0),
+            comment_count: parseInt(p.orig_comment_count || 0),
+            liked_by_me: false,
+          }
+        : null)
+    : undefined;
+
+  const {
+    author_tags, bookmark_id,
+    orig_id, orig_user_id, orig_username, orig_first_name, orig_last_name, orig_avatar,
+    orig_content_html, orig_image_path, orig_type, orig_skill_tag,
+    orig_accepted_answer_id, orig_resolved_at, orig_created_at,
+    orig_like_count, orig_comment_count,
+    repost_count, reposted_by_me,
+    ...rest
+  } = p;
+  // Reference the destructured-out fields so noUnusedLocals/lint stays quiet.
+  void author_tags; void bookmark_id; void orig_user_id; void orig_username; void orig_first_name;
+  void orig_last_name; void orig_avatar; void orig_content_html; void orig_image_path; void orig_type;
+  void orig_skill_tag; void orig_accepted_answer_id; void orig_resolved_at; void orig_created_at;
+  void orig_like_count; void orig_comment_count; void orig_id;
+
+  return {
+    ...normalizeAvatar(rest),
+    like_count: parseInt(rest.like_count || 0),
+    comment_count: parseInt(rest.comment_count || 0),
+    liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
+    bookmarked_by_me: parseInt(rest.bookmarked_by_me || 0) > 0,
+    is_following: parseInt(rest.is_following || 0) > 0,
+    is_friend: parseInt(rest.is_friend || 0) > 0,
+    repost_count: parseInt(repost_count || 0),
+    reposted_by_me: parseInt(reposted_by_me || 0) > 0,
+    repost_of,
+    top_comments: [] as any[],
+  };
+}
+
+/** Fetch one post in the full feed shape (incl. nested repost original + top
+ *  comments) for a given viewer. Returns null if the id is gone. Used to return
+ *  a freshly-created repost/quote to the client. */
+async function fetchFeedPostById(viewerId: number, postId: number) {
+  const rows = await query(`SELECT ${FEED_COLUMNS} ${FEED_FROM} WHERE p.id = ?`, [...feedColParams(viewerId), postId]);
+  if (rows.length === 0) return null;
+  const normalized = rows.map(normalizeFeedRow);
+  await embedTopComments(viewerId, normalized);
+  return normalized[0];
+}
+
 export type FeedTier = 'unseen' | 'seen';
 
 export interface GetFeedOptions {
@@ -490,18 +691,7 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
   const viewerTags = parseTagList(me?.tags);
   const viewerTagSet = new Set(viewerTags);
 
-  const SELECT = `
-    SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
-           p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
-           u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
-           (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
-           (SELECT COUNT(*) FROM post_comments  WHERE post_id = p.id) AS comment_count,
-           (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
-           (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me,
-           (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
-           (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend
-    FROM posts p
-    JOIN users u ON u.id = p.user_id`;
+  const SELECT = `SELECT ${FEED_COLUMNS} ${FEED_FROM}`;
 
   // What this viewer may see: public, own, or friends/follows-only posts.
   const VISIBILITY = `(
@@ -520,10 +710,10 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     ? `EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`
     : `NOT EXISTS (SELECT 1 FROM post_views v WHERE v.post_id = p.id AND v.user_id = ? AND v.seen = 1)`;
 
-  // ? order so far: liked_by_me(1), bookmarked_by_me(1), is_following(1),
-  // is_friend(2), visibility(5), seen(1) = 11.
+  // ? order: FEED_COLUMNS viewer cols (6) — liked, bookmarked, is_following,
+  // is_friend×2, reposted_by_me — then visibility(5) + seen(1) = 12.
   const baseParams: any[] = [
-    userId, userId, userId, userId, userId, // liked, bookmarked, is_following, is_friend×2
+    ...feedColParams(userId),
     userId, userId, userId, userId, userId, userId, // visibility(5) + seen(1)
   ];
 
@@ -554,6 +744,8 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     );
     const scored = window
       .map((p) => {
+        // Reposts ride recency only (no relevance boost) — the F2.8 tiebreak.
+        if (p.repost_of) return { p, score: 0 };
         const postMatches = extractPostTags(p.content_html).filter((t) => viewerTagSet.has(t)).length;
         const authorMatches = parseTagList(p.author_tags).filter((t) => viewerTagSet.has(t)).length;
         let score = postMatches * 10 + authorMatches;
@@ -589,19 +781,7 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     hasMore = rows.length === limit;
   }
 
-  const normalized = rows.map((p) => {
-    const { author_tags, ...rest } = p;
-    return {
-      ...normalizeAvatar(rest),
-      like_count: parseInt(rest.like_count || 0),
-      comment_count: parseInt(rest.comment_count || 0),
-      liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
-      bookmarked_by_me: parseInt(rest.bookmarked_by_me || 0) > 0,
-      is_following: parseInt(rest.is_following || 0) > 0,
-      is_friend: parseInt(rest.is_friend || 0) > 0,
-      top_comments: [] as any[],
-    };
-  });
+  const normalized = rows.map(normalizeFeedRow);
 
   await embedTopComments(userId, normalized);
 
@@ -630,6 +810,15 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
   const limit = Math.min(Math.max(1, opts.limit ?? 10), 20);
   const cursor = opts.cursor && opts.cursor > 0 ? opts.cursor : null;
 
+  // Same per-viewer column shape as the feed (incl. nested repost original), but
+  // sourced from the bookmark join so saved reposts render identically.
+  const SELECT = `SELECT ${FEED_COLUMNS}, b.id AS bookmark_id
+    FROM post_bookmarks b
+    JOIN posts p ON p.id = b.post_id
+    JOIN users u ON u.id = p.user_id
+    LEFT JOIN posts orig ON orig.id = p.repost_of
+    LEFT JOIN users ou ON ou.id = orig.user_id`;
+
   const VISIBILITY = `(
         p.visibility = 'public'
         OR p.user_id = ?
@@ -642,26 +831,14 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
            ))
       )`;
 
-  // ? order: liked_by_me(1), is_following(1), is_friend(2), bookmark filter(1),
-  // visibility(5), keyset(0..1).
-  const params: number[] = [userId, userId, userId, userId, userId, userId, userId, userId, userId, userId];
+  // ? order: FEED_COLUMNS viewer cols (6), bookmark filter(1), visibility(5),
+  // keyset(0..1).
+  const params: number[] = [...feedColParams(userId), userId, userId, userId, userId, userId, userId];
   let keysetSql = '';
   if (cursor) { keysetSql = ` AND b.id < ?`; params.push(cursor); }
 
   const rows = await query(
-    `SELECT p.id, p.user_id, p.content_html, p.image_path, p.visibility,
-            p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
-            u.username, u.first_name, u.last_name, u.avatar,
-            b.id AS bookmark_id,
-            (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
-            (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
-            (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id AND user_id = ?) AS liked_by_me,
-            (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
-            (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
-            1 AS bookmarked_by_me
-     FROM post_bookmarks b
-     JOIN posts p ON p.id = b.post_id
-     JOIN users u ON u.id = p.user_id
+    `${SELECT}
      WHERE b.user_id = ? AND ${VISIBILITY}${keysetSql}
      ORDER BY b.id DESC LIMIT ${limit}`,
     params
@@ -674,20 +851,9 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
     ? Math.min(...rows.map((r) => Number(r.bookmark_id)))
     : null;
 
-  const normalized = rows.map((p) => {
-    const { bookmark_id, ...rest } = p;
-    void bookmark_id; // internal keyset field — excluded from the wire shape
-    return {
-      ...normalizeAvatar(rest),
-      like_count: parseInt(rest.like_count || 0),
-      comment_count: parseInt(rest.comment_count || 0),
-      liked_by_me: parseInt(rest.liked_by_me || 0) > 0,
-      bookmarked_by_me: true,
-      is_following: parseInt(rest.is_following || 0) > 0,
-      is_friend: parseInt(rest.is_friend || 0) > 0,
-      top_comments: [] as any[],
-    };
-  });
+  // Every row is saved by definition, so force bookmarked_by_me regardless of
+  // what the shared column computed.
+  const normalized = rows.map((p) => ({ ...normalizeFeedRow(p), bookmarked_by_me: true }));
 
   await embedTopComments(userId, normalized);
 

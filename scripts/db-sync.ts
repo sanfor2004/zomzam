@@ -239,6 +239,7 @@ const schema: Record<string, Record<string, string>> = {
     skill_tag: 'VARCHAR(50) NULL DEFAULT NULL',                      // ask routing/matching
     accepted_answer_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',         // FK -> post_comments.id (the accepted answer)
     resolved_at: 'DATETIME NULL DEFAULT NULL',                       // set on accept OR manual resolve; resolved = NOT NULL
+    repost_of: 'BIGINT UNSIGNED NULL DEFAULT NULL',                  // pointer model: set ⇒ this row is a repost of the (root) original
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   post_likes: {
@@ -302,6 +303,7 @@ const indexes: Record<string, Record<string, string>> = {
     idx_user_id: 'INDEX idx_user_id (user_id)',
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
     idx_type_resolved: 'INDEX idx_type_resolved (type, resolved_at)',
+    idx_repost_of: 'INDEX idx_repost_of (repost_of)',
   },
   post_likes: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',

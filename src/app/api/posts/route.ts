@@ -23,6 +23,7 @@ export const POST = withAuth(async (request, user) => {
       type: formData.get('type'),
       skill_tag: formData.get('skill_tag'),
       remove_image: formData.get('remove_image'),
+      repost_of: formData.get('repost_of'),
     };
   } else {
     body = await request.json().catch(() => ({}));
@@ -37,6 +38,7 @@ export const POST = withAuth(async (request, user) => {
         imageFile,
         type: body.type,
         skillTag: body.skill_tag,
+        repostOf: body.repost_of ? parseInt(body.repost_of) : undefined,
       });
       // Live "new posts" pill: fan a lightweight signal out to everyone who can
       // see this author's feed (friends + followers) so their feed offers a
@@ -67,6 +69,19 @@ export const POST = withAuth(async (request, user) => {
             })
           )
         );
+      }
+      // A quote repost notifies the original's author (skip a self-repost). The
+      // nested original (with its author id) rides on the normalized post.
+      {
+        const origAuthor = post.repost_of?.user_id;
+        if (origAuthor && origAuthor !== user.id) {
+          await createNotification(origAuthor, 'reposted', {
+            from_user_id: user.id,
+            by_user: user.username,
+            post_id: post.repost_of!.id,
+            message: 'reposted your post',
+          });
+        }
       }
       return NextResponse.json({ success: true, post });
     }
@@ -111,6 +126,30 @@ export const POST = withAuth(async (request, user) => {
 
     case 'bookmark':
       return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
+
+    case 'repost': {
+      // Plain (empty-comment) repost toggle. On a fresh repost, fan the live pill
+      // out to the reposter's audience and notify the original author (skip self).
+      const { reposted, post } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
+      if (reposted && post) {
+        const audience = await posts.getFeedAudience(user.id);
+        await Promise.all(
+          audience.map((rid) =>
+            pushStreamOrder(rid, 'new_post', { post_id: post.id, by_user: user.username }, false)
+          )
+        );
+        const origAuthor = post.repost_of?.user_id;
+        if (origAuthor && origAuthor !== user.id) {
+          await createNotification(origAuthor, 'reposted', {
+            from_user_id: user.id,
+            by_user: user.username,
+            post_id: post.repost_of!.id,
+            message: 'reposted your post',
+          });
+        }
+      }
+      return NextResponse.json({ success: true, reposted, post });
+    }
 
     case 'comment_vote':
       return NextResponse.json({ success: true, ...await posts.toggleCommentVote(user.id, parseInt(body.comment_id || 0)) });

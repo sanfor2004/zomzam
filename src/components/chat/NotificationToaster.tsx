@@ -26,6 +26,8 @@ function describe(n: NotificationPayload): { title: string; description: string 
       return { title: who, description: 'accepted your answer 🎉' };
     case 'new_follower':
       return { title: who, description: 'started following you' };
+    case 'reposted':
+      return { title: who, description: 'reposted your post' };
     default:
       return { title: who, description: d.message || 'sent you a notification' };
   }

@@ -1,13 +1,23 @@
 'use client';
-import { Button } from '@/components/ui';
+import { Button, Modal, Dropdown } from '@/components/ui';
 
 import React, { useRef, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2, MessageSquareQuote } from 'lucide-react';
 import { FollowButton } from '@/components/social/FollowButton';
 import { SignInPrompt } from '@/components/social/SignInPrompt';
+import type { CurrentUser, Post as FeedPost } from '@/app/(dashboard)/home/shared';
+
+// The quote composer is the heavy feed component (contentEditable + gsap). Load
+// it lazily so it never weighs down the public permalink's initial bundle — it
+// only mounts when a signed-in viewer opens "Repost with comment".
+const PostComposer = dynamic(
+  () => import('@/app/(dashboard)/home/PostComposer').then((m) => m.PostComposer),
+  { ssr: false, loading: () => <div className="py-8 text-center text-xs text-slate-500"><Loader2 className="w-4 h-4 animate-spin inline" /></div> }
+);
 
 interface Post {
   id: number;
@@ -18,6 +28,7 @@ interface Post {
   avatar: string;
   content_html: string;
   image_path?: string | null;
+  visibility?: string;
   type?: 'status' | 'ask' | 'win';
   skill_tag?: string | null;
   accepted_answer_id?: number | null;
@@ -29,6 +40,8 @@ interface Post {
   bookmarked_by_me?: boolean;
   is_following?: boolean;
   is_friend?: boolean;
+  repost_count?: number;
+  reposted_by_me?: boolean;
 }
 
 interface Comment {
@@ -76,10 +89,12 @@ export default function PostDetail({
   post,
   initialComments,
   viewerId,
+  currentUser,
 }: {
   post: Post;
   initialComments: Comment[];
   viewerId: number | null;
+  currentUser: CurrentUser | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   usePageEntrance(containerRef);
@@ -92,6 +107,14 @@ export default function PostDetail({
   const [shareCopied, setShareCopied] = useState(false);
   // Public page: an anonymous tap on follow/bookmark/repost opens this prompt.
   const [signInOpen, setSignInOpen] = useState(false);
+  const [bookmarked, setBookmarked] = useState(!!post.bookmarked_by_me);
+  const [reposted, setReposted] = useState(!!post.reposted_by_me);
+  const [repostCount, setRepostCount] = useState(post.repost_count ?? 0);
+  const [repostMenuOpen, setRepostMenuOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+  // Public-only repost (F2.4); the permalink hero only ever shows a single post,
+  // so the repost target is this post's id (the service collapses any chain).
+  const canRepost = (post.visibility ?? 'public') === 'public';
 
   // Favor economy: ask resolution state is mutable here (owner accepts/resolves).
   const [acceptedId, setAcceptedId] = useState<number | null>(post.accepted_answer_id ?? null);
@@ -161,6 +184,47 @@ export default function PostDetail({
         body: JSON.stringify({ action: 'like', post_id: post.id }),
       });
     } catch { /* non-blocking */ }
+  };
+
+  // Private bookmark toggle (optimistic). Anonymous → polite sign-in prompt.
+  const toggleBookmark = async () => {
+    if (!viewerId) { setSignInOpen(true); return; }
+    const next = !bookmarked;
+    setBookmarked(next);
+    try {
+      await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'bookmark', post_id: post.id }),
+      });
+    } catch { setBookmarked(!next); }
+  };
+
+  // Plain repost toggle (optimistic). Anonymous → sign-in prompt.
+  const togglePlainRepost = async () => {
+    setRepostMenuOpen(false);
+    if (!viewerId) { setSignInOpen(true); return; }
+    const next = !reposted;
+    setReposted(next);
+    setRepostCount((c) => Math.max(0, next ? c + 1 : c - 1));
+    try {
+      const res = await fetch('/api/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'repost', post_id: post.id }),
+      });
+      const data = await res.json();
+      if (!data.success) { setReposted(!next); setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1)); }
+    } catch {
+      setReposted(!next);
+      setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
+    }
+  };
+
+  const openQuote = () => {
+    setRepostMenuOpen(false);
+    if (!viewerId) { setSignInOpen(true); return; }
+    setQuoteOpen(true);
   };
 
   const handleShare = async () => {
@@ -332,16 +396,82 @@ export default function PostDetail({
             </span>
           </div>
 
-          <Button variant="unstyled"
-            onClick={handleShare}
-            className={`flex items-center gap-2 text-sm font-semibold transition-colors ml-auto ${
-              shareCopied ? 'text-emerald-400' : 'text-slate-500 hover:text-emerald-400'
-            }`}
-          >
-            {shareCopied ? <Check className="w-[18px] h-[18px]" /> : <Share2 className="w-[18px] h-[18px]" />}
-            {shareCopied ? 'Copied!' : 'Share'}
-          </Button>
+          {/* Repost — public-only. Menu: instant plain repost / repost with a comment. */}
+          {canRepost && (
+            <Dropdown
+              mode="menu"
+              open={repostMenuOpen}
+              onClose={() => setRepostMenuOpen(false)}
+              align="left"
+              dropdownClassName="min-w-[15rem] p-1.5 space-y-0.5"
+              trigger={
+                <Button
+                  variant="unstyled"
+                  onClick={() => setRepostMenuOpen((o) => !o)}
+                  aria-label="Repost"
+                  aria-haspopup="menu"
+                  aria-expanded={repostMenuOpen}
+                  className={`flex items-center gap-2 text-sm font-semibold transition-colors ${
+                    reposted ? 'text-emerald-500' : 'text-slate-500 hover:text-emerald-400'
+                  }`}
+                >
+                  <Repeat2 className="w-[18px] h-[18px]" />
+                  <span>{repostCount > 0 ? repostCount : ''} {reposted ? 'Reposted' : 'Repost'}</span>
+                </Button>
+              }
+            >
+              <Dropdown.Item leading={<Repeat2 className="w-4 h-4" />} onClick={togglePlainRepost}>
+                {reposted ? 'Undo repost' : 'Repost'}
+              </Dropdown.Item>
+              <Dropdown.Item leading={<MessageSquareQuote className="w-4 h-4" />} onClick={openQuote}>
+                Repost with comment
+              </Dropdown.Item>
+            </Dropdown>
+          )}
+
+          <div className="flex items-center gap-6 ml-auto">
+            <Button variant="unstyled"
+              onClick={toggleBookmark}
+              aria-label={bookmarked ? 'Remove from saved' : 'Save post'}
+              aria-pressed={bookmarked}
+              className={`flex items-center gap-2 text-sm font-semibold transition-colors ${
+                bookmarked ? 'text-primary-500' : 'text-slate-500 hover:text-primary-400'
+              }`}
+            >
+              {bookmarked ? <BookmarkCheck className="w-[18px] h-[18px]" fill="currentColor" /> : <Bookmark className="w-[18px] h-[18px]" />}
+              {bookmarked ? 'Saved' : 'Save'}
+            </Button>
+
+            <Button variant="unstyled"
+              onClick={handleShare}
+              className={`flex items-center gap-2 text-sm font-semibold transition-colors ${
+                shareCopied ? 'text-emerald-400' : 'text-slate-500 hover:text-emerald-400'
+              }`}
+            >
+              {shareCopied ? <Check className="w-[18px] h-[18px]" /> : <Share2 className="w-[18px] h-[18px]" />}
+              {shareCopied ? 'Copied!' : 'Share'}
+            </Button>
+          </div>
         </div>
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: QUOTE REPOST MODAL (permalink)
+            Contains: Kit Modal hosting the lazy PostComposer in `quoting` mode;
+            on success routes the viewer to the new quote's permalink
+            ────────────────────────────────────────────────────────── */}
+        {quoteOpen && (
+          <Modal isOpen={quoteOpen} onClose={() => setQuoteOpen(false)} title="Repost with comment">
+            <PostComposer
+              currentUser={currentUser}
+              friends={[]}
+              onPosted={() => {}}
+              quoting={{
+                original: post as unknown as FeedPost,
+                onPosted: (created) => { setQuoteOpen(false); window.location.href = `/p/${created.id}`; },
+              }}
+            />
+          </Modal>
+        )}
       </div>
 
       {/* ──────────────────────────────────────────────────────────
