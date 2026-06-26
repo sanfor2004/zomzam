@@ -121,6 +121,17 @@ test('createPost rejects an empty post (no text, no image) with HttpError 400', 
   assert.equal(db.execute.mock.calls.length, 0);
 });
 
+test('createPost normal-post fetch omits repost_of so a fresh post never mis-renders as a tombstone', async () => {
+  // Regression (2026-06-26): the create return selected p.repost_of, which is
+  // NULL for a normal post; PostCard reads `repost_of !== undefined`, so the null
+  // flagged a brand-new post as a deleted-original repost ("You reposted" +
+  // "This post is no longer available") until a refresh re-fetched via the feed.
+  db.queryOne.mock.mockImplementation(async () => ({ id: 1, user_id: USER_ID, avatar: null }));
+  await posts.createPost(USER_ID, { contentHtml: '<p>hi</p>', visibility: 'public', imageFile: null });
+  const fetchCall = db.queryOne.mock.calls.find((c) => /0 AS like_count/.test(c.arguments[0] as string))!;
+  assert.doesNotMatch(fetchCall.arguments[0] as string, /repost_of/, 'a normal create return must not carry repost_of');
+});
+
 // ── Favor economy: accept_answer bridge + resolve_ask ────────────────────────
 
 test('acceptAnswer resolves the ask, logs a helpful_event, and returns the helper id', async () => {
@@ -403,4 +414,255 @@ test('getFeedAudience returns friend+follower ids, every clause scoped to the au
   assert.match(sql, /type = 'friend'/);
   assert.match(sql, /type = 'follow'/);
   assert.ok(params.every((p) => p === USER_ID), 'audience query never reaches outside the author');
+});
+
+// ── Bookmark: private, id-scoped toggle ──────────────────────────────────────
+
+test('toggleBookmark inserts a bookmark scoped to the acting user when none exists', async () => {
+  db.queryOne.mock.mockImplementationOnce(async () => null); // not yet bookmarked
+  const res = await posts.toggleBookmark(USER_ID, 5);
+  assert.deepEqual(res, { bookmarked: true });
+  assert.deepEqual(db.queryOne.mock.calls[0].arguments[1], [5, USER_ID], 'existence probe scoped to (post, user)');
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /INSERT INTO post_bookmarks \(post_id, user_id\)/);
+  assert.deepEqual(params, [5, USER_ID]);
+});
+
+test('toggleBookmark deletes the bookmark (scoped to user) when it already exists', async () => {
+  db.queryOne.mock.mockImplementationOnce(async () => ({ id: 1 })); // already bookmarked
+  const res = await posts.toggleBookmark(USER_ID, 5);
+  assert.deepEqual(res, { bookmarked: false });
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /DELETE FROM post_bookmarks WHERE post_id = \? AND user_id = \?/);
+  assert.deepEqual(params, [5, USER_ID]);
+});
+
+// ── Repost: plain toggle (public-only, root-collapse, self-allowed) ───────────
+
+test('toggleRepost creates a plain repost of a public original, scoped to the user', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },                       // target
+    { id: 5, user_id: 9, visibility: 'public' },      // root
+    null,                                             // no existing plain repost
+  );
+  seedQuery([feedRow({ id: 100, repost_of: 5, orig_id: 5 })], []); // fetchFeedPostById + top comments
+
+  const res = await posts.toggleRepost(USER_ID, 5);
+
+  assert.equal(res.reposted, true);
+  const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
+  assert.match(insert.arguments[0] as string, /content_html, visibility, image_path, type, skill_tag, repost_of/);
+  assert.deepEqual(insert.arguments[1], [USER_ID, 5], 'author = session user, repost_of = root id');
+});
+
+test('toggleRepost on an existing plain repost removes it (un-repost), scoped to the user', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },                       // target
+    { id: 5, user_id: 9, visibility: 'public' },      // root
+    { id: 99 },                                       // existing plain repost row
+  );
+  const res = await posts.toggleRepost(USER_ID, 5);
+
+  assert.deepEqual(res, { reposted: false });
+  const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /DELETE FROM posts WHERE id = \? AND user_id = \?/);
+  assert.deepEqual(params, [99, USER_ID], 'a user can only undo their own repost');
+});
+
+test('toggleRepost rejects a non-public original (400) and writes nothing', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: 9, visibility: 'friends' },     // friends-only ⇒ not repostable
+  );
+  await assert.rejects(
+    () => posts.toggleRepost(USER_ID, 5),
+    (err: any) => err instanceof HttpError && err.status === 400,
+  );
+  assert.equal(db.execute.mock.calls.length, 0);
+});
+
+test('toggleRepost collapses to the root when the target is itself a repost', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: 3 },                           // target is a repost of 3
+    { id: 3, user_id: 9, visibility: 'public' },       // root = 3
+    null,
+  );
+  seedQuery([feedRow({ id: 100, repost_of: 3, orig_id: 3 })], []);
+
+  await posts.toggleRepost(USER_ID, 5);
+
+  assert.deepEqual(db.queryOne.mock.calls[1].arguments[1], [3], 'root resolved from the target\'s repost_of');
+  const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
+  assert.equal((insert.arguments[1] as any[])[1], 3, 'repost_of points at the true root, never a chain');
+});
+
+test('toggleRepost allows a self-repost (root authored by the same user)', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: USER_ID, visibility: 'public' }, // own post
+    null,
+  );
+
+  const res = await posts.toggleRepost(USER_ID, 5);
+  assert.equal(res.reposted, true, 'self-repost is permitted at the service layer');
+});
+
+test('toggleRepost returns the original author + id to notify (a plain repost never enters the feed)', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: 9, visibility: 'public' },
+    null,
+  );
+  const res = await posts.toggleRepost(USER_ID, 5);
+  assert.deepEqual(res, { reposted: true, originalAuthorId: 9, originalId: 5 });
+});
+
+test('toggleRepost matches only the empty IMAGE-LESS pointer (an image-only quote is not a plain repost)', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: 9, visibility: 'public' },
+    null,
+  );
+  await posts.toggleRepost(USER_ID, 5);
+  const probe = db.queryOne.mock.calls[2].arguments[0] as string;
+  assert.match(probe, /content_html = '' AND image_path IS NULL/, 'plain-repost probe excludes image-only quotes');
+});
+
+test('getFeed hides plain reposts (empty image-less pointers) from the home feed', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 5 })], []);
+  await posts.getFeed(USER_ID, { tier: 'seen' });
+  const sql = db.query.mock.calls[0].arguments[0] as string;
+  assert.match(sql, /NOT \(p\.repost_of IS NOT NULL AND p\.content_html = '' AND p\.image_path IS NULL\)/);
+});
+
+test('createPost quote accepts an image-only quote (no text)', async () => {
+  seedQueryOne({ id: 5, repost_of: null }, { id: 5, user_id: 9, visibility: 'public' });
+  seedQuery([feedRow({ id: 102, repost_of: 5, orig_id: 5 })], []);
+  await posts.createPost(USER_ID, { contentHtml: '', visibility: 'public', imageFile: { size: 100 } as any, repostOf: 5 });
+  assert.equal(uploads.processImageUpload.mock.calls.length, 1, 'the quote\'s own image is processed');
+  const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
+  assert.equal((insert.arguments[1] as any[])[6], 5, 'repost_of = root id');
+});
+
+// ── Repost: quote (createPost with repostOf) ─────────────────────────────────
+
+test('createPost quote stores repost_of + content and forces public/status', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },                       // target
+    { id: 5, user_id: 9, visibility: 'public' },      // root
+  );
+  seedQuery([feedRow({ id: 101, repost_of: 5, orig_id: 5 })], []); // fetchFeedPostById
+
+  await posts.createPost(USER_ID, { contentHtml: '<p>nice work</p>', visibility: 'friends', imageFile: null, repostOf: 5 });
+
+  const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
+  const params = insert.arguments[1] as any[];
+  // (user_id, content_html, visibility, image_path, type, skill_tag, repost_of)
+  assert.equal(params[0], USER_ID);
+  assert.match(params[1], /nice work/);
+  assert.equal(params[2], 'public', 'a quote is always public');
+  assert.equal(params[4], 'status', 'a quote is always a status');
+  assert.equal(params[6], 5, 'repost_of = root id');
+});
+
+test('createPost quote rejects empty text (400) before touching the DB', async () => {
+  await assert.rejects(
+    () => posts.createPost(USER_ID, { contentHtml: '   ', visibility: 'public', imageFile: null, repostOf: 5 }),
+    (err: any) => err instanceof HttpError && err.status === 400,
+  );
+  assert.equal(db.execute.mock.calls.length, 0);
+  assert.equal(db.queryOne.mock.calls.length, 0, 'empty-text quote is rejected before resolving the target');
+});
+
+test('createPost quote rejects a non-public original (400)', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: 9, visibility: 'exclusive' },
+  );
+  await assert.rejects(
+    () => posts.createPost(USER_ID, { contentHtml: '<p>x</p>', visibility: 'public', imageFile: null, repostOf: 5 }),
+    (err: any) => err instanceof HttpError && err.status === 400,
+  );
+  assert.equal(db.execute.mock.calls.length, 0);
+});
+
+// ── getSaved: newest-saved-first, visibility re-checked, bookmarked forced ────
+
+test('getSaved orders newest-saved-first and re-applies the feed visibility rule', async () => {
+  seedQuery([feedRow({ id: 7, bookmark_id: 30, repost_of: null })], []); // saved rows + top comments
+
+  const res = await posts.getSaved(USER_ID, {});
+
+  const [sql, params] = db.query.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /FROM post_bookmarks b/);
+  assert.match(sql, /ORDER BY b\.id DESC/);
+  assert.match(sql, /p\.visibility = 'public'/, 'visibility clause re-applied so lost-access posts drop out');
+  assert.equal(params[6], USER_ID, 'bookmark owner filter is the session user');
+  assert.equal(res.posts[0].bookmarked_by_me, true, 'every saved row is bookmarked by definition');
+});
+
+test('getSaved keyset-paginates on the bookmark id', async () => {
+  seedQuery([feedRow({ id: 7, bookmark_id: 12, repost_of: null }), feedRow({ id: 6, bookmark_id: 11, repost_of: null })], []);
+
+  const res = await posts.getSaved(USER_ID, { cursor: 20, limit: 2 });
+
+  const [sql, params] = db.query.mock.calls[0].arguments as [string, any[]];
+  assert.match(sql, /b\.id < \?/, 'keyset predicate on the bookmark id');
+  assert.equal(params[params.length - 1], 20, 'cursor bound last');
+  assert.equal(res.has_more, true);
+  assert.equal(res.next_cursor, 11, 'smallest bookmark id seeds the next page');
+});
+
+// ── getFeed: nested repost shape + engagement flags ──────────────────────────
+
+test('getFeed builds a nested repost_of object from the orig_* columns', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({
+    id: 200, repost_of: 5, orig_id: 5, orig_user_id: 9, orig_username: 'origauthor',
+    orig_content_html: '<p>the original</p>', orig_like_count: 3, orig_comment_count: 1,
+  })], []);
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' }); // non-scored path
+
+  const nested = res.posts[0].repost_of;
+  assert.ok(nested && typeof nested === 'object', 'live repost yields a nested original object');
+  assert.equal(nested.id, 5);
+  assert.equal(nested.username, 'origauthor');
+  assert.match(nested.content_html, /the original/);
+});
+
+test('getFeed yields repost_of: null (tombstone) when the original was deleted', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 200, repost_of: 5, orig_id: null })], []); // FK set, original gone
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+  assert.equal(res.posts[0].repost_of, null, 'a deleted original renders as a tombstone');
+});
+
+test('getFeed normalizes engagement flags to booleans', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 5, liked_by_me: 1, bookmarked_by_me: 1, is_following: 1, is_friend: 1, reposted_by_me: 1, repost_count: 4 })], []);
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+  const p = res.posts[0];
+  assert.equal(p.liked_by_me, true);
+  assert.equal(p.bookmarked_by_me, true);
+  assert.equal(p.is_following, true);
+  assert.equal(p.is_friend, true);
+  assert.equal(p.reposted_by_me, true);
+  assert.equal(p.repost_count, 4);
+});
+
+test('getFeed excludes reposts from relevance scoring (recency only — score 0)', async () => {
+  seedQueryOne({ tags: ['react'] }); // viewer tags
+  // A normal tag-matched post (score 10) vs a repost whose content also matches
+  // (#react) but is forced to score 0 — the normal post must rank first.
+  seedQuery([
+    feedRow({ id: 1, content_html: '<span data-tag="react">#react</span>' }), // normal, score 10
+    feedRow({ id: 2, content_html: '<span data-tag="react">#react</span>', repost_of: 9, orig_id: 9 }), // repost, score 0
+  ]);
+
+  const res = await posts.getFeed(USER_ID, {}); // scored landing page
+  assert.deepEqual(res.posts.map((p: any) => p.id), [1, 2], 'the repost never outranks a real tag match');
 });

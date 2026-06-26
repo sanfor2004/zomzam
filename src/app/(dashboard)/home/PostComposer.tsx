@@ -43,6 +43,11 @@ interface PostComposerProps {
   /** Present ⇒ edit mode: seeds the editor/image/visibility from the post, hides
    *  the type + skill controls, and submits `post_edit` instead of creating. */
   editing?: { post: Post; onSaved: (post: Post) => void };
+  /** Present ⇒ quote-repost mode: shows a read-only preview of `original` above
+   *  the editor, hides type/skill/image + locks visibility to Public, requires
+   *  text, and submits `create` with `repost_of = original.id`. Distinct config
+   *  object (not an `isQuoting` flag) — mirrors `editing`. */
+  quoting?: { original: Post; onPosted: (post: Post) => void };
 }
 
 // ──────────────────────────────────────────────────────────
@@ -51,7 +56,7 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted, editing }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, editing, quoting }: PostComposerProps) {
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
@@ -80,7 +85,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
 
   const [postingLoading, setPostingLoading] = useState(false);
-  const [visibility, setVisibility] = useState<PostVisibility>(editing?.post.visibility ?? 'friends');
+  const [visibility, setVisibility] = useState<PostVisibility>(quoting ? 'public' : editing?.post.visibility ?? 'friends');
 
   // Favor economy: one composer, branch on type. Ask reveals a skill/topic tag
   // for routing/matching; Win posts share milestones (amount stays opt-in, body
@@ -405,6 +410,8 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
   // ── Post / Save ─────────────────────────────────────────────
   // Valid with text, an image (new or kept), or both — never over the cap.
   const hasImageContent = !!imageFile || !!imagePreview;
+  // A quote needs text OR an image (an empty, image-less quote is just a plain
+  // repost, handled by the menu's instant action) — same rule as a normal post.
   const canSubmit = (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
 
   const createPostSubmit = async (content_html: string) => {
@@ -433,6 +440,31 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
       }
     } catch {
       toast({ variant: 'error', title: "Couldn't post", description: 'Something went wrong. Please try again.' });
+    }
+  };
+
+  const submitQuote = async (content_html: string) => {
+    if (!quoting) return;
+    try {
+      const fd = new FormData();
+      fd.append('content_html', content_html);
+      fd.append('visibility', 'public'); // a quote republishes public content
+      fd.append('repost_of', String(quoting.original.id));
+      if (imageFile) fd.append('image', imageFile); // the quote's OWN image (optional)
+      const res = await fetch('/api/posts', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (data.success) {
+        editorRef.current!.innerHTML = '';
+        setCharCount(0);
+        setPopoverActive(false);
+        setShowEmoji(false);
+        quoting.onPosted(data.post);
+        toast({ variant: 'success', title: 'Reposted', description: 'Your quote is now live in the feed.' });
+      } else {
+        toast({ variant: 'error', title: "Couldn't repost", description: data.message || 'Something went wrong. Please try again.' });
+      }
+    } catch {
+      toast({ variant: 'error', title: "Couldn't repost", description: 'Something went wrong. Please try again.' });
     }
   };
 
@@ -471,7 +503,8 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
     if (!editorRef.current || !canSubmit) return;
     const content_html = editorRef.current.innerHTML;
     setPostingLoading(true);
-    if (editing) await saveEdit(content_html);
+    if (quoting) await submitQuote(content_html);
+    else if (editing) await saveEdit(content_html);
     else await createPostSubmit(content_html);
     setPostingLoading(false);
   };
@@ -485,13 +518,14 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
 
   // Placeholder + submit label adapt to the post type so the composer reads like
   // the action it performs (discoverability, HIG).
-  const editorPlaceholder =
-    postType === 'ask'
+  const editorPlaceholder = quoting
+    ? 'Add a comment to your repost…'
+    : postType === 'ask'
       ? 'What do you need help with? Be specific so the right people can answer.'
       : postType === 'win'
       ? 'Share a win worth celebrating — what did you just pull off?'
       : `What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`;
-  const submitLabel = editing ? 'Save' : postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
+  const submitLabel = quoting ? 'Repost' : editing ? 'Save' : postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
 
   return (
     /* ──────────────────────────────────────────────────────────
@@ -535,8 +569,8 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
           the left, audience switch (Friends / Public) on the right
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        {/* Type + skill are fixed in edit mode (only text/image/visibility change). */}
-        {!editing && (
+        {/* Type + skill are fixed in edit/quote mode (only the comment changes). */}
+        {!editing && !quoting && (
           <div className="flex flex-wrap items-center gap-2">
             <PostTypeSwitch value={postType} onChange={setPostType} />
             {postType === 'ask' && (
@@ -551,8 +585,40 @@ export function PostComposer({ currentUser, friends, onPosted, editing }: PostCo
             )}
           </div>
         )}
-        <AudienceSwitch value={visibility} onChange={setVisibility} />
+        {/* A quote is always public (it republishes already-public content), so the
+            audience is locked and shown as a static note instead of a switch. */}
+        {quoting ? (
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 bg-[#111318] border border-slate-800/60 rounded-xl px-2.5 py-1.5">
+            <Users className="w-3.5 h-3.5" /> Public repost
+          </span>
+        ) : (
+          <AudienceSwitch value={visibility} onChange={setVisibility} />
+        )}
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: QUOTE PREVIEW (quote-repost mode)
+          Contains: read-only embedded preview of the original being quoted
+          ────────────────────────────────────────────────────────── */}
+      {quoting && (
+        <div className="mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
+          <div className="flex items-center gap-2">
+            <Image
+              src={quoting.original.avatar || '/Assets/Img/default-avatar.png'}
+              alt={displayName(quoting.original)}
+              width={28}
+              height={28}
+              className="w-7 h-7 rounded-lg object-cover border border-slate-800"
+            />
+            <span className="text-xs font-bold text-white truncate">{displayName(quoting.original)}</span>
+            <span className="text-[11px] text-slate-500 truncate">@{quoting.original.username}</span>
+          </div>
+          <div
+            className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-4"
+            dangerouslySetInnerHTML={{ __html: quoting.original.content_html }}
+          />
+        </div>
+      )}
 
       {/* Row 1 — avatar, text area, character amount */}
       <div className="flex gap-3">

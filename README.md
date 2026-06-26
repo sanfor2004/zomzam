@@ -87,7 +87,8 @@ zomzam.com/
 │   │   │   ├── community/     # /community, /community/discover, /following, /friends, /requests
 │   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
 │   │   │   ├── dashboard/     # /dashboard — primary metrics dashboard
-│   │   │   ├── home/          # /home — social feed + post composer
+│   │   │   ├── home/          # /home — social feed + post composer (+ shared PostCard)
+│   │   │   ├── saved/         # /saved — the viewer's bookmarked posts
 │   │   │   ├── me/            # /me — profile settings
 │   │   │   ├── money/         # /money/accounts, /dashboard, /expenses, /income, /lend
 │   │   │   ├── settings/      # /settings — timezone, language, currency preferences
@@ -173,6 +174,7 @@ zomzam.com/
 | `/forgot-password` | Public | Request a password-reset token. |
 | `/pricing` | Public | Plans & pricing — the free social core vs the paid Pro/Agency tiers that unlock the CRM + Leads suite; monthly/annual toggle, subscribe CTAs. |
 | `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill). The social right sidebar (Messages / Active Now / Suggested) is now global in the shell, not per-page. |
+| `/saved` | Protected | The viewer's bookmarked posts, newest-saved-first; renders the shared feed `PostCard`. Visibility is re-checked on read, so a since-hidden or deleted post drops out silently. |
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
 | `/p/[postId]` | Protected | Permalink view for a single post (deep-linkable from the feed). |
 | `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
@@ -213,13 +215,13 @@ zomzam.com/
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
 | `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
 | `/api/notion` | `sync`, `update_settings` | Notion integration for CRM lead sync. |
-| `/api/posts` | `feed` (tiered `tier=unseen`/`seen` + keyset `cursor` + `filter=help`/`help_matches`), `mark_seen` (batch read receipts), `comments`, `top_comments`, `create` (status/ask/win), `like`, `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement + favor economy (ask/win, accept-answer bridge). Chat-style feed: unseen posts first (tracked in `post_views`), then seen backfill. |
+| `/api/posts` | `feed` (tiered `tier=unseen`/`seen` + keyset `cursor` + `filter=help`/`help_matches`), `saved` (keyset bookmarked posts), `mark_seen` (batch read receipts), `comments`, `top_comments`, `create` (status/ask/win, or a quote repost via `repost_of` — text and/or own image), `like`, `bookmark`, `repost` (plain repost toggle, public-only, root-collapse), `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement (like/bookmark/repost) + favor economy (ask/win, accept-answer bridge). Chat-style feed: unseen posts first (tracked in `post_views`), then seen backfill. Reposts use a `posts.repost_of` pointer: a **plain** repost (empty pointer) boosts the original and surfaces on the reposter's profile (not duplicated in the feed, Twitter-style); a **quote** repost is a real feed post with its own numbers that embeds the original as text (the original's image is never republished). |
 | `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read`, `typing` (transient peer-is-typing ping, no DB write) | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
-| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, the `message_read` "Seen" receipt, and the `new_post` feed-pill fan-out). |
+| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` / `new_follower` / `reposted` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, the `message_read` "Seen" receipt, and the `new_post` feed-pill fan-out). |
 
 ---
 

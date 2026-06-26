@@ -3,6 +3,23 @@ import { withAuth } from '@/lib/api-auth';
 import * as posts from '@/lib/services/posts';
 import { createNotification, pushStreamOrder } from '@/lib/models/user';
 
+// Notify a repost's original author (both the plain-repost and quote paths land
+// here). Skips a self-repost and a missing/tombstoned original.
+async function notifyRepostAuthor(
+  origAuthorId: number | undefined,
+  origPostId: number | undefined,
+  actorId: number,
+  actorUsername: string,
+) {
+  if (!origAuthorId || origAuthorId === actorId || !origPostId) return;
+  await createNotification(origAuthorId, 'reposted', {
+    from_user_id: actorId,
+    by_user: actorUsername,
+    post_id: origPostId,
+    message: 'reposted your post',
+  });
+}
+
 // Thin dispatch layer: authenticate, parse the request body (post creation is
 // multipart/form-data because it may carry an image File; every other action is
 // JSON), delegate to the posts service, shape the response. Business logic lives
@@ -23,6 +40,7 @@ export const POST = withAuth(async (request, user) => {
       type: formData.get('type'),
       skill_tag: formData.get('skill_tag'),
       remove_image: formData.get('remove_image'),
+      repost_of: formData.get('repost_of'),
     };
   } else {
     body = await request.json().catch(() => ({}));
@@ -37,6 +55,7 @@ export const POST = withAuth(async (request, user) => {
         imageFile,
         type: body.type,
         skillTag: body.skill_tag,
+        repostOf: body.repost_of ? parseInt(body.repost_of) : undefined,
       });
       // Live "new posts" pill: fan a lightweight signal out to everyone who can
       // see this author's feed (friends + followers) so their feed offers a
@@ -68,6 +87,8 @@ export const POST = withAuth(async (request, user) => {
           )
         );
       }
+      // A quote repost notifies the original's author (skip a self-repost).
+      await notifyRepostAuthor(post.repost_of?.user_id, post.repost_of?.id, user.id, user.username);
       return NextResponse.json({ success: true, post });
     }
 
@@ -108,6 +129,21 @@ export const POST = withAuth(async (request, user) => {
 
     case 'like':
       return NextResponse.json({ success: true, ...await posts.toggleLike(user.id, parseInt(body.post_id || 0)) });
+
+    case 'bookmark':
+      return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
+
+    case 'repost': {
+      // Plain (empty-pointer) repost toggle. It never enters the home feed (no
+      // fan-out pill — there'd be no post to show), it only boosts the original
+      // and shows on the reposter's profile. On a fresh repost, notify the
+      // original author (skip self).
+      const { reposted, originalAuthorId, originalId } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
+      if (reposted) {
+        await notifyRepostAuthor(originalAuthorId, originalId, user.id, user.username);
+      }
+      return NextResponse.json({ success: true, reposted });
+    }
 
     case 'comment_vote':
       return NextResponse.json({ success: true, ...await posts.toggleCommentVote(user.id, parseInt(body.comment_id || 0)) });
@@ -163,6 +199,15 @@ export const GET = withAuth(async (request, user) => {
           limit,
           filter: searchParams.get('filter') || undefined,
         }),
+      });
+    }
+
+    case 'saved': {
+      // The viewer's bookmarked posts, newest-saved-first, keyset on bookmark id.
+      const cursor = parseInt(searchParams.get('cursor') || '0') || null;
+      return NextResponse.json({
+        success: true,
+        ...await posts.getSaved(user.id, { cursor, limit }),
       });
     }
 

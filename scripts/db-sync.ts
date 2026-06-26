@@ -243,6 +243,7 @@ const schema: Record<string, Record<string, string>> = {
     skill_tag: 'VARCHAR(50) NULL DEFAULT NULL',                      // ask routing/matching
     accepted_answer_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',         // FK -> post_comments.id (the accepted answer)
     resolved_at: 'DATETIME NULL DEFAULT NULL',                       // set on accept OR manual resolve; resolved = NOT NULL
+    repost_of: 'BIGINT UNSIGNED NULL DEFAULT NULL',                  // pointer model: set ⇒ this row is a repost of the (root) original
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   post_likes: {
@@ -274,6 +275,15 @@ const schema: Record<string, Record<string, string>> = {
     user_id: 'INT NOT NULL',
     seen: 'TINYINT(1) NOT NULL DEFAULT 1',          // true/false read flag (room for "delivered, not seen" later)
     seen_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  // Private saved-posts: one row per (user, post). Its presence means the viewer
+  // bookmarked that post; the /saved page reverse-chrons these (visibility
+  // re-checked at read time so a since-hidden post never leaks).
+  post_bookmarks: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   // Append-only log the future credits engine consumes (NOT a ledger): one row
   // each time an asker accepts an answer. No balance is ever touched here.
@@ -320,6 +330,7 @@ const indexes: Record<string, Record<string, string>> = {
     idx_user_id: 'INDEX idx_user_id (user_id)',
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
     idx_type_resolved: 'INDEX idx_type_resolved (type, resolved_at)',
+    idx_repost_of: 'INDEX idx_repost_of (repost_of)',
   },
   post_likes: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',
@@ -337,6 +348,10 @@ const indexes: Record<string, Record<string, string>> = {
   post_views: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',  // upsert target for mark_seen
     idx_user_seen: 'INDEX idx_user_seen (user_id, seen)',          // "my unseen" NOT EXISTS filter
+  },
+  post_bookmarks: {
+    uq_user_post: 'UNIQUE INDEX uq_user_post (user_id, post_id)',  // toggle target + one-per-user
+    idx_user_id: 'INDEX idx_user_id (user_id, id)',                // newest-saved-first keyset
   },
   rate_limit_events: {
     // The count-within-window + per-bucket purge both filter by (bucket, time).

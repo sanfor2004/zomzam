@@ -59,6 +59,19 @@ export interface Post {
   comment_count: number;
   liked_by_me: boolean;
   top_comments?: Comment[];
+  // ── Engagement (follow / repost / bookmark) ──────────────────
+  // Private bookmark state for the viewer (drives the Bookmark icon fill).
+  bookmarked_by_me?: boolean;
+  // Repost pointer model: when this row IS a repost, repost_of carries the live
+  // original (or null when the original was deleted → tombstone). repost_count is
+  // how many times the post has been reposted; reposted_by_me is the viewer's
+  // plain-repost toggle state.
+  repost_of?: Post | null;
+  repost_count?: number;
+  reposted_by_me?: boolean;
+  // Server-computed viewer↔author relationship (drives the Follow button).
+  is_following?: boolean;
+  is_friend?: boolean;
 }
 
 export function displayName(u: { first_name: string | null; last_name: string | null; username: string }) {
