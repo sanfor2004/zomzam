@@ -4,19 +4,18 @@ import * as posts from '@/lib/services/posts';
 import { createNotification, pushStreamOrder } from '@/lib/models/user';
 
 // Notify a repost's original author (both the plain-repost and quote paths land
-// here). Skips a self-repost. The nested original — with its author id — rides on
-// the normalized post the service returns; a tombstoned/absent original is a no-op.
+// here). Skips a self-repost and a missing/tombstoned original.
 async function notifyRepostAuthor(
-  post: { repost_of?: { id: number; user_id: number } | null },
+  origAuthorId: number | undefined,
+  origPostId: number | undefined,
   actorId: number,
   actorUsername: string,
 ) {
-  const origAuthor = post.repost_of?.user_id;
-  if (!origAuthor || origAuthor === actorId) return;
-  await createNotification(origAuthor, 'reposted', {
+  if (!origAuthorId || origAuthorId === actorId || !origPostId) return;
+  await createNotification(origAuthorId, 'reposted', {
     from_user_id: actorId,
     by_user: actorUsername,
-    post_id: post.repost_of!.id,
+    post_id: origPostId,
     message: 'reposted your post',
   });
 }
@@ -89,7 +88,7 @@ export const POST = withAuth(async (request, user) => {
         );
       }
       // A quote repost notifies the original's author (skip a self-repost).
-      await notifyRepostAuthor(post, user.id, user.username);
+      await notifyRepostAuthor(post.repost_of?.user_id, post.repost_of?.id, user.id, user.username);
       return NextResponse.json({ success: true, post });
     }
 
@@ -135,19 +134,15 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
 
     case 'repost': {
-      // Plain (empty-comment) repost toggle. On a fresh repost, fan the live pill
-      // out to the reposter's audience and notify the original author (skip self).
-      const { reposted, post } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
-      if (reposted && post) {
-        const audience = await posts.getFeedAudience(user.id);
-        await Promise.all(
-          audience.map((rid) =>
-            pushStreamOrder(rid, 'new_post', { post_id: post.id, by_user: user.username }, false)
-          )
-        );
-        await notifyRepostAuthor(post, user.id, user.username);
+      // Plain (empty-pointer) repost toggle. It never enters the home feed (no
+      // fan-out pill — there'd be no post to show), it only boosts the original
+      // and shows on the reposter's profile. On a fresh repost, notify the
+      // original author (skip self).
+      const { reposted, originalAuthorId, originalId } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
+      if (reposted) {
+        await notifyRepostAuthor(originalAuthorId, originalId, user.id, user.username);
       }
-      return NextResponse.json({ success: true, reposted, post });
+      return NextResponse.json({ success: true, reposted });
     }
 
     case 'comment_vote':

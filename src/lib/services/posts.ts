@@ -79,14 +79,15 @@ export async function createPost(userId: number, input: CreatePostInput) {
   const raw = (input.contentHtml || '').trim();
   const hasImage = !!(input.imageFile && input.imageFile.size > 0);
 
-  // QUOTE repost branch: a quote carries the reposter's comment over a nested
-  // original. It collapses to the root, is forced public/status/no-skill, and —
-  // unlike a normal post — REQUIRES text (an empty quote is just a plain repost,
-  // which the toggle path handles instead). No image on a quote.
+  // QUOTE repost branch: a quote carries the reposter's own comment AND/OR image
+  // over a nested original. It collapses to the root and is forced
+  // public/status/no-skill. A quote needs text OR an image (an empty, image-less
+  // quote is just a plain repost, which the toggle path handles instead). The
+  // quote's own image is allowed; the ORIGINAL's image is never republished.
   const isQuote = input.repostOf != null && Number(input.repostOf) > 0;
   let repostRootId: number | null = null;
   if (isQuote) {
-    if (!raw) throw new HttpError(400, 'A quote repost needs a comment');
+    if (!raw && !hasImage) throw new HttpError(400, 'A quote repost needs a comment or image');
     const { rootId } = await resolveRepostTarget(Number(input.repostOf));
     repostRootId = rootId;
   } else if (!raw && !hasImage) {
@@ -108,7 +109,7 @@ export async function createPost(userId: number, input: CreatePostInput) {
     : null;
 
   let image_path: string | null = null;
-  if (hasImage && !isQuote) image_path = await processPostImage(input.imageFile!);
+  if (hasImage) image_path = await processPostImage(input.imageFile!);
 
   const result = await execute(
     `INSERT INTO posts (user_id, content_html, visibility, image_path, type, skill_tag, repost_of) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -428,11 +429,13 @@ async function resolveRepostTarget(targetId: number): Promise<{ rootId: number; 
  * the freshly-normalized repost row (with nested original) so the route can fan
  * out the live pill + notify; on un-repost returns `{ reposted: false }`.
  */
-export async function toggleRepost(userId: number, targetId: number): Promise<{ reposted: boolean; post?: any }> {
-  const { rootId } = await resolveRepostTarget(targetId);
+export async function toggleRepost(userId: number, targetId: number): Promise<{ reposted: boolean; originalAuthorId?: number; originalId?: number }> {
+  const { rootId, authorId } = await resolveRepostTarget(targetId);
 
+  // A PLAIN repost is the empty pointer row: no text AND no image. An image-only
+  // quote also has content_html='' but carries an image, so it must NOT match here.
   const existing = await queryOne<{ id: number }>(
-    `SELECT id FROM posts WHERE repost_of = ? AND user_id = ? AND content_html = ''`,
+    `SELECT id FROM posts WHERE repost_of = ? AND user_id = ? AND content_html = '' AND image_path IS NULL`,
     [rootId, userId]
   );
   if (existing) {
@@ -453,8 +456,10 @@ export async function toggleRepost(userId: number, targetId: number): Promise<{ 
     [result.insertId, userId]
   );
 
-  const post = await fetchFeedPostById(userId, result.insertId);
-  return { reposted: true, post };
+  // A plain repost never enters the home feed (it only boosts the original +
+  // shows on the reposter's profile), so there's no row to return for prepend —
+  // just the ids the route needs to notify the original's author.
+  return { reposted: true, originalAuthorId: authorId, originalId: rootId };
 }
 
 export async function toggleCommentVote(userId: number, commentId: number): Promise<{ upvoted: boolean }> {
@@ -567,9 +572,9 @@ const FEED_COLUMNS = `
     (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
     (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
     (SELECT COUNT(*) FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id)) AS repost_count,
-    (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id) AND r.user_id = ? AND r.content_html = '')) AS reposted_by_me,
+    (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id) AND r.user_id = ? AND r.content_html = '' AND r.image_path IS NULL)) AS reposted_by_me,
     orig.id AS orig_id, orig.user_id AS orig_user_id, orig.content_html AS orig_content_html,
-    orig.image_path AS orig_image_path, orig.type AS orig_type, orig.skill_tag AS orig_skill_tag,
+    orig.type AS orig_type, orig.skill_tag AS orig_skill_tag,
     orig.accepted_answer_id AS orig_accepted_answer_id, orig.resolved_at AS orig_resolved_at, orig.created_at AS orig_created_at,
     ou.username AS orig_username, ou.first_name AS orig_first_name, ou.last_name AS orig_last_name, ou.avatar AS orig_avatar,
     (SELECT COUNT(*) FROM post_likes    WHERE post_id = orig.id) AS orig_like_count,
@@ -621,7 +626,8 @@ function normalizeFeedRow(p: any) {
             last_name: p.orig_last_name,
             avatar: p.orig_avatar || DEFAULT_AVATAR,
             content_html: p.orig_content_html,
-            image_path: p.orig_image_path,
+            // The original's image is deliberately NOT carried into a repost — a
+            // repost shows the original as text only; click through to see media.
             type: p.orig_type,
             skill_tag: p.orig_skill_tag,
             accepted_answer_id: p.orig_accepted_answer_id,
@@ -637,7 +643,7 @@ function normalizeFeedRow(p: any) {
   const {
     author_tags, bookmark_id,
     orig_id, orig_user_id, orig_username, orig_first_name, orig_last_name, orig_avatar,
-    orig_content_html, orig_image_path, orig_type, orig_skill_tag,
+    orig_content_html, orig_type, orig_skill_tag,
     orig_accepted_answer_id, orig_resolved_at, orig_created_at,
     orig_like_count, orig_comment_count,
     repost_count, reposted_by_me,
@@ -645,7 +651,7 @@ function normalizeFeedRow(p: any) {
   } = p;
   // Reference the destructured-out fields so noUnusedLocals/lint stays quiet.
   void author_tags; void bookmark_id; void orig_user_id; void orig_username; void orig_first_name;
-  void orig_last_name; void orig_avatar; void orig_content_html; void orig_image_path; void orig_type;
+  void orig_last_name; void orig_avatar; void orig_content_html; void orig_type;
   void orig_skill_tag; void orig_accepted_answer_id; void orig_resolved_at; void orig_created_at;
   void orig_like_count; void orig_comment_count; void orig_id;
 
@@ -737,6 +743,12 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     filterParams.push(...viewerTags);
   }
 
+  // A PLAIN repost (empty pointer: no text, no image) never appears in the home
+  // feed — it surfaces on the reposter's profile instead, so the feed isn't
+  // flooded with duplicates (Twitter-style). Quote reposts (text and/or image)
+  // are real posts and stay.
+  const HIDE_PLAIN_REPOST = ` AND NOT (p.repost_of IS NOT NULL AND p.content_html = '' AND p.image_path IS NULL)`;
+
   const isScoredFirstPage = tier === 'unseen' && !cursor && !filter;
 
   let rows: any[];
@@ -746,7 +758,7 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     // Landing screen: rank a recency window in-memory by tag relevance + ask
     // freshness, then take the top `limit`.
     const window = await query(
-      `${SELECT} WHERE ${VISIBILITY} AND ${SEEN} ORDER BY p.id DESC LIMIT ${SCORED_WINDOW}`,
+      `${SELECT} WHERE ${VISIBILITY} AND ${SEEN}${HIDE_PLAIN_REPOST} ORDER BY p.id DESC LIMIT ${SCORED_WINDOW}`,
       baseParams
     );
     const scored = window
@@ -781,7 +793,7 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
       keysetParams.push(cursor);
     }
     rows = await query(
-      `${SELECT} WHERE ${VISIBILITY} AND ${SEEN}${filterSql}${keysetSql}
+      `${SELECT} WHERE ${VISIBILITY} AND ${SEEN}${HIDE_PLAIN_REPOST}${filterSql}${keysetSql}
        ORDER BY p.id DESC LIMIT ${limit}`,
       [...baseParams, ...filterParams, ...keysetParams]
     );

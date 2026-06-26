@@ -410,11 +410,9 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
   // ── Post / Save ─────────────────────────────────────────────
   // Valid with text, an image (new or kept), or both — never over the cap.
   const hasImageContent = !!imageFile || !!imagePreview;
-  // A quote requires text (an empty quote is just a plain repost, handled by the
-  // menu's instant action); a normal post is valid with text OR an image.
-  const canSubmit = quoting
-    ? charCount > 0 && charCount <= MAX_POST_CHARS && !postingLoading
-    : (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
+  // A quote needs text OR an image (an empty, image-less quote is just a plain
+  // repost, handled by the menu's instant action) — same rule as a normal post.
+  const canSubmit = (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
 
   const createPostSubmit = async (content_html: string) => {
     try {
@@ -452,6 +450,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
       fd.append('content_html', content_html);
       fd.append('visibility', 'public'); // a quote republishes public content
       fd.append('repost_of', String(quoting.original.id));
+      if (imageFile) fd.append('image', imageFile); // the quote's OWN image (optional)
       const res = await fetch('/api/posts', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
@@ -735,12 +734,9 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
             </ToolbarButton>
             {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
           </div>
-          {/* No image on a quote — the embedded original carries the visual. */}
-          {!quoting && (
-            <ToolbarButton label="Add a photo" onClick={() => fileInputRef.current?.click()}>
-              <ImageIcon className="w-4 h-4" />
-            </ToolbarButton>
-          )}
+          <ToolbarButton label="Add a photo" onClick={() => fileInputRef.current?.click()}>
+            <ImageIcon className="w-4 h-4" />
+          </ToolbarButton>
           <input
             ref={fileInputRef}
             type="file"

@@ -502,10 +502,47 @@ test('toggleRepost allows a self-repost (root authored by the same user)', async
     { id: 5, user_id: USER_ID, visibility: 'public' }, // own post
     null,
   );
-  seedQuery([feedRow({ id: 100, repost_of: 5, orig_id: 5 })], []);
 
   const res = await posts.toggleRepost(USER_ID, 5);
   assert.equal(res.reposted, true, 'self-repost is permitted at the service layer');
+});
+
+test('toggleRepost returns the original author + id to notify (a plain repost never enters the feed)', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: 9, visibility: 'public' },
+    null,
+  );
+  const res = await posts.toggleRepost(USER_ID, 5);
+  assert.deepEqual(res, { reposted: true, originalAuthorId: 9, originalId: 5 });
+});
+
+test('toggleRepost matches only the empty IMAGE-LESS pointer (an image-only quote is not a plain repost)', async () => {
+  seedQueryOne(
+    { id: 5, repost_of: null },
+    { id: 5, user_id: 9, visibility: 'public' },
+    null,
+  );
+  await posts.toggleRepost(USER_ID, 5);
+  const probe = db.queryOne.mock.calls[2].arguments[0] as string;
+  assert.match(probe, /content_html = '' AND image_path IS NULL/, 'plain-repost probe excludes image-only quotes');
+});
+
+test('getFeed hides plain reposts (empty image-less pointers) from the home feed', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery([feedRow({ id: 5 })], []);
+  await posts.getFeed(USER_ID, { tier: 'seen' });
+  const sql = db.query.mock.calls[0].arguments[0] as string;
+  assert.match(sql, /NOT \(p\.repost_of IS NOT NULL AND p\.content_html = '' AND p\.image_path IS NULL\)/);
+});
+
+test('createPost quote accepts an image-only quote (no text)', async () => {
+  seedQueryOne({ id: 5, repost_of: null }, { id: 5, user_id: 9, visibility: 'public' });
+  seedQuery([feedRow({ id: 102, repost_of: 5, orig_id: 5 })], []);
+  await posts.createPost(USER_ID, { contentHtml: '', visibility: 'public', imageFile: { size: 100 } as any, repostOf: 5 });
+  assert.equal(uploads.processImageUpload.mock.calls.length, 1, 'the quote\'s own image is processed');
+  const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
+  assert.equal((insert.arguments[1] as any[])[6], 5, 'repost_of = root id');
 });
 
 // ── Repost: quote (createPost with repostOf) ─────────────────────────────────

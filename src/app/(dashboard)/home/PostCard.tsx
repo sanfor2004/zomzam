@@ -9,6 +9,7 @@ import {
   Loader2, Heart, MessageCircle, Trash2,
   Check, ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
   HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
+  Globe, Users, Lock,
 } from 'lucide-react';
 import { Button, Tooltip, ShareButton, useToast, Modal, Dropdown } from '@/components/ui';
 import { FollowButton } from '@/components/social/FollowButton';
@@ -184,8 +185,9 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     } catch { /* non-blocking */ }
   };
 
-  // Plain repost toggle (optimistic). A fresh repost is handed to the host via
-  // onReposted so it prepends to the feed; un-reposting just flips the icon.
+  // Plain repost toggle (optimistic). A plain repost never enters the home feed
+  // (it only boosts the original + shows on the reposter's profile), so there's
+  // nothing to prepend — just flip the count/active state on this card.
   const togglePlainRepost = async () => {
     setRepostMenuOpen(false);
     const next = !reposted;
@@ -201,8 +203,6 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
       if (!data.success) {
         setReposted(!next);
         setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
-      } else if (data.reposted && data.post) {
-        onReposted?.(data.post);
       }
     } catch {
       setReposted(!next);
@@ -307,14 +307,6 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
         )}
 
         <div className="p-5">
-          {/* ─── Repost attribution: "<reposter> reposted" (plain or quote) ─── */}
-          {isRepost && (
-            <div className="mb-2.5 flex items-center gap-1.5 text-xs font-semibold text-slate-500">
-              <Repeat2 className="w-3.5 h-3.5" />
-              <span>{isOwn ? 'You' : name} reposted</span>
-            </div>
-          )}
-
           {/* ── Header + content ── */}
           <div className="flex gap-3">
             <Link href={`/u/${post.username}`} className="flex-shrink-0">
@@ -339,6 +331,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 <Link href={`/u/${post.username}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
                   @{post.username}
                 </Link>
+                <VisibilityBadge visibility={post.visibility} />
                 {isOwn ? (
                   <span className="text-xs text-slate-600 flex-shrink-0">· {relativeTime(post.created_at)}</span>
                 ) : (
@@ -390,12 +383,22 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
 
               {isRepost ? (
                 <>
-                  {/* Quote reposts carry the reposter's own comment above the
-                      embedded original; plain reposts have none. */}
+                  {/* A quote carries the reposter's own comment and/or image above
+                      the embedded original (which is shown as text only). */}
                   {quoteText && (
                     <div
                       className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
                       dangerouslySetInnerHTML={{ __html: post.content_html }}
+                    />
+                  )}
+                  {post.image_path && (
+                    <Image
+                      src={post.image_path}
+                      alt=""
+                      width={1200}
+                      height={800}
+                      sizes="(max-width: 1024px) 100vw, 600px"
+                      className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
                     />
                   )}
                   {original ? <NestedOriginal original={original} /> : <RepostTombstone />}
@@ -754,17 +757,25 @@ function NestedOriginal({ original }: { original: Post }) {
         className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
         dangerouslySetInnerHTML={{ __html: original.content_html }}
       />
-      {original.image_path && (
-        <Image
-          src={original.image_path}
-          alt=""
-          width={1200}
-          height={800}
-          sizes="(max-width: 1024px) 100vw, 600px"
-          className="mt-2.5 w-full max-h-[24rem] object-cover rounded-xl border border-white/[0.06]"
-        />
-      )}
+      {/* The original's image is intentionally not shown inside a repost — the
+          "<n> images" cue + tap-through to the full post is the path to media. */}
     </Link>
+  );
+}
+
+// ── Visibility badge ──────────────────────────────────────────
+// A small audience signifier next to the byline: globe (public), people
+// (friends), lock (exclusive). Icon + accessible label (never colour alone, HIG).
+function VisibilityBadge({ visibility }: { visibility?: string }) {
+  const v = visibility ?? 'friends';
+  const { Icon, label } =
+    v === 'public' ? { Icon: Globe, label: 'Public' }
+    : v === 'exclusive' ? { Icon: Lock, label: 'Exclusive' }
+    : { Icon: Users, label: 'Friends' };
+  return (
+    <span className="inline-flex items-center text-slate-600" title={label} aria-label={`Audience: ${label}`}>
+      <Icon className="w-3 h-3" />
+    </span>
   );
 }
 

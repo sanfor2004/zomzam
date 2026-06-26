@@ -5,7 +5,7 @@ import React, { useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2 } from 'lucide-react';
+import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2, Globe, Users, Lock } from 'lucide-react';
 import { FollowButton } from '@/components/social/FollowButton';
 import { SignInPrompt } from '@/components/social/SignInPrompt';
 
@@ -327,13 +327,25 @@ export default function PostDetail({
                 size="md"
               />
             )}
-            <time className="text-xs text-slate-500 tabular-nums">
-              {new Date(post.created_at).toLocaleDateString(undefined, {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric',
-              })}
-            </time>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <time className="tabular-nums">
+                {new Date(post.created_at).toLocaleDateString(undefined, {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </time>
+              {(() => {
+                const v = post.visibility ?? 'friends';
+                const Aud = v === 'public' ? Globe : v === 'exclusive' ? Lock : Users;
+                const label = v === 'public' ? 'Public' : v === 'exclusive' ? 'Exclusive' : 'Friends';
+                return (
+                  <span className="inline-flex items-center" title={label} aria-label={`Audience: ${label}`}>
+                    <Aud className="w-3.5 h-3.5" />
+                  </span>
+                );
+              })()}
+            </div>
           </div>
         </div>
 
