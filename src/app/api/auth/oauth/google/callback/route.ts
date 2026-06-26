@@ -50,6 +50,8 @@ export const GET = withError(async (request: NextRequest) => {
       googleId: profile.sub,
       email: profile.email,
       name: profile.name,
+      firstName: profile.givenName,
+      lastName: profile.familyName,
       picture: profile.picture,
     });
 

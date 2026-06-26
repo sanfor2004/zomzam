@@ -18,6 +18,8 @@ export interface GoogleProfile {
   email: string;
   emailVerified: boolean;
   name?: string;
+  givenName?: string;
+  familyName?: string;
   picture?: string;
 }
 
@@ -86,6 +88,8 @@ export async function fetchGoogleProfile(code: string): Promise<GoogleProfile> {
     email: payload.email as string,
     emailVerified: payload.email_verified === true,
     name: payload.name as string | undefined,
+    givenName: payload.given_name as string | undefined,
+    familyName: payload.family_name as string | undefined,
     picture: payload.picture as string | undefined,
   };
 }

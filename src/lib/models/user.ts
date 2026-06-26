@@ -180,6 +180,8 @@ export interface GoogleProfileInput {
   googleId: string;
   email: string;
   name?: string;
+  firstName?: string;
+  lastName?: string;
   picture?: string;
 }
 
@@ -211,19 +213,36 @@ export async function findOrCreateGoogleUser(profile: GoogleProfileInput) {
     if (byEmail.is_active === 0) {
       return { success: false, message: 'This account has been deactivated.' };
     }
-    await execute(`UPDATE users SET google_id = ?, last_login_at = NOW() WHERE id = ?`, [
-      profile.googleId,
-      byEmail.id,
-    ]);
+    // Link the Google identity and opportunistically fill in any blank profile
+    // fields from Google — but ONLY where the account has none yet, so a user's
+    // own avatar/name is never overwritten by Google's (`||` treats null AND ''
+    // as empty). first/last fall back to splitting the full `name` if Google
+    // didn't send the granular claims.
+    const [gFirst, ...gRest] = (profile.name || '').trim().split(/\s+/);
+    const nextAvatar = byEmail.avatar || profile.picture || null;
+    const nextFirst = byEmail.first_name || profile.firstName || gFirst || null;
+    const nextLast = byEmail.last_name || profile.lastName || (gRest.length ? gRest.join(' ') : null);
+    await execute(
+      `UPDATE users SET google_id = ?, avatar = ?, first_name = ?, last_name = ?, last_login_at = NOW() WHERE id = ?`,
+      [profile.googleId, nextAvatar, nextFirst, nextLast, byEmail.id]
+    );
+    byEmail.avatar = nextAvatar;
+    byEmail.first_name = nextFirst;
+    byEmail.last_name = nextLast;
     const { password, ...safeUser } = byEmail;
     return { success: true, message: 'Login successful', user: normalizeAvatar(safeUser) };
   }
 
+  // Brand-new Google account: seed name + avatar from the profile too (granular
+  // claims if present, else split the full name) so it isn't created blank.
+  const [gFirst, ...gRest] = (profile.name || '').trim().split(/\s+/);
+  const newFirst = profile.firstName || gFirst || null;
+  const newLast = profile.lastName || (gRest.length ? gRest.join(' ') : null);
   const username = await uniqueUsername(usernameFromEmail(profile.email));
   const res = await execute(
-    `INSERT INTO users (username, email, email_canonical, google_id, avatar, is_verified, last_login_at, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 1, NOW(), NOW(), NOW())`,
-    [username, profile.email, emailCanonical, profile.googleId, profile.picture || null]
+    `INSERT INTO users (username, email, email_canonical, google_id, avatar, first_name, last_name, is_verified, last_login_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW(), NOW())`,
+    [username, profile.email, emailCanonical, profile.googleId, profile.picture || null, newFirst, newLast]
   );
 
   return {
@@ -234,6 +253,8 @@ export async function findOrCreateGoogleUser(profile: GoogleProfileInput) {
       username,
       email: profile.email,
       avatar: profile.picture || null,
+      first_name: newFirst,
+      last_name: newLast,
       role: 'user' as const,
       token_version: 0,
     }),
