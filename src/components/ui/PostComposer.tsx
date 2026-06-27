@@ -7,9 +7,17 @@ import {
   AtSign, Hash, Send, Users, X,
   MessageSquare, HelpCircle, Trophy, type LucideIcon,
 } from 'lucide-react';
-import { Button, AudienceSwitch, Input, Tooltip, useToast, type PostVisibility } from '@/components/ui';
+// Sibling Kit primitives — imported directly (not via the './index' barrel) so
+// this component, which the barrel itself re-exports, never imports the barrel.
+import { Button } from './Button';
+import { AudienceSwitch, type PostVisibility } from './AudienceSwitch';
+import { Input } from './Input';
+import { Tooltip } from './Tooltip';
+import { useToast } from './Toast';
 import { gsap } from '@/lib/gsap';
-import { displayName, type CurrentUser, type MentionUser, type Post } from './shared';
+// Feature-owned domain types still live with the home feed; the composer is a
+// data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
+import { displayName, type CurrentUser, type MentionUser, type Post } from '@/app/(dashboard)/home/shared';
 
 type Trigger = '@' | '#';
 type PostType = 'status' | 'ask' | 'win';
@@ -48,6 +56,10 @@ interface PostComposerProps {
    *  text, and submits `create` with `repost_of = original.id`. Distinct config
    *  object (not an `isQuoting` flag) — mirrors `editing`. */
   quoting?: { original: Post; onPosted: (post: Post) => void };
+  /** Showcase mode (the /ui-kit page). Skips the /api/posts network call on
+   *  submit — just clears the editor + toasts — so the data-free reference page
+   *  can render a fully interactive composer without ever writing a real post. */
+  demo?: boolean;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -56,7 +68,7 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted, editing, quoting }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, editing, quoting, demo }: PostComposerProps) {
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
@@ -502,6 +514,21 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
   const handlePost = async () => {
     if (!editorRef.current || !canSubmit) return;
     const content_html = editorRef.current.innerHTML;
+
+    // Showcase mode (/ui-kit): never touch the network or mutate real data —
+    // just reset the editor and acknowledge, mirroring the success path's UX.
+    if (demo) {
+      editorRef.current.innerHTML = '';
+      setCharCount(0);
+      setPopoverActive(false);
+      setShowEmoji(false);
+      removeImage();
+      setPostType('status');
+      setSkillTag('');
+      toast({ variant: 'info', title: 'Demo composer', description: 'Showcase only — nothing was actually posted.' });
+      return;
+    }
+
     setPostingLoading(true);
     if (quoting) await submitQuote(content_html);
     else if (editing) await saveEdit(content_html);
@@ -537,7 +564,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
         ────────────────────────────────────────────────────────── */
     <div
       ref={composerCardRef}
-      className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl p-5 shadow-apple-lg"
+      className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-apple-lg"
       onFocusCapture={() => {
         gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
           gsap.to(composerCardRef.current, {
@@ -560,7 +587,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
       {/* Top-edge highlight */}
       <div
         aria-hidden
-        className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+        className="absolute inset-x-0 top-0 h-px rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
       />
 
       {/* ──────────────────────────────────────────────────────────
@@ -705,10 +732,12 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
         </div>
       )}
 
-      {/* Row 2 — text settings (left) + Post button (right) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
-        {/* Text settings */}
-        <div className="flex items-center gap-1">
+      {/* Row 2 — text settings (left) + Post button (right).
+          Phone: stacks vertically so the toolbar never collides with the CTA;
+          the Post button spans full width for a comfortable thumb-zone target. */}
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
+        {/* Text settings — wraps to a second line on very narrow screens */}
+        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
           <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
             <Bold className="w-4 h-4" />
           </ToolbarButton>
@@ -755,7 +784,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
           disabled={!canSubmit}
           loading={postingLoading}
           leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
-          className="h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
+          className="w-full sm:w-auto justify-center h-11 sm:h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
         >
           {submitLabel}
         </Button>
@@ -769,7 +798,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting 
         <div
           role="listbox"
           aria-label={triggerType === '@' ? 'Mention a friend' : 'Create a tag'}
-          className="absolute z-50 w-80 overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1A1D24]/95 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/5 origin-top animate-in"
+          className="absolute z-50 w-72 sm:w-80 max-w-[calc(100vw-2.5rem)] overflow-hidden rounded-2xl border border-slate-700/60 bg-[#1A1D24]/95 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/5 origin-top animate-in"
           style={{ top: `${popoverPos.top}px`, left: `${popoverPos.left}px` }}
         >
           {/* Header */}
@@ -897,7 +926,7 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
     <div
       role="dialog"
       aria-label="Choose an emoji"
-      className="absolute bottom-full left-0 mb-2 z-50 w-72 max-h-72 overflow-y-auto rounded-2xl border border-slate-700/60 bg-[#1A1D24]/95 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/5 p-2 origin-bottom animate-in"
+      className="absolute bottom-full left-0 mb-2 z-50 w-72 max-w-[calc(100vw-2.5rem)] max-h-72 overflow-y-auto rounded-2xl border border-slate-700/60 bg-[#1A1D24]/95 backdrop-blur-xl shadow-2xl shadow-black/50 ring-1 ring-white/5 p-2 origin-bottom animate-in"
     >
       {EMOJI_GROUPS.map((group) => (
         <div key={group.label} className="mb-1.5 last:mb-0">

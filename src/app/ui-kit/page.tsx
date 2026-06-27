@@ -21,6 +21,7 @@ import {
   Modal,
   NumberInput,
   Pagination,
+  PostComposer,
   Progress,
   RadioGroup,
   ShareButton,
@@ -524,7 +525,35 @@ export default function UiKitPage() {
             </p>
           </div>
         </Section>
+
+        {/* Post Composer */}
+        <Section title="Post Composer" description="The home-feed composer — rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience. The only data-coupled Kit member; rendered here in demo mode (the Post button never hits the API). Fully responsive — resize to a phone width to see it stack.">
+          <ToastProvider>
+            <PostComposer
+              demo
+              currentUser={DEMO_CURRENT_USER}
+              friends={DEMO_FRIENDS}
+              onPosted={() => {}}
+            />
+          </ToastProvider>
+        </Section>
       </div>
     </div>
   );
 }
+
+// Mock data for the showcase composer — never persisted; `demo` short-circuits
+// the network so these IDs are purely for rendering the avatar + @mention list.
+const DEMO_CURRENT_USER = {
+  id: 0,
+  username: 'you',
+  first_name: 'Demo',
+  last_name: 'User',
+  avatar: null,
+};
+
+const DEMO_FRIENDS = [
+  { id: 1, username: 'marwa', first_name: 'Marwa', last_name: 'Hassan', avatar: '/Assets/Img/default-avatar.png', is_online: true },
+  { id: 2, username: 'kareem', first_name: 'Kareem', last_name: 'Adel', avatar: '/Assets/Img/default-avatar.png', is_online: false },
+  { id: 3, username: 'lina', first_name: 'Lina', last_name: 'Sayed', avatar: '/Assets/Img/default-avatar.png', is_online: true },
+];

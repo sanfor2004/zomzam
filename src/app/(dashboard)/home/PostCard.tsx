@@ -11,9 +11,8 @@ import {
   HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
   Globe, Users, Lock,
 } from 'lucide-react';
-import { Button, Tooltip, ShareButton, useToast, Modal, Dropdown } from '@/components/ui';
+import { Button, Tooltip, ShareButton, useToast, Modal, Dropdown, PostComposer } from '@/components/ui';
 import { FollowButton } from '@/components/social/FollowButton';
-import { PostComposer } from './PostComposer';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
 } from './shared';

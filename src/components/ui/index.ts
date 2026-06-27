@@ -17,6 +17,7 @@ export * from './Input';
 export * from './Modal';
 export * from './NumberInput';
 export * from './Pagination';
+export * from './PostComposer';
 export * from './Progress';
 export * from './Radio';
 export * from './SegmentedSwitch';
