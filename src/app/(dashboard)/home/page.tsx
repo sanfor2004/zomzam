@@ -6,8 +6,7 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Loader2, MessagesSquare, HelpCircle, Sparkles, ArrowUp,
 } from 'lucide-react';
-import { Button, PostComposer } from '@/components/ui';
-import { PostCard } from './PostCard';
+import { Button, PostComposer, PostCard } from '@/components/ui';
 import { usePostSeenTracker } from './usePostSeenTracker';
 import {
   type CurrentUser, type MentionUser, type Post,

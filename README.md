@@ -87,7 +87,7 @@ zomzam.com/
 │   │   │   ├── community/     # /community, /community/discover, /following, /friends, /requests
 │   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
 │   │   │   ├── dashboard/     # /dashboard — primary metrics dashboard
-│   │   │   ├── home/          # /home — social feed + post composer (+ shared PostCard)
+│   │   │   ├── home/          # /home — social feed (composer + PostCard live in the Kit; shared.ts holds the feed types)
 │   │   │   ├── saved/         # /saved — the viewer's bookmarked posts
 │   │   │   ├── me/            # /me — profile settings
 │   │   │   ├── money/         # /money/accounts, /dashboard, /expenses, /income, /lend
@@ -123,7 +123,7 @@ zomzam.com/
 │   │   └── providers.tsx        # Global context aggregation wrapper (mounts ErrorReporter)
 │   │
 │   ├── components/
-│   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + PostComposer (data-coupled feed composer) + index.ts barrel
+│   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + data-coupled feed members PostComposer & PostCard (both /api/posts-aware, demo-mode for /ui-kit) + index.ts barrel
 │   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), RightSidebar (persistent right nav: Messages + Active Now presence + Suggested), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
 │   │   ├── ErrorReporter.tsx    # Global client error listener (uncaught errors + unhandled rejections → /api/report-error)

@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Loader2, Bookmark } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { Button, PostCard } from '@/components/ui';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import { PostCard } from '../home/PostCard';
 import { type CurrentUser, type MentionUser, type Post } from '../home/shared';
 
 // ──────────────────────────────────────────────────────────

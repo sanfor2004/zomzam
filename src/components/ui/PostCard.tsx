@@ -11,18 +11,28 @@ import {
   HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
   Globe, Users, Lock,
 } from 'lucide-react';
-import { Button, Tooltip, ShareButton, useToast, Modal, Dropdown, PostComposer } from '@/components/ui';
+// Sibling Kit primitives — imported directly (not via the './index' barrel) so
+// this component, which the barrel itself re-exports, never imports the barrel.
+import { Button } from './Button';
+import { Tooltip } from './Tooltip';
+import { ShareButton } from './ShareButton';
+import { useToast } from './Toast';
+import { Modal } from './Modal';
+import { Dropdown } from './Dropdown';
+import { PostComposer } from './PostComposer';
 import { FollowButton } from '@/components/social/FollowButton';
+// Feature-owned domain types still live with the home feed; the card is a
+// data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
-} from './shared';
+} from '@/app/(dashboard)/home/shared';
 
 // ── Post card ─────────────────────────────────────────────────
 // Shared between the home feed and the /saved page (and any future feed-style
 // list). memo'd so composer keystrokes (and other host-page state churn) don't
 // re-render every mounted card — only cards whose own props actually change
 // re-render. Relies on `onDelete`/`onEdited` being stable useCallbacks in the host.
-export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, onUnbookmark, onReposted, currentUser, friends, observe }: {
+export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited, onUnbookmark, onReposted, currentUser, friends, observe, demo }: {
   post: Post;
   isOwn: boolean;
   onDelete: (id: number) => void;
@@ -36,6 +46,10 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   currentUser: CurrentUser | null;
   friends: MentionUser[];
   observe: (el: HTMLElement | null, postId: number) => void;
+  /** Showcase mode (the /ui-kit page). Keeps every interaction optimistic but
+   *  skips the /api/posts mutations (like/bookmark/repost/delete) so the
+   *  data-free reference page can render a fully live-feeling card. */
+  demo?: boolean;
 }) {
   const name = displayName(post);
   const { toast } = useToast();
@@ -120,6 +134,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
 
   // Throws on failure so the caller (handleWedgeDelete) can keep the confirm armed.
   const handleDelete = async () => {
+    if (demo) { onDelete(post.id); return; } // showcase: no network, just unmount
     const res = await fetch('/api/posts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -150,6 +165,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const toggleLike = async () => {
     setLiked((prev) => !prev);
     setLikeCount((prev) => liked ? prev - 1 : prev + 1);
+    if (demo) return; // showcase: keep the optimistic flip, skip the write
     try {
       await fetch('/api/posts', {
         method: 'POST',
@@ -174,6 +190,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const toggleBookmark = async () => {
     const next = !bookmarked;
     setBookmarked(next);
+    if (demo) return; // showcase: keep the optimistic flip, skip the write
     try {
       await fetch('/api/posts', {
         method: 'POST',
@@ -192,6 +209,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     const next = !reposted;
     setReposted(next);
     setRepostCount((c) => Math.max(0, next ? c + 1 : c - 1));
+    if (demo) return; // showcase: keep the optimistic flip, skip the write
     try {
       const res = await fetch('/api/posts', {
         method: 'POST',
@@ -305,9 +323,9 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
           </Modal>
         )}
 
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           {/* ── Header + content ── */}
-          <div className="flex gap-3">
+          <div className="flex gap-2.5 sm:gap-3">
             <Link href={`/u/${post.username}`} className="flex-shrink-0">
               <Image
                 src={post.avatar || '/Assets/Img/default-avatar.png'}
@@ -432,7 +450,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             visible (no hover reveal): a real toolbar, not a floating
             pill. Opaque `surface-dark` fill — no backdrop-blur, since a
             blur behind an opaque layer is invisible work (perf). */}
-        <div className="relative flex items-center justify-between rounded-b-3xl border-t border-white/[0.07] bg-surface-dark px-4 py-2.5">
+        <div className="relative flex items-center justify-between rounded-b-3xl border-t border-white/[0.07] bg-surface-dark px-3 sm:px-4 py-2.5">
           {/* Top-edge highlight — light from above on the solid shelf */}
           <span
             aria-hidden
