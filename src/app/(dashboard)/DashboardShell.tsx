@@ -14,7 +14,7 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { RightSidebar } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, Bookmark, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, Bookmark, ChevronLeft, ChevronRight, Zap, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 import { describeNotification, notifTimeAgo } from '@/lib/notifications';
@@ -532,14 +532,36 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             )}
           </div>
 
-          {/* Upgrade — unlock the paid CRM + Leads suite */}
-          <Button variant="unstyled"
-            onClick={() => router.push('/pricing')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-primary-400 rounded-lg hover:bg-primary-500/10 transition-colors${isActive('/pricing')}`}
-          >
-            <Sparkles className="w-5 h-5 flex-shrink-0" />
-            <span>Upgrade</span>
-          </Button>
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: UPGRADE PLAN CARD
+              Contains: current-plan badge, value copy, "Upgrade to Pro" CTA
+              ────────────────────────────────────────────────────────── */}
+          <div className="mt-2 rounded-2xl border border-primary-500/20 bg-gradient-to-br from-primary-500/10 via-primary-500/[0.06] to-transparent p-3.5 shadow-apple-sm">
+            {/* Current-plan badge row */}
+            <div className="flex items-center gap-3">
+              <span className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-primary-500/15 text-primary-400 ring-1 ring-inset ring-primary-500/25">
+                <Sparkles className="w-4.5 h-4.5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-slate-400 leading-tight">Current plan:</p>
+                <p className="text-sm font-bold text-white leading-tight">Free</p>
+              </div>
+            </div>
+
+            {/* Value copy */}
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+              Upgrade to Pro to get the latest and exclusive features
+            </p>
+
+            {/* CTA */}
+            <Button variant="unstyled"
+              onClick={() => router.push('/pricing')}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 shadow-apple-sm transition-colors cursor-pointer"
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span>Upgrade to Pro</span>
+            </Button>
+          </div>
 
           {/* Settings */}
           <Button variant="unstyled"
