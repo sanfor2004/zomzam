@@ -540,10 +540,12 @@ export default function UiKitPage() {
         </Section>
 
         {/* Post Card */}
-        <Section title="Post Card" description="The feed/saved post box — byline, audience badge, content, action bar (like / comment / repost / save / share) and a top-comment preview. Demo mode keeps every interaction live (optimistic) but skips the API writes. Resize to phone width to see the padding/spacing adapt.">
+        <Section title="Post Card" description="The feed/saved post box, Instagram-style — story-ring avatar, verified check, full-width caption + full-bleed image, and the action bar (like / comment / repost / save / share). Demo mode keeps every interaction live (optimistic) but skips the API writes. Resize to phone width to see the padding/spacing adapt.">
           <ToastProvider>
             <div className="space-y-4 max-w-xl">
-              {/* A friend's "Win" post with a top comment */}
+              {/* Image post — full-bleed photo, verified author */}
+              <PostCard demo post={DEMO_POST_IMAGE} isOwn={false} currentUser={DEMO_CURRENT_USER} friends={DEMO_FRIENDS} onDelete={() => {}} onEdited={() => {}} observe={() => {}} />
+              {/* A friend's "Win" post with a top comment (text-only) */}
               <PostCard demo post={DEMO_POST_WIN} isOwn={false} currentUser={DEMO_CURRENT_USER} friends={DEMO_FRIENDS} onDelete={() => {}} onEdited={() => {}} observe={() => {}} />
               {/* Your own status post — shows the owner edit/delete corner wedge */}
               <PostCard demo post={DEMO_POST_OWN} isOwn currentUser={DEMO_CURRENT_USER} friends={DEMO_FRIENDS} onDelete={() => {}} onEdited={() => {}} observe={() => {}} />
@@ -573,6 +575,30 @@ const DEMO_FRIENDS = [
 
 // Mock posts for the showcase card — `demo` short-circuits every /api/posts
 // write, so these ids/relationships are purely for rendering.
+const DEMO_POST_IMAGE = {
+  id: 100,
+  public_id: 'demo-image',
+  user_id: 3,
+  username: 'lina',
+  first_name: 'Lina',
+  last_name: 'Sayed',
+  avatar: '/Assets/Img/default-avatar.png',
+  content_html: 'soft hues, slow days, and a heart full of stillness 🌸',
+  image_path: '/Assets/Uploads/posts/post_ccc5585fa48281fdb846f1bc1c5fd1c3.png',
+  visibility: 'public' as const,
+  type: 'status' as const,
+  created_at: new Date(Date.now() - 432e5).toISOString(),
+  like_count: 107000,
+  comment_count: 312,
+  liked_by_me: true,
+  repost_count: 18,
+  reposted_by_me: false,
+  bookmarked_by_me: false,
+  is_friend: false,
+  is_following: false,
+  is_verified: true,
+};
+
 const DEMO_POST_WIN = {
   id: 101,
   public_id: 'demo-win',
@@ -593,6 +619,7 @@ const DEMO_POST_WIN = {
   bookmarked_by_me: false,
   is_friend: true,
   is_following: true,
+  is_verified: true,
   top_comments: [
     { id: 9001, post_id: 101, parent_id: null, username: 'kareem', first_name: 'Kareem', last_name: 'Adel', avatar: '/Assets/Img/default-avatar.png', content: 'Huge — congrats! 🙌', created_at: new Date(Date.now() - 18e5).toISOString(), upvote_count: 4, upvoted_by_me: false },
   ],

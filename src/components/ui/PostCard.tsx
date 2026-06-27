@@ -9,7 +9,7 @@ import {
   Loader2, Heart, MessageCircle, Trash2,
   Check, ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
   HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
-  Globe, Users, Lock,
+  Globe, Users, Lock, BadgeCheck,
 } from 'lucide-react';
 // Sibling Kit primitives — imported directly (not via the './index' barrel) so
 // this component, which the barrel itself re-exports, never imports the barrel.
@@ -26,6 +26,10 @@ import { FollowButton } from '@/components/social/FollowButton';
 import {
   displayName, relativeTime, type CurrentUser, type MentionUser, type Comment, type Post,
 } from '@/app/(dashboard)/home/shared';
+
+// Compact count formatter for the action bar (1.2K / 107K / 3.4M), Instagram-
+// style. Defined once at module scope so it isn't rebuilt on every card render.
+const compactCount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
 // ── Post card ─────────────────────────────────────────────────
 // Shared between the home feed and the /saved page (and any future feed-style
@@ -76,6 +80,9 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const original = post.repost_of ?? null;
   // A quote carries the reposter's comment; a plain repost has empty content.
   const quoteText = (post.content_html || '').trim();
+  // Whether a normal post has any caption text (image-only posts skip the text
+  // block so the full-bleed image sits flush under the header, IG-style).
+  const hasBody = quoteText.length > 0;
   // Repostable only when the effective root is public (F2.4): a normal card uses
   // its own visibility; a repost card targets its (always-public) live original.
   const canRepost = isRepost ? !!original : post.visibility === 'public';
@@ -323,124 +330,143 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
           </Modal>
         )}
 
-        <div className="p-4 sm:p-5">
-          {/* ── Header + content ── */}
-          <div className="flex gap-2.5 sm:gap-3">
-            <Link href={`/u/${post.username}`} className="flex-shrink-0">
-              <Image
-                src={post.avatar || '/Assets/Img/default-avatar.png'}
-                alt={name}
-                width={40}
-                height={40}
-                className="w-10 h-10 rounded-xl object-cover border border-slate-800 hover:border-primary-500/30 transition-colors"
-              />
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: POST HEADER (Instagram-style)
+            Contains: story-ring avatar, name + verified check, secondary line
+            (@user · audience · time), inline Follow (non-friends)
+            ────────────────────────────────────────────────────────── */}
+        <div className="p-4 sm:p-5 pb-3">
+          {/* On own posts the corner wedge occupies the top-right, so reserve
+              space (pr-12) for it. */}
+          <div className={`flex items-center gap-3 ${isOwn ? 'pr-12' : ''}`}>
+            {/* Story-ring avatar — a gradient ring nods to the IG look; the inner
+                surface-dark gap keeps the photo from touching the gradient. */}
+            <Link href={`/u/${post.username}`} className="flex-shrink-0 group">
+              <span className="block rounded-full bg-gradient-to-tr from-primary-500 via-rose-500 to-purple-500 p-[2px] transition-transform group-hover:scale-[1.03]">
+                <span className="block rounded-full bg-surface-dark p-[2px]">
+                  <Image
+                    src={post.avatar || '/Assets/Img/default-avatar.png'}
+                    alt={name}
+                    width={44}
+                    height={44}
+                    className="w-11 h-11 rounded-full object-cover"
+                  />
+                </span>
+              </span>
             </Link>
-            {/* On own posts the corner wedge occupies the top-right, so reserve
-                space (pr-12) and fold the timestamp inline beside the username. */}
-            <div className={`flex-1 min-w-0 ${isOwn ? 'pr-12' : ''}`}>
-              <div className="flex items-baseline gap-2 flex-wrap">
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
                 <Link
                   href={`/u/${post.username}`}
-                  className="text-sm font-bold text-white hover:text-primary-400 hover:underline transition-colors"
+                  className="text-sm font-bold text-white hover:text-primary-400 hover:underline transition-colors truncate"
                 >
                   {name}
                 </Link>
-                <Link href={`/u/${post.username}`} className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
-                  @{post.username}
-                </Link>
-                <VisibilityBadge visibility={post.visibility} />
-                {isOwn ? (
-                  <span className="text-xs text-slate-600 flex-shrink-0">· {relativeTime(post.created_at)}</span>
-                ) : (
-                  <>
-                    {/* Follow: shown for non-friends only; reflects/​toggles follow
-                        state in place. Friends never see it (they already connect). */}
-                    {!post.is_friend && (
-                      <span className="ml-auto flex items-center gap-2">
-                        <FollowButton
-                          targetUserId={post.user_id}
-                          initialIsFollowing={!!post.is_following}
-                          viewerId={currentUser?.id ?? 0}
-                        />
-                        <span className="text-xs text-slate-600 flex-shrink-0">{relativeTime(post.created_at)}</span>
-                      </span>
-                    )}
-                    {post.is_friend && (
-                      <span className="text-xs text-slate-600 ml-auto flex-shrink-0">{relativeTime(post.created_at)}</span>
-                    )}
-                  </>
+                {post.is_verified && (
+                  <BadgeCheck className="w-4 h-4 text-sky-400 flex-shrink-0" aria-label="Verified" />
                 )}
               </div>
-
-              {/* ─── Type badges (ask / win) — icon + label, never colour alone (HIG) ─── */}
-              {(isAsk || isWin) && (
-                <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
-                  {isAsk && (
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
-                        isResolved ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-300'
-                      }`}
-                    >
-                      {isResolved ? <CheckCircle2 className="w-3 h-3" /> : <HelpCircle className="w-3 h-3" />}
-                      {isResolved ? 'Resolved' : 'Help needed'}
-                    </span>
-                  )}
-                  {isAsk && post.skill_tag && (
-                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800/60 text-slate-300">
-                      <Hash className="w-3 h-3" />{post.skill_tag}
-                    </span>
-                  )}
-                  {isWin && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-primary-500/15 text-primary-400">
-                      <Trophy className="w-3 h-3" /> Win
-                    </span>
-                  )}
-                </div>
-              )}
-
-              {isRepost ? (
-                <>
-                  {/* A quote carries the reposter's own comment and/or image above
-                      the embedded original (which is shown as text only). */}
-                  {quoteText && (
-                    <div
-                      className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
-                      dangerouslySetInnerHTML={{ __html: post.content_html }}
-                    />
-                  )}
-                  {post.image_path && (
-                    <Image
-                      src={post.image_path}
-                      alt=""
-                      width={1200}
-                      height={800}
-                      sizes="(max-width: 1024px) 100vw, 600px"
-                      className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
-                    />
-                  )}
-                  {original ? <NestedOriginal original={original} /> : <RepostTombstone />}
-                </>
-              ) : (
-                <>
-                  <div
-                    className="mt-2 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
-                    dangerouslySetInnerHTML={{ __html: post.content_html }}
-                  />
-                  {post.image_path && (
-                    <Image
-                      src={post.image_path}
-                      alt=""
-                      width={1200}
-                      height={800}
-                      sizes="(max-width: 1024px) 100vw, 600px"
-                      className="mt-3 w-full max-h-[28rem] object-cover rounded-2xl border border-white/[0.06]"
-                    />
-                  )}
-                </>
-              )}
+              <div className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0">
+                <Link href={`/u/${post.username}`} className="hover:text-slate-300 transition-colors truncate">
+                  @{post.username}
+                </Link>
+                <span className="text-slate-700">·</span>
+                <VisibilityBadge visibility={post.visibility} />
+                <span className="text-slate-700">·</span>
+                <span className="text-slate-600 flex-shrink-0">{relativeTime(post.created_at)}</span>
+              </div>
             </div>
+
+            {/* Follow — non-friends only (own posts use the corner wedge; friends
+                already connect, so they never see it). */}
+            {!isOwn && !post.is_friend && (
+              <FollowButton
+                targetUserId={post.user_id}
+                initialIsFollowing={!!post.is_following}
+                viewerId={currentUser?.id ?? 0}
+              />
+            )}
           </div>
         </div>
+
+        {/* ─── Type badges (ask / win) — icon + label, never colour alone (HIG) ─── */}
+        {(isAsk || isWin) && (
+          <div className="px-4 sm:px-5 pb-2.5 flex items-center gap-1.5 flex-wrap">
+            {isAsk && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide ${
+                  isResolved ? 'bg-emerald-500/15 text-emerald-400' : 'bg-sky-500/15 text-sky-300'
+                }`}
+              >
+                {isResolved ? <CheckCircle2 className="w-3 h-3" /> : <HelpCircle className="w-3 h-3" />}
+                {isResolved ? 'Resolved' : 'Help needed'}
+              </span>
+            )}
+            {isAsk && post.skill_tag && (
+              <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-800/60 text-slate-300">
+                <Hash className="w-3 h-3" />{post.skill_tag}
+              </span>
+            )}
+            {isWin && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide bg-primary-500/15 text-primary-400">
+                <Trophy className="w-3 h-3" /> Win
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: POST BODY + MEDIA (full-width)
+            Contains: caption text (px-padded), full-bleed image, repost embed
+            ──────────────────────────────────────────────────────────
+            IG-style: the caption spans the full card width (not indented under
+            the avatar) and the image is full-bleed edge-to-edge, sitting flush
+            above the action bar. */}
+        {isRepost ? (
+          <>
+            {/* A quote carries the reposter's own comment and/or image above the
+                embedded original (which is shown as text only). */}
+            {quoteText && (
+              <div
+                className="px-4 sm:px-5 pb-3 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                dangerouslySetInnerHTML={{ __html: post.content_html }}
+              />
+            )}
+            {post.image_path && (
+              <Image
+                src={post.image_path}
+                alt=""
+                width={1200}
+                height={1200}
+                sizes="(max-width: 1024px) 100vw, 600px"
+                className="w-full max-h-[34rem] object-cover"
+              />
+            )}
+            <div className="px-4 sm:px-5 pt-3 pb-4">
+              {original ? <NestedOriginal original={original} /> : <RepostTombstone />}
+            </div>
+          </>
+        ) : (
+          <>
+            {hasBody && (
+              <div
+                className="px-4 sm:px-5 pb-3 text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                dangerouslySetInnerHTML={{ __html: post.content_html }}
+              />
+            )}
+            {post.image_path && (
+              <Image
+                src={post.image_path}
+                alt=""
+                width={1200}
+                height={1200}
+                sizes="(max-width: 1024px) 100vw, 600px"
+                className="w-full max-h-[34rem] object-cover"
+              />
+            )}
+          </>
+        )}
 
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: POST ACTION BAR — ALWAYS-ON FOOTER
@@ -458,7 +484,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
           />
 
           {/* Left group: Like + Comments */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 sm:gap-5">
             <Tooltip content={liked ? 'Unlike' : 'Like'}>
               <Button
                 variant="unstyled"
@@ -468,8 +494,8 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                   liked ? 'text-rose-500' : 'text-slate-400 hover:text-rose-400'
                 }`}
               >
-                <Heart ref={heartIconRef} className="w-4 h-4" fill={liked ? 'currentColor' : 'none'} />
-                {likeCount > 0 && <span>{likeCount}</span>}
+                <Heart ref={heartIconRef} className="w-5 h-5" fill={liked ? 'currentColor' : 'none'} />
+                {likeCount > 0 && <span>{compactCount.format(likeCount)}</span>}
               </Button>
             </Tooltip>
 
@@ -480,8 +506,8 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 aria-label="View comments on post"
                 className="flex items-center gap-1.5 text-xs font-semibold transition-colors text-slate-400 hover:text-sky-400"
               >
-                <MessageCircle className="w-4 h-4" />
-                {post.comment_count > 0 && <span>{post.comment_count}</span>}
+                <MessageCircle className="w-5 h-5" />
+                {post.comment_count > 0 && <span>{compactCount.format(post.comment_count)}</span>}
               </Button>
             </Tooltip>
 
@@ -506,8 +532,8 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                         reposted ? 'text-emerald-500' : 'text-slate-400 hover:text-emerald-400'
                       }`}
                     >
-                      <Repeat2 className="w-4 h-4" />
-                      {repostCount > 0 && <span>{repostCount}</span>}
+                      <Repeat2 className="w-5 h-5" />
+                      {repostCount > 0 && <span>{compactCount.format(repostCount)}</span>}
                     </Button>
                   </Tooltip>
                 }
@@ -530,7 +556,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
           </div>
 
           {/* Right group: Bookmark + Share (icon-only, no counts) */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 sm:gap-5">
             <Tooltip content={bookmarked ? 'Saved' : 'Save'}>
               <Button
                 variant="unstyled"
@@ -541,7 +567,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                   bookmarked ? 'text-primary-500' : 'text-slate-400 hover:text-primary-400'
                 }`}
               >
-                {bookmarked ? <BookmarkCheck className="w-4 h-4" fill="currentColor" /> : <Bookmark className="w-4 h-4" />}
+                {bookmarked ? <BookmarkCheck className="w-5 h-5" fill="currentColor" /> : <Bookmark className="w-5 h-5" />}
               </Button>
             </Tooltip>
 

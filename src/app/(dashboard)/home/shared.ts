@@ -75,6 +75,9 @@ export interface Post {
   // Server-computed viewer↔author relationship (drives the Follow button).
   is_following?: boolean;
   is_friend?: boolean;
+  // Reserved presentational flag — not yet populated by the API. When true the
+  // card renders a verified check beside the author name (Instagram-style).
+  is_verified?: boolean;
 }
 
 export function displayName(u: { first_name: string | null; last_name: string | null; username: string }) {
