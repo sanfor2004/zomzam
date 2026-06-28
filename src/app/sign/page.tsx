@@ -145,15 +145,6 @@ function SignPageContent() {
     { scope: pageRef, dependencies: [message] },
   );
 
-  const handleTabChange = (tab: 'signin' | 'signup') => {
-    if (tab === 'signin') {
-      window.history.replaceState(null, '', ' ');
-    } else {
-      window.history.replaceState(null, '', '#signup');
-    }
-    animateTabSwitch(tab);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -304,11 +295,6 @@ function SignPageContent() {
       >
         <div className="p-8 space-y-5">
 
-          {/* Wordmark — brand icon now lives centered in the top nav bar */}
-          <div className="flex items-center">
-            <span className="text-white font-black text-[15px] tracking-tight">zomzam</span>
-          </div>
-
           {/* Heading — SplitText target on entrance */}
           <div className="space-y-1 pt-1">
             <h1
@@ -326,7 +312,7 @@ function SignPageContent() {
           <SegmentedSwitch
             ariaLabel="Choose sign in or create account"
             value={pillTab}
-            onChange={(tab) => handleTabChange(tab as 'signin' | 'signup')}
+            onChange={(tab) => animateTabSwitch(tab as 'signin' | 'signup')}
             options={[
               { value: 'signin', label: 'Sign in' },
               { value: 'signup', label: 'Create account' },
