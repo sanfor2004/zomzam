@@ -626,8 +626,10 @@ const SCORED_WINDOW = 300; // candidate pool ranked in-memory for the landing pa
 // fetches, so every surface returns an identically-shaped Post (incl. the nested
 // repost original). Six `?` placeholders, in order: liked_by_me, bookmarked_by_me,
 // is_following, is_friend (×2), reposted_by_me — supply them with feedColParams().
-// repost_count + reposted_by_me are keyed on COALESCE(p.repost_of, p.id) so a
-// repost card shows the ROOT original's tally and the viewer's toggle state.
+// repost_count + reposted_by_me are keyed on p.id so each card shows ITS OWN
+// repost tally/state: an original shows how many times it was reposted; a
+// repost (quote) card shows 0 (reposts collapse to the root, never to a quote),
+// so the root's tally never bleeds onto the quote card.
 const FEED_COLUMNS = `
     p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.image_paths, p.visibility,
     p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at, p.repost_of,
@@ -638,8 +640,8 @@ const FEED_COLUMNS = `
     (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me,
     (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
     (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
-    (SELECT COUNT(*) FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id)) AS repost_count,
-    (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id) AND r.user_id = ? AND r.content_html = '' AND r.image_path IS NULL)) AS reposted_by_me,
+    (SELECT COUNT(*) FROM posts r WHERE r.repost_of = p.id) AS repost_count,
+    (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = p.id AND r.user_id = ? AND r.content_html = '' AND r.image_path IS NULL)) AS reposted_by_me,
     orig.id AS orig_id, orig.public_id AS orig_public_id, orig.user_id AS orig_user_id, orig.content_html AS orig_content_html,
     orig.type AS orig_type, orig.skill_tag AS orig_skill_tag,
     orig.accepted_answer_id AS orig_accepted_answer_id, orig.resolved_at AS orig_resolved_at, orig.created_at AS orig_created_at,

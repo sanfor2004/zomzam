@@ -604,7 +604,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           <div className="p-4 relative z-10">
             <div className={`flex gap-3 ${leftCollapsed ? 'flex-col items-center' : 'items-center justify-between px-3'}`}>
               <Button variant="unstyled"
-                onClick={() => router.push('/me')}
+                onClick={() => router.push(`/u/${currentUser.username}`)}
                 title={[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
                 className={`flex items-center gap-3 text-left group min-w-0 ${leftCollapsed ? '' : 'flex-grow'}`}
               >

@@ -258,14 +258,14 @@ export default function PostDetail({
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: BREADCRUMB
-          Contains: Back link to author profile
+          Contains: Back link to home feed
           ────────────────────────────────────────────────────────── */}
       <Link
-        href={`/u/${post.username}`}
+        href="/home"
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
-        @{post.username}&apos;s profile
+        Home
       </Link>
 
       {/* ──────────────────────────────────────────────────────────

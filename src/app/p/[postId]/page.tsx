@@ -59,8 +59,8 @@ export default async function PostPage({ params }: PageProps) {
             (SELECT COUNT(*) FROM post_bookmarks WHERE post_id = p.id AND user_id = ?) AS bookmarked_by_me,
             (EXISTS(SELECT 1 FROM user_connections WHERE requester_id = ? AND addressee_id = p.user_id AND type = 'follow' AND status = 'accepted')) AS is_following,
             (EXISTS(SELECT 1 FROM user_connections WHERE type = 'friend' AND status = 'accepted' AND ((requester_id = ? AND addressee_id = p.user_id) OR (addressee_id = ? AND requester_id = p.user_id)))) AS is_friend,
-            (SELECT COUNT(*) FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id)) AS repost_count,
-            (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = COALESCE(p.repost_of, p.id) AND r.user_id = ? AND r.content_html = '' AND r.image_path IS NULL)) AS reposted_by_me
+            (SELECT COUNT(*) FROM posts r WHERE r.repost_of = p.id) AS repost_count,
+            (EXISTS(SELECT 1 FROM posts r WHERE r.repost_of = p.id AND r.user_id = ? AND r.content_html = '' AND r.image_path IS NULL)) AS reposted_by_me
      FROM posts p
      JOIN users u ON u.id = p.user_id
      WHERE p.public_id = ?`,
