@@ -9,7 +9,7 @@ import {
   Loader2, Heart, MessageCircle, Trash2,
   Check, ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
   HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
-  Globe, Users, Lock, BadgeCheck,
+  Globe, Users, Lock,
 } from 'lucide-react';
 // Sibling Kit primitives — imported directly (not via the './index' barrel) so
 // this component, which the barrel itself re-exports, never imports the barrel.
@@ -364,9 +364,6 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 >
                   {name}
                 </Link>
-                {post.is_verified && (
-                  <BadgeCheck className="w-4 h-4 text-sky-400 flex-shrink-0" aria-label="Verified" />
-                )}
               </div>
               <div className="flex items-center gap-1.5 text-xs text-slate-500 min-w-0">
                 <Link href={`/u/${post.username}`} className="hover:text-slate-300 transition-colors truncate">
