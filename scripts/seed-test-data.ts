@@ -20,14 +20,17 @@ import fs from 'fs';
 import path from 'path';
 
 // ── env (same manual parser as db-sync.ts — no dotenv dependency) ──
+// Loads `.env` then `.env.local` (local overrides), mirroring Next.js order.
 function loadEnv() {
-  const envPath = path.resolve(process.cwd(), '.env');
-  if (!fs.existsSync(envPath)) return;
-  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const [key, ...values] = trimmed.split('=');
-    if (key && values.length) process.env[key.trim()] = values.join('=').trim();
+  for (const file of ['.env', '.env.local']) {
+    const envPath = path.resolve(process.cwd(), file);
+    if (!fs.existsSync(envPath)) continue;
+    for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const [key, ...values] = trimmed.split('=');
+      if (key && values.length) process.env[key.trim()] = values.join('=').trim();
+    }
   }
 }
 loadEnv();

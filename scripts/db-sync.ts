@@ -1,11 +1,16 @@
 import mysql from 'mysql2/promise';
 import fs from 'fs';
 import path from 'path';
+import { canonicalEmail } from '../src/lib/email';
 
-// Manual .env parser for scripts running directly via tsx without external dotenv dependency
+// Manual .env parser for scripts running directly via tsx without external
+// dotenv dependency. Loads `.env` then `.env.local`, with `.env.local` taking
+// precedence — mirroring Next.js's load order so the script and the app read
+// the same values regardless of which file a secret lives in.
 function loadEnv() {
-  const envPath = path.resolve(process.cwd(), '.env');
-  if (fs.existsSync(envPath)) {
+  for (const file of ['.env', '.env.local']) {
+    const envPath = path.resolve(process.cwd(), file);
+    if (!fs.existsSync(envPath)) continue;
     const envContent = fs.readFileSync(envPath, 'utf8');
     envContent.split('\n').forEach((line) => {
       const trimmed = line.trim();
@@ -26,6 +31,7 @@ const schema: Record<string, Record<string, string>> = {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     username: 'VARCHAR(50) NOT NULL UNIQUE',
     email: 'VARCHAR(255) NOT NULL UNIQUE',
+    email_canonical: 'VARCHAR(255) NULL DEFAULT NULL',            // inbox-identity key (lowercased, +tag/dot-folded) — see src/lib/email.ts
     first_name: 'VARCHAR(100) NULL',
     last_name: 'VARCHAR(100) NULL',
     password: 'VARCHAR(255) NULL',
@@ -231,14 +237,17 @@ const schema: Record<string, Record<string, string>> = {
   },
   posts: {
     id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    public_id: 'CHAR(32) NULL DEFAULT NULL',                         // opaque MD5 used in the public /p/ permalink (hides the sequential id)
     user_id: 'INT NOT NULL',
     content_html: 'TEXT NOT NULL',
     visibility: "ENUM('friends', 'public', 'exclusive') NOT NULL DEFAULT 'friends'",
-    image_path: 'VARCHAR(255) NULL DEFAULT NULL',
+    image_path: 'VARCHAR(255) NULL DEFAULT NULL',                   // first attached image (kept for back-compat + plain-repost guards)
+    image_paths: 'JSON NULL DEFAULT NULL',                          // full ordered list of up to 3 attached images (image_path = element 0)
     type: "ENUM('status', 'ask', 'win') NOT NULL DEFAULT 'status'", // favor economy: one feed, branch on type
     skill_tag: 'VARCHAR(50) NULL DEFAULT NULL',                      // ask routing/matching
     accepted_answer_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',         // FK -> post_comments.id (the accepted answer)
     resolved_at: 'DATETIME NULL DEFAULT NULL',                       // set on accept OR manual resolve; resolved = NOT NULL
+    repost_of: 'BIGINT UNSIGNED NULL DEFAULT NULL',                  // pointer model: set ⇒ this row is a repost of the (root) original
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   post_likes: {
@@ -271,6 +280,15 @@ const schema: Record<string, Record<string, string>> = {
     seen: 'TINYINT(1) NOT NULL DEFAULT 1',          // true/false read flag (room for "delivered, not seen" later)
     seen_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Private saved-posts: one row per (user, post). Its presence means the viewer
+  // bookmarked that post; the /saved page reverse-chrons these (visibility
+  // re-checked at read time so a since-hidden post never leaks).
+  post_bookmarks: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   // Append-only log the future credits engine consumes (NOT a ledger): one row
   // each time an asker accepts an answer. No balance is ever touched here.
   helpful_events: {
@@ -281,6 +299,29 @@ const schema: Record<string, Record<string, string>> = {
     asker_user_id: 'INT UNSIGNED NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Emoji reactions on direct messages. One reaction per (message, user) —
+  // reacting again replaces the emoji, reacting with the same emoji toggles it
+  // off (Messenger-style). Scoped/authorized at the API by walking the message's
+  // conversation participants.
+  message_reactions: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    message_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT UNSIGNED NOT NULL',
+    emoji: 'VARCHAR(16) NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
+  // Shared-backend rate limiter (src/lib/rate-limit.ts). One append-only row per
+  // attempt, keyed by an opaque `bucket` (e.g. "login:1.2.3.4"). Lives in the DB,
+  // not process memory, because Vercel's serverless functions are ephemeral +
+  // multi-instance — an in-memory window resets on every cold start and isn't
+  // shared across instances, so it can't actually throttle brute force there.
+  // `created_at_ms` is epoch milliseconds (matches Date.now()) for exact
+  // sliding-window math without DATETIME/timezone rounding.
+  rate_limit_events: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    bucket: 'VARCHAR(190) NOT NULL',
+    created_at_ms: 'BIGINT UNSIGNED NOT NULL',
+  },
 };
 
 // Composite / secondary indexes the column-only `schema` map cannot express
@@ -289,10 +330,15 @@ const schema: Record<string, Record<string, string>> = {
 // sync can check INFORMATION_SCHEMA.STATISTICS and add only what is missing —
 // declarative + idempotent, the same contract as the column sync.
 const indexes: Record<string, Record<string, string>> = {
+  users: {
+    uq_email_canonical: 'UNIQUE INDEX uq_email_canonical (email_canonical)',  // one account per inbox (blocks dot/+tag/case duplicates)
+  },
   posts: {
     idx_user_id: 'INDEX idx_user_id (user_id)',
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
     idx_type_resolved: 'INDEX idx_type_resolved (type, resolved_at)',
+    idx_repost_of: 'INDEX idx_repost_of (repost_of)',
+    uq_public_id: 'UNIQUE INDEX uq_public_id (public_id)',  // permalink lookup target + collision guard
   },
   post_likes: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',
@@ -310,6 +356,18 @@ const indexes: Record<string, Record<string, string>> = {
   post_views: {
     uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',  // upsert target for mark_seen
     idx_user_seen: 'INDEX idx_user_seen (user_id, seen)',          // "my unseen" NOT EXISTS filter
+  },
+  post_bookmarks: {
+    uq_user_post: 'UNIQUE INDEX uq_user_post (user_id, post_id)',  // toggle target + one-per-user
+    idx_user_id: 'INDEX idx_user_id (user_id, id)',                // newest-saved-first keyset
+  },
+  rate_limit_events: {
+    // The count-within-window + per-bucket purge both filter by (bucket, time).
+    idx_bucket_time: 'INDEX idx_bucket_time (bucket, created_at_ms)',
+  },
+  message_reactions: {
+    uq_message_user: 'UNIQUE INDEX uq_message_user (message_id, user_id)',  // one reaction per user per message (upsert target)
+    idx_message_id: 'INDEX idx_message_id (message_id)',                    // load all reactions for a thread's messages
   },
 };
 
@@ -400,6 +458,43 @@ async function syncDatabase() {
     }
   } catch (err) {
     console.error('Failed to update crm_projects.lead_id column:', err);
+  }
+
+  // Backfill opaque public_id for any pre-existing posts (rows created before the
+  // column existed). MD5 of the id + RAND() + UUID() so the value is unique and
+  // NOT derivable from the sequential id — old permalinks become non-enumerable
+  // too, not just new ones. New rows get their public_id from the app on insert.
+  try {
+    const [r] = await connection.query<any>(
+      `UPDATE posts SET public_id = MD5(CONCAT(id, '-', RAND(), '-', UUID()))
+       WHERE public_id IS NULL OR public_id = ''`
+    );
+    if (r.affectedRows > 0) console.log(`Backfilled public_id on ${r.affectedRows} existing post(s)`);
+  } catch (err) {
+    console.error('Failed to backfill posts.public_id:', err);
+  }
+
+  // Backfill email_canonical for pre-existing accounts (rows created before the
+  // column existed). Gmail-aware folding can't be expressed in pure SQL, so we
+  // compute it in JS. Per-row try/catch: if two legacy rows happen to fold to
+  // the same inbox, the unique index rejects the second — we log it rather than
+  // abort the whole sync (it flags a real duplicate to reconcile by hand).
+  try {
+    const [rows] = await connection.query<any[]>(
+      `SELECT id, email FROM users WHERE email_canonical IS NULL OR email_canonical = ''`
+    );
+    let filled = 0;
+    for (const r of rows) {
+      try {
+        await connection.query(`UPDATE users SET email_canonical = ? WHERE id = ?`, [canonicalEmail(r.email), r.id]);
+        filled++;
+      } catch (e: any) {
+        console.error(`  email_canonical collision for user ${r.id} (${r.email}) -> ${canonicalEmail(r.email)}:`, e.code || e.message);
+      }
+    }
+    if (filled > 0) console.log(`Backfilled email_canonical on ${filled} user(s)`);
+  } catch (err) {
+    console.error('Failed to backfill users.email_canonical:', err);
   }
 
   // Custom schema updates (making users.password nullable for Google-OAuth-only accounts)

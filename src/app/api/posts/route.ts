@@ -3,6 +3,35 @@ import { withAuth } from '@/lib/api-auth';
 import * as posts from '@/lib/services/posts';
 import { createNotification, pushStreamOrder } from '@/lib/models/user';
 
+// Notify a repost's original author (both the plain-repost and quote paths land
+// here). Skips a self-repost and a missing/tombstoned original.
+async function notifyRepostAuthor(
+  origAuthorId: number | undefined,
+  origPostId: number | undefined,
+  origPublicId: string | undefined,
+  actorId: number,
+  actorUsername: string,
+) {
+  if (!origAuthorId || origAuthorId === actorId || !origPostId) return;
+  // Batch by post: repeat reposters on the same post collapse into one roster
+  // row ("X and N others reposted your post") instead of spamming N rows — and
+  // a re-repost from the same actor is deduped, not re-counted. public_id drives
+  // the notification's deep link to the (opaque) post permalink.
+  await createNotification(
+    origAuthorId,
+    'reposted',
+    {
+      from_user_id: actorId,
+      from_username: actorUsername,
+      by_user: actorUsername,
+      post_id: origPostId,
+      public_id: origPublicId,
+      message: 'reposted your post',
+    },
+    { aggregate: true, aggregateKey: 'post_id' }
+  );
+}
+
 // Thin dispatch layer: authenticate, parse the request body (post creation is
 // multipart/form-data because it may carry an image File; every other action is
 // JSON), delegate to the posts service, shape the response. Business logic lives
@@ -10,11 +39,21 @@ import { createNotification, pushStreamOrder } from '@/lib/models/user';
 export const POST = withAuth(async (request, user) => {
   const contentType = request.headers.get('content-type') || '';
   const isMultipart = contentType.includes('multipart/form-data');
-  let imageFile: File | null = null;
+  let imageFiles: File[] = [];
+  let keptPaths: string[] = [];
   let body: any;
   if (isMultipart) {
     const formData = await request.formData();
-    imageFile = formData.get('image') as File | null;
+    // Up to 3 images arrive as repeated `image` parts (createPost/editPost cap them).
+    imageFiles = formData.getAll('image').filter((v): v is File => v instanceof File && v.size > 0);
+    // Edit mode: the existing image URLs the user retained, as a JSON array.
+    try {
+      const raw = formData.get('kept_paths');
+      if (typeof raw === 'string' && raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) keptPaths = parsed.filter((s) => typeof s === 'string');
+      }
+    } catch { /* malformed ⇒ keep nothing */ }
     body = {
       action: formData.get('action') || 'create',
       post_id: formData.get('post_id'),
@@ -22,7 +61,7 @@ export const POST = withAuth(async (request, user) => {
       visibility: formData.get('visibility'),
       type: formData.get('type'),
       skill_tag: formData.get('skill_tag'),
-      remove_image: formData.get('remove_image'),
+      repost_of: formData.get('repost_of'),
     };
   } else {
     body = await request.json().catch(() => ({}));
@@ -34,9 +73,10 @@ export const POST = withAuth(async (request, user) => {
       const post = await posts.createPost(user.id, {
         contentHtml: body.content_html || '',
         visibility: body.visibility,
-        imageFile,
+        imageFiles,
         type: body.type,
         skillTag: body.skill_tag,
+        repostOf: body.repost_of ? parseInt(body.repost_of) : undefined,
       });
       // Live "new posts" pill: fan a lightweight signal out to everyone who can
       // see this author's feed (friends + followers) so their feed offers a
@@ -62,12 +102,15 @@ export const POST = withAuth(async (request, user) => {
           recipients.map((rid) =>
             createNotification(rid, 'new_help_request', {
               post_id: post.id,
+              public_id: post.public_id,
               skill_tag: post.skill_tag,
               by_user: user.username,
             })
           )
         );
       }
+      // A quote repost notifies the original's author (skip a self-repost).
+      await notifyRepostAuthor(post.repost_of?.user_id, post.repost_of?.id, post.repost_of?.public_id, user.id, user.username);
       return NextResponse.json({ success: true, post });
     }
 
@@ -81,6 +124,7 @@ export const POST = withAuth(async (request, user) => {
       if (helperUserId !== user.id) {
         await createNotification(helperUserId, 'answer_accepted', {
           post_id: result.postId,
+          public_id: result.postPublicId,
           comment_id: result.commentId,
           by_user: user.username,
         });
@@ -95,19 +139,34 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true, ...await posts.reopenAsk(user.id, parseInt(body.post_id || 0)) });
 
     case 'post_edit':
-      // multipart/form-data: carries the optional image File + remove_image flag.
+      // multipart/form-data: carries kept existing image URLs + any new image Files.
       return NextResponse.json({
         success: true,
         ...await posts.editPost(user.id, parseInt(body.post_id || 0), {
           contentHtml: body.content_html || '',
           visibility: body.visibility || undefined,
-          imageFile,
-          removeImage: body.remove_image === '1',
+          keptPaths,
+          newImageFiles: imageFiles,
         }),
       });
 
     case 'like':
       return NextResponse.json({ success: true, ...await posts.toggleLike(user.id, parseInt(body.post_id || 0)) });
+
+    case 'bookmark':
+      return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
+
+    case 'repost': {
+      // Plain (empty-pointer) repost toggle. It never enters the home feed (no
+      // fan-out pill — there'd be no post to show), it only boosts the original
+      // and shows on the reposter's profile. On a fresh repost, notify the
+      // original author (skip self).
+      const { reposted, originalAuthorId, originalId, originalPublicId } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
+      if (reposted) {
+        await notifyRepostAuthor(originalAuthorId, originalId, originalPublicId, user.id, user.username);
+      }
+      return NextResponse.json({ success: true, reposted });
+    }
 
     case 'comment_vote':
       return NextResponse.json({ success: true, ...await posts.toggleCommentVote(user.id, parseInt(body.comment_id || 0)) });
@@ -163,6 +222,15 @@ export const GET = withAuth(async (request, user) => {
           limit,
           filter: searchParams.get('filter') || undefined,
         }),
+      });
+    }
+
+    case 'saved': {
+      // The viewer's bookmarked posts, newest-saved-first, keyset on bookmark id.
+      const cursor = parseInt(searchParams.get('cursor') || '0') || null;
+      return NextResponse.json({
+        success: true,
+        ...await posts.getSaved(user.id, { cursor, limit }),
       });
     }
 

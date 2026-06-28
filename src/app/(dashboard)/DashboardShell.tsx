@@ -14,9 +14,10 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { RightSidebar } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, ChevronLeft, ChevronRight, type LucideIcon } from 'lucide-react';
+import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, Bookmark, ChevronLeft, ChevronRight, Zap, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
+import { describeNotification, notifTimeAgo } from '@/lib/notifications';
 
 function DashboardLayoutContent({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   const { t } = useTranslation();
@@ -56,6 +57,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // Flat icon nav used in collapsed mode (groups → their primary page).
   const collapsedNav: { Icon: LucideIcon; label: string; path: string; badge?: number }[] = [
     { Icon: Home, label: t('nav_home') || 'Home', path: '/home' },
+    { Icon: Bookmark, label: 'Saved', path: '/saved' },
     { Icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadTotal },
     { Icon: Clock, label: t('nav_time') || 'Time', path: '/time/execution' },
     { Icon: DollarSign, label: t('nav_money') || 'Money', path: '/money/dashboard' },
@@ -130,6 +132,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // desktop sidebar minus the parked CRM/Dashboard suites.
   const mobileNavLinks: { label: string; path: string; Icon: LucideIcon }[] = [
     { label: t('nav_home') || 'Home', path: '/home', Icon: Home },
+    { label: 'Saved Posts', path: '/saved', Icon: Bookmark },
     { label: 'Pomodoro Focus', path: '/time/execution', Icon: Clock },
     { label: 'Task Board', path: '/time/tasks', Icon: ListChecks },
     { label: 'Ledger Overview', path: '/money/dashboard', Icon: DollarSign },
@@ -300,6 +303,15 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           >
             <Home className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_home') || 'Home'}</span>
+          </Button>
+
+          {/* Saved */}
+          <Button variant="unstyled"
+            onClick={() => router.push('/saved')}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/saved')}`}
+          >
+            <Bookmark className="w-5 h-5 flex-shrink-0" />
+            <span>Saved</span>
           </Button>
 
           {/* Messages */}
@@ -520,14 +532,36 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             )}
           </div>
 
-          {/* Upgrade — unlock the paid CRM + Leads suite */}
-          <Button variant="unstyled"
-            onClick={() => router.push('/pricing')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-primary-400 rounded-lg hover:bg-primary-500/10 transition-colors${isActive('/pricing')}`}
-          >
-            <Sparkles className="w-5 h-5 flex-shrink-0" />
-            <span>Upgrade</span>
-          </Button>
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: UPGRADE PLAN CARD
+              Contains: current-plan badge, value copy, "Upgrade to Pro" CTA
+              ────────────────────────────────────────────────────────── */}
+          <div className="mt-2 rounded-2xl border border-primary-500/20 bg-gradient-to-br from-primary-500/10 via-primary-500/[0.06] to-transparent p-3.5 shadow-apple-sm">
+            {/* Current-plan badge row */}
+            <div className="flex items-center gap-3">
+              <span className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-primary-500/15 text-primary-400 ring-1 ring-inset ring-primary-500/25">
+                <Sparkles className="w-4.5 h-4.5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-slate-400 leading-tight">Current plan:</p>
+                <p className="text-sm font-bold text-white leading-tight">Free</p>
+              </div>
+            </div>
+
+            {/* Value copy */}
+            <p className="mt-3 text-xs leading-relaxed text-slate-400">
+              Upgrade to Pro to get the latest and exclusive features
+            </p>
+
+            {/* CTA */}
+            <Button variant="unstyled"
+              onClick={() => router.push('/pricing')}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 shadow-apple-sm transition-colors cursor-pointer"
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span>Upgrade to Pro</span>
+            </Button>
+          </div>
 
           {/* Settings */}
           <Button variant="unstyled"
@@ -570,7 +604,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           <div className="p-4 relative z-10">
             <div className={`flex gap-3 ${leftCollapsed ? 'flex-col items-center' : 'items-center justify-between px-3'}`}>
               <Button variant="unstyled"
-                onClick={() => router.push('/me')}
+                onClick={() => router.push(`/u/${currentUser.username}`)}
                 title={[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
                 className={`flex items-center gap-3 text-left group min-w-0 ${leftCollapsed ? '' : 'flex-grow'}`}
               >
@@ -743,30 +777,58 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
                   </span>
                 )}
               </div>
-              <div className="max-h-60 overflow-y-auto py-1">
+              <div className="max-h-80 overflow-y-auto py-1">
                 {notifications.length === 0 ? (
                   <p className="text-center text-xs text-slate-400 py-6 italic">No notifications yet.</p>
                 ) : (
-                  notifications.map((n) => (
-                    <div
-                      key={n.id}
-                      className="px-4 py-3 hover:bg-slate-800/30 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 cursor-pointer"
-                    >
-                      <Image
-                        src={n.data?.from_avatar || '/Assets/Img/default-avatar.png'}
-                        alt=""
-                        width={32}
-                        height={32}
-                        className="w-8 h-8 rounded-full object-cover mt-0.5"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs">
-                          <span className="font-bold">{n.data?.from_username}</span> {n.data?.message || 'sent you a message'}
-                        </p>
-                      </div>
-                      {!n.is_read && <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2"></span>}
-                    </div>
-                  ))
+                  notifications.map((n) => {
+                    const view = describeNotification(n);
+                    const when = notifTimeAgo(n.created_at);
+                    // Each row deep-links to where it actually happened (the post,
+                    // the follower's profile, the inbox). Rows without a known
+                    // destination fall back to a static, non-navigating element so
+                    // a dead click never lands the user on a 404.
+                    const RowTag: any = view.href ? Link : 'div';
+                    const rowProps = view.href
+                      ? { href: view.href, onClick: () => setNotifDropdownOpen(false) }
+                      : {};
+                    return (
+                      <RowTag
+                        key={n.id}
+                        {...rowProps}
+                        className={cn(
+                          'group px-4 py-3 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 transition-colors',
+                          view.href ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default',
+                          !n.is_read && 'bg-primary-500/[0.04]',
+                        )}
+                      >
+                        <div className="relative flex-shrink-0 mt-0.5">
+                          <Image
+                            src={view.avatar}
+                            alt=""
+                            width={36}
+                            height={36}
+                            className="w-9 h-9 rounded-full object-cover"
+                          />
+                          <span
+                            aria-hidden
+                            className="absolute -bottom-1 -right-1 text-[11px] leading-none bg-surface-dark rounded-full px-0.5 ring-1 ring-slate-800"
+                          >
+                            {view.emoji}
+                          </span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={cn('text-xs leading-snug', !n.is_read ? 'text-white' : 'text-slate-300')}>
+                            {view.text}
+                          </p>
+                          {when && <p className="text-[10px] text-slate-500 mt-0.5">{when}</p>}
+                        </div>
+                        {!n.is_read && (
+                          <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
+                        )}
+                      </RowTag>
+                    );
+                  })
                 )}
               </div>
             </div>

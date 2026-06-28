@@ -9,7 +9,7 @@ import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
 import PublicUserStatus from './PublicUserStatus';
 import ProfileAnimationKit from './ProfileAnimationKit';
-import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, LogIn, Laptop, Globe, MessageCircle, Users } from 'lucide-react';
+import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, LogIn, Laptop, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -95,24 +95,65 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // or when they're an accepted friend; otherwise just public ones.
   const canSeePrivate = viewerId === profileUserId || initialStatus === 'friends';
 
-  // ── This user's posts (visibility-aware) ────────────────────
-  let posts: Array<{ id: number; content_html: string; visibility: string; created_at: string; like_count: number; comment_count: number }> = [];
+  // ── This user's posts + reposts (visibility-aware) ──────────
+  // A PLAIN repost (empty pointer: no text, no image) renders Twitter-style — as
+  // the ORIGINAL post with a "reposted" label, linking to the original, showing
+  // the ORIGINAL's numbers. Quote reposts and normal posts render as themselves.
+  type ProfilePost = {
+    id: number;            // the post the card links to (original for a plain repost)
+    public_id: string;     // opaque id the permalink is keyed on (original's for a plain repost)
+    content_html: string;  // what to preview (original's text for a plain repost)
+    visibility: string;
+    created_at: string;
+    like_count: number;
+    comment_count: number;
+    reposted: boolean;     // show the "reposted" attribution line
+  };
+  let posts: ProfilePost[] = [];
   try {
     const rows = await query<any>(
-      `SELECT p.id, p.content_html, p.visibility, p.created_at,
+      `SELECT p.id, p.public_id, p.content_html, p.image_path, p.visibility, p.created_at, p.repost_of,
               (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
-              (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count
+              (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
+              orig.id AS orig_id, orig.public_id AS orig_public_id, orig.content_html AS orig_content_html, orig.visibility AS orig_visibility,
+              (SELECT COUNT(*) FROM post_likes    WHERE post_id = orig.id) AS orig_like_count,
+              (SELECT COUNT(*) FROM post_comments WHERE post_id = orig.id) AS orig_comment_count
        FROM posts p
+       LEFT JOIN posts orig ON orig.id = p.repost_of
        WHERE p.user_id = ? AND (p.visibility = 'public' OR ? = 1)
        ORDER BY p.created_at DESC
        LIMIT 20`,
       [profileUserId, canSeePrivate ? 1 : 0]
     );
-    posts = rows.map((p) => ({
-      ...p,
-      like_count: parseInt(p.like_count || 0),
-      comment_count: parseInt(p.comment_count || 0),
-    }));
+    posts = rows
+      .map((p): ProfilePost | null => {
+        const isPlainRepost = p.repost_of != null && !(p.content_html || '').trim() && !p.image_path;
+        if (isPlainRepost) {
+          // Original gone ⇒ drop the dangling pointer (no tombstone on a profile).
+          if (!p.orig_id) return null;
+          return {
+            id: Number(p.orig_id),
+            public_id: p.orig_public_id,
+            content_html: p.orig_content_html,
+            visibility: p.orig_visibility || 'public', // reposts are public-only
+            created_at: p.created_at,
+            like_count: parseInt(p.orig_like_count || 0),
+            comment_count: parseInt(p.orig_comment_count || 0),
+            reposted: true,
+          };
+        }
+        return {
+          id: Number(p.id),
+          public_id: p.public_id,
+          content_html: p.content_html,
+          visibility: p.visibility,
+          created_at: p.created_at,
+          like_count: parseInt(p.like_count || 0),
+          comment_count: parseInt(p.comment_count || 0),
+          reposted: false,
+        };
+      })
+      .filter((p): p is ProfilePost => p !== null);
   } catch { /* posts table may not exist yet */ }
 
   // ── Mutual friends (viewer ∩ profile) ───────────────────────
@@ -381,31 +422,39 @@ export default async function PublicProfilePage({ params }: PageProps) {
             </p>
           ) : (
             <div className="space-y-4">
-              {posts.map((p) => (
-                <Link
-                  key={p.id}
-                  href={`/p/${p.id}`}
-                  data-entrance="list-item"
-                  className="block bg-[#111318] border border-slate-800/60 rounded-2xl p-4 hover:border-primary-500/30 transition-colors"
-                >
-                  <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mb-2">
-                    <span>{new Date(p.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    {p.visibility !== 'public' && (
-                      <span className="px-1.5 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[9px] uppercase tracking-wider">
-                        {p.visibility === 'friends' ? 'Friends' : 'Exclusive'}
-                      </span>
+              {posts.map((p) => {
+                const Aud = p.visibility === 'public' ? Globe : p.visibility === 'exclusive' ? Lock : Users;
+                const audLabel = p.visibility === 'public' ? 'Public' : p.visibility === 'exclusive' ? 'Exclusive' : 'Friends';
+                return (
+                  <Link
+                    key={`${p.reposted ? 'r' : 'p'}${p.id}`}
+                    href={`/p/${p.public_id}`}
+                    data-entrance="list-item"
+                    className="block bg-[#111318] border border-slate-800/60 rounded-2xl p-4 hover:border-primary-500/30 transition-colors"
+                  >
+                    {p.reposted && (
+                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-2">
+                        <Repeat2 className="w-3.5 h-3.5" />
+                        <span>{fullName || profileUser.username} reposted</span>
+                      </div>
                     )}
-                  </div>
-                  <div
-                    className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
-                    dangerouslySetInnerHTML={{ __html: p.content_html }}
-                  />
-                  <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
-                    <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {p.like_count}</span>
-                    <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {p.comment_count}</span>
-                  </div>
-                </Link>
-              ))}
+                    <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mb-2">
+                      <span>{new Date(p.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                      <span className="inline-flex items-center" title={audLabel} aria-label={`Audience: ${audLabel}`}>
+                        <Aud className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
+                    <div
+                      className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                      dangerouslySetInnerHTML={{ __html: p.content_html }}
+                    />
+                    <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
+                      <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {p.like_count}</span>
+                      <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {p.comment_count}</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </div>

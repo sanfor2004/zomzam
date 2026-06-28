@@ -19,7 +19,7 @@ export const POST = withError(async (request) => {
   // The field-specific signup messages stay (real UX); the throttle is the
   // meaningful mitigation. 5 attempts / 15 min per IP, per action.
   if (action === 'login' || action === 'register') {
-    if (!rateLimit(`${action}:${clientIp(request)}`, 5, 15 * 60 * 1000)) {
+    if (!(await rateLimit(`${action}:${clientIp(request)}`, 5, 15 * 60 * 1000))) {
       return NextResponse.json(
         { success: false, message: 'Too many attempts. Please wait a few minutes and try again.' },
         { status: 429 }

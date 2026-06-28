@@ -41,13 +41,19 @@ export type PostType = 'status' | 'ask' | 'win';
 
 export interface Post {
   id: number;
+  // Opaque MD5 identifier used in the public /p/ permalink (hides the sequential
+  // numeric id). Internal mutations still key on the numeric `id`.
+  public_id: string;
   user_id: number;
   username: string;
   first_name: string | null;
   last_name: string | null;
   avatar: string;
   content_html: string;
+  // First attached image (back-compat). `image_paths` is the full ordered list of
+  // up to 3 images; readers should prefer it and fall back to [image_path].
   image_path?: string | null;
+  image_paths?: string[] | null;
   visibility?: PostVisibility;
   // Favor economy (ask/win). Absent on legacy rows → treated as 'status'.
   type?: PostType;
@@ -59,6 +65,22 @@ export interface Post {
   comment_count: number;
   liked_by_me: boolean;
   top_comments?: Comment[];
+  // ── Engagement (follow / repost / bookmark) ──────────────────
+  // Private bookmark state for the viewer (drives the Bookmark icon fill).
+  bookmarked_by_me?: boolean;
+  // Repost pointer model: when this row IS a repost, repost_of carries the live
+  // original (or null when the original was deleted → tombstone). repost_count is
+  // how many times the post has been reposted; reposted_by_me is the viewer's
+  // plain-repost toggle state.
+  repost_of?: Post | null;
+  repost_count?: number;
+  reposted_by_me?: boolean;
+  // Server-computed viewer↔author relationship (drives the Follow button).
+  is_following?: boolean;
+  is_friend?: boolean;
+  // Reserved presentational flag — not yet populated by the API. When true the
+  // card renders a verified check beside the author name (Instagram-style).
+  is_verified?: boolean;
 }
 
 export function displayName(u: { first_name: string | null; last_name: string | null; username: string }) {

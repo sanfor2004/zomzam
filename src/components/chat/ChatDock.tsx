@@ -66,6 +66,12 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
     setEmojiOpen(false);
   };
 
+  // "Seen" marker: show under the thread when my most recent message has been
+  // read by the peer (read_at set live via the zz-message-read receipt). If the
+  // peer has since replied, the last message is theirs — no marker needed.
+  const lastMsg = win.messages[win.messages.length - 1];
+  const showSeen = !win.loading && !!lastMsg && lastMsg.sender_id === myId && !!lastMsg.read_at;
+
   return (
     <div className="pointer-events-auto w-[320px] max-w-[calc(100vw-2rem)] bg-[#1A1D24] border border-slate-800/70 rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
       {/* ── Header (not click-to-minimize: use the explicit control on the right) ── */}
@@ -148,6 +154,11 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
                   </div>
                 );
               })
+            )}
+
+            {/* ── "Seen" receipt ── */}
+            {showSeen && (
+              <p className="text-[10px] text-slate-500 text-right pr-1">Seen</p>
             )}
 
             {/* ── Typing indicator (peer is composing) ── */}

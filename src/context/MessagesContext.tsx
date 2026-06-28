@@ -351,6 +351,28 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // ── Incoming read receipts ──────────────────────────────────
+  // The peer read our messages: stamp read_at on our own still-unread sent
+  // messages in that window so the dock can render the "Seen" marker live.
+  useEffect(() => {
+    const onRead = (e: Event) => {
+      const { reader_id } = (e as CustomEvent).detail || {};
+      if (!reader_id) return;
+      const readAt = new Date().toISOString();
+      setWindows((prev) => prev.map((w) => {
+        if (w.otherUser.id !== reader_id) return w;
+        return {
+          ...w,
+          messages: w.messages.map((m) =>
+            m.sender_id === me.id && !m.read_at ? { ...m, read_at: readAt } : m
+          ),
+        };
+      }));
+    };
+    window.addEventListener('zz-message-read', onRead);
+    return () => window.removeEventListener('zz-message-read', onRead);
+  }, [me.id]);
+
   // ── Bootstrap + presence freshness ──────────────────────────
   // Initial load, then a light poll every 20s keeps presence dots and the
   // last-chatted ordering fresh (SSE delivers messages instantly; this is just

@@ -223,10 +223,29 @@ export const POST = withAuth(async (request, user) => {
         return NextResponse.json({ success: false, message: 'Cannot follow this user' }, { status: 400 });
       }
 
-      await execute(
+      const followResult = await execute(
         `INSERT IGNORE INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'follow', 'accepted')`,
         [user.id, targetId]
       );
+
+      // Notify only on a genuinely NEW follow — INSERT IGNORE reports
+      // affectedRows = 0 when the follow already exists, so a re-follow is silent.
+      if (followResult.affectedRows > 0) {
+        const me = await getUserById(user.id);
+        // Batch followers into one roster ("X and N others started following
+        // you") — no per-target id, so bucket purely by type.
+        await createNotification(
+          targetId,
+          'new_follower',
+          {
+            from_user_id: user.id,
+            from_username: user.username,
+            from_avatar: me?.avatar || DEFAULT_AVATAR,
+            message: 'started following you',
+          },
+          { aggregate: true }
+        );
+      }
 
       return NextResponse.json({ success: true, message: 'Now following' });
     }

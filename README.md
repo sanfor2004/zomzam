@@ -41,7 +41,7 @@ The platform is divided into three major suites:
 * **Projects Hub** (`/crm/projects`): Delivery tracking for won client contracts, mapping development milestones (`Planning`, `Design`, `Feedback Review`, `Production Delivered`) to automated task-completion indicators.
 
 ### 4. 🌐 Preferences & Social Integration (Platform Core)
-* **Home Feed** (`/home`): A post composer (with `@mention` autocomplete popover) and a real-time feed of posts from the user's network, with like/comment/delete actions. Individual posts expand to a permalink view at `/p/[postId]`.
+* **Home Feed** (`/home`): A post composer (with `@mention` autocomplete popover) and a real-time feed of posts from the user's network, with like/comment/delete actions. Individual posts expand to a permalink view at `/p/[postId]`, where the id is an opaque MD5 (`public_id`), never the sequential numeric id.
 * **System Preferences** (`/settings`): Refactored to use unified UI selects for timezone adjustment (with live clock previews), multi-language configuration, and primary/secondary currency selections.
 * **Vanity Public Profiles** (`/u/[username]`): Public profile directories featuring real-time presence indicators (Online, Away, Offline) synchronized dynamically via Server-Sent Events (SSE) based on user mouse movements and idle timers.
 * **Social Connections** (`/community`): A member directory showing user availability, network contacts, follows, friend requests, and discovery suggestions.
@@ -59,7 +59,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | :--- | :--- | :--- |
 | **Framework** | **Next.js 16.2 (App Router)** | SSR & Server Components for SEO and fast loading; Edge Route Handlers for high concurrency. |
 | **UI Library** | **React 19** | Leverage Server Components, improved concurrent rendering, and native element hooks. |
-| **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 27 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
+| **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 28 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
 | **Styling** | **Tailwind CSS v4** (`@theme` CSS-first tokens) | Modern CSS variables, Tailwind engine for atomic utility styling, custom HSL/Zomzam-Orange palettes defined directly in `globals.css`. |
 | **Database** | **MySQL (via `mysql2/promise`)** | High performance, transaction safety, and sub-millisecond query execution on structured schemas. |
 | **Security** | **Jose JWT, BcryptJS & DOMPurify** | A single `jose`-based session module (`src/lib/session.ts`) signs/verifies the `ZOMZAM_SESSION` JWT for both the Edge proxy and Node API routes (`jsonwebtoken` removed). The same `jose` dependency also verifies Google's `id_token` via remote JWKS for "Sign in with Google" (`src/lib/google-oauth.ts`) — no separate OAuth library installed. API routes are gated by a `withAuth()` wrapper (`src/lib/api-auth.ts`), not the proxy; high-rounds bcrypt salt for password protection; post HTML is sanitized server-side with `isomorphic-dompurify` (tag allowlist) before storage; login/register are IP rate-limited (`src/lib/rate-limit.ts`). |
@@ -87,7 +87,8 @@ zomzam.com/
 │   │   │   ├── community/     # /community, /community/discover, /following, /friends, /requests
 │   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
 │   │   │   ├── dashboard/     # /dashboard — primary metrics dashboard
-│   │   │   ├── home/          # /home — social feed + post composer
+│   │   │   ├── home/          # /home — social feed (composer + PostCard live in the Kit; shared.ts holds the feed types)
+│   │   │   ├── saved/         # /saved — the viewer's bookmarked posts
 │   │   │   ├── me/            # /me — profile settings
 │   │   │   ├── money/         # /money/accounts, /dashboard, /expenses, /income, /lend
 │   │   │   ├── settings/      # /settings — timezone, language, currency preferences
@@ -122,7 +123,7 @@ zomzam.com/
 │   │   └── providers.tsx        # Global context aggregation wrapper (mounts ErrorReporter)
 │   │
 │   ├── components/
-│   │   ├── ui/                  # The Zomzam Kit — 27 primitives (Button, Card, Modal, Toast, …) + index.ts barrel
+│   │   ├── ui/                  # The Zomzam Kit — 28 primitives (Button, Card, Modal, Toast, PostImageGrid, …) + data-coupled feed members PostComposer & PostCard (both /api/posts-aware, demo-mode for /ui-kit) + index.ts barrel
 │   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), RightSidebar (persistent right nav: Messages + Active Now presence + Suggested), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
 │   │   ├── ErrorReporter.tsx    # Global client error listener (uncaught errors + unhandled rejections → /api/report-error)
@@ -145,7 +146,6 @@ zomzam.com/
 │   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, throttled, never throws; recipient defaults to 2004.Sanfor@gmail.com)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
-│   │   ├── facebook-oauth.ts    # Facebook Sign-In/Sign-Up: auth URL builder, code exchange, Graph API profile fetch
 │   │   ├── db.ts                # MySQL connection pool + transaction helpers
 │   │   ├── gsap.ts               # Single source of truth for GSAP + plugin registration
 │   │   ├── notion.ts             # Notion API client for CRM lead sync
@@ -174,8 +174,9 @@ zomzam.com/
 | `/forgot-password` | Public | Request a password-reset token. |
 | `/pricing` | Public | Plans & pricing — the free social core vs the paid Pro/Agency tiers that unlock the CRM + Leads suite; monthly/annual toggle, subscribe CTAs. |
 | `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill). The social right sidebar (Messages / Active Now / Suggested) is now global in the shell, not per-page. |
+| `/saved` | Protected | The viewer's bookmarked posts, newest-saved-first; renders the shared feed `PostCard`. Visibility is re-checked on read, so a since-hidden or deleted post drops out silently. |
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
-| `/p/[postId]` | Protected | Permalink view for a single post (deep-linkable from the feed). |
+| `/p/[postId]` | Public | Permalink view for a single post (deep-linkable from the feed). The `[postId]` segment is the post's opaque `public_id` (a 32-char MD5), **not** the sequential numeric id — so the permalink can't be walked to enumerate or count posts. The route only resolves a valid `public_id`; a numeric id 404s. |
 | `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
 | `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |
 | `/time/tasks` | Protected | Task checklist manager (priority, duration blocks, undoable deletes). |
@@ -207,7 +208,6 @@ zomzam.com/
 | `/api/auth` | `register`, `login`, `logout`, `check`, `update_settings` | Session lifecycle and account settings. |
 | `/api/auth/forgot-password` / `/reset-password` | — | Token-based password recovery, outside the session. |
 | `/api/auth/oauth/google` / `/oauth/google/callback` | — | Google Sign-In: redirects to Google's consent screen, then verifies the returned `id_token` (`jose` remote JWKS) and mints a `ZOMZAM_SESSION` cookie. |
-| `/api/auth/oauth/facebook` / `/oauth/facebook/callback` | — | Facebook Sign-In/Sign-Up: redirects to Facebook's consent screen, exchanges the code for an access token (server-to-server), resolves the profile via the Graph API, and mints a `ZOMZAM_SESSION` cookie. |
 | `/api/profile` / `/api/profile/change-password` | — | Profile field updates, avatar upload (`sharp` -> Vercel Blob), authenticated password change. |
 | `/api/dashboard` | — | Aggregates Time/Money metrics for the primary dashboard. |
 | `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
@@ -215,13 +215,13 @@ zomzam.com/
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
 | `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
 | `/api/notion` | `sync`, `update_settings` | Notion integration for CRM lead sync. |
-| `/api/posts` | `feed` (tiered `tier=unseen`/`seen` + keyset `cursor` + `filter=help`/`help_matches`), `mark_seen` (batch read receipts), `comments`, `top_comments`, `create` (status/ask/win), `like`, `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement + favor economy (ask/win, accept-answer bridge). Chat-style feed: unseen posts first (tracked in `post_views`), then seen backfill. |
+| `/api/posts` | `feed` (tiered `tier=unseen`/`seen` + keyset `cursor` + `filter=help`/`help_matches`), `saved` (keyset bookmarked posts), `mark_seen` (batch read receipts), `comments`, `top_comments`, `create` (status/ask/win, or a quote repost via `repost_of` — text and/or own image), `like`, `bookmark`, `repost` (plain repost toggle, public-only, root-collapse), `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement (like/bookmark/repost) + favor economy (ask/win, accept-answer bridge). Chat-style feed: unseen posts first (tracked in `post_views`), then seen backfill. Reposts use a `posts.repost_of` pointer: a **plain** repost (empty pointer) boosts the original and surfaces on the reposter's profile (not duplicated in the feed, Twitter-style); a **quote** repost is a real feed post with its own numbers that embeds the original as text (the original's image is never republished). |
 | `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read`, `typing` (transient peer-is-typing ping, no DB write) | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |
 | `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
-| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, and the `new_post` feed-pill fan-out). |
+| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` / `new_follower` / `reposted` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, the `message_read` "Seen" receipt, and the `new_post` feed-pill fan-out). |
 
 ---
 
@@ -256,12 +256,6 @@ NODE_ENV=development
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 GOOGLE_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/google/callback
-
-# Facebook Sign-In/Sign-Up — Facebook Login product from
-# https://developers.facebook.com/apps/
-FACEBOOK_CLIENT_ID=
-FACEBOOK_CLIENT_SECRET=
-FACEBOOK_OAUTH_REDIRECT_URI=http://localhost:3000/api/auth/oauth/facebook/callback
 
 # File uploads — Vercel Blob store (Storage -> Create Database -> Blob in the
 # Vercel dashboard auto-injects this in production). For local dev, run
@@ -331,7 +325,6 @@ sequenceDiagram
 ### Authentication Core Code:
 * **Session Tokens**: [session.ts](file:///c:/www/zomzam.com/src/lib/session.ts) is the single place a `jose` JWT is signed/verified (Edge proxy + Node routes). [api-auth.ts](file:///c:/www/zomzam.com/src/lib/api-auth.ts) exposes the `withAuth()`/`withError()` route gates and `getSessionUser()`, which also enforces `is_active` + `token_version` revocation. [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) is now bcrypt-only.
 * **Google Sign-In**: [google-oauth.ts](file:///c:/www/zomzam.com/src/lib/google-oauth.ts) builds the consent-screen URL and exchanges the returned code for an `id_token`, verified against Google's live JWKS via `jose`'s `createRemoteJWKSet` — no extra OAuth dependency needed. `/api/auth/oauth/google` sets a short-lived `state` + `redirect` cookie pair (CSRF check) before redirecting to Google; `/api/auth/oauth/google/callback` verifies `state`, then calls `findOrCreateGoogleUser()` ([user.ts](file:///c:/www/zomzam.com/src/lib/models/user.ts)) to link-by-verified-email or create a password-less account before minting the same `ZOMZAM_SESSION` cookie as credential login.
-* **Facebook Sign-In/Sign-Up**: [facebook-oauth.ts](file:///c:/www/zomzam.com/src/lib/facebook-oauth.ts) builds the consent-screen URL and exchanges the returned code for an access token via a server-to-server call authenticated with the app's client secret, then resolves the profile (`id`, `email`, `name`, `picture`) through the Graph API. Same `state`/`redirect` cookie CSRF pattern as Google; `/api/auth/oauth/facebook/callback` calls `findOrCreateFacebookUser()` ([user.ts](file:///c:/www/zomzam.com/src/lib/models/user.ts)) to link-by-email or create a password-less account before minting the `ZOMZAM_SESSION` cookie. Users who decline the `email` permission are bounced back with a `no_email` guidance message instead of a half-created account.
 * **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) protects every page by **default-deny** — only an explicit public allowlist (`/`, `/sign`, `/forgot-password`, `/u`, `/p`, `/ui-kit`, `/pricing`) is reachable without a session; everything else redirects to `/sign`. So a newly added page can never be accidentally left unguarded. It verifies tokens via the shared edge-safe `verifySession` (`jose`) without triggering Node-only environment crashes; API authorization itself lives in `withAuth()` at the route layer, not the proxy.
 
 ---
@@ -428,7 +421,7 @@ When the final development task (containing the phrase `Production Delivery & La
 
 Zomzam ships its own component library at `src/components/ui` instead of depending on shadcn/ui, Radix UI, or Framer Motion — every interaction primitive is owned, styled with the project's Tailwind v4 tokens, and free of third-party UI churn.
 
-* **27 primitives**, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, CountUp, Divider, Dropdown, Input, Modal, NumberInput, Pagination, Progress, Radio, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
+* **28 primitives**, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, CountUp, Divider, Dropdown, Input, Modal, NumberInput, Pagination, PostImageGrid, Progress, Radio, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
 * **Live showcase** at [`/ui-kit`](file:///c:/www/zomzam.com/src/app/ui-kit/page.tsx) — a dev-only route (unlinked from navigation, no auth gate) rendering every primitive with its real variants, sizes, and states. Nothing on that page reads or writes live data.
 * **Shared motion**: `src/hooks/usePageEntrance.ts` drives the standard page-load reveal (title mask, staggered card/list entrances) via GSAP, respecting `prefers-reduced-motion` automatically. GSAP itself is centralized in `src/lib/gsap.ts` so plugins register exactly once.
 * **Extension rule**: if the Kit doesn't have what a feature needs, build it once inline — then promote it into `src/components/ui` the moment a second page needs the same pattern, following the existing `variant`/`size`/`shape` prop conventions (see `Button.tsx`).

@@ -21,7 +21,7 @@ function cap(value: unknown, max = MAX_FIELD): string {
 export const POST = withError(async (request) => {
   // Blunt abuse: at most 20 client reports / 5 min per IP. The per-fault email
   // throttle in bug-report.ts then collapses duplicates on top of this.
-  if (!rateLimit(`report-error:${clientIp(request)}`, 20, 5 * 60 * 1000)) {
+  if (!(await rateLimit(`report-error:${clientIp(request)}`, 20, 5 * 60 * 1000))) {
     return NextResponse.json({ success: true }); // silently drop
   }
 

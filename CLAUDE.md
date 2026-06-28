@@ -69,7 +69,7 @@ Our objective: Technological Sovereignty. Cinematic Visuals. Infinite Scalabilit
 ## SECTION 2: ZENITH AESTHETIC ENGINEERING ($250K+ VISUALS)
 
 ### 2.0 The Zomzam Kit — Use This First (Non-Negotiable)
-Before writing any new markup, check `src/components/ui` (the **Zomzam Kit**) for an existing primitive. It already ships 27 production primitives, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, CountUp, Divider, Dropdown, Input, Modal, NumberInput, Pagination, Progress, Radio, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
+Before writing any new markup, check `src/components/ui` (the **Zomzam Kit**) for an existing primitive. It already ships 28 production primitives, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, CountUp, Divider, Dropdown, Input, Modal, NumberInput, Pagination, PostImageGrid, Progress, Radio, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
 
 * **Visual reference**: `/ui-kit` is a live, dev-only showcase route (unlinked from nav, no auth gate, reads/writes no real data) rendering every primitive with its real variants and states. Check it before building anything new.
 * **Extension protocol**: if no primitive fits, build the one-off inline once. The moment the same pattern is needed a second time, promote it into `src/components/ui` as a proper primitive — follow the existing `variant` / `size` / `shape` prop conventions (see `Button.tsx` for the canonical shape) instead of copy-pasting markup across pages.

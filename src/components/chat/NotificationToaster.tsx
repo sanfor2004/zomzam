@@ -2,32 +2,17 @@
 
 import { useEffect } from 'react';
 import { useToast } from '@/components/ui';
+import { describeNotification } from '@/lib/notifications';
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: NOTIFICATION TOASTER
 // Bridges the SSE-driven `new-notification` window event (dispatched by
 // StreamWaiterContext) to a live toast popup. Mount once inside the dashboard
-// shell's <ToastProvider>. Renders nothing itself.
+// shell's <ToastProvider>. Wording comes from the SAME describeNotification
+// helper the navbar dropdown uses, so a toast reads identically to its row
+// (incl. actor batching: "alice and 2 others reposted your post").
+// Renders nothing itself.
 // ──────────────────────────────────────────────────────────
-
-interface NotificationPayload {
-  type?: string;
-  data?: { from_username?: string; by_user?: string; message?: string; skill_tag?: string };
-}
-
-/** Maps a notification payload to a readable toast title + line. */
-function describe(n: NotificationPayload): { title: string; description: string } {
-  const d = n?.data || {};
-  const who = d.from_username || d.by_user || 'Someone';
-  switch (n?.type) {
-    case 'new_help_request':
-      return { title: who, description: d.skill_tag ? `needs help with ${d.skill_tag}` : 'posted a help request' };
-    case 'answer_accepted':
-      return { title: who, description: 'accepted your answer 🎉' };
-    default:
-      return { title: who, description: d.message || 'sent you a notification' };
-  }
-}
 
 export function NotificationToaster() {
   const { toast } = useToast();
@@ -36,8 +21,8 @@ export function NotificationToaster() {
     const onNotification = (e: Event) => {
       const n = (e as CustomEvent).detail;
       if (!n) return;
-      const { title, description } = describe(n);
-      toast({ title, description, variant: 'info' });
+      const view = describeNotification(n);
+      toast({ title: `${view.emoji} New activity`, description: view.text, variant: 'info' });
     };
     window.addEventListener('new-notification', onNotification);
     return () => window.removeEventListener('new-notification', onNotification);
