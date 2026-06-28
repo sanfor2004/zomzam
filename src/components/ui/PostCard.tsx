@@ -209,9 +209,9 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     } catch { /* non-blocking */ }
   };
 
-  // Plain repost toggle (optimistic). A plain repost never enters the home feed
-  // (it only boosts the original + shows on the reposter's profile), so there's
-  // nothing to prepend — just flip the count/active state on this card.
+  // Plain repost toggle (optimistic). The pointer row enters the feed on the
+  // next fetch (re-floating the original — the reach boost); nothing is prepended
+  // in place, so just flip the count/active state on this card.
   const togglePlainRepost = async () => {
     setRepostMenuOpen(false);
     const next = !reposted;

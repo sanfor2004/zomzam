@@ -587,12 +587,12 @@ test('toggleRepost matches only the empty IMAGE-LESS pointer (an image-only quot
   assert.match(probe, /content_html = '' AND image_path IS NULL/, 'plain-repost probe excludes image-only quotes');
 });
 
-test('getFeed hides plain reposts (empty image-less pointers) from the home feed', async () => {
+test('getFeed lets plain reposts into the home feed (recency re-floats the original)', async () => {
   seedQueryOne({ tags: [] });
   seedQuery([feedRow({ id: 5 })], []);
   await posts.getFeed(USER_ID, { tier: 'seen' });
   const sql = db.query.mock.calls[0].arguments[0] as string;
-  assert.match(sql, /NOT \(p\.repost_of IS NOT NULL AND p\.content_html = '' AND p\.image_path IS NULL\)/);
+  assert.doesNotMatch(sql, /NOT \(p\.repost_of IS NOT NULL/, 'plain reposts are no longer filtered out');
 });
 
 test('createPost quote accepts an image-only quote (no text)', async () => {

@@ -152,7 +152,15 @@ zomzam.com/
 │   │   ├── utils.ts              # cn() class merger, currency conversion rates
 │   │   ├── services/             # Per-suite business logic extracted from the route megaswitches
 │   │   │   ├── crm.ts           # CRM logic + qualify_lead cross-suite bridge (+ crm.test.ts)
-│   │   │   ├── posts.ts         # Social feed/comment logic + sanitizer + tag ranking (+ posts.test.ts)
+│   │   │   ├── posts/           # Social feed service, split by concern (+ posts.test.ts)
+│   │   │   │   ├── index.ts     #   public API barrel (re-exports the surface)
+│   │   │   │   ├── shared.ts    #   db-free helpers shared across modules
+│   │   │   │   ├── crud.ts      #   post create/edit/delete + sanitizer + image pipeline
+│   │   │   │   ├── feed.ts      #   home feed, /saved, seen, tag ranking, FEED_* SQL
+│   │   │   │   ├── comments.ts  #   comment thread + voting
+│   │   │   │   ├── reposts.ts   #   plain-repost toggle + root resolution
+│   │   │   │   ├── asks.ts      #   ask lifecycle (accept/resolve/reopen/notify)
+│   │   │   │   └── engagement.ts #  like / bookmark toggles
 │   │   │   └── dashboard.ts     # Cross-suite rollup + blended hourly-rate math (+ dashboard.test.ts)
 │   │   └── models/
 │   │       └── user.ts          # User table queries

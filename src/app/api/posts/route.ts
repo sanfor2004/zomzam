@@ -157,10 +157,11 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
 
     case 'repost': {
-      // Plain (empty-pointer) repost toggle. It never enters the home feed (no
-      // fan-out pill — there'd be no post to show), it only boosts the original
-      // and shows on the reposter's profile. On a fresh repost, notify the
-      // original author (skip self).
+      // Plain (empty-pointer) repost toggle. The pointer row surfaces in the
+      // feed on the next fetch (recency re-floats the original — the reach
+      // boost) and on the reposter's profile; no optimistic row is returned, so
+      // there's no fan-out pill here. On a fresh repost, notify the original
+      // author (skip self).
       const { reposted, originalAuthorId, originalId, originalPublicId } = await posts.toggleRepost(user.id, parseInt(body.post_id || 0));
       if (reposted) {
         await notifyRepostAuthor(originalAuthorId, originalId, originalPublicId, user.id, user.username);
