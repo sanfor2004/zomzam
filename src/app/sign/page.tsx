@@ -225,9 +225,16 @@ function SignPageContent() {
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: TOP NAVIGATION BAR
-          Contains: back link (left), language switcher (right)
+          Contains: back link (left), centered logo icon, language
+          switcher (right). Logo is absolutely centered so it stays
+          mid-bar regardless of the side items' widths.
           ────────────────────────────────────────────────────────── */}
       <div className="absolute top-5 left-0 right-0 px-6 flex items-center justify-between z-20">
+        <img
+          src="/Assets/Img/Icon-white.svg"
+          alt="Zomzam"
+          className="absolute left-1/2 -translate-x-1/2 w-7 h-7 pointer-events-none"
+        />
         <a
           href="/"
           className="flex items-center gap-1.5 text-[13px] font-medium text-slate-500 hover:text-slate-300 transition-colors duration-150"
@@ -297,9 +304,8 @@ function SignPageContent() {
       >
         <div className="p-8 space-y-5">
 
-          {/* Logo + wordmark */}
-          <div className="flex items-center gap-2.5">
-            <img src="/Assets/Img/Icon-white.svg" alt="Zomzam" className="w-7 h-7" />
+          {/* Wordmark — brand icon now lives centered in the top nav bar */}
+          <div className="flex items-center">
             <span className="text-white font-black text-[15px] tracking-tight">zomzam</span>
           </div>
 
