@@ -20,6 +20,7 @@ import { useToast } from './Toast';
 import { Modal } from './Modal';
 import { Dropdown } from './Dropdown';
 import { PostComposer } from './PostComposer';
+import { PostImageGrid, postImages } from './PostImageGrid';
 import { FollowButton } from '@/components/social/FollowButton';
 // Feature-owned domain types still live with the home feed; the card is a
 // data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
@@ -433,16 +434,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
               />
             )}
-            {post.image_path && (
-              <Image
-                src={post.image_path}
-                alt=""
-                width={1200}
-                height={1200}
-                sizes="(max-width: 1024px) 100vw, 600px"
-                className="w-full max-h-[34rem] object-cover"
-              />
-            )}
+            <CardMedia images={postImages(post)} />
             <div className="px-4 sm:px-5 pt-3 pb-4">
               {original ? <NestedOriginal original={original} /> : <RepostTombstone />}
             </div>
@@ -455,16 +447,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
               />
             )}
-            {post.image_path && (
-              <Image
-                src={post.image_path}
-                alt=""
-                width={1200}
-                height={1200}
-                sizes="(max-width: 1024px) 100vw, 600px"
-                className="w-full max-h-[34rem] object-cover"
-              />
-            )}
+            <CardMedia images={postImages(post)} />
           </>
         )}
 
@@ -615,6 +598,21 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     </div>
   );
 });
+
+// ── Card media ────────────────────────────────────────────────
+// A post's attached image(s) under the header, flush above the action bar. A
+// lone image stays full-bleed edge-to-edge (Instagram-style); two or three sit
+// in a padded, rounded strip (so the gallery reads as a deliberate group, not a
+// broken full-bleed crop). Renders nothing for an image-less post.
+function CardMedia({ images }: { images: string[] }) {
+  if (images.length === 0) return null;
+  if (images.length === 1) return <PostImageGrid images={images} single="bleed" />;
+  return (
+    <div className="px-4 sm:px-5 pb-1">
+      <PostImageGrid images={images} />
+    </div>
+  );
+}
 
 // ── Owner quarter-circle control ──────────────────────────────
 // A 90° corner wedge pinned to the card's top-right, split by a 45° bisector

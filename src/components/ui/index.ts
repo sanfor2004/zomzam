@@ -19,6 +19,7 @@ export * from './NumberInput';
 export * from './Pagination';
 export * from './PostCard';
 export * from './PostComposer';
+export * from './PostImageGrid';
 export * from './Progress';
 export * from './Radio';
 export * from './SegmentedSwitch';

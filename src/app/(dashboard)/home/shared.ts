@@ -50,7 +50,10 @@ export interface Post {
   last_name: string | null;
   avatar: string;
   content_html: string;
+  // First attached image (back-compat). `image_paths` is the full ordered list of
+  // up to 3 images; readers should prefer it and fall back to [image_path].
   image_path?: string | null;
+  image_paths?: string[] | null;
   visibility?: PostVisibility;
   // Favor economy (ask/win). Absent on legacy rows → treated as 'status'.
   type?: PostType;

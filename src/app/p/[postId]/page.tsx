@@ -50,7 +50,7 @@ export default async function PostPage({ params }: PageProps) {
 
   const vid = viewer?.id ?? 0;
   const post = await queryOne<any>(
-    `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.created_at, p.visibility,
+    `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.image_paths, p.created_at, p.visibility,
             p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.repost_of,
             u.username, u.first_name, u.last_name, u.avatar,
             (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,

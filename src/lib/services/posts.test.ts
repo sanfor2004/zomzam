@@ -132,6 +132,30 @@ test('createPost normal-post fetch omits repost_of so a fresh post never mis-ren
   assert.doesNotMatch(fetchCall.arguments[0] as string, /repost_of/, 'a normal create return must not carry repost_of');
 });
 
+test('createPost stores up to 3 images: image_path = first, image_paths = full JSON list', async () => {
+  // Each upload resolves to a distinct URL so order/dedup is observable.
+  let n = 0;
+  uploads.processImageUpload.mock.mockImplementation(async () => `/Assets/Uploads/posts/img${++n}.webp`);
+  db.queryOne.mock.mockImplementation(async () => ({ id: 1, user_id: USER_ID, avatar: null }));
+
+  await posts.createPost(USER_ID, {
+    contentHtml: '<p>gallery</p>',
+    visibility: 'public',
+    imageFiles: [{ size: 1 } as any, { size: 1 } as any, { size: 1 } as any, { size: 1 } as any], // 4 → capped to 3
+  });
+
+  assert.equal(uploads.processImageUpload.mock.calls.length, 3, 'only the first 3 images are processed');
+  const insert = db.execute.mock.calls.find((c) => /INSERT INTO posts/.test(c.arguments[0] as string))!;
+  assert.match(insert.arguments[0] as string, /image_path, type, skill_tag, repost_of, image_paths/);
+  const params = insert.arguments[1] as any[];
+  assert.equal(params[4], '/Assets/Uploads/posts/img1.webp', 'image_path = first image');
+  assert.equal(
+    params[8],
+    JSON.stringify(['/Assets/Uploads/posts/img1.webp', '/Assets/Uploads/posts/img2.webp', '/Assets/Uploads/posts/img3.webp']),
+    'image_paths = full ordered list',
+  );
+});
+
 // ── Favor economy: accept_answer bridge + resolve_ask ────────────────────────
 
 test('acceptAnswer resolves the ask, logs a helpful_event, and returns the helper id', async () => {
@@ -244,65 +268,97 @@ test('reopenAsk rejects a non-ask post (400)', async () => {
 
 // ── Post editing: editPost (text + image + visibility) ───────────────────────
 
-test('editPost keeps the current image when no new file and no remove flag', async () => {
-  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp' });
+test('editPost keeps the current images when keptPaths retains them and no new files', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp', image_paths: ['/Assets/Uploads/posts/old.webp'] });
 
-  await posts.editPost(USER_ID, 7, { contentHtml: 'updated', imageFile: null, removeImage: false });
+  await posts.editPost(USER_ID, 7, { contentHtml: 'updated', keptPaths: ['/Assets/Uploads/posts/old.webp'], newImageFiles: [] });
 
   assert.deepEqual(db.queryOne.mock.calls[0].arguments[1], [7, USER_ID], 'ownership check scoped to user');
   const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
-  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \? WHERE id = \? AND user_id = \?/);
-  assert.deepEqual(params, ['updated', '/Assets/Uploads/posts/old.webp', 7, USER_ID]);
-  assert.equal(uploads.processImageUpload.mock.calls.length, 0, 'no re-upload when image is kept');
+  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?, image_paths = \? WHERE id = \? AND user_id = \?/);
+  assert.deepEqual(params, ['updated', '/Assets/Uploads/posts/old.webp', JSON.stringify(['/Assets/Uploads/posts/old.webp']), 7, USER_ID]);
+  assert.equal(uploads.processImageUpload.mock.calls.length, 0, 'no re-upload when images are kept');
   assert.equal(uploads.deleteUploadFile.mock.calls.length, 0, 'kept image is not deleted');
 });
 
-test('editPost replaces the image: stores the new one and deletes the old', async () => {
-  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp' });
+test('editPost replaces the image: stores the new one and deletes the dropped old one', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp', image_paths: ['/Assets/Uploads/posts/old.webp'] });
 
-  await posts.editPost(USER_ID, 7, { contentHtml: 'x', imageFile: { size: 100 } as any, removeImage: false });
+  await posts.editPost(USER_ID, 7, { contentHtml: 'x', keptPaths: [], newImageFiles: [{ size: 100 } as any] });
 
   assert.equal(uploads.processImageUpload.mock.calls.length, 1, 'new image processed');
   const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
-  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?/);
+  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?, image_paths = \?/);
   assert.equal(params[1], '/Assets/Uploads/posts/new.webp', 'row points at the new image');
+  assert.equal(params[2], JSON.stringify(['/Assets/Uploads/posts/new.webp']), 'image_paths holds the new single-image list');
   assert.deepEqual(uploads.deleteUploadFile.mock.calls[0].arguments[0], '/Assets/Uploads/posts/old.webp', 'old blob removed');
 });
 
-test('editPost removes the image: nulls image_path and deletes the old file', async () => {
-  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp' });
+test('editPost removes the image: nulls image_path/image_paths and deletes the dropped file', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp', image_paths: ['/Assets/Uploads/posts/old.webp'] });
 
-  await posts.editPost(USER_ID, 7, { contentHtml: 'still text', imageFile: null, removeImage: true });
+  await posts.editPost(USER_ID, 7, { contentHtml: 'still text', keptPaths: [], newImageFiles: [] });
 
   const [, params] = db.execute.mock.calls[0].arguments as [string, any[]];
   assert.equal(params[1], null, 'image_path nulled');
+  assert.equal(params[2], null, 'image_paths nulled');
   assert.equal(uploads.processImageUpload.mock.calls.length, 0, 'nothing uploaded on remove');
   assert.deepEqual(uploads.deleteUploadFile.mock.calls[0].arguments[0], '/Assets/Uploads/posts/old.webp');
 });
 
-test('editPost persists visibility when provided (and only then)', async () => {
-  seedQueryOne({ id: 7, image_path: null });
+test('editPost spoof-filters keptPaths to URLs the row actually has', async () => {
+  seedQueryOne({ id: 7, image_path: '/Assets/Uploads/posts/old.webp', image_paths: ['/Assets/Uploads/posts/old.webp'] });
 
-  await posts.editPost(USER_ID, 7, { contentHtml: 'hi', visibility: 'public', imageFile: null, removeImage: false });
+  // A forged keptPaths can't smuggle in an arbitrary URL — only the row's own
+  // images survive. Keeping the real one means it is NOT deleted.
+  await posts.editPost(USER_ID, 7, {
+    contentHtml: 'x',
+    keptPaths: ['/Assets/Uploads/posts/old.webp', 'https://evil.example/leak.png'],
+    newImageFiles: [],
+  });
+
+  const [, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.equal(params[2], JSON.stringify(['/Assets/Uploads/posts/old.webp']), 'forged URL filtered out');
+  assert.equal(uploads.deleteUploadFile.mock.calls.length, 0, 'the genuinely-kept image is not deleted');
+});
+
+test('editPost caps the final image set at 3', async () => {
+  seedQueryOne({ id: 7, image_path: '/a.webp', image_paths: ['/a.webp', '/b.webp'] });
+
+  await posts.editPost(USER_ID, 7, {
+    contentHtml: 'x',
+    keptPaths: ['/a.webp', '/b.webp'],
+    newImageFiles: [{ size: 1 } as any, { size: 1 } as any], // would make 4 → only 1 fits
+  });
+
+  assert.equal(uploads.processImageUpload.mock.calls.length, 1, 'only the new file that fits within the cap is uploaded');
+  const [, params] = db.execute.mock.calls[0].arguments as [string, any[]];
+  assert.equal(params[2], JSON.stringify(['/a.webp', '/b.webp', '/Assets/Uploads/posts/new.webp']), 'final set capped at 3');
+});
+
+test('editPost persists visibility when provided (and only then)', async () => {
+  seedQueryOne({ id: 7, image_path: null, image_paths: null });
+
+  await posts.editPost(USER_ID, 7, { contentHtml: 'hi', visibility: 'public', keptPaths: [], newImageFiles: [] });
 
   const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
-  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?, visibility = \? WHERE id = \? AND user_id = \?/);
-  assert.deepEqual(params, ['hi', null, 'public', 7, USER_ID]);
+  assert.match(sql, /UPDATE posts SET content_html = \?, image_path = \?, image_paths = \?, visibility = \? WHERE id = \? AND user_id = \?/);
+  assert.deepEqual(params, ['hi', null, null, 'public', 7, USER_ID]);
 });
 
 test('editPost refuses a post the user does not own (403)', async () => {
   seedQueryOne(); // ownership miss
   await assert.rejects(
-    () => posts.editPost(USER_ID, 7, { contentHtml: 'x', imageFile: null, removeImage: false }),
+    () => posts.editPost(USER_ID, 7, { contentHtml: 'x', keptPaths: [], newImageFiles: [] }),
     (err: any) => err instanceof HttpError && err.status === 403
   );
   assert.equal(db.execute.mock.calls.length, 0, 'no UPDATE on ownership failure');
 });
 
 test('editPost rejects an edit that would leave the post empty (400)', async () => {
-  seedQueryOne({ id: 7, image_path: null }); // no existing image to fall back on
+  seedQueryOne({ id: 7, image_path: null, image_paths: null }); // no existing image to fall back on
   await assert.rejects(
-    () => posts.editPost(USER_ID, 7, { contentHtml: '   ', imageFile: null, removeImage: false }),
+    () => posts.editPost(USER_ID, 7, { contentHtml: '   ', keptPaths: [], newImageFiles: [] }),
     (err: any) => err instanceof HttpError && err.status === 400
   );
   assert.equal(db.execute.mock.calls.length, 0);

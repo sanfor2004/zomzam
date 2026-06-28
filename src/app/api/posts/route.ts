@@ -39,11 +39,21 @@ async function notifyRepostAuthor(
 export const POST = withAuth(async (request, user) => {
   const contentType = request.headers.get('content-type') || '';
   const isMultipart = contentType.includes('multipart/form-data');
-  let imageFile: File | null = null;
+  let imageFiles: File[] = [];
+  let keptPaths: string[] = [];
   let body: any;
   if (isMultipart) {
     const formData = await request.formData();
-    imageFile = formData.get('image') as File | null;
+    // Up to 3 images arrive as repeated `image` parts (createPost/editPost cap them).
+    imageFiles = formData.getAll('image').filter((v): v is File => v instanceof File && v.size > 0);
+    // Edit mode: the existing image URLs the user retained, as a JSON array.
+    try {
+      const raw = formData.get('kept_paths');
+      if (typeof raw === 'string' && raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) keptPaths = parsed.filter((s) => typeof s === 'string');
+      }
+    } catch { /* malformed ⇒ keep nothing */ }
     body = {
       action: formData.get('action') || 'create',
       post_id: formData.get('post_id'),
@@ -51,7 +61,6 @@ export const POST = withAuth(async (request, user) => {
       visibility: formData.get('visibility'),
       type: formData.get('type'),
       skill_tag: formData.get('skill_tag'),
-      remove_image: formData.get('remove_image'),
       repost_of: formData.get('repost_of'),
     };
   } else {
@@ -64,7 +73,7 @@ export const POST = withAuth(async (request, user) => {
       const post = await posts.createPost(user.id, {
         contentHtml: body.content_html || '',
         visibility: body.visibility,
-        imageFile,
+        imageFiles,
         type: body.type,
         skillTag: body.skill_tag,
         repostOf: body.repost_of ? parseInt(body.repost_of) : undefined,
@@ -130,14 +139,14 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true, ...await posts.reopenAsk(user.id, parseInt(body.post_id || 0)) });
 
     case 'post_edit':
-      // multipart/form-data: carries the optional image File + remove_image flag.
+      // multipart/form-data: carries kept existing image URLs + any new image Files.
       return NextResponse.json({
         success: true,
         ...await posts.editPost(user.id, parseInt(body.post_id || 0), {
           contentHtml: body.content_html || '',
           visibility: body.visibility || undefined,
-          imageFile,
-          removeImage: body.remove_image === '1',
+          keptPaths,
+          newImageFiles: imageFiles,
         }),
       });
 

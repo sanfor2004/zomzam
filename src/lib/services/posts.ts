@@ -54,13 +54,44 @@ function extractPostTags(html: string): string[] {
 export interface CreatePostInput {
   contentHtml: string;
   visibility: string;
-  imageFile: File | null;
+  /** Up to {@link MAX_POST_IMAGES} attached images. `imageFile` is the legacy
+   *  single-image field — supply either; both are coalesced via {@link selectImageFiles}. */
+  imageFiles?: (File | null)[];
+  imageFile?: File | null;
   type?: string;             // 'status' | 'ask' | 'win'
   skillTag?: string | null;  // ask routing tag, ignored for non-ask
   repostOf?: number | null;  // set ⇒ this is a QUOTE repost of that post (root-collapsed)
 }
 
 const POST_TYPES = ['status', 'ask', 'win'];
+
+// Product cap: a post (or quote) carries at most this many images. Enforced
+// server-side here even though the composer also limits it — never trust client.
+export const MAX_POST_IMAGES = 3;
+
+/** Coalesce the legacy `imageFile` + new `imageFiles` inputs into one ordered,
+ *  non-empty File list, capped at MAX_POST_IMAGES. Drops nulls/empty files. */
+function selectImageFiles(input: { imageFiles?: (File | null)[]; imageFile?: File | null }): File[] {
+  const raw = input.imageFiles?.length ? input.imageFiles : (input.imageFile ? [input.imageFile] : []);
+  return raw.filter((f): f is File => !!f && f.size > 0).slice(0, MAX_POST_IMAGES);
+}
+
+/** Encode a JSON image array for the `image_paths` column, or null when empty
+ *  so a no-image post stores SQL NULL (not "[]"). */
+function encodeImagePaths(paths: string[]): string | null {
+  return paths.length ? JSON.stringify(paths) : null;
+}
+
+/** Decode the `image_paths` column back to a string[]. mysql2 hands JSON columns
+ *  back already-parsed, but tolerate a raw string (or absent column) defensively. */
+function decodeImagePaths(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.filter((s) => typeof s === 'string');
+  if (typeof raw === 'string' && raw.trim()) {
+    try { const a = JSON.parse(raw); return Array.isArray(a) ? a.filter((s) => typeof s === 'string') : []; }
+    catch { return []; }
+  }
+  return [];
+}
 
 /**
  * Validate, re-encode, and store a post image. One piece of knowledge — the
@@ -83,9 +114,19 @@ async function processPostImage(file: File): Promise<string> {
   }
 }
 
+/** Store an ordered batch of post images, preserving order. Sequential (not
+ *  Promise.all) so a mid-batch validation failure surfaces the same 400 a single
+ *  upload would, without firing later uploads. */
+async function processPostImages(files: File[]): Promise<string[]> {
+  const out: string[] = [];
+  for (const file of files) out.push(await processPostImage(file));
+  return out;
+}
+
 export async function createPost(userId: number, input: CreatePostInput) {
   const raw = (input.contentHtml || '').trim();
-  const hasImage = !!(input.imageFile && input.imageFile.size > 0);
+  const files = selectImageFiles(input);
+  const hasImage = files.length > 0;
 
   // QUOTE repost branch: a quote carries the reposter's own comment AND/OR image
   // over a nested original. It collapses to the root and is forced
@@ -116,12 +157,15 @@ export async function createPost(userId: number, input: CreatePostInput) {
     ? slugifyTag(input.skillTag).slice(0, 50) || null
     : null;
 
-  let image_path: string | null = null;
-  if (hasImage) image_path = await processPostImage(input.imageFile!);
+  // image_path stays the FIRST image (back-compat + plain-repost guards);
+  // image_paths is the full ordered JSON list (NULL when there are none).
+  const paths = hasImage ? await processPostImages(files) : [];
+  const image_path: string | null = paths[0] ?? null;
+  const image_paths = encodeImagePaths(paths);
 
   const result = await execute(
-    `INSERT INTO posts (public_id, user_id, content_html, visibility, image_path, type, skill_tag, repost_of) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [newPublicId(), userId, content_html, visibility, image_path, type, skill_tag, repostRootId]
+    `INSERT INTO posts (public_id, user_id, content_html, visibility, image_path, type, skill_tag, repost_of, image_paths) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [newPublicId(), userId, content_html, visibility, image_path, type, skill_tag, repostRootId, image_paths]
   );
 
   // The author has implicitly seen their own post — record it so the unseen-first
@@ -143,7 +187,7 @@ export async function createPost(userId: number, input: CreatePostInput) {
   // selected as null): PostCard reads `repost_of !== undefined` to decide a row
   // is a repost, so a null here would mis-render a fresh post as a tombstone.
   const post = await queryOne(
-    `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.visibility,
+    `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.image_paths, p.visibility,
             p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at,
             u.username, u.first_name, u.last_name, u.avatar,
             0 AS like_count, 0 AS comment_count, 0 AS liked_by_me
@@ -152,70 +196,81 @@ export async function createPost(userId: number, input: CreatePostInput) {
     [result.insertId]
   );
 
-  return normalizeAvatar(post);
+  return { ...normalizeAvatar(post), image_paths: decodeImagePaths(post.image_paths) };
 }
 
 export interface EditPostInput {
   contentHtml: string;
-  visibility?: string;       // omitted ⇒ leave visibility unchanged
-  imageFile: File | null;    // present (size>0) ⇒ replace/add the image
-  removeImage: boolean;      // true (and no new file) ⇒ strip back to text-only
+  visibility?: string;          // omitted ⇒ leave visibility unchanged
+  keptPaths?: string[];         // existing image URLs the user kept, in display order
+  newImageFiles?: File[];       // freshly attached images to append (after the kept ones)
 }
 
 /**
- * Owner edits a post's text, image, and (optionally) visibility — type and
- * skill_tag are immutable here. Image intent: a new file replaces/adds; else
- * removeImage strips it; else the current image is kept. The old blob is deleted
- * only after the row stops referencing it, so a failed UPDATE never orphans it.
- * Edits are silent (no edited marker). Returns the persisted content/image so
- * the caller can patch its cached copy without a refetch.
+ * Owner edits a post's text, images, and (optionally) visibility — type and
+ * skill_tag are immutable here. Image intent is declarative: the final image set
+ * is `keptPaths` (the existing URLs the editor left in place, spoof-filtered
+ * against what the row actually has) followed by the freshly uploaded
+ * `newImageFiles`, capped at {@link MAX_POST_IMAGES}. Any previously-stored blob
+ * the editor dropped is deleted only AFTER the row stops referencing it, so a
+ * failed UPDATE never orphans a live image. Edits are silent (no edited marker).
+ * Returns the persisted content/images so the caller can patch its cache.
  */
 export async function editPost(userId: number, postId: number, input: EditPostInput) {
   if (!postId) throw new HttpError(400, 'post_id required');
 
-  const post = await queryOne<{ id: number; image_path: string | null }>(
-    `SELECT id, image_path FROM posts WHERE id = ? AND user_id = ?`,
+  const post = await queryOne<{ id: number; image_path: string | null; image_paths: unknown }>(
+    `SELECT id, image_path, image_paths FROM posts WHERE id = ? AND user_id = ?`,
     [postId, userId]
   );
   if (!post) throw new HttpError(403, 'Not found or not yours');
 
   const raw = (input.contentHtml || '').trim();
-  const hasNewImage = !!(input.imageFile && input.imageFile.size > 0);
-  const keepsImage = !!post.image_path && !input.removeImage && !hasNewImage;
-  // A post must still have text or an image after the edit (mirrors createPost).
-  if (!raw && !hasNewImage && !keepsImage) throw new HttpError(400, 'Content or image required');
+
+  // What the row currently stores (multi-image rows use image_paths; legacy rows
+  // fall back to the single image_path).
+  const existing = decodeImagePaths(post.image_paths);
+  const existingList = existing.length ? existing : (post.image_path ? [post.image_path] : []);
+
+  // Keep only the existing URLs the editor actually retained — and only ones the
+  // row genuinely has, so a forged keptPaths can't smuggle in an arbitrary URL.
+  const requestedKeep = input.keptPaths ?? existingList;
+  const kept = requestedKeep.filter((p) => existingList.includes(p)).slice(0, MAX_POST_IMAGES);
+
+  // Append new uploads up to the remaining room.
+  const newFiles = (input.newImageFiles ?? []).filter((f) => !!f && f.size > 0);
+  const room = Math.max(0, MAX_POST_IMAGES - kept.length);
+  const uploaded = room > 0 && newFiles.length ? await processPostImages(newFiles.slice(0, room)) : [];
+
+  const finalPaths = [...kept, ...uploaded];
+  // A post must still have text or at least one image after the edit (mirrors createPost).
+  if (!raw && finalPaths.length === 0) throw new HttpError(400, 'Content or image required');
 
   const content_html = sanitizeHtml(raw);
   const allowedVisibility = ['friends', 'public', 'exclusive'];
   const visibility = allowedVisibility.includes(input.visibility ?? '') ? input.visibility! : undefined;
 
-  // Resolve the next image_path and which old file (if any) to delete afterward.
-  let nextImagePath = post.image_path;
-  let oldFile: string | null = null;
-  if (hasNewImage) {
-    nextImagePath = await processPostImage(input.imageFile!);
-    oldFile = post.image_path;
-  } else if (input.removeImage) {
-    nextImagePath = null;
-    oldFile = post.image_path;
-  }
+  const image_path = finalPaths[0] ?? null;
+  const image_paths = encodeImagePaths(finalPaths);
 
   if (visibility) {
     await execute(
-      `UPDATE posts SET content_html = ?, image_path = ?, visibility = ? WHERE id = ? AND user_id = ?`,
-      [content_html, nextImagePath, visibility, postId, userId]
+      `UPDATE posts SET content_html = ?, image_path = ?, image_paths = ?, visibility = ? WHERE id = ? AND user_id = ?`,
+      [content_html, image_path, image_paths, visibility, postId, userId]
     );
   } else {
     await execute(
-      `UPDATE posts SET content_html = ?, image_path = ? WHERE id = ? AND user_id = ?`,
-      [content_html, nextImagePath, postId, userId]
+      `UPDATE posts SET content_html = ?, image_path = ?, image_paths = ? WHERE id = ? AND user_id = ?`,
+      [content_html, image_path, image_paths, postId, userId]
     );
   }
 
-  // Remove the orphaned old blob only after the row no longer points at it.
-  if (oldFile) await deleteUploadFile(oldFile);
+  // Remove every old blob the editor dropped — only after the row no longer
+  // points at it.
+  const removed = existingList.filter((p) => !finalPaths.includes(p));
+  for (const file of removed) await deleteUploadFile(file);
 
-  return { content_html, image_path: nextImagePath, visibility };
+  return { content_html, image_path, image_paths: finalPaths, visibility };
 }
 
 export interface AcceptAnswerResult {
@@ -522,8 +577,8 @@ export async function deleteComment(userId: number, commentId: number): Promise<
 export async function deletePost(userId: number, postId: number): Promise<void> {
   if (!postId) throw new HttpError(400, 'post_id required');
 
-  const owned = await queryOne<{ image_path: string | null }>(
-    `SELECT image_path FROM posts WHERE id = ? AND user_id = ?`,
+  const owned = await queryOne<{ image_path: string | null; image_paths: unknown }>(
+    `SELECT image_path, image_paths FROM posts WHERE id = ? AND user_id = ?`,
     [postId, userId]
   );
   if (!owned) throw new HttpError(403, 'Not found or not yours');
@@ -533,8 +588,10 @@ export async function deletePost(userId: number, postId: number): Promise<void> 
   await execute(`DELETE FROM post_comments WHERE post_id = ?`, [postId]);
   await execute(`DELETE FROM posts         WHERE id = ? AND user_id = ?`, [postId, userId]);
 
-  // Remove the orphaned image blob (mirrors avatar cleanup).
-  await deleteUploadFile(owned.image_path);
+  // Remove every orphaned image blob (mirrors avatar cleanup). Multi-image rows
+  // store the full list in image_paths; legacy rows fall back to image_path.
+  const blobs = decodeImagePaths(owned.image_paths);
+  for (const file of (blobs.length ? blobs : [owned.image_path])) await deleteUploadFile(file);
 }
 
 export async function addComment(userId: number, postId: number, rawContent: string, parentId: number | null) {
@@ -572,7 +629,7 @@ const SCORED_WINDOW = 300; // candidate pool ranked in-memory for the landing pa
 // repost_count + reposted_by_me are keyed on COALESCE(p.repost_of, p.id) so a
 // repost card shows the ROOT original's tally and the viewer's toggle state.
 const FEED_COLUMNS = `
-    p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.visibility,
+    p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.image_paths, p.visibility,
     p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.created_at, p.repost_of,
     u.username, u.first_name, u.last_name, u.avatar, u.tags AS author_tags,
     (SELECT COUNT(*) FROM post_likes     WHERE post_id = p.id) AS like_count,
@@ -668,6 +725,7 @@ function normalizeFeedRow(p: any) {
 
   return {
     ...normalizeAvatar(rest),
+    image_paths: decodeImagePaths(rest.image_paths),
     like_count: parseInt(rest.like_count || 0),
     comment_count: parseInt(rest.comment_count || 0),
     liked_by_me: parseInt(rest.liked_by_me || 0) > 0,

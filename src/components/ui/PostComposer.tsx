@@ -15,6 +15,7 @@ import { Input } from './Input';
 import { Tooltip } from './Tooltip';
 import { useToast } from './Toast';
 import { gsap } from '@/lib/gsap';
+import { postImages } from './PostImageGrid';
 // Feature-owned domain types still live with the home feed; the composer is a
 // data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
 import { displayName, type CurrentUser, type MentionUser, type Post } from '@/app/(dashboard)/home/shared';
@@ -22,9 +23,21 @@ import { displayName, type CurrentUser, type MentionUser, type Post } from '@/ap
 type Trigger = '@' | '#';
 type PostType = 'status' | 'ask' | 'win';
 
+// One attached image in the composer: a freshly-picked `file` (with a blob
+// preview URL), or an existing server image kept from edit mode (`file: null`,
+// `url` is its server path).
+interface ComposerImage {
+  url: string;
+  file: File | null;
+}
+
 // Maximum visible characters allowed per post. Mention (@) and tag (#) pills
 // count toward this via innerText, so the limit reflects what the reader sees.
 const MAX_POST_CHARS = 500;
+
+// Product cap: a post carries at most 3 images. Mirrors the server cap in
+// `createPost`/`editPost` so the user gets instant feedback (server re-validates).
+const MAX_POST_IMAGES = 3;
 
 // Post image attachment — mirrors the server allowlist/cap (api/posts) so the
 // user gets instant feedback; the server still re-validates (never trust client).
@@ -72,8 +85,10 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
-  // image preview (a server path, not a blob) and visibility below.
-  const originalImagePath = editing?.post.image_path ?? null;
+  // image previews (server paths, not blobs) and visibility below.
+  const initialImages: ComposerImage[] = editing
+    ? postImages(editing.post).map((url) => ({ url, file: null }))
+    : [];
 
   // Editor refs / state
   const editorRef = useRef<HTMLDivElement>(null);
@@ -85,8 +100,8 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const [showEmoji, setShowEmoji] = useState(false);
   const emojiGroupRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(originalImagePath);
+  // Up to MAX_POST_IMAGES attached images, in display order.
+  const [images, setImages] = useState<ComposerImage[]>(initialImages);
 
   // Autocomplete dropdown state
   const [popoverActive, setPopoverActive] = useState(false);
@@ -366,13 +381,19 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   };
 
   // ── Image attachment ────────────────────────────────────────
-  // Revoke the previous object URL whenever the preview changes or the component
-  // unmounts — the cleanup runs with the *old* value, so no URL leaks.
-  // Only blob: URLs are object URLs that need revoking — the edit-mode seed is a
-  // server path, so guard against revoking (a no-op, but keeps intent clear).
+  // Revoke every blob preview URL on unmount so no object URL leaks. Kept in a
+  // ref (not the effect dep list) so adding/removing images mid-session doesn't
+  // re-run cleanup and revoke URLs still on screen — only blob: URLs are object
+  // URLs (edit-mode seeds are server paths, left untouched).
+  const imagesRef = useRef(images);
+  useEffect(() => { imagesRef.current = images; }, [images]);
   useEffect(() => {
-    return () => { if (imagePreview?.startsWith('blob:')) URL.revokeObjectURL(imagePreview); };
-  }, [imagePreview]);
+    return () => {
+      for (const img of imagesRef.current) {
+        if (img.file && img.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
+      }
+    };
+  }, []);
 
   // Edit mode: seed the editor from the post's HTML once on mount (image +
   // visibility are seeded via initial state above).
@@ -384,24 +405,53 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   }, []);
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = ''; // reset so re-picking the same file still fires onChange
-    if (!file) return;
-    if (!POST_IMAGE_TYPES.includes(file.type)) {
-      toast({ variant: 'error', title: 'Unsupported image', description: 'Use a JPG, PNG, or WebP image.' });
+    if (picked.length === 0) return;
+
+    const room = MAX_POST_IMAGES - images.length;
+    if (room <= 0) {
+      toast({ variant: 'error', title: 'Image limit reached', description: `You can attach up to ${MAX_POST_IMAGES} images.` });
       return;
     }
-    if (file.size > POST_IMAGE_MAX_BYTES) {
-      toast({ variant: 'error', title: 'Image too large', description: 'Maximum image size is 5 MB.' });
-      return;
+
+    const accepted: ComposerImage[] = [];
+    for (const file of picked) {
+      if (accepted.length >= room) {
+        toast({ variant: 'info', title: 'Image limit reached', description: `Only the first ${MAX_POST_IMAGES} images were added.` });
+        break;
+      }
+      if (!POST_IMAGE_TYPES.includes(file.type)) {
+        toast({ variant: 'error', title: 'Unsupported image', description: 'Use a JPG, PNG, or WebP image.' });
+        continue;
+      }
+      if (file.size > POST_IMAGE_MAX_BYTES) {
+        toast({ variant: 'error', title: 'Image too large', description: 'Maximum image size is 5 MB.' });
+        continue;
+      }
+      accepted.push({ url: URL.createObjectURL(file), file });
     }
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file)); // effect revokes any prior URL
+    if (accepted.length) setImages((prev) => [...prev, ...accepted]);
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
+  // Drop one image; revoke its blob preview immediately (only freshly-picked
+  // files carry a blob URL — existing edit-mode images are server paths).
+  const removeImageAt = (index: number) => {
+    setImages((prev) => {
+      const img = prev[index];
+      if (img?.file && img.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  // Drop every image (post-submit reset). Revoke all blob previews first.
+  const clearImages = () => {
+    setImages((prev) => {
+      for (const img of prev) {
+        if (img.file && img.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
+      }
+      return [];
+    });
   };
 
   // ── Emoji picker dismissal (outside-click / Escape) ─────────
@@ -420,11 +470,17 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   }, [showEmoji]);
 
   // ── Post / Save ─────────────────────────────────────────────
-  // Valid with text, an image (new or kept), or both — never over the cap.
-  const hasImageContent = !!imageFile || !!imagePreview;
+  // Valid with text, at least one image (new or kept), or both — never over the cap.
+  const hasImageContent = images.length > 0;
   // A quote needs text OR an image (an empty, image-less quote is just a plain
   // repost, handled by the menu's instant action) — same rule as a normal post.
   const canSubmit = (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
+
+  // Append every freshly-picked image File (skipping kept existing ones, which
+  // carry file: null) as repeated `image` parts the server reads via getAll.
+  const appendNewImages = (fd: FormData) => {
+    for (const img of images) if (img.file) fd.append('image', img.file);
+  };
 
   const createPostSubmit = async (content_html: string) => {
     try {
@@ -433,7 +489,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
       formData.append('visibility', visibility);
       formData.append('type', postType);
       if (postType === 'ask' && skillTag.trim()) formData.append('skill_tag', skillTag.trim());
-      if (imageFile) formData.append('image', imageFile);
+      appendNewImages(formData);
       // No Content-Type header — the browser sets the multipart boundary itself.
       const res = await fetch('/api/posts', { method: 'POST', body: formData });
       const data = await res.json();
@@ -442,7 +498,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         setCharCount(0);
         setPopoverActive(false);
         setShowEmoji(false);
-        removeImage();
+        clearImages();
         setPostType('status');
         setSkillTag('');
         onPosted(data.post);
@@ -462,7 +518,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
       fd.append('content_html', content_html);
       fd.append('visibility', 'public'); // a quote republishes public content
       fd.append('repost_of', String(quoting.original.id));
-      if (imageFile) fd.append('image', imageFile); // the quote's OWN image (optional)
+      appendNewImages(fd); // the quote's OWN image(s) (optional)
       const res = await fetch('/api/posts', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
@@ -470,6 +526,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         setCharCount(0);
         setPopoverActive(false);
         setShowEmoji(false);
+        clearImages();
         quoting.onPosted(data.post);
         toast({ variant: 'success', title: 'Reposted', description: 'Your quote is now live in the feed.' });
       } else {
@@ -482,16 +539,17 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
 
   const saveEdit = async (content_html: string) => {
     if (!editing) return;
-    // Had an image, now cleared with no replacement ⇒ ask the server to drop it.
-    const removed = !!originalImagePath && !imageFile && !imagePreview;
+    // Declarative image intent: send the existing URLs the editor kept + any new
+    // files. The server drops any prior image not in kept_paths.
+    const keptPaths = images.filter((img) => !img.file).map((img) => img.url);
     try {
       const fd = new FormData();
       fd.append('action', 'post_edit');
       fd.append('post_id', String(editing.post.id));
       fd.append('content_html', content_html);
       fd.append('visibility', visibility);
-      if (imageFile) fd.append('image', imageFile);
-      if (removed) fd.append('remove_image', '1');
+      fd.append('kept_paths', JSON.stringify(keptPaths));
+      appendNewImages(fd);
       const res = await fetch('/api/posts', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
@@ -499,6 +557,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
           ...editing.post,
           content_html: data.content_html,
           image_path: data.image_path ?? null,
+          image_paths: data.image_paths ?? null,
           visibility: data.visibility ?? editing.post.visibility,
         });
         toast({ variant: 'success', title: 'Post updated', description: 'Your changes are saved.' });
@@ -522,7 +581,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
       setCharCount(0);
       setPopoverActive(false);
       setShowEmoji(false);
-      removeImage();
+      clearImages();
       setPostType('status');
       setSkillTag('');
       toast({ variant: 'info', title: 'Demo composer', description: 'Showcase only — nothing was actually posted.' });
@@ -709,26 +768,33 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
       </div>
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: COMPOSER IMAGE PREVIEW
-          Contains: attached image thumbnail + remove (×) control
+          DEVELOPMENT NAVIGATOR: COMPOSER IMAGE PREVIEWS (up to 3)
+          Contains: attached image thumbnails + per-image remove (×) control
           ────────────────────────────────────────────────────────── */}
-      {imagePreview && (
-        <div className="relative mt-3 inline-block">
-          {/* Blob object-URL preview — not server-optimizable, so a plain <img>. */}
-          <img
-            src={imagePreview}
-            alt="Attached preview"
-            className="max-h-56 max-w-full rounded-2xl border border-white/[0.07] object-cover"
-          />
-          <Button
-            variant="unstyled"
-            onClick={removeImage}
-            aria-label="Remove image"
-            title="Remove image"
-            className="absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-white backdrop-blur-sm hover:bg-black/80 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+      {images.length > 0 && (
+        <div className={`mt-3 grid gap-2 ${images.length === 1 ? 'grid-cols-1 max-w-xs' : 'grid-cols-3'}`}>
+          {images.map((img, i) => (
+            <div key={img.url} className="relative group">
+              {/* Blob object-URL (or kept server path) preview — a plain <img>
+                  since blob URLs aren't server-optimizable. */}
+              <img
+                src={img.url}
+                alt={`Attached preview ${i + 1}`}
+                className={`w-full rounded-2xl border border-white/[0.07] object-cover ${
+                  images.length === 1 ? 'max-h-56' : 'aspect-square'
+                }`}
+              />
+              <Button
+                variant="unstyled"
+                onClick={() => removeImageAt(i)}
+                aria-label={`Remove image ${i + 1}`}
+                title="Remove image"
+                className="absolute top-1.5 right-1.5 flex items-center justify-center w-7 h-7 rounded-full bg-black/60 text-white backdrop-blur-sm hover:bg-black/80 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -763,13 +829,18 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
             </ToolbarButton>
             {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
           </div>
-          <ToolbarButton label="Add a photo" onClick={() => fileInputRef.current?.click()}>
+          <ToolbarButton
+            label={images.length >= MAX_POST_IMAGES ? `Up to ${MAX_POST_IMAGES} images` : 'Add a photo'}
+            disabled={images.length >= MAX_POST_IMAGES}
+            onClick={() => fileInputRef.current?.click()}
+          >
             <ImageIcon className="w-4 h-4" />
           </ToolbarButton>
           <input
             ref={fileInputRef}
             type="file"
             accept={POST_IMAGE_ACCEPT}
+            multiple
             onChange={handleImageSelect}
             className="hidden"
             aria-hidden

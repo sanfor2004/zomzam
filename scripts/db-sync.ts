@@ -241,7 +241,8 @@ const schema: Record<string, Record<string, string>> = {
     user_id: 'INT NOT NULL',
     content_html: 'TEXT NOT NULL',
     visibility: "ENUM('friends', 'public', 'exclusive') NOT NULL DEFAULT 'friends'",
-    image_path: 'VARCHAR(255) NULL DEFAULT NULL',
+    image_path: 'VARCHAR(255) NULL DEFAULT NULL',                   // first attached image (kept for back-compat + plain-repost guards)
+    image_paths: 'JSON NULL DEFAULT NULL',                          // full ordered list of up to 3 attached images (image_path = element 0)
     type: "ENUM('status', 'ask', 'win') NOT NULL DEFAULT 'status'", // favor economy: one feed, branch on type
     skill_tag: 'VARCHAR(50) NULL DEFAULT NULL',                      // ask routing/matching
     accepted_answer_id: 'BIGINT UNSIGNED NULL DEFAULT NULL',         // FK -> post_comments.id (the accepted answer)

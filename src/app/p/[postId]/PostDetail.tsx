@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2, Globe, Users, Lock } from 'lucide-react';
 import { FollowButton } from '@/components/social/FollowButton';
 import { SignInPrompt } from '@/components/social/SignInPrompt';
+import { PostImageGrid, postImages } from '@/components/ui';
 
 interface Post {
   id: number;
@@ -18,6 +19,7 @@ interface Post {
   avatar: string;
   content_html: string;
   image_path?: string | null;
+  image_paths?: string[] | null;
   visibility?: string;
   type?: 'status' | 'ask' | 'win';
   skill_tag?: string | null;
@@ -355,16 +357,10 @@ export default function PostDetail({
           dangerouslySetInnerHTML={{ __html: post.content_html }}
         />
 
-        {post.image_path && (
-          <Image
-            src={post.image_path}
-            alt=""
-            width={1200}
-            height={800}
-            priority
-            sizes="(max-width: 800px) calc(100vw - 2rem), 736px"
-            className="mt-4 w-full max-h-[32rem] object-cover rounded-2xl border border-white/[0.06]"
-          />
+        {postImages(post).length > 0 && (
+          <div className="mt-4">
+            <PostImageGrid images={postImages(post)} single="rounded" />
+          </div>
         )}
 
         {/* Action bar */}
