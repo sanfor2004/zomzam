@@ -191,33 +191,37 @@ function SignPageContent() {
   };
 
   return (
-    <div ref={pageRef} className="min-h-screen w-full bg-[#09090b] flex items-center justify-center relative overflow-hidden">
+    <div ref={pageRef} className="min-h-screen w-full bg-[#09090b] flex items-center justify-center relative overflow-x-hidden py-24 sm:py-28">
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AMBIENT BACKGROUND
           Contains: orange radial glow (bgGlowRef — blooms from
           scale 0.3 at t=0), OrbitRings SVG (ringsRef — 3 concentric
           arc rings, CSS-rotated, GSAP fade-in at t=0)
+          Fixed, viewport-clipped layer so the oversized glow/rings
+          stay centered and never inflate scroll height or trigger a
+          horizontal scrollbar when the card grows past the viewport.
           ────────────────────────────────────────────────────────── */}
-      <div
-        ref={bgGlowRef}
-        aria-hidden="true"
-        className="absolute z-0 pointer-events-none"
-        style={{
-          width: '900px',
-          height: '900px',
-          borderRadius: '50%',
-          background:
-            'radial-gradient(circle, rgba(238,87,18,0.35) 0%, rgba(238,87,18,0.12) 36%, rgba(238,87,18,0.03) 58%, transparent 72%)',
-          filter: 'blur(40px)',
-          top: '50%',
-          left: '50%',
-          marginLeft: '-450px',
-          marginTop: '-450px',
-        }}
-      />
+      <div aria-hidden="true" className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div
+          ref={bgGlowRef}
+          className="absolute pointer-events-none"
+          style={{
+            width: '900px',
+            height: '900px',
+            borderRadius: '50%',
+            background:
+              'radial-gradient(circle, rgba(238,87,18,0.35) 0%, rgba(238,87,18,0.12) 36%, rgba(238,87,18,0.03) 58%, transparent 72%)',
+            filter: 'blur(40px)',
+            top: '50%',
+            left: '50%',
+            marginLeft: '-450px',
+            marginTop: '-450px',
+          }}
+        />
 
-      <OrbitRings ref={ringsRef} />
+        <OrbitRings ref={ringsRef} />
+      </div>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: TOP NAVIGATION BAR
