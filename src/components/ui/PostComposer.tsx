@@ -81,7 +81,10 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-export function PostComposer({ currentUser, friends, onPosted, editing, quoting, demo }: PostComposerProps) {
+// `currentUser` stays in the props contract (callers still pass it) but is no
+// longer read here — the composer dropped its leading avatar and personalised
+// placeholder in the toolbar-on-focus redesign.
+export function PostComposer({ friends, onPosted, editing, quoting, demo }: PostComposerProps) {
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
@@ -95,6 +98,10 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const composerCardRef = useRef<HTMLDivElement>(null);
   const [charCount, setCharCount] = useState(0);
   const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
+  // The rich-text settings toolbar is revealed only once the user clicks into
+  // the editor (kept hidden until then for a clean, distraction-free resting
+  // state — matches the "settings appear on click" interaction).
+  const [showToolbar, setShowToolbar] = useState(false);
 
   // Emoji picker + image attachment
   const [showEmoji, setShowEmoji] = useState(false);
@@ -454,6 +461,21 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     });
   };
 
+  // ── Toolbar reveal dismissal (click outside the whole card) ──
+  // The settings toolbar appears on editor focus and stays up while the user
+  // works anywhere inside the card; a click outside the composer retires it.
+  useEffect(() => {
+    if (!showToolbar) return;
+    const onDown = (e: PointerEvent) => {
+      if (composerCardRef.current && !composerCardRef.current.contains(e.target as Node)) {
+        setShowToolbar(false);
+        setShowEmoji(false);
+      }
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [showToolbar]);
+
   // ── Emoji picker dismissal (outside-click / Escape) ─────────
   useEffect(() => {
     if (!showEmoji) return;
@@ -610,16 +632,16 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
       ? 'What do you need help with? Be specific so the right people can answer.'
       : postType === 'win'
       ? 'Share a win worth celebrating — what did you just pull off?'
-      : `What's on your mind${currentUser ? `, ${displayName(currentUser)}` : ''}? Use @ to mention, # to tag.`;
+      : "What's on your mind?";
   const submitLabel = quoting ? 'Repost' : editing ? 'Save' : postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
 
   return (
     /* ──────────────────────────────────────────────────────────
         DEVELOPMENT NAVIGATOR: POST COMPOSER
         Contains: Top row (post type switch + audience switch),
-                  Row 1 (avatar + editor + char counter),
-                  Row 2 (text settings toolbar + Post button),
-                  image preview, @/#-autocomplete popover
+                  Editor + settings toolbar (revealed on focus),
+                  image preview, action bar (char counter + icon send),
+                  @/#-autocomplete popover
         ────────────────────────────────────────────────────────── */
     <div
       ref={composerCardRef}
@@ -706,65 +728,90 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         </div>
       )}
 
-      {/* Row 1 — avatar, text area, character amount */}
-      <div className="flex gap-3">
-        <Image
-          src={currentUser?.avatar || '/Assets/Img/default-avatar.png'}
-          alt="You"
-          width={40}
-          height={40}
-          className="w-10 h-10 rounded-xl object-cover border border-slate-800 flex-shrink-0"
-        />
-
-        <div className="flex-1 min-w-0">
-          <div className="relative">
-            <div
-              ref={editorRef}
-              contentEditable
-              onInput={handleInput}
-              onKeyDown={handleKeyDown}
-              data-placeholder={editorPlaceholder}
-              className="w-full min-h-[44px] max-w-full bg-[#111318] rounded-2xl px-4 py-2.5 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden outline-none focus:border-primary-500/40 transition-colors"
-            />
-            <style jsx>{`
-              div[contenteditable]:empty:before {
-                content: attr(data-placeholder);
-                color: #64748b;
-                pointer-events: none;
-              }
-              div[contenteditable] :global(ul) {
-                list-style: disc;
-                padding-left: 1.5rem;
-                margin: 0.25rem 0;
-              }
-              div[contenteditable] :global(ol) {
-                list-style: decimal;
-                padding-left: 1.5rem;
-                margin: 0.25rem 0;
-              }
-              div[contenteditable] :global(li) {
-                margin: 0.125rem 0;
-              }
-            `}</style>
-          </div>
-
-          {/* Character counter — amber near limit, rose when over */}
-          <div className="flex justify-end mt-2">
-            <span
-              aria-live="polite"
-              title={`${MAX_POST_CHARS - charCount} characters remaining`}
-              className={`text-[11px] font-bold tabular-nums transition-colors ${
-                charCount > MAX_POST_CHARS
-                  ? 'text-rose-500'
-                  : charCount >= MAX_POST_CHARS * 0.9
-                  ? 'text-amber-400'
-                  : 'text-slate-600'
-              }`}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: EDITOR + SETTINGS TOOLBAR
+          Contains: rich-text settings toolbar (revealed on focus —
+          Bold/Italic/Underline/List, @, #, emoji, image), and the
+          contenteditable editor ("What's on your mind?")
+          ────────────────────────────────────────────────────────── */}
+      <div className="relative">
+        {/* Settings toolbar — revealed once the editor is clicked/focused */}
+        {showToolbar && (
+          <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 mb-2 p-1 rounded-xl bg-[#111318] border border-slate-800/60 origin-top animate-in">
+            <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
+              <Bold className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
+              <Italic className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
+              <Underline className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
+              <List className="w-4 h-4" />
+            </ToolbarButton>
+            <span className="w-px h-5 bg-slate-800 mx-1" />
+            <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
+              <AtSign className="w-4 h-4" />
+            </ToolbarButton>
+            <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
+              <Hash className="w-4 h-4" />
+            </ToolbarButton>
+            <div ref={emojiGroupRef} className="relative">
+              <ToolbarButton label="Emoji" active={showEmoji} onClick={() => setShowEmoji((v) => !v)}>
+                <Smile className="w-4 h-4" />
+              </ToolbarButton>
+              {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
+            </div>
+            <ToolbarButton
+              label={images.length >= MAX_POST_IMAGES ? `Up to ${MAX_POST_IMAGES} images` : 'Add a photo'}
+              disabled={images.length >= MAX_POST_IMAGES}
+              onClick={() => fileInputRef.current?.click()}
             >
-              {charCount}/{MAX_POST_CHARS}
-            </span>
+              <ImageIcon className="w-4 h-4" />
+            </ToolbarButton>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={POST_IMAGE_ACCEPT}
+              multiple
+              onChange={handleImageSelect}
+              className="hidden"
+              aria-hidden
+              tabIndex={-1}
+            />
           </div>
-        </div>
+        )}
+
+        <div
+          ref={editorRef}
+          contentEditable
+          onInput={handleInput}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setShowToolbar(true)}
+          data-placeholder={editorPlaceholder}
+          className="w-full min-h-[88px] max-w-full bg-[#111318] rounded-2xl px-4 py-3 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden outline-none focus:border-primary-500/40 transition-colors"
+        />
+        <style jsx>{`
+          div[contenteditable]:empty:before {
+            content: attr(data-placeholder);
+            color: #64748b;
+            pointer-events: none;
+          }
+          div[contenteditable] :global(ul) {
+            list-style: disc;
+            padding-left: 1.5rem;
+            margin: 0.25rem 0;
+          }
+          div[contenteditable] :global(ol) {
+            list-style: decimal;
+            padding-left: 1.5rem;
+            margin: 0.25rem 0;
+          }
+          div[contenteditable] :global(li) {
+            margin: 0.125rem 0;
+          }
+        `}</style>
       </div>
 
       {/* ──────────────────────────────────────────────────────────
@@ -798,67 +845,39 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         </div>
       )}
 
-      {/* Row 2 — text settings (left) + Post button (right).
-          Phone: stacks vertically so the toolbar never collides with the CTA;
-          the Post button spans full width for a comfortable thumb-zone target. */}
-      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mt-4 pt-4 border-t border-slate-800/60">
-        {/* Text settings — wraps to a second line on very narrow screens */}
-        <div className="flex flex-wrap items-center gap-0.5 sm:gap-1">
-          <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
-            <Bold className="w-4 h-4" />
-          </ToolbarButton>
-          <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
-            <Italic className="w-4 h-4" />
-          </ToolbarButton>
-          <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
-            <Underline className="w-4 h-4" />
-          </ToolbarButton>
-          <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
-            <List className="w-4 h-4" />
-          </ToolbarButton>
-          <span className="w-px h-5 bg-slate-800 mx-1" />
-          <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
-            <AtSign className="w-4 h-4" />
-          </ToolbarButton>
-          <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
-            <Hash className="w-4 h-4" />
-          </ToolbarButton>
-          <div ref={emojiGroupRef} className="relative">
-            <ToolbarButton label="Emoji" active={showEmoji} onClick={() => setShowEmoji((v) => !v)}>
-              <Smile className="w-4 h-4" />
-            </ToolbarButton>
-            {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
-          </div>
-          <ToolbarButton
-            label={images.length >= MAX_POST_IMAGES ? `Up to ${MAX_POST_IMAGES} images` : 'Add a photo'}
-            disabled={images.length >= MAX_POST_IMAGES}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <ImageIcon className="w-4 h-4" />
-          </ToolbarButton>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept={POST_IMAGE_ACCEPT}
-            multiple
-            onChange={handleImageSelect}
-            className="hidden"
-            aria-hidden
-            tabIndex={-1}
-          />
-        </div>
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: COMPOSER ACTION BAR
+          Contains: live character counter (left of the CTA),
+                    icon-only send button
+          ────────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-800/60">
+        {/* Character counter — amber near limit, rose when over */}
+        <span
+          aria-live="polite"
+          title={`${MAX_POST_CHARS - charCount} characters remaining`}
+          className={`text-[11px] font-bold tabular-nums transition-colors ${
+            charCount > MAX_POST_CHARS
+              ? 'text-rose-500'
+              : charCount >= MAX_POST_CHARS * 0.9
+              ? 'text-amber-400'
+              : 'text-slate-600'
+          }`}
+        >
+          {charCount}/{MAX_POST_CHARS}
+        </span>
 
         <Button
-          size="none"
-          shape="rounded"
+          variant="primary"
+          size="icon"
+          shape="circle"
           onClick={handlePost}
           disabled={!canSubmit}
           loading={postingLoading}
+          aria-label={submitLabel}
+          title={submitLabel}
           leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
-          className="w-full sm:w-auto justify-center h-11 sm:h-[34px] px-4 text-xs font-bold gap-1.5 disabled:opacity-40"
-        >
-          {submitLabel}
-        </Button>
+          className="disabled:opacity-40"
+        />
       </div>
 
       {/* ──────────────────────────────────────────────────────────
