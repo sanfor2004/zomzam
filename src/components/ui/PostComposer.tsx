@@ -866,17 +866,17 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
           {charCount}/{MAX_POST_CHARS}
         </span>
 
+        {/* Send — no chrome at rest: the orange-filled glyph is the affordance.
+            Hover blooms a soft primary tint + lift; active presses it in. */}
         <Button
-          variant="primary"
-          size="icon"
-          shape="circle"
+          variant="unstyled"
           onClick={handlePost}
           disabled={!canSubmit}
           loading={postingLoading}
           aria-label={submitLabel}
           title={submitLabel}
-          leftIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
-          className="disabled:opacity-40"
+          leftIcon={!postingLoading && <Send className="w-5 h-5" fill="currentColor" strokeWidth={0} />}
+          className="flex items-center justify-center w-10 h-10 rounded-xl text-primary-500 transition-all duration-150 hover:bg-primary-500/10 hover:text-primary-600 hover:-translate-y-px active:scale-95 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
         />
       </div>
 
