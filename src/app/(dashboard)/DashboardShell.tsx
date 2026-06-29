@@ -53,6 +53,9 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const pathname = usePathname();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  // Auto-hide the phone bottom bar on scroll-down, reveal on scroll-up.
+  const [barHidden, setBarHidden] = useState(false);
+  const lastScrollY = useRef(0);
   // Seeded from the server (see layout.tsx). The proxy middleware already gates
   // every protected route, so by the time this renders the user is guaranteed
   // authenticated — no client-side auth fetch or loading spinner needed.
@@ -146,6 +149,19 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     router.push(path);
     setMobileMenuOpen(false);
   };
+
+  // Direction-aware auto-hide for the bottom bar. The dashboard scrolls inside
+  // <main>, not the window, so this rides main's onScroll. Hide once scrolled
+  // past the bar's own height; small deltas are ignored to avoid jitter.
+  const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
+    const y = e.currentTarget.scrollTop;
+    if (Math.abs(y - lastScrollY.current) < 6) return;
+    setBarHidden(y > lastScrollY.current && y > 64);
+    lastScrollY.current = y;
+  };
+
+  // Reveal the bar (and reset the tracker) on every route change.
+  useEffect(() => { setBarHidden(false); lastScrollY.current = 0; }, [pathname]);
 
   // Bottom-bar center ➕. The composer state lives in /home's page; reach it via
   // a same-route window event, or route there with a flag the page reads once.
@@ -813,7 +829,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             Viewport-locked, scrollable area where dashboard pages render
             ────────────────────────────────────────────────────────── */}
         {/* pb on phone clears the fixed bottom nav bar (+ safe area). */}
-        <main className="flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8">
+        <main onScroll={handleMainScroll} className="flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8">
           {children}
         </main>
       </div>
@@ -837,7 +853,11 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           ────────────────────────────────────────────────────────── */}
       <nav
         aria-label="Primary"
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-dark/90 backdrop-blur-xl border-t border-slate-800 pb-[env(safe-area-inset-bottom)]"
+        className={cn(
+          'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-dark/90 backdrop-blur-xl border-t border-slate-800 pb-[env(safe-area-inset-bottom)]',
+          'transition-transform duration-300 ease-out motion-reduce:transition-none',
+          barHidden ? 'translate-y-full' : 'translate-y-0',
+        )}
       >
         <div className="flex items-stretch justify-around h-16 px-1">
           <BarTab Icon={Home} label="Home" active={pathname === '/home'} onClick={() => router.push('/home')} />
