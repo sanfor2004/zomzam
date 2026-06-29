@@ -6,6 +6,11 @@ import { useRouter } from 'next/navigation';
 import { useTranslation, LANGUAGES } from '@/context/TranslationContext';
 import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
 import { Button, Switch, Modal, Select, NumberInput, Alert, useToast } from '@/components/ui';
+import {
+  fetchUserPrefs, savePreferences, fetchCrmSettings, saveCrmSettings,
+  fetchNotionSettings, saveNotionSettings, syncNotion,
+  changePassword, logout, deleteAccount, formatLiveClock,
+} from './page.services';
 
 const COMMON_TIMEZONES = [
   'UTC',
@@ -88,65 +93,45 @@ export default function SettingsPage() {
 
   // Fetch initial user settings
   useEffect(() => {
-    const fetchSettings = async () => {
+    (async () => {
       try {
-        const res = await fetch('/api/auth?action=check');
-        const data = await res.json();
-        if (data.success && data.authenticated && data.user) {
-          setTimezone(data.user.timezone || 'UTC');
-          setPrimaryCurrency(data.user.primary_currency || 'EGP');
-          setSecondaryCurrency(data.user.secondary_currency || 'USD');
-          setNotificationsEnabled(!!data.user.notifications_enabled);
+        const prefs = await fetchUserPrefs();
+        if (prefs) {
+          setTimezone(prefs.timezone);
+          setPrimaryCurrency(prefs.primaryCurrency);
+          setSecondaryCurrency(prefs.secondaryCurrency);
+          setNotificationsEnabled(prefs.notificationsEnabled);
         }
       } catch (err) {
         console.error('Failed to load user settings:', err);
       } finally {
         setIsPageLoading(false);
       }
-    };
-    fetchSettings();
+    })();
   }, []);
 
   // Fetch CRM Settings
   useEffect(() => {
-    async function loadCrmSettings() {
+    (async () => {
       try {
-        const response = await fetch('/api/crm', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'get_crm_settings' })
-        });
-        const res = await response.json();
-        if (res.success && res.settings) {
-          setCrmSettings(prev => ({
-            ...prev,
-            ...res.settings
-          }));
-        }
+        const settings = await fetchCrmSettings();
+        if (settings) setCrmSettings(prev => ({ ...prev, ...settings }));
       } catch (err) {
         console.error("Failed to load CRM settings:", err);
       }
-    }
-    loadCrmSettings();
+    })();
   }, []);
 
   // Fetch Notion Settings
   useEffect(() => {
-    async function loadNotionSettings() {
+    (async () => {
       try {
-        const response = await fetch('/api/notion');
-        const res = await response.json();
-        if (res.success && res.settings) {
-          setNotionSettings(prev => ({
-            ...prev,
-            ...res.settings
-          }));
-        }
+        const settings = await fetchNotionSettings();
+        if (settings) setNotionSettings(prev => ({ ...prev, ...settings }));
       } catch (err) {
         console.error("Failed to load Notion settings:", err);
       }
-    }
-    loadNotionSettings();
+    })();
   }, []);
 
   const handleSaveNotionSettings = async (e: React.FormEvent) => {
@@ -154,16 +139,11 @@ export default function SettingsPage() {
     setIsSavingNotion(true);
 
     try {
-      const res = await fetch('/api/notion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_settings', settings: notionSettings }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const { success, error } = await saveNotionSettings(notionSettings);
+      if (success) {
         toast({ variant: 'success', description: 'Notion settings updated successfully!' });
       } else {
-        toast({ variant: 'error', description: data.error || 'Failed to save Notion settings' });
+        toast({ variant: 'error', description: error || 'Failed to save Notion settings' });
       }
     } catch (err) {
       console.error(err);
@@ -184,21 +164,15 @@ export default function SettingsPage() {
     setIsSyncing(true);
 
     try {
-      const res = await fetch('/api/notion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'sync' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        const stats = data.stats;
+      const { success, stats, error } = await syncNotion();
+      if (success && stats) {
         toast({
           variant: 'success',
           title: 'Notion sync complete',
           description: `Synced ${stats.tasks} tasks, ${stats.projects} projects, ${stats.links} links.`,
         });
       } else {
-        toast({ variant: 'error', description: data.error || 'Failed to synchronize with Notion' });
+        toast({ variant: 'error', description: error || 'Failed to synchronize with Notion' });
       }
     } catch (err) {
       console.error(err);
@@ -213,16 +187,11 @@ export default function SettingsPage() {
     setIsSavingCrm(true);
 
     try {
-      const res = await fetch('/api/crm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_crm_settings', settings: crmSettings }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const { success, error } = await saveCrmSettings(crmSettings);
+      if (success) {
         toast({ variant: 'success', description: 'CRM settings updated successfully!' });
       } else {
-        toast({ variant: 'error', description: data.error || 'Failed to save CRM settings' });
+        toast({ variant: 'error', description: error || 'Failed to save CRM settings' });
       }
     } catch (err) {
       console.error(err);
@@ -241,28 +210,7 @@ export default function SettingsPage() {
 
   // Live clock that updates every second in the selected timezone
   useEffect(() => {
-    const updateClock = () => {
-      try {
-        const now = new Date();
-        const formatted = now.toLocaleTimeString('en-US', {
-          timeZone: timezone,
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: true,
-          weekday: 'short',
-        });
-        const dateFormatted = now.toLocaleDateString('en-US', {
-          timeZone: timezone,
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
-        });
-        setLiveClock(`${formatted} · ${dateFormatted}`);
-      } catch {
-        setLiveClock('');
-      }
-    };
+    const updateClock = () => setLiveClock(formatLiveClock(timezone));
     updateClock();
     const timer = setInterval(updateClock, 1000);
     return () => clearInterval(timer);
@@ -274,24 +222,18 @@ export default function SettingsPage() {
     setIsSavingPref(true);
 
     try {
-      const res = await fetch('/api/auth?action=update_settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          timezone,
-          notifications_enabled: notificationsEnabled,
-          primary_currency: primaryCurrency,
-          secondary_currency: secondaryCurrency,
-        }),
+      const { success, message } = await savePreferences({
+        timezone,
+        notificationsEnabled,
+        primaryCurrency,
+        secondaryCurrency,
       });
-
-      const data = await res.json();
-      if (data.success) {
+      if (success) {
         toast({ variant: 'success', description: t('settings_save_success') });
         // Trigger page refresh to propagate header/context updates
         router.refresh();
       } else {
-        toast({ variant: 'error', description: data.message || 'Failed to save settings' });
+        toast({ variant: 'error', description: message || 'Failed to save settings' });
       }
     } catch (err) {
       console.error(err);
@@ -320,29 +262,18 @@ export default function SettingsPage() {
     setIsSavingPass(true);
 
     try {
-      const res = await fetch('/api/profile/change-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          current_password: currentPassword,
-          new_password: newPassword,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
+      const { success, message } = await changePassword(currentPassword, newPassword);
+      if (success) {
         toast({ variant: 'success', description: 'Password changed — signing you out…' });
         // Tear down the current session, then bounce to sign-in. Keep the
         // form disabled (isSavingPass stays true) through the redirect. Logout
         // is best-effort — even if it fails we still redirect, since the
-        // password is already changed — but we surface the failure to the log.
-        await fetch('/api/auth?action=logout', { method: 'POST' }).catch((err) =>
-          console.error('Logout after password change failed:', err),
-        );
+        // password is already changed.
+        await logout();
         router.push('/sign');
         router.refresh();
       } else {
-        toast({ variant: 'error', description: data.message || 'Failed to update password' });
+        toast({ variant: 'error', description: message || 'Failed to update password' });
         setIsSavingPass(false);
       }
     } catch (err) {
@@ -361,18 +292,13 @@ export default function SettingsPage() {
     }
     setIsDeletingAccount(true);
     try {
-      const res = await fetch('/api/profile', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: deletePassword }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const { success, message } = await deleteAccount(deletePassword);
+      if (success) {
         // Redirect to sign-in after deletion
         router.push('/sign');
         router.refresh();
       } else {
-        setDeleteError(data.message || 'Failed to delete account.');
+        setDeleteError(message || 'Failed to delete account.');
         setIsDeletingAccount(false);
       }
     } catch {
