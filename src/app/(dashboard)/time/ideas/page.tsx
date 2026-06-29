@@ -6,29 +6,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Lightbulb, Plus, Trash2, Edit2, X, Check, Save } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-
-interface Task {
-  id: number;
-  title: string;
-  status: string;
-  priority: string;
-  duration_block: number;
-}
-
-interface Horizon {
-  id: number;
-  type: 'week' | 'month' | 'year';
-  content: string;
-  status: string;
-}
-
-interface Idea {
-  id: number;
-  content: string;
-  linked_task_id: number | null;
-  linked_horizon_id: number | null;
-  created_at: string;
-}
+import {
+  loadIdeasData, addIdeaRequest, updateIdeaRequest, deleteIdeaRequest,
+  type Task, type Horizon, type Idea,
+} from './page.services';
 
 type MentionItem = (Task & { _tagType: 'task' }) | (Horizon & { _tagType: 'plan' });
 
@@ -63,20 +44,10 @@ export default function IdeaCapturePage() {
 
   const loadData = async () => {
     try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'load' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIdeas(data.ideas || []);
-        setTasks(data.tasks || []);
-        const week = data.horizons?.week || [];
-        const month = data.horizons?.month || [];
-        const year = data.horizons?.year || [];
-        setHorizons([...week, ...month, ...year]);
-      }
+      const { ideas, tasks, horizons } = await loadIdeasData();
+      setIdeas(ideas);
+      setTasks(tasks);
+      setHorizons(horizons);
     } catch (err) {
       console.error('Failed to load ideas data:', err);
     } finally {
@@ -296,19 +267,8 @@ export default function IdeaCapturePage() {
     try {
       if (editingIdeaId) {
         // Edit Save
-        const res = await fetch('/api/time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'update_idea',
-            id: editingIdeaId,
-            content,
-            linked_task_id: linkedTaskId,
-            linked_horizon_id: linkedHorizonId,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
+        const ok = await updateIdeaRequest(editingIdeaId, { content, linkedTaskId, linkedHorizonId });
+        if (ok) {
           setIdeas(prev => prev.map(i => i.id === editingIdeaId ? { ...i, content, linked_task_id: linkedTaskId, linked_horizon_id: linkedHorizonId } : i));
           setEditingIdeaId(null);
           editorRef.current!.innerHTML = '';
@@ -316,19 +276,9 @@ export default function IdeaCapturePage() {
         }
       } else {
         // Create new
-        const res = await fetch('/api/time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'add_idea',
-            content,
-            linked_task_id: linkedTaskId,
-            linked_horizon_id: linkedHorizonId,
-          }),
-        });
-        const data = await res.json();
-        if (data.success && data.idea) {
-          setIdeas(prev => [data.idea, ...prev]);
+        const idea = await addIdeaRequest({ content, linkedTaskId, linkedHorizonId });
+        if (idea) {
+          setIdeas(prev => [idea, ...prev]);
           editorRef.current!.innerHTML = '';
           setCharCount(0);
         }
@@ -370,15 +320,8 @@ export default function IdeaCapturePage() {
   const handleDeleteIdea = async (id: number) => {
     if (!confirm('Are you sure you want to delete this idea?')) return;
     try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_idea', id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setIdeas(prev => prev.filter(i => i.id !== id));
-      }
+      const ok = await deleteIdeaRequest(id);
+      if (ok) setIdeas(prev => prev.filter(i => i.id !== id));
     } catch (err) {
       console.error('Error deleting idea:', err);
     }
