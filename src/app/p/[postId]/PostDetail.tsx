@@ -9,6 +9,10 @@ import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCirc
 import { FollowButton } from '@/components/social/FollowButton';
 import { SignInPrompt } from '@/components/social/SignInPrompt';
 import { PostImageGrid, postImages } from '@/components/ui';
+import {
+  acceptAnswerRequest, resolveAskRequest, reopenAskRequest,
+  likeRequest, bookmarkRequest, repostRequest, commentRequest,
+} from './PostDetail.services';
 
 interface Post {
   id: number;
@@ -120,15 +124,10 @@ export default function PostDetail({
   const acceptAnswer = async (commentId: number) => {
     if (!isOwner || !isAsk) return;
     try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'accept_answer', post_id: post.id, comment_id: commentId }),
-      });
-      const data = await res.json();
-      if (data.success) {
+      const r = await acceptAnswerRequest(post.id, commentId);
+      if (r.success) {
         setAcceptedId(commentId);
-        setResolvedAt(data.resolvedAt ?? new Date().toISOString());
+        setResolvedAt(r.resolvedAt ?? new Date().toISOString());
       }
     } catch { /* non-blocking */ }
   };
@@ -137,13 +136,8 @@ export default function PostDetail({
   const resolveAsk = async () => {
     if (!isOwner || !isAsk) return;
     try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'resolve_ask', post_id: post.id }),
-      });
-      const data = await res.json();
-      if (data.success) setResolvedAt(data.resolvedAt ?? new Date().toISOString());
+      const r = await resolveAskRequest(post.id);
+      if (r.success) setResolvedAt(r.resolvedAt ?? new Date().toISOString());
     } catch { /* non-blocking */ }
   };
 
@@ -153,13 +147,7 @@ export default function PostDetail({
   const reopenAsk = async () => {
     if (!isOwner || !isAsk) return;
     try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reopen_ask', post_id: post.id }),
-      });
-      const data = await res.json();
-      if (data.success) { setAcceptedId(null); setResolvedAt(null); }
+      if (await reopenAskRequest(post.id)) { setAcceptedId(null); setResolvedAt(null); }
     } catch { /* non-blocking */ }
   };
 
@@ -168,11 +156,7 @@ export default function PostDetail({
     setLiked((prev) => !prev);
     setLikeCount((prev) => (liked ? prev - 1 : prev + 1));
     try {
-      await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'like', post_id: post.id }),
-      });
+      await likeRequest(post.id);
     } catch { /* non-blocking */ }
   };
 
@@ -182,11 +166,7 @@ export default function PostDetail({
     const next = !bookmarked;
     setBookmarked(next);
     try {
-      await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bookmark', post_id: post.id }),
-      });
+      await bookmarkRequest(post.id);
     } catch { setBookmarked(!next); }
   };
 
@@ -196,15 +176,9 @@ export default function PostDetail({
     const next = !reposted;
     setReposted(next);
     setRepostCount((c) => Math.max(0, next ? c + 1 : c - 1));
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'repost', post_id: post.id }),
-      });
-      const data = await res.json();
-      if (!data.success) { setReposted(!next); setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1)); }
-    } catch {
+    let ok = false;
+    try { ok = await repostRequest(post.id); } catch { ok = false; }
+    if (!ok) {
       setReposted(!next);
       setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
     }
@@ -226,14 +200,9 @@ export default function PostDetail({
   const addComment = async (text: string, parentId?: number): Promise<boolean> => {
     if (!viewerId) { window.location.href = '/sign'; return false; }
     try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'comment', post_id: post.id, content: text, parent_id: parentId ?? null }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        const normalized = { ...data.comment, avatar: data.comment.avatar || '/Assets/Img/default-avatar.png' };
+      const comment = await commentRequest(post.id, text, parentId);
+      if (comment) {
+        const normalized = { ...comment, avatar: comment.avatar || '/Assets/Img/default-avatar.png' };
         setComments((prev) => [...prev, normalized]);
         return true;
       }
