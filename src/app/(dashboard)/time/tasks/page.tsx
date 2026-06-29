@@ -1,155 +1,53 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, X, AlertCircle, Database } from 'lucide-react';
+import { LayoutDashboard, Clock, Plus, Check, Play, Edit2, Trash2, RotateCcw, AlertCircle, Database } from 'lucide-react';
 import { Button, Select, Modal, Alert } from '@/components/ui';
 import { gsap } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-
-interface Task {
-  id: number;
-  user_id: number;
-  horizon_id: number | null;
-  title: string;
-  priority: 'urgent' | 'medium' | 'maybe' | 'free';
-  duration_block: number;
-  actual_duration: number | null;
-  status: 'pending' | 'completed' | 'deleted';
-  created_at: string;
-  completed_at: string | null;
-}
-
-interface Horizon {
-  id: number;
-  user_id: number;
-  type: 'week' | 'month' | 'year';
-  content: string;
-  status: 'active' | 'completed';
-  created_at: string;
-}
+import { useTasks } from './useTasks';
+import { type Task, type Priority } from './page.services';
 
 export default function TaskBoardPage() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  // Data State
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [horizons, setHorizons] = useState<Horizon[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // Data + CRUD (load, add, complete, restore, delete, undo, edit, Notion sync).
+  const {
+    horizons, isLoading, activeTasks, completedTasks,
+    undoTask, showUndoToast, isSyncing, syncStats, syncError,
+    addTask, updateTask, completeTask, restoreTask, deleteTask, undoDelete, syncNotion,
+  } = useTasks();
 
   const pageRef  = useRef<HTMLDivElement>(null);
   const tasksRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [isLoading]);
 
-  // Notion sync states
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [syncStats, setSyncStats] = useState<any>(null);
-  const [syncError, setSyncError] = useState<string | null>(null);
-
-  const handleSyncNotion = async () => {
-    setIsSyncing(true);
-    setSyncError(null);
-    setSyncStats(null);
-    try {
-      const res = await fetch('/api/notion', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'sync' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSyncStats(data.stats);
-        loadData();
-        setTimeout(() => setSyncStats(null), 5000);
-      } else {
-        setSyncError(data.error || 'Sync failed');
-        setTimeout(() => setSyncError(null), 5000);
-      }
-    } catch (err) {
-      console.error(err);
-      setSyncError('Failed to sync tasks');
-      setTimeout(() => setSyncError(null), 5000);
-    } finally {
-      setIsSyncing(false);
-    }
-  };
-
   // Add Form State
   const [newTitle, setNewTitle] = useState('');
-  const [newPriority, setNewPriority] = useState<'urgent' | 'medium' | 'maybe' | 'free'>('medium');
+  const [newPriority, setNewPriority] = useState<Priority>('medium');
   const [newDuration, setNewDuration] = useState(25);
   const [newHorizonId, setNewHorizonId] = useState<string>('');
-
 
   // Edit Modal State
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState('');
-  const [editPriority, setEditPriority] = useState<'urgent' | 'medium' | 'maybe' | 'free'>('medium');
+  const [editPriority, setEditPriority] = useState<Priority>('medium');
   const [editDuration, setEditDuration] = useState(25);
   const [editHorizonId, setEditHorizonId] = useState<string>('');
 
-
-  // Undo Buffer
-  const [undoTask, setUndoTask] = useState<Task | null>(null);
-  const [showUndoToast, setShowUndoToast] = useState(false);
-
-  // Load from API
-  const loadData = async () => {
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'load' }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTasks(data.tasks || []);
-        // Horizons are grouped by week/month/year in api, let's flatten them for linking dropdown
-        const week = data.horizons?.week || [];
-        const month = data.horizons?.month || [];
-        const year = data.horizons?.year || [];
-        setHorizons([...week, ...month, ...year]);
-      }
-    } catch (err) {
-      console.error('Failed to load tasks data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // Add Task
+  // Add Task — clears the form on success.
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
-
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'add_task',
-          title: newTitle,
-          priority: newPriority,
-          duration_block: newDuration,
-          horizon_id: newHorizonId ? parseInt(newHorizonId) : null,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.task) {
-        setTasks(prev => [...prev, data.task]);
-        setNewTitle('');
-        setNewPriority('medium');
-        setNewDuration(25);
-        setNewHorizonId('');
-      }
-    } catch (err) {
-      console.error('Error adding task:', err);
+    const ok = await addTask({ title: newTitle, priority: newPriority, duration: newDuration, horizonId: newHorizonId });
+    if (ok) {
+      setNewTitle('');
+      setNewPriority('medium');
+      setNewDuration(25);
+      setNewHorizonId('');
     }
   };
 
@@ -165,96 +63,14 @@ export default function TaskBoardPage() {
       gsap.fromTo(
         row,
         { scale: 1 },
-        {
-          scale: 1.08,
-          duration: 0.18,
-          ease: 'power2.out',
-          yoyo: true,
-          repeat: 1,
-          onComplete: () => gsap.set(row, { scale: 1 }),
-        }
+        { scale: 1.08, duration: 0.18, ease: 'power2.out', yoyo: true, repeat: 1, onComplete: () => gsap.set(row, { scale: 1 }) }
       );
     });
   };
 
-  // Complete Task
-  const handleCompleteTask = async (id: number) => {
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'complete_task', id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        flashTaskCompletion(id);
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'completed' as const, completed_at: new Date().toISOString() } : t));
-      }
-    } catch (err) {
-      console.error('Error completing task:', err);
-    }
-  };
-
-  // Restore Task
-  const handleRestoreTask = async (id: number) => {
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'restore_task', id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, status: 'pending' as const, completed_at: null } : t));
-      }
-    } catch (err) {
-      console.error('Error restoring task:', err);
-    }
-  };
-
-  // Delete Task
-  const handleDeleteTask = async (id: number) => {
-    const taskToDelete = tasks.find(t => t.id === id);
-    if (!taskToDelete) return;
-
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_task', id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUndoTask(taskToDelete);
-        setShowUndoToast(true);
-        setTasks(prev => prev.filter(t => t.id !== id));
-        setTimeout(() => {
-          setShowUndoToast(false);
-        }, 6000);
-      }
-    } catch (err) {
-      console.error('Error deleting task:', err);
-    }
-  };
-
-  // Restore Deleted Task (Undo)
-  const handleUndoDelete = async () => {
-    if (!undoTask) return;
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'restore_task', id: undoTask.id }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTasks(prev => [...prev, { ...undoTask, status: 'pending' as const }]);
-        setUndoTask(null);
-        setShowUndoToast(false);
-      }
-    } catch (err) {
-      console.error('Error restoring task:', err);
-    }
+  // Complete → optimistic update (hook) then the flash on success.
+  const handleComplete = async (id: number) => {
+    if (await completeTask(id)) flashTaskCompletion(id);
   };
 
   // Open Edit Dialog
@@ -266,31 +82,11 @@ export default function TaskBoardPage() {
     setEditHorizonId(task.horizon_id ? task.horizon_id.toString() : '');
   };
 
-  // Submit Edit
+  // Submit Edit — closes the modal on success.
   const handleEditTask = async () => {
     if (!editingTask || !editTitle.trim()) return;
-
-    try {
-      const res = await fetch('/api/time', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update_task',
-          id: editingTask.id,
-          title: editTitle,
-          priority: editPriority,
-          duration_block: editDuration,
-          horizon_id: editHorizonId ? parseInt(editHorizonId) : null,
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.task) {
-        setTasks(prev => prev.map(t => t.id === editingTask.id ? data.task : t));
-        setEditingTask(null);
-      }
-    } catch (err) {
-      console.error('Error updating task:', err);
-    }
+    const ok = await updateTask(editingTask.id, { title: editTitle, priority: editPriority, duration: editDuration, horizonId: editHorizonId });
+    if (ok) setEditingTask(null);
   };
 
   // Priority Styles Helper
@@ -303,20 +99,6 @@ export default function TaskBoardPage() {
       default: return 'bg-slate-400';
     }
   };
-
-  // Filter & Sort Tasks
-  const activeTasks = tasks
-    .filter(t => t.status === 'pending')
-    .sort((a, b) => {
-      const priorityOrder = { urgent: 0, medium: 1, maybe: 2, free: 3 };
-      const diff = priorityOrder[a.priority] - priorityOrder[b.priority];
-      if (diff !== 0) return diff;
-      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
-    });
-
-  const completedTasks = tasks
-    .filter(t => t.status === 'completed')
-    .sort((a, b) => new Date(b.completed_at || '').getTime() - new Date(a.completed_at || '').getTime());
 
   if (isLoading) {
     return (
@@ -340,7 +122,7 @@ export default function TaskBoardPage() {
             <span>Task &quot;{undoTask.title}&quot; deleted.</span>
           </div>
           <Button variant="unstyled"
-            onClick={handleUndoDelete}
+            onClick={undoDelete}
             className="text-xs font-black uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors"
           >
             Undo
@@ -365,7 +147,7 @@ export default function TaskBoardPage() {
 
         <div className="flex items-center gap-2 self-start">
           <Button
-            onClick={handleSyncNotion}
+            onClick={syncNotion}
             loading={isSyncing}
             variant="secondary"
             className="text-xs border-purple-500/20 hover:bg-purple-500/5 text-purple-650"
@@ -465,7 +247,7 @@ export default function TaskBoardPage() {
 
                     <div className="flex items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <Button variant="unstyled"
-                        onClick={() => handleCompleteTask(task.id)}
+                        onClick={() => handleComplete(task.id)}
                         title="Mark Complete"
                         className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-500/10 rounded-xl transition-colors"
                       >
@@ -479,7 +261,7 @@ export default function TaskBoardPage() {
                         <Edit2 className="w-4 h-4" />
                       </Button>
                       <Button variant="unstyled"
-                        onClick={() => handleDeleteTask(task.id)}
+                        onClick={() => deleteTask(task.id)}
                         title="Delete Task"
                         className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors"
                       >
@@ -524,7 +306,7 @@ export default function TaskBoardPage() {
                       </span>
                     </div>
                     <Button variant="unstyled"
-                      onClick={() => handleRestoreTask(task.id)}
+                      onClick={() => restoreTask(task.id)}
                       title="Restore Task"
                       className="p-2 text-slate-400 hover:text-primary-500 hover:bg-primary-500/10 rounded-xl transition-colors"
                     >
