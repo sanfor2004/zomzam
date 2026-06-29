@@ -184,6 +184,7 @@ zomzam.com/
 | `/home` | Protected | Social feed: post composer with `@mention` autocomplete, live feed (live "new posts" pill). The social right sidebar (Messages / Active Now / Suggested) is now global in the shell, not per-page. |
 | `/saved` | Protected | The viewer's bookmarked posts, newest-saved-first; renders the shared feed `PostCard`. Visibility is re-checked on read, so a since-hidden or deleted post drops out silently. |
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
+| `/notifications` | Protected | Full-page notification list (the mobile bottom-bar's 🔔 target — a bottom bar can't drop the topbar dropdown upward). Reuses the same `describeNotification` renderers as the desktop bell dropdown; marks read on open. |
 | `/p/[postId]` | Public | Permalink view for a single post (deep-linkable from the feed). The `[postId]` segment is the post's opaque `public_id` (a 32-char MD5), **not** the sequential numeric id — so the permalink can't be walked to enumerate or count posts. The route only resolves a valid `public_id`; a numeric id 404s. |
 | `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
 | `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |

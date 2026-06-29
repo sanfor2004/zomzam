@@ -55,9 +55,10 @@ interface SuggestedUser {
 
 const CARD = 'bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple';
 
-/** The shared content — used by both the desktop column and the mobile drawer.
- *  `onNavigate` lets the drawer close itself once the user opens a chat. */
-function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
+/** The shared content — used by the desktop column, the tablet drawer, and the
+ *  phone Menu sheet (folded in there instead of a separate FAB).
+ *  `onNavigate` lets the host close itself once the user opens a chat/link. */
+export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const { contacts, openChat } = useMessages();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [sent, setSent] = useState<Set<number>>(new Set());
@@ -314,12 +315,15 @@ export function RightSidebar() {
         </button>
       </aside>
 
-      {/* ── Mobile toggle (FAB) — hidden while a chat window occupies the corner ── */}
+      {/* ── Tablet toggle (FAB) — md→lg only. On phone (<md) presence is folded
+            into the Menu sheet (DashboardShell), so no FAB there; on desktop
+            (lg+) the column above replaces it. Hidden while a chat window
+            occupies the corner. ── */}
       <button
         type="button"
         onClick={() => setDrawerOpen(true)}
         aria-label="Show messages & friends"
-        className={`${windows.length > 0 ? 'hidden' : 'lg:hidden'} fixed bottom-5 right-5 z-[80] w-12 h-12 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-2xl shadow-primary-500/30 flex items-center justify-center transition-colors`}
+        className={`${windows.length > 0 ? 'hidden' : 'hidden md:flex lg:hidden'} fixed bottom-5 right-5 z-[80] w-12 h-12 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-2xl shadow-primary-500/30 items-center justify-center transition-colors`}
       >
         <Users className="w-5 h-5" />
         {unreadTotal > 0 && (

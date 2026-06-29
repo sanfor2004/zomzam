@@ -11,13 +11,38 @@ import { MoneyProvider } from '@/context/MoneyContext';
 import { CurrentUserProvider } from '@/context/CurrentUserContext';
 import { MessagesProvider, useMessages, type ChatContact } from '@/context/MessagesContext';
 import { ChatDock } from '@/components/chat/ChatDock';
-import { RightSidebar } from '@/components/chat/RightSidebar';
+import { RightSidebar, SidebarBody } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { LayoutDashboard, Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Briefcase, Home, MessageCircle, ListChecks, Compass, UserPlus, Heart, Sparkles, Bookmark, ChevronLeft, ChevronRight, Zap, type LucideIcon } from 'lucide-react';
+import { Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Home, MessageCircle, Sparkles, Bookmark, ChevronLeft, ChevronRight, ChevronDown, Zap, Plus, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 import { describeNotification, notifTimeAgo } from '@/lib/notifications';
+
+type NavGroupKey = 'time' | 'money' | 'community';
+
+// One slot of the mobile bottom nav bar. Icon-only; active = orange (stroke +
+// faint fill); optional count badge (Messages unread / Notifications).
+function BarTab({ Icon, label, active, badge, onClick }: {
+  Icon: LucideIcon; label: string; active: boolean; badge?: number; onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
+      className="relative flex-1 flex items-center justify-center group"
+    >
+      <Icon className={cn('w-6 h-6 transition-colors', active ? 'text-primary-500 fill-primary-500/20' : 'text-slate-400 group-hover:text-slate-200')} />
+      {badge ? (
+        <span className="absolute top-2 left-1/2 translate-x-2 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[9px] font-bold flex items-center justify-center">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      ) : null}
+    </button>
+  );
+}
 
 function DashboardLayoutContent({ children, initialUser }: { children: React.ReactNode; initialUser: any }) {
   const { t } = useTranslation();
@@ -32,10 +57,10 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // every protected route, so by the time this renders the user is guaranteed
   // authenticated — no client-side auth fetch or loading spinner needed.
   const [currentUser] = useState<any>(initialUser);
-  const [timeGroupOpen, setTimeGroupOpen] = useState(false);
-  const [moneyGroupOpen, setMoneyGroupOpen] = useState(false);
-  const [crmGroupOpen, setCrmGroupOpen] = useState(false);
-  const [communityGroupOpen, setCommunityGroupOpen] = useState(false);
+  // Single-open accordion shared by the desktop sidebar and the mobile Menu
+  // sheet: at most one section expanded at a time. null = all collapsed.
+  const [openGroup, setOpenGroup] = useState<NavGroupKey | null>(null);
+  const toggleGroup = (g: NavGroupKey) => setOpenGroup((cur) => (cur === g ? null : g));
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [msgDropdownOpen, setMsgDropdownOpen] = useState(false);
   const sidebarNavRef = useRef<HTMLElement>(null);
@@ -90,19 +115,13 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const [sheetDragY, setSheetDragY] = useState(0);
   const sheetDrag = useRef<{ startY: number; active: boolean }>({ startY: 0, active: false });
 
-  // Auto-expand the nav section corresponding to current route on load
+  // Auto-expand the nav section corresponding to the current route on load.
+  // Single-open: landing on a section's page opens it (and collapses the rest).
   useEffect(() => {
-    if (pathname) {
-      if (pathname.startsWith('/time/')) {
-        setTimeGroupOpen(true);
-      } else if (pathname.startsWith('/money/')) {
-        setMoneyGroupOpen(true);
-      } else if (pathname.startsWith('/crm')) {
-        setCrmGroupOpen(true);
-      } else if (pathname.startsWith('/community')) {
-        setCommunityGroupOpen(true);
-      }
-    }
+    if (!pathname) return;
+    if (pathname.startsWith('/time/')) setOpenGroup('time');
+    else if (pathname.startsWith('/money/')) setOpenGroup('money');
+    else if (pathname.startsWith('/community')) setOpenGroup('community');
   }, [pathname]);
 
   const handleLogout = async () => {
@@ -128,21 +147,89 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     setMobileMenuOpen(false);
   };
 
-  // Flat mobile nav (Home first, then every live sub-page). Mirrors the
-  // desktop sidebar minus the parked CRM/Dashboard suites.
-  const mobileNavLinks: { label: string; path: string; Icon: LucideIcon }[] = [
-    { label: t('nav_home') || 'Home', path: '/home', Icon: Home },
-    { label: 'Saved Posts', path: '/saved', Icon: Bookmark },
-    { label: 'Pomodoro Focus', path: '/time/execution', Icon: Clock },
-    { label: 'Task Board', path: '/time/tasks', Icon: ListChecks },
-    { label: 'Ledger Overview', path: '/money/dashboard', Icon: DollarSign },
-    { label: 'Friends Grid', path: '/community/friends', Icon: Users },
-    { label: 'Discover People', path: '/community/discover', Icon: Compass },
-    { label: 'Friend Requests', path: '/community/requests', Icon: UserPlus },
-    { label: 'Connections & Follows', path: '/community/following', Icon: Heart },
-    { label: 'Upgrade', path: '/pricing', Icon: Sparkles },
-    { label: t('nav_settings') || 'Settings', path: '/settings', Icon: Settings },
+  // Bottom-bar center ➕. The composer state lives in /home's page; reach it via
+  // a same-route window event, or route there with a flag the page reads once.
+  const handleCreate = () => {
+    if (pathname === '/home') window.dispatchEvent(new CustomEvent('zz:open-composer'));
+    else router.push('/home?compose=1');
+  };
+
+  // The three live collapsible suites — one source of truth for the desktop
+  // sidebar AND the mobile Menu sheet (both render them via renderNavSection).
+  const NAV_GROUPS: { key: NavGroupKey; label: string; Icon: LucideIcon; items: { label: string; path: string }[] }[] = [
+    {
+      key: 'time', label: t('nav_time') || 'Time', Icon: Clock, items: [
+        { label: 'Pomodoro Timer', path: '/time/execution' },
+        { label: 'Task Board', path: '/time/tasks' },
+        { label: 'Dream Planning', path: '/time/planning' },
+        { label: 'Idea Capture', path: '/time/ideas' },
+        { label: 'Daily Tracker', path: '/time/tracker' },
+      ],
+    },
+    {
+      key: 'money', label: t('nav_money') || 'Money', Icon: DollarSign, items: [
+        { label: 'Overview', path: '/money/dashboard' },
+        { label: 'Expenses', path: '/money/expenses' },
+        { label: 'Income', path: '/money/income' },
+        { label: 'Accounts', path: '/money/accounts' },
+        { label: 'Lending', path: '/money/lend' },
+      ],
+    },
+    {
+      key: 'community', label: t('nav_community') || 'Community', Icon: Users, items: [
+        { label: 'Friends Grid', path: '/community/friends' },
+        { label: 'Discover People', path: '/community/discover' },
+        { label: 'Friend Requests', path: '/community/requests' },
+        { label: 'Connections & Follows', path: '/community/following' },
+      ],
+    },
   ];
+
+  // One accordion section, styled for the desktop sidebar (compact) or the
+  // mobile Menu sheet (larger touch targets). Single-open via openGroup; the
+  // body uses the CSS grid-rows 0fr↔1fr height trick (no JS) and honours
+  // reduce-motion. Active sub-item = filled dot + orange text (calm, no pill).
+  const renderNavSection = (group: typeof NAV_GROUPS[number], mobile = false) => {
+    const isOpen = openGroup === group.key;
+    return (
+      <div key={group.key} className="space-y-1">
+        <Button variant="unstyled"
+          onClick={() => toggleGroup(group.key)}
+          aria-expanded={isOpen}
+          className={cn(
+            'w-full flex items-center gap-3 rounded-xl text-slate-200 font-semibold hover:bg-slate-800/50 transition-colors',
+            mobile ? 'px-4 min-h-[48px] text-sm' : 'px-3 py-2.5 text-sm',
+          )}
+        >
+          <group.Icon className="w-5 h-5 flex-shrink-0 text-slate-400" />
+          <span className="flex-1 text-left">{group.label}</span>
+          <ChevronDown className={cn('w-4 h-4 text-slate-500 transition-transform duration-300 motion-reduce:transition-none', isOpen && 'rotate-180')} />
+        </Button>
+        <div className={cn('grid transition-all duration-300 ease-out motion-reduce:transition-none', isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0')}>
+          <div className="overflow-hidden">
+            <div className="ml-5 pl-4 border-l border-slate-700/70 space-y-1 py-1">
+              {group.items.map((it) => {
+                const active = pathname === it.path;
+                return (
+                  <Button key={it.path} variant="unstyled"
+                    onClick={() => (mobile ? goToMobile(it.path) : router.push(it.path))}
+                    className={cn(
+                      'w-full text-left flex items-center gap-2.5 rounded-lg transition-colors',
+                      mobile ? 'px-3 min-h-[40px] text-sm' : 'px-3 py-2 text-xs font-medium',
+                      active ? 'text-primary-500 font-semibold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white',
+                    )}
+                  >
+                    <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors', active ? 'bg-primary-500' : 'bg-slate-600')} />
+                    <span>{it.label}</span>
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // ── Bottom-sheet drag handlers (attached to the grab handle only, so the
   //    scrollable link list underneath is never hijacked) ──
@@ -328,99 +415,9 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             )}
           </Button>
 
-          {/* Time Management Group */}
-          <div className="space-y-1">
-            <Button variant="unstyled"
-              onClick={() => setTimeGroupOpen(!timeGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
-            >
-              <span>{t('nav_time')}</span>
-              <Clock className="w-4 h-4 text-slate-400" />
-            </Button>
-            {timeGroupOpen && (
-              <div id="timeGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/time/execution')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/execution')}`}
-                  >
-                    Pomodoro Timer
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/time/tasks')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/tasks')}`}
-                  >
-                    Task Board
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/time/planning')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/planning')}`}
-                  >
-                    Dream Planning
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/time/ideas')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/ideas')}`}
-                  >
-                    Idea Capture
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/time/tracker')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/time/tracker')}`}
-                  >
-                    Daily Tracker
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Money Management Group */}
-          <div className="space-y-1">
-            <Button variant="unstyled"
-              onClick={() => setMoneyGroupOpen(!moneyGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
-            >
-              <span>{t('nav_money')}</span>
-              <DollarSign className="w-4 h-4 text-slate-400" />
-            </Button>
-            {moneyGroupOpen && (
-              <div id="moneyGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/money/dashboard')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/dashboard')}`}
-                  >
-                    Overview
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/money/expenses')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/expenses')}`}
-                  >
-                    Expenses
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/money/income')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/income')}`}
-                  >
-                    Income
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/money/accounts')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/accounts')}`}
-                  >
-                    Accounts
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/money/lend')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/money/lend')}`}
-                  >
-                    Lending
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Time + Money suites (single-open accordions) */}
+          {renderNavSection(NAV_GROUPS[0])}
+          {renderNavSection(NAV_GROUPS[1])}
 
           {/* ──────────────────────────────────────────────────────────
               TEMPORARILY DISABLED: CRM SUITE + DASHBOARD
@@ -491,46 +488,8 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           </Button>
               ────────────────────────────────────────────────────────── */}
 
-          {/* Community Group */}
-          <div className="space-y-1">
-            <Button variant="unstyled"
-              onClick={() => setCommunityGroupOpen(!communityGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors cursor-pointer"
-            >
-              <span>{t('nav_community') || 'Community'}</span>
-              <Users className="w-4 h-4 text-slate-400" />
-            </Button>
-            {communityGroupOpen && (
-              <div id="communityGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/community/friends')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/friends')}`}
-                  >
-                    Friends Grid
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/community/discover')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/discover')}`}
-                  >
-                    Discover People
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/community/requests')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/requests')}`}
-                  >
-                    Friend Requests
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/community/following')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors cursor-pointer${isActive('/community/following')}`}
-                  >
-                    Connections & Follows
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Community suite (single-open accordion) */}
+          {renderNavSection(NAV_GROUPS[2])}
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: UPGRADE PLAN CARD
@@ -671,9 +630,11 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: TOPBAR ACTIONS
-              Contains: Messages dropdown (red dot + contacts list), Notifications bell
+              Contains: Messages dropdown (red dot + contacts list), Notifications bell.
+              Hidden on phone (<md) — Messages + Notifications live on the bottom
+              nav bar there; shown on tablet/desktop which have no bottom bar.
               ────────────────────────────────────────────────────────── */}
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             {/* Messages */}
             <DropdownMenu
               open={msgDropdownOpen}
@@ -831,6 +792,17 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
                   })
                 )}
               </div>
+              {/* Shares one render path with the /notifications page (the mobile
+                  bottom-bar target). */}
+              <div className="px-4 pt-2 border-t border-slate-800">
+                <Link
+                  href="/notifications"
+                  onClick={() => setNotifDropdownOpen(false)}
+                  className="block text-center text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors py-1"
+                >
+                  See all
+                </Link>
+              </div>
             </div>
           </DropdownMenu>
           </div>
@@ -840,7 +812,8 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             DEVELOPMENT NAVIGATOR: MAIN WORKSPACE CONTAINER
             Viewport-locked, scrollable area where dashboard pages render
             ────────────────────────────────────────────────────────── */}
-        <main className="flex-grow overflow-y-auto relative p-6 md:p-8">
+        {/* pb on phone clears the fixed bottom nav bar (+ safe area). */}
+        <main className="flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8">
           {children}
         </main>
       </div>
@@ -856,17 +829,36 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
       <ChatDock />
       <NotificationToaster />
 
-      {/* Mobile menu FAB (bottom-LEFT) — mirrors the presence rail FAB at
-          bottom-right. Hidden while the sheet is open (it covers this corner);
-          the sheet closes via backdrop tap or swipe-down. */}
-      <Button
-        variant="unstyled"
-        onClick={() => setMobileMenuOpen(true)}
-        aria-label="Open menu"
-        className={`${mobileMenuOpen ? 'hidden' : 'md:hidden'} fixed bottom-5 left-5 z-[80] w-12 h-12 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-2xl shadow-primary-500/30 flex items-center justify-center transition-colors`}
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: MOBILE BOTTOM NAV BAR (phone-only)
+          Contains: Home, Messages (unread badge), raised ➕ Create, Notifications
+          (count badge), Menu (opens the sheet). Twitter/IG-style. Phone-only
+          (md:hidden) — tablet/desktop use the left sidebar. Safe-area padded.
+          ────────────────────────────────────────────────────────── */}
+      <nav
+        aria-label="Primary"
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-dark/90 backdrop-blur-xl border-t border-slate-800 pb-[env(safe-area-inset-bottom)]"
       >
-        <Menu className="w-5 h-5" />
-      </Button>
+        <div className="flex items-stretch justify-around h-16 px-1">
+          <BarTab Icon={Home} label="Home" active={pathname === '/home'} onClick={() => router.push('/home')} />
+          <BarTab Icon={MessageCircle} label="Messages" active={pathname.startsWith('/messages')} badge={unreadTotal} onClick={() => router.push('/messages')} />
+
+          {/* Raised center Create — breaks above the bar line */}
+          <div className="flex items-center justify-center px-1">
+            <Button
+              variant="unstyled"
+              onClick={handleCreate}
+              aria-label="Create post"
+              className="-mt-7 w-14 h-14 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/40 flex items-center justify-center transition-colors active:scale-95 ring-4 ring-surface-dark"
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+          </div>
+
+          <BarTab Icon={Bell} label="Notifications" active={pathname === '/notifications'} badge={notificationsCount} onClick={() => router.push('/notifications')} />
+          <BarTab Icon={Menu} label="Menu" active={mobileMenuOpen} onClick={() => setMobileMenuOpen(true)} />
+        </div>
+      </nav>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: MOBILE NAV BOTTOM SHEET
@@ -914,33 +906,95 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           <span className="w-10 h-1.5 rounded-full bg-slate-700" />
         </div>
 
-        {/* Flat link list */}
+        {/* Sectioned menu — mirrors the desktop sidebar (profile · Saved ·
+            suites · Upgrade · Active Now · Settings · Sign out). */}
         <nav className="flex-1 overflow-y-auto px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-1 space-y-1">
-          {mobileNavLinks.map(({ label, path, Icon }) => {
-            const active = pathname === path;
-            return (
-              <Button
-                key={path}
-                variant="unstyled"
-                onClick={() => goToMobile(path)}
-                className={cn(
-                  'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold transition-colors',
-                  active
-                    ? 'bg-primary-500/10 text-primary-500'
-                    : 'text-slate-300 hover:bg-slate-800/50 hover:text-white',
-                )}
-              >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                <span>{label}</span>
-              </Button>
-            );
-          })}
+          {/* Profile header → own profile (the only profile entry point on phone) */}
+          <Button
+            variant="unstyled"
+            onClick={() => goToMobile(`/u/${currentUser.username}`)}
+            className="w-full flex items-center gap-3 px-3 py-2 mb-1 rounded-2xl hover:bg-slate-800/50 transition-colors text-left"
+          >
+            <div className="relative flex-shrink-0">
+              <Image
+                src={currentUser.avatar || '/Assets/Img/default-avatar.png'}
+                alt="Avatar"
+                width={44}
+                height={44}
+                className="w-11 h-11 rounded-2xl object-cover border border-slate-800"
+              />
+              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-surface-dark ${status.dot}`} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white truncate">
+                {[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
+              </p>
+              <p className="text-[11px] text-slate-500 truncate">View profile</p>
+            </div>
+          </Button>
+
+          {/* Saved */}
+          <Button
+            variant="unstyled"
+            onClick={() => goToMobile('/saved')}
+            className={cn(
+              'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold transition-colors',
+              pathname === '/saved' ? 'bg-primary-500/10 text-primary-500' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white',
+            )}
+          >
+            <Bookmark className="w-5 h-5 flex-shrink-0" />
+            <span>Saved</span>
+          </Button>
+
+          {/* Live suites (single-open accordions, larger touch targets) */}
+          {renderNavSection(NAV_GROUPS[0], true)}
+          {renderNavSection(NAV_GROUPS[1], true)}
+          {renderNavSection(NAV_GROUPS[2], true)}
+
+          {/* Upgrade — compact gradient card (mirrors the desktop card) */}
+          <div className="my-2 rounded-2xl border border-primary-500/20 bg-gradient-to-br from-primary-500/10 via-primary-500/[0.06] to-transparent p-3.5 shadow-apple-sm">
+            <div className="flex items-center gap-3">
+              <span className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-primary-500/15 text-primary-400 ring-1 ring-inset ring-primary-500/25">
+                <Sparkles className="w-4.5 h-4.5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-medium text-slate-400 leading-tight">Current plan:</p>
+                <p className="text-sm font-bold text-white leading-tight">Free</p>
+              </div>
+            </div>
+            <Button
+              variant="unstyled"
+              onClick={() => goToMobile('/pricing')}
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 shadow-apple-sm transition-colors"
+            >
+              <Zap className="w-4 h-4 flex-shrink-0" />
+              <span>Upgrade to Pro</span>
+            </Button>
+          </div>
+
+          {/* Settings */}
+          <Button
+            variant="unstyled"
+            onClick={() => goToMobile('/settings')}
+            className={cn(
+              'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold transition-colors',
+              pathname === '/settings' ? 'bg-primary-500/10 text-primary-500' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white',
+            )}
+          >
+            <Settings className="w-5 h-5 flex-shrink-0" />
+            <span>{t('nav_settings') || 'Settings'}</span>
+          </Button>
+
+          {/* Active Now + Suggested — folded in from the right sidebar (no phone FAB) */}
+          <div className="pt-2 mt-1 border-t border-slate-800/60">
+            <SidebarBody onNavigate={() => setMobileMenuOpen(false)} />
+          </div>
 
           {/* Sign Out */}
           <Button
             variant="unstyled"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-950/20 transition-colors"
+            className="w-full flex items-center gap-3 px-4 min-h-[48px] mt-1 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-950/20 transition-colors"
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_logout') || 'Sign Out'}</span>

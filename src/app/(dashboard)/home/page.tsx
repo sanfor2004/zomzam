@@ -64,6 +64,23 @@ export default function HomePage() {
     setComposerOpen(false);
   }, [handlePostCreated]);
 
+  // ── Bottom-nav "Create" entry points ────────────────────────
+  // The mobile bottom bar's center ➕ lives in the shell, which can't reach this
+  // page's composer state directly. Two signals bridge it: a `?compose=1` param
+  // (arriving from another route) read once on mount, and a `zz:open-composer`
+  // window event (fired when Create is tapped while already on /home).
+  // ponytail: a window CustomEvent is the minimal cross-component signal — no
+  // composer state lifted into a context just to open a modal.
+  useEffect(() => {
+    const open = () => openComposer();
+    window.addEventListener('zz:open-composer', open);
+    if (new URLSearchParams(window.location.search).get('compose') === '1') {
+      openComposer();
+      window.history.replaceState({}, '', '/home'); // strip so refresh/back doesn't re-open
+    }
+    return () => window.removeEventListener('zz:open-composer', open);
+  }, [openComposer]);
+
   useGSAP(() => {
     if (initialLoading || posts.length === 0) return;
     gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {

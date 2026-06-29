@@ -304,35 +304,34 @@ html.dark * {
   width: 100%;
 }
 
+/* Active nav item: calm — orange text/icon + a short rounded left accent, no
+   fill pill (see nav redesign spec §4.2). The accent sits in the row's left
+   padding so it never shifts the icon/label. */
 .nav-link-active {
+  position: relative;
   color: #EE5712 !important;
-  background-color: rgba(238, 87, 18, 0.1) !important;
   font-weight: 600;
+}
+
+.nav-link-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #EE5712;
+}
+
+html[dir="rtl"] .nav-link-active::before {
+  left: auto;
+  right: 0;
 }
 
 .nav-link-active svg {
   stroke: #EE5712 !important;
-}
-
-/* Sidebar structure connections (Zenith Tree Lines) */
-#timeGroup > div,
-#moneyGroup > div,
-#communityGroup > div {
-  border-left: 1.5px solid rgba(238, 87, 18, 0.2) !important;
-  margin-left: 1.25rem !important;
-  padding-left: 0.5rem !important;
-  border-right: none !important;
-}
-
-html[dir="rtl"] #timeGroup > div,
-html[dir="rtl"] #moneyGroup > div,
-html[dir="rtl"] #communityGroup > div {
-  border-left: none !important;
-  border-right: 1.5px solid rgba(238, 87, 18, 0.2) !important;
-  margin-left: 0 !important;
-  margin-right: 1.25rem !important;
-  padding-left: 0 !important;
-  padding-right: 0.5rem !important;
 }
 
 /* Neon glow effect */
