@@ -598,7 +598,7 @@ test('getFeed collapses a plain repost into its ORIGINAL with a reposted_by labe
   // feed page → one plain repost (by Sara) of original #5; #5 not on the page, so
   // collapse fetches it; then embedTopComments sees [].
   seedQuery(
-    [plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara' })],
+    [plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara', is_following: 1 })],
     [feedRow({ id: 5, username: 'orig', content_html: '<p>the original</p>' })],
     [],
   );
@@ -615,12 +615,50 @@ test('getFeed collapses a plain repost into its ORIGINAL with a reposted_by labe
   assert.deepEqual(card.repost_seen_ids, [100], 'the absorbed pointer id rides along for read-receipts');
 });
 
+test('getFeed boosts a STRANGER\'s repost silently — no label leak across the social graph', async () => {
+  seedQueryOne({ tags: [] });
+  // Sara is neither friend nor follow of the viewer (is_friend/is_following 0).
+  seedQuery(
+    [plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara', is_friend: 0, is_following: 0 })],
+    [feedRow({ id: 5, username: 'orig', content_html: '<p>the original</p>' })],
+    [],
+  );
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+
+  assert.equal(res.posts.length, 1, 'the original still surfaces (reach boost is global)');
+  const card = res.posts[0];
+  assert.equal(card.id, 5);
+  assert.equal(card.reposted_by, undefined, 'a non-connected reposter is NOT named — no label');
+  assert.deepEqual(card.repost_seen_ids, [100], 'the boost + read-receipt still ride along');
+});
+
+test('getFeed labels only the CONNECTED reposters, dropping strangers from a mixed boost', async () => {
+  seedQueryOne({ tags: [] });
+  // Two reposters of #5: ahmed (followed) shows; sara (stranger) is dropped.
+  seedQuery(
+    [
+      plainRepostRow({ id: 101, repost_of: 5, username: 'sara', first_name: 'Sara', is_friend: 0, is_following: 0 }),
+      plainRepostRow({ id: 100, repost_of: 5, username: 'ahmed', first_name: 'Ahmed', is_following: 1 }),
+    ],
+    [feedRow({ id: 5, username: 'orig' })],
+    [],
+  );
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+
+  assert.equal(res.posts.length, 1);
+  assert.equal(res.posts[0].reposted_by.total, 1, 'only the connected reposter is named');
+  assert.deepEqual(res.posts[0].reposted_by.users.map((u: any) => u.username), ['ahmed']);
+  assert.deepEqual(res.posts[0].repost_seen_ids, [101, 100], 'both pointers still ride for read-receipts');
+});
+
 test('getFeed de-dups many reposters of one original into a single aggregated card', async () => {
   seedQueryOne({ tags: [] });
   seedQuery(
     [
-      plainRepostRow({ id: 101, repost_of: 5, username: 'sara', first_name: 'Sara' }),
-      plainRepostRow({ id: 100, repost_of: 5, username: 'ahmed', first_name: 'Ahmed' }),
+      plainRepostRow({ id: 101, repost_of: 5, username: 'sara', first_name: 'Sara', is_friend: 1 }),
+      plainRepostRow({ id: 100, repost_of: 5, username: 'ahmed', first_name: 'Ahmed', is_following: 1 }),
     ],
     [feedRow({ id: 5, username: 'orig' })], // original fetched once
     [],
@@ -640,7 +678,7 @@ test('getFeed merges a plain repost with the original\'s own appearance (no extr
   // query needed (only feed + embedTopComments), and they collapse to one card.
   seedQuery(
     [
-      plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara' }),
+      plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara', is_friend: 1 }),
       feedRow({ id: 5, username: 'orig' }),
     ],
     [],

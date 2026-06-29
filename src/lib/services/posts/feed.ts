@@ -229,7 +229,15 @@ async function collapsePlainReposts(userId: number, rows: any[]): Promise<any[]>
       emitted.set(effId, card);
     }
     if (plain) {
-      (card._reposted_by ??= []).push(reposterOf(r));
+      // Attribution is connection-scoped: only name the reposter if the viewer
+      // follows/befriends them (or it's the viewer's own repost). A stranger's
+      // repost still boosts the original (it's collapsed in + the seen id rides
+      // along) — it just surfaces unlabeled, so we never leak who-reposted-what
+      // across the social graph. is_friend/is_following on the pointer row are
+      // computed against p.user_id, which IS the reposter.
+      const connected =
+        Number(r.user_id) === userId || Number(r.is_friend) > 0 || Number(r.is_following) > 0;
+      if (connected) (card._reposted_by ??= []).push(reposterOf(r));
       (card._repost_seen_ids ??= []).push(Number(r.id));
     }
   }
