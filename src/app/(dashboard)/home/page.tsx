@@ -1,34 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Image from 'next/image';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import {
-  Loader2, MessagesSquare, HelpCircle, Sparkles, ArrowUp,
-  Image as ImageIcon, Trophy,
-} from 'lucide-react';
+import { Loader2, MessagesSquare, HelpCircle, Sparkles, ArrowUp } from 'lucide-react';
 import { Button, PostComposer, PostCard, Modal } from '@/components/ui';
-import { usePostSeenTracker } from './usePostSeenTracker';
-import {
-  displayName, type CurrentUser, type MentionUser, type Post, type PostType,
-} from './shared';
+import { ComposerBanner } from './ComposerBanner';
+import { useFeed } from './useFeed';
+import { fetchCurrentUser, fetchFriends } from './page.services';
+import { type CurrentUser, type MentionUser, type Post, type PostType } from './shared';
 
 export default function HomePage() {
+  // Viewer identity — used by the composer (@mentions, edit modal) and cards.
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  // friends is still needed for the composer's @mention autocomplete + edit modal.
   const [friends, setFriends] = useState<MentionUser[]>([]);
 
-  // ── New-posts pill ──────────────────────────────────────────
-  // Live SSE `zz-new-post` signals from people in the network bump this counter;
-  // a soft pill offers to refresh instead of yanking the user's scroll position.
-  const [newPostsCount, setNewPostsCount] = useState(0);
-
   // ── Composer modal ──────────────────────────────────────────
-  // The inline composer is now a resting banner; clicking it (or a quick-action
-  // chip) opens the full composer in a modal. Chips pre-seed the post type /
-  // photo picker. `composerDirty` (reported by the composer) gates a discard
-  // confirmation when the user closes a modal that holds an unsaved draft.
+  // The resting banner opens the full composer in a modal; chips pre-seed the
+  // post type / photo picker. `composerDirty` gates a discard confirm on close.
   const [composerOpen, setComposerOpen] = useState(false);
   const [composerType, setComposerType] = useState<PostType>('status');
   const [composerPhoto, setComposerPhoto] = useState(false);
@@ -37,53 +26,20 @@ export default function HomePage() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ── Feed state ──────────────────────────────────────────────
-  // Chat-style read model: the feed serves UNSEEN posts first (newest-first,
-  // keyset-paginated by the smallest post id already delivered), then backfills
-  // SEEN posts. `tier` tracks which progression we're in; `cursor` is that id.
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [feedFilter, setFeedFilter] = useState<'all' | 'help' | 'help_matches'>('all');
-  const [tier, setTier] = useState<'unseen' | 'seen'>('unseen');
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingFeed, setLoadingFeed] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  // Desktop = fine pointer + wide viewport. Drives the end-of-feed UX: unseen
-  // always auto-loads; once exhausted, the SEEN tier auto-loads on mobile but
-  // waits for a "Load older posts" click on desktop (less jarring with a mouse).
-  const [isDesktop, setIsDesktop] = useState(false);
+  // Feed state machine (list, tiers, pagination, sentinel, new-posts pill).
+  const {
+    posts, feedFilter, setFeedFilter, tier, hasMore, loadingFeed, initialLoading, isDesktop,
+    newPostsCount, refreshUnseen, loadMore, observe, bottomRef, feedRef,
+    handleDeletePost, handlePostCreated, handlePostEdited,
+  } = useFeed();
 
-  // Seen-tracker: marks cards as read on viewport dwell (see usePostSeenTracker).
-  const { observe } = usePostSeenTracker();
+  // pageRef reuses containerRef (same node, usePageEntrance scope).
+  usePageEntrance(containerRef, [posts.length]);
 
-  // Mirror mutable values into refs so the stable IntersectionObserver / loader
-  // callbacks always read fresh state without being torn down each change.
-  const loadingFeedRef = useRef(false);
-  const tierRef = useRef<'unseen' | 'seen'>('unseen');
-  const cursorRef = useRef<number | null>(null);
-  const hasMoreRef = useRef(true);
-  // Count of posts actually delivered into the feed this session. Lets loadMore
-  // detect an empty feed without reading async `posts` state — see the
-  // unseen→seen advance below (empty unseen tier must auto-pull the seen tier).
-  const deliveredRef = useRef(0);
-  const feedFilterRef = useRef(feedFilter);
-  const isDesktopRef = useRef(isDesktop);
-  useEffect(() => { isDesktopRef.current = isDesktop; }, [isDesktop]);
-
-  // Stable handlers so memo(PostCard) isn't invalidated every render. setPosts is
-  // referentially stable, so these callbacks never need to change.
-  const handleDeletePost = useCallback((id: number) => {
-    setPosts((prev) => prev.filter((p) => p.id !== id));
-  }, []);
-
-  // Prepend a freshly-created post (from the composer) to the top of the feed.
-  // The author has already been recorded as having seen it server-side.
-  const handlePostCreated = useCallback((post: Post) => {
-    setPosts((prev) => [post, ...prev]);
-  }, []);
-
-  // Patch a post in place after an inline edit (content/image/visibility) — no refetch.
-  const handlePostEdited = useCallback((updated: Post) => {
-    setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+  // ── Data bootstrap ──────────────────────────────────────────
+  useEffect(() => {
+    fetchCurrentUser().then(setCurrentUser);
+    fetchFriends().then(setFriends);
   }, []);
 
   // ── Composer open/close ─────────────────────────────────────
@@ -102,175 +58,11 @@ export default function HomePage() {
     if (composerDirty) setConfirmDiscard(true);
     else setComposerOpen(false);
   }, [composerDirty]);
-  // Success: prepend the new post and dismiss the modal. (The composer reports
-  // dirty=false again when it remounts on the next open.)
+  // Success: prepend the new post and dismiss the modal.
   const handleComposerPosted = useCallback((post: Post) => {
-    setPosts((prev) => [post, ...prev]);
+    handlePostCreated(post);
     setComposerOpen(false);
-  }, []);
-
-  const bottomRef = useRef<HTMLDivElement>(null);
-  const feedRef = useRef<HTMLDivElement>(null);
-  // pageRef reuses containerRef (same DOM node, usePageEntrance uses it as animation scope)
-  usePageEntrance(containerRef, [posts.length]);
-
-  // ── Data bootstrap ──────────────────────────────────────────
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await fetch('/api/auth?action=check');
-        const data = await res.json();
-        if (data.success && data.authenticated) setCurrentUser(data.user);
-      } catch { /* non-blocking */ }
-    })();
-
-    (async () => {
-      try {
-        const res = await fetch('/api/social?action=friends');
-        const data = await res.json();
-        if (data.success) setFriends(data.friends || []);
-      } catch { /* non-blocking */ }
-    })();
-  }, []);
-
-  // ── Desktop vs mobile (pointer + width) ─────────────────────
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px) and (pointer: fine)');
-    const update = () => setIsDesktop(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-
-  // ── Feed loading ────────────────────────────────────────────
-  // One loader for both tiers. Reads tier/cursor from refs so it can be a single
-  // stable callback. When the unseen tier runs dry it advances to the seen tier
-  // (without fetching yet) so desktop can gate the first seen page behind a button.
-  const loadMore = useCallback(async () => {
-    if (loadingFeedRef.current || !hasMoreRef.current) return;
-    loadingFeedRef.current = true;
-    setLoadingFeed(true);
-    // When true, the unseen tier ran dry on a still-empty feed; we chain straight
-    // into the seen tier (the sentinel + "Load older" button that normally drive
-    // it only render once posts exist, so an empty feed would otherwise dead-end).
-    let chainSeen = false;
-    try {
-      const params = new URLSearchParams({ action: 'feed', tier: tierRef.current });
-      if (cursorRef.current) params.set('cursor', String(cursorRef.current));
-      if (feedFilterRef.current !== 'all') params.set('filter', feedFilterRef.current);
-
-      const res = await fetch(`/api/posts?${params.toString()}`);
-      const data = await res.json();
-      if (data.success) {
-        const isFirstPage = !cursorRef.current;
-        setPosts((prev) => {
-          if (isFirstPage && tierRef.current === 'unseen' && prev.length === 0) return data.posts;
-          const known = new Set(prev.map((p: Post) => p.id));
-          return [...prev, ...data.posts.filter((p: Post) => !known.has(p.id))];
-        });
-        deliveredRef.current += data.posts.length;
-        cursorRef.current = data.next_cursor ?? null;
-
-        if (data.has_more) {
-          hasMoreRef.current = true;
-          setHasMore(true);
-        } else if (tierRef.current === 'unseen') {
-          // Unseen exhausted → advance to the seen backfill tier.
-          tierRef.current = 'seen';
-          cursorRef.current = null;
-          hasMoreRef.current = true; // provisional; the first seen page confirms
-          setTier('seen');
-          setHasMore(true);
-          // If nothing has been delivered yet, the empty-state renders (no
-          // sentinel, no button) and the seen tier would never load. This is the
-          // common case for a returning user — and always for your own just-posted
-          // content, which is recorded as seen on creation. Pull the first seen
-          // page right now. Otherwise desktop waits for the button, mobile for the
-          // sentinel, exactly as before.
-          if (deliveredRef.current === 0) chainSeen = true;
-        } else {
-          hasMoreRef.current = false;
-          setHasMore(false);
-        }
-      }
-    } catch { /* non-blocking */ }
-    setLoadingFeed(false);
-    loadingFeedRef.current = false;
-    if (chainSeen) {
-      // Keep the loader up (don't flash the empty state) while the seen page loads.
-      loadMore();
-    } else {
-      setInitialLoading(false);
-    }
-  }, []);
-
-  // Reset to a fresh unseen feed (mount + whenever the filter changes).
-  const resetAndLoad = useCallback(() => {
-    tierRef.current = 'unseen';
-    cursorRef.current = null;
-    hasMoreRef.current = true;
-    deliveredRef.current = 0;
-    setTier('unseen');
-    setHasMore(true);
-    setInitialLoading(true);
-    setPosts([]);
-    loadMore();
-  }, [loadMore]);
-
-  useEffect(() => {
-    feedFilterRef.current = feedFilter;
-    resetAndLoad();
-  }, [feedFilter, resetAndLoad]);
-
-  // ── New-posts pill + merge-on-refresh ───────────────────────
-  // SSE delivers `zz-new-post` when someone in the network posts. We only count
-  // it (a soft signal) so the user's scroll isn't disturbed.
-  useEffect(() => {
-    const onNewPost = () => setNewPostsCount((c) => c + 1);
-    window.addEventListener('zz-new-post', onNewPost);
-    return () => window.removeEventListener('zz-new-post', onNewPost);
-  }, []);
-
-  // Clicking the pill fetches the freshest unseen page and MERGES it onto the top
-  // of the feed (preserving everything already scrolled), rather than wiping and
-  // reloading from scratch. The merged-in posts are themselves unseen, so they
-  // get marked read as the user scrolls back over them.
-  const refreshUnseen = useCallback(async () => {
-    setNewPostsCount(0);
-    try {
-      const params = new URLSearchParams({ action: 'feed', tier: 'unseen' });
-      if (feedFilterRef.current !== 'all') params.set('filter', feedFilterRef.current);
-      const res = await fetch(`/api/posts?${params.toString()}`);
-      const data = await res.json();
-      if (data.success) {
-        setPosts((prev) => {
-          const known = new Set(prev.map((p: Post) => p.id));
-          const fresh = data.posts.filter((p: Post) => !known.has(p.id));
-          return fresh.length ? [...fresh, ...prev] : prev;
-        });
-      }
-    } catch { /* non-blocking */ }
-    feedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
-  // ── Infinite scroll sentinel ────────────────────────────────
-  // Auto-loads the unseen tier always; auto-loads the seen tier only on mobile
-  // (desktop pulls older posts via an explicit button). Re-created when the feed
-  // length / tier / hasMore / device changes so it re-evaluates an in-view sentinel.
-  useEffect(() => {
-    const sentinel = bottomRef.current;
-    if (!sentinel) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || !hasMoreRef.current || loadingFeedRef.current) return;
-        if (tierRef.current === 'seen' && isDesktopRef.current) return; // desktop seen = manual
-        loadMore();
-      },
-      { threshold: 0.1 }
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [posts.length, hasMore, tier, isDesktop, loadMore]);
+  }, [handlePostCreated]);
 
   useGSAP(() => {
     if (initialLoading || posts.length === 0) return;
@@ -299,7 +91,7 @@ export default function HomePage() {
     <div ref={containerRef} className="max-w-2xl mx-auto relative animate-in">
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: MAIN FEED (single column)
-          Contains: Composer card, post feed with infinite scroll. The social
+          Contains: Composer banner, post feed with infinite scroll. The social
           right sidebar (Messages / Active Now / Suggested) now lives globally
           in the dashboard shell (RightSidebar), not per-page here.
           ────────────────────────────────────────────────────────── */}
@@ -464,64 +256,3 @@ export default function HomePage() {
     </div>
   );
 }
-
-// ──────────────────────────────────────────────────────────
-// DEVELOPMENT NAVIGATOR: COMPOSER BANNER (resting-state trigger)
-// Contains: author avatar, "What's on your mind?" pill (opens the composer
-// modal), and Photo / Ask / Win quick-action chips (open it pre-configured)
-// ──────────────────────────────────────────────────────────
-function ComposerBanner({
-  currentUser,
-  onOpen,
-}: {
-  currentUser: CurrentUser | null;
-  onOpen: (type?: PostType, photo?: boolean) => void;
-}) {
-  return (
-    <div
-      id="post-composer"
-      className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-apple-lg"
-    >
-      {/* Top-edge highlight */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-px rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
-      />
-      <div className="flex items-center gap-3">
-        <Image
-          src={currentUser?.avatar || '/Assets/Img/default-avatar.png'}
-          alt=""
-          width={44}
-          height={44}
-          className="w-11 h-11 rounded-full object-cover border border-slate-800 flex-shrink-0"
-        />
-        <button
-          type="button"
-          onClick={() => onOpen()}
-          className="flex-1 text-left px-4 py-2.5 rounded-full bg-[#111318] border border-slate-800/60 text-sm text-slate-500 hover:border-primary-500/40 hover:text-slate-400 transition-colors"
-        >
-          {currentUser ? `What's on your mind, ${displayName(currentUser).split(' ')[0]}?` : "What's on your mind?"}
-        </button>
-      </div>
-      <div className="flex items-center gap-1 mt-3 pt-3 border-t border-slate-800/60">
-        <BannerAction icon={<ImageIcon className="w-4 h-4 text-emerald-400" />} label="Photo" onClick={() => onOpen('status', true)} />
-        <BannerAction icon={<HelpCircle className="w-4 h-4 text-sky-400" />} label="Ask" onClick={() => onOpen('ask')} />
-        <BannerAction icon={<Trophy className="w-4 h-4 text-amber-400" />} label="Win" onClick={() => onOpen('win')} />
-      </div>
-    </div>
-  );
-}
-
-function BannerAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors active:scale-[0.98]"
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
-
