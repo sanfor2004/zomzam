@@ -155,8 +155,8 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // past the bar's own height; small deltas are ignored to avoid jitter.
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
     const y = e.currentTarget.scrollTop;
-    if (Math.abs(y - lastScrollY.current) < 6) return;
-    setBarHidden(y > lastScrollY.current && y > 64);
+    if (Math.abs(y - lastScrollY.current) < 4) return;
+    setBarHidden(y > lastScrollY.current && y > 16);
     lastScrollY.current = y;
   };
 
