@@ -17,6 +17,7 @@ import { LeadCard } from "@/components/crm/LeadCard";
 import { LeadDetailsModal } from "@/components/crm/LeadDetailsModal";
 import { cn } from "@/lib/utils";
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { getLeadsRequest, deleteLeadsBatchRequest, addLeadRequest, type NewLeadData } from './page.services';
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
@@ -36,7 +37,7 @@ export default function LeadsPage() {
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [newLeadData, setNewLeadData] = useState({
+  const [newLeadData, setNewLeadData] = useState<NewLeadData>({
     name: "",
     email: "",
     phone: "",
@@ -53,15 +54,8 @@ export default function LeadsPage() {
   const fetchLeadsData = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/crm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_leads' })
-      });
-      const data = await response.json();
-      if (data.success) {
-        setLeads(data.leads || []);
-      }
+      const { success, leads } = await getLeadsRequest();
+      if (success) setLeads(leads);
       setSelectedLeadIds([]);
     } catch (err) {
       console.error(err);
@@ -102,12 +96,7 @@ export default function LeadsPage() {
 
     setIsDeleting(true);
     try {
-      const response = await fetch('/api/crm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_leads_batch', ids: selectedLeadIds })
-      });
-      const res = await response.json();
+      const res = await deleteLeadsBatchRequest(selectedLeadIds);
       if (res.success) {
         setSelectedLeadIds([]);
         await fetchLeadsData();
@@ -127,15 +116,10 @@ export default function LeadsPage() {
 
     setIsSubmitting(true);
     try {
-      const response = await fetch('/api/crm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_lead', lead: newLeadData })
-      });
-      const res = await response.json();
+      const ok = await addLeadRequest(newLeadData);
       setIsSubmitting(false);
 
-      if (res.success) {
+      if (ok) {
         setShowAddForm(false);
         setNewLeadData({
           name: "",
