@@ -17,6 +17,8 @@ import { useToast } from './Toast';
 import { gsap } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 import { postImages } from './PostImageGrid';
+import { useComposerImages, type ComposerImage } from './useComposerImages';
+import { MAX_POST_IMAGES, POST_IMAGE_ACCEPT, createPostRequest, quoteRequest, editPostRequest } from './PostComposer.services';
 // Feature-owned domain types still live with the home feed; the composer is a
 // data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
 import { displayName, type CurrentUser, type MentionUser, type Post } from '@/app/(dashboard)/home/shared';
@@ -24,27 +26,9 @@ import { displayName, type CurrentUser, type MentionUser, type Post } from '@/ap
 type Trigger = '@' | '#';
 type PostType = 'status' | 'ask' | 'win';
 
-// One attached image in the composer: a freshly-picked `file` (with a blob
-// preview URL), or an existing server image kept from edit mode (`file: null`,
-// `url` is its server path).
-interface ComposerImage {
-  url: string;
-  file: File | null;
-}
-
 // Maximum visible characters allowed per post. Mention (@) and tag (#) pills
 // count toward this via innerText, so the limit reflects what the reader sees.
 const MAX_POST_CHARS = 500;
-
-// Product cap: a post carries at most 3 images. Mirrors the server cap in
-// `createPost`/`editPost` so the user gets instant feedback (server re-validates).
-const MAX_POST_IMAGES = 3;
-
-// Post image attachment — mirrors the server allowlist/cap (api/posts) so the
-// user gets instant feedback; the server still re-validates (never trust client).
-const POST_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-const POST_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const POST_IMAGE_ACCEPT = POST_IMAGE_TYPES.join(',');
 
 // Curated, dependency-free emoji palette grouped by intent. OS emoji input still
 // works for everything else — this is a quick-pick affordance, not a full keyboard.
@@ -125,8 +109,9 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const [showEmoji, setShowEmoji] = useState(false);
   const emojiGroupRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Up to MAX_POST_IMAGES attached images, in display order.
-  const [images, setImages] = useState<ComposerImage[]>(initialImages);
+  // Image attachment lifecycle (list, validation, blob cleanup, derived upload
+  // files + kept paths) — see useComposerImages.
+  const { images, handleImageSelect, removeImageAt, clearImages, newImageFiles, keptPaths } = useComposerImages(initialImages, toast);
 
   // Autocomplete dropdown state
   const [popoverActive, setPopoverActive] = useState(false);
@@ -405,21 +390,6 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     updateCharCount();
   };
 
-  // ── Image attachment ────────────────────────────────────────
-  // Revoke every blob preview URL on unmount so no object URL leaks. Kept in a
-  // ref (not the effect dep list) so adding/removing images mid-session doesn't
-  // re-run cleanup and revoke URLs still on screen — only blob: URLs are object
-  // URLs (edit-mode seeds are server paths, left untouched).
-  const imagesRef = useRef(images);
-  useEffect(() => { imagesRef.current = images; }, [images]);
-  useEffect(() => {
-    return () => {
-      for (const img of imagesRef.current) {
-        if (img.file && img.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
-      }
-    };
-  }, []);
-
   // Edit mode: seed the editor from the post's HTML once on mount (image +
   // visibility are seeded via initial state above).
   useEffect(() => {
@@ -443,56 +413,6 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   useEffect(() => {
     onDirtyChange?.(charCount > 0 || images.length > 0);
   }, [charCount, images.length, onDirtyChange]);
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const picked = Array.from(e.target.files ?? []);
-    e.target.value = ''; // reset so re-picking the same file still fires onChange
-    if (picked.length === 0) return;
-
-    const room = MAX_POST_IMAGES - images.length;
-    if (room <= 0) {
-      toast({ variant: 'error', title: 'Image limit reached', description: `You can attach up to ${MAX_POST_IMAGES} images.` });
-      return;
-    }
-
-    const accepted: ComposerImage[] = [];
-    for (const file of picked) {
-      if (accepted.length >= room) {
-        toast({ variant: 'info', title: 'Image limit reached', description: `Only the first ${MAX_POST_IMAGES} images were added.` });
-        break;
-      }
-      if (!POST_IMAGE_TYPES.includes(file.type)) {
-        toast({ variant: 'error', title: 'Unsupported image', description: 'Use a JPG, PNG, or WebP image.' });
-        continue;
-      }
-      if (file.size > POST_IMAGE_MAX_BYTES) {
-        toast({ variant: 'error', title: 'Image too large', description: 'Maximum image size is 5 MB.' });
-        continue;
-      }
-      accepted.push({ url: URL.createObjectURL(file), file });
-    }
-    if (accepted.length) setImages((prev) => [...prev, ...accepted]);
-  };
-
-  // Drop one image; revoke its blob preview immediately (only freshly-picked
-  // files carry a blob URL — existing edit-mode images are server paths).
-  const removeImageAt = (index: number) => {
-    setImages((prev) => {
-      const img = prev[index];
-      if (img?.file && img.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
-      return prev.filter((_, i) => i !== index);
-    });
-  };
-
-  // Drop every image (post-submit reset). Revoke all blob previews first.
-  const clearImages = () => {
-    setImages((prev) => {
-      for (const img of prev) {
-        if (img.file && img.url.startsWith('blob:')) URL.revokeObjectURL(img.url);
-      }
-      return [];
-    });
-  };
 
   // ── Toolbar reveal dismissal (click outside the whole card) ──
   // The settings toolbar appears on editor focus and stays up while the user
@@ -533,29 +453,20 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   // repost, handled by the menu's instant action) — same rule as a normal post.
   const canSubmit = (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
 
-  // Append every freshly-picked image File (skipping kept existing ones, which
-  // carry file: null) as repeated `image` parts the server reads via getAll.
-  const appendNewImages = (fd: FormData) => {
-    for (const img of images) if (img.file) fd.append('image', img.file);
+  // Reset the editor + popovers + attachments after a successful submit.
+  const resetAfterSubmit = () => {
+    editorRef.current!.innerHTML = '';
+    setCharCount(0);
+    setPopoverActive(false);
+    setShowEmoji(false);
+    clearImages();
   };
 
   const createPostSubmit = async (content_html: string) => {
     try {
-      const formData = new FormData();
-      formData.append('content_html', content_html);
-      formData.append('visibility', visibility);
-      formData.append('type', postType);
-      if (postType === 'ask' && skillTag.trim()) formData.append('skill_tag', skillTag.trim());
-      appendNewImages(formData);
-      // No Content-Type header — the browser sets the multipart boundary itself.
-      const res = await fetch('/api/posts', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await createPostRequest({ contentHtml: content_html, visibility, postType, skillTag, imageFiles: newImageFiles });
       if (data.success) {
-        editorRef.current!.innerHTML = '';
-        setCharCount(0);
-        setPopoverActive(false);
-        setShowEmoji(false);
-        clearImages();
+        resetAfterSubmit();
         setPostType('status');
         setSkillTag('');
         onPosted(data.post);
@@ -571,19 +482,9 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const submitQuote = async (content_html: string) => {
     if (!quoting) return;
     try {
-      const fd = new FormData();
-      fd.append('content_html', content_html);
-      fd.append('visibility', 'public'); // a quote republishes public content
-      fd.append('repost_of', String(quoting.original.id));
-      appendNewImages(fd); // the quote's OWN image(s) (optional)
-      const res = await fetch('/api/posts', { method: 'POST', body: fd });
-      const data = await res.json();
+      const data = await quoteRequest({ contentHtml: content_html, repostOf: quoting.original.id, imageFiles: newImageFiles });
       if (data.success) {
-        editorRef.current!.innerHTML = '';
-        setCharCount(0);
-        setPopoverActive(false);
-        setShowEmoji(false);
-        clearImages();
+        resetAfterSubmit();
         quoting.onPosted(data.post);
         toast({ variant: 'success', title: 'Reposted', description: 'Your quote is now live in the feed.' });
       } else {
@@ -596,26 +497,15 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
 
   const saveEdit = async (content_html: string) => {
     if (!editing) return;
-    // Declarative image intent: send the existing URLs the editor kept + any new
-    // files. The server drops any prior image not in kept_paths.
-    const keptPaths = images.filter((img) => !img.file).map((img) => img.url);
     try {
-      const fd = new FormData();
-      fd.append('action', 'post_edit');
-      fd.append('post_id', String(editing.post.id));
-      fd.append('content_html', content_html);
-      fd.append('visibility', visibility);
-      fd.append('kept_paths', JSON.stringify(keptPaths));
-      appendNewImages(fd);
-      const res = await fetch('/api/posts', { method: 'POST', body: fd });
-      const data = await res.json();
+      const data = await editPostRequest({ postId: editing.post.id, contentHtml: content_html, visibility, keptPaths, imageFiles: newImageFiles });
       if (data.success) {
         editing.onSaved({
           ...editing.post,
-          content_html: data.content_html,
+          content_html: data.content_html ?? content_html,
           image_path: data.image_path ?? null,
           image_paths: data.image_paths ?? null,
-          visibility: data.visibility ?? editing.post.visibility,
+          visibility: (data.visibility as PostVisibility) ?? editing.post.visibility,
         });
         toast({ variant: 'success', title: 'Post updated', description: 'Your changes are saved.' });
       } else {
