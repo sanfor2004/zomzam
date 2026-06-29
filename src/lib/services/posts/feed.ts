@@ -75,6 +75,14 @@ const FEED_VISIBILITY = `(
            ))
       )`;
 
+// A plain repost (empty pointer: repost_of set, no text AND no image) is never a
+// standalone post — it only boosts its original in the feed (collapsed) and shows
+// on the reposter's profile. So it must never appear as its own row on /saved
+// either. Quote reposts (text and/or image) and normal posts pass. The home feed
+// FETCHES plain reposts on purpose (collapse re-floats their original), so this
+// guard is scoped to /saved, which has no collapse pass.
+const NOT_PLAIN_REPOST = `(p.repost_of IS NULL OR p.content_html <> '' OR p.image_path IS NOT NULL)`;
+
 /**
  * Shape one raw FEED_COLUMNS row into the wire Post. Builds the nested repost
  * original from the orig_* columns: a value of `undefined` ⇒ not a repost; `null`
@@ -449,7 +457,7 @@ export async function getSaved(userId: number, opts: GetSavedOptions = {}) {
 
   const rows = await query(
     `${SELECT}
-     WHERE b.user_id = ? AND ${VISIBILITY}${keysetSql}
+     WHERE b.user_id = ? AND ${VISIBILITY} AND ${NOT_PLAIN_REPOST}${keysetSql}
      ORDER BY b.id DESC LIMIT ${limit}`,
     params
   );

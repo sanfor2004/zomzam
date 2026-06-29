@@ -752,6 +752,17 @@ test('getSaved keyset-paginates on the bookmark id', async () => {
   assert.equal(res.next_cursor, 11, 'smallest bookmark id seeds the next page');
 });
 
+test('getSaved excludes plain-repost pointer rows (never a standalone saved item)', async () => {
+  seedQuery([feedRow({ id: 7, bookmark_id: 30, repost_of: null })], []);
+
+  await posts.getSaved(USER_ID, {});
+
+  // The query filters out an empty pointer (repost_of set, no text, no image) while
+  // keeping normal posts and quote reposts (text and/or image).
+  const sql = db.query.mock.calls[0].arguments[0] as string;
+  assert.match(sql, /p\.repost_of IS NULL OR p\.content_html <> '' OR p\.image_path IS NOT NULL/);
+});
+
 // ── getFeed: nested repost shape + engagement flags ──────────────────────────
 
 test('getFeed builds a nested repost_of object from the orig_* columns', async () => {
