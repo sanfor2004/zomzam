@@ -7,6 +7,9 @@ import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { User, Upload, Trash2, X, Plus, Loader2, Sparkles, HelpCircle } from 'lucide-react';
 import { Alert } from '@/components/ui/Alert';
+import {
+  fetchProfile, uploadAvatarRequest, removeAvatarRequest, saveProfileRequest, validateAvatarFile,
+} from './page.services';
 
 export default function MyProfilePage() {
   const { t } = useTranslation();
@@ -41,41 +44,23 @@ export default function MyProfilePage() {
 
   // Fetch initial profile data
   useEffect(() => {
-    const fetchProfile = async () => {
+    (async () => {
       try {
-        const res = await fetch('/api/auth?action=check');
-        const data = await res.json();
-        if (data.success && data.authenticated && data.user) {
-          setUsername(data.user.username || '');
-          setEmail(data.user.email || '');
-          setFirstName(data.user.first_name || '');
-          setLastName(data.user.last_name || '');
-          setBio(data.user.bio || '');
-          setCurrentAvatarUrl(data.user.avatar || null);
-
-          // Handle tags parsing
-          if (data.user.tags) {
-            try {
-              const parsed = typeof data.user.tags === 'string' 
-                ? JSON.parse(data.user.tags) 
-                : data.user.tags;
-              if (Array.isArray(parsed)) {
-                setTags(parsed);
-              }
-            } catch (e) {
-              console.error('Failed to parse tags:', e);
-            }
-          }
-        } else {
-          router.push('/sign');
-        }
+        const user = await fetchProfile();
+        if (!user) { router.push('/sign'); return; }
+        setUsername(user.username);
+        setEmail(user.email);
+        setFirstName(user.first_name);
+        setLastName(user.last_name);
+        setBio(user.bio);
+        setCurrentAvatarUrl(user.avatar);
+        setTags(user.tags);
       } catch (err) {
         console.error('Failed to load profile details:', err);
       } finally {
         setIsPageLoading(false);
       }
-    };
-    fetchProfile();
+    })();
   }, [router]);
 
   // Clean up image preview URL if it changes
@@ -93,12 +78,9 @@ export default function MyProfilePage() {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-      const res = await fetch('/api/profile', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await uploadAvatarRequest(file);
       if (data.success) {
-        setCurrentAvatarUrl(data.user?.avatar || null);
+        setCurrentAvatarUrl(data.avatar);
         setAvatarPreview(null);
         setSuccessMsg('Profile photo updated');
       } else {
@@ -120,17 +102,8 @@ export default function MyProfilePage() {
     e.target.value = ''; // reset so re-picking the same file still fires onChange
     if (!file) return;
 
-    // Client-side validations
-    if (file.size > 2 * 1024 * 1024) {
-      setErrorMsg('Image size cannot exceed 2MB');
-      return;
-    }
-
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedTypes.includes(file.type)) {
-      setErrorMsg('Only JPEG, PNG, GIF and WEBP formats are supported');
-      return;
-    }
+    const err = validateAvatarFile(file);
+    if (err) { setErrorMsg(err); return; }
 
     setErrorMsg(null);
     setAvatarPreview(URL.createObjectURL(file));
@@ -149,10 +122,7 @@ export default function MyProfilePage() {
     setErrorMsg(null);
     setSuccessMsg(null);
     try {
-      const formData = new FormData();
-      formData.append('remove_avatar', '1');
-      const res = await fetch('/api/profile', { method: 'POST', body: formData });
-      const data = await res.json();
+      const data = await removeAvatarRequest();
       if (data.success) {
         setCurrentAvatarUrl(null);
         setAvatarPreview(null);
@@ -223,18 +193,7 @@ export default function MyProfilePage() {
     setErrorMsg(null);
 
     try {
-      const formData = new FormData();
-      formData.append('first_name', firstName);
-      formData.append('last_name', lastName);
-      formData.append('bio', bio);
-      formData.append('tags', JSON.stringify(tags));
-
-      const res = await fetch('/api/profile', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await res.json();
+      const data = await saveProfileRequest({ firstName, lastName, bio, tags });
       if (data.success) {
         setSuccessMsg(t('profile_success'));
         // Force header re-render to load updated details
