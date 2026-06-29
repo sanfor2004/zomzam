@@ -156,7 +156,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const handleMainScroll = (e: React.UIEvent<HTMLElement>) => {
     const y = e.currentTarget.scrollTop;
     if (Math.abs(y - lastScrollY.current) < 4) return;
-    setBarHidden(y > lastScrollY.current && y > 16);
+    setBarHidden(y > lastScrollY.current && y > 30);
     lastScrollY.current = y;
   };
 
