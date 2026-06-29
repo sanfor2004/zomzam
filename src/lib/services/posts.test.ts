@@ -587,12 +587,90 @@ test('toggleRepost matches only the empty IMAGE-LESS pointer (an image-only quot
   assert.match(probe, /content_html = '' AND image_path IS NULL/, 'plain-repost probe excludes image-only quotes');
 });
 
-test('getFeed lets plain reposts into the home feed (recency re-floats the original)', async () => {
+// ── Plain-repost collapse: original surfaces with a "reposted" label, deduped ──
+
+// A plain (empty pointer) repost row: repost_of set, no text, no image.
+const plainRepostRow = (over: Record<string, any> = {}) =>
+  feedRow({ content_html: '', image_path: null, ...over });
+
+test('getFeed collapses a plain repost into its ORIGINAL with a reposted_by label', async () => {
   seedQueryOne({ tags: [] });
-  seedQuery([feedRow({ id: 5 })], []);
-  await posts.getFeed(USER_ID, { tier: 'seen' });
-  const sql = db.query.mock.calls[0].arguments[0] as string;
-  assert.doesNotMatch(sql, /NOT \(p\.repost_of IS NOT NULL/, 'plain reposts are no longer filtered out');
+  // feed page → one plain repost (by Sara) of original #5; #5 not on the page, so
+  // collapse fetches it; then embedTopComments sees [].
+  seedQuery(
+    [plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara' })],
+    [feedRow({ id: 5, username: 'orig', content_html: '<p>the original</p>' })],
+    [],
+  );
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+
+  assert.equal(res.posts.length, 1, 'the empty pointer never renders as its own card');
+  const card = res.posts[0];
+  assert.equal(card.id, 5, 'the ORIGINAL is the card subject (engagement targets it)');
+  assert.match(card.content_html, /the original/);
+  assert.equal(card.repost_of, undefined, 'renders as a normal post, not a nested-repost card');
+  assert.equal(card.reposted_by.total, 1);
+  assert.equal(card.reposted_by.users[0].username, 'sara');
+  assert.deepEqual(card.repost_seen_ids, [100], 'the absorbed pointer id rides along for read-receipts');
+});
+
+test('getFeed de-dups many reposters of one original into a single aggregated card', async () => {
+  seedQueryOne({ tags: [] });
+  seedQuery(
+    [
+      plainRepostRow({ id: 101, repost_of: 5, username: 'sara', first_name: 'Sara' }),
+      plainRepostRow({ id: 100, repost_of: 5, username: 'ahmed', first_name: 'Ahmed' }),
+    ],
+    [feedRow({ id: 5, username: 'orig' })], // original fetched once
+    [],
+  );
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+
+  assert.equal(res.posts.length, 1, 'two reposts of the same post → ONE card');
+  assert.equal(res.posts[0].reposted_by.total, 2);
+  assert.deepEqual(res.posts[0].reposted_by.users.map((u: any) => u.username), ['sara', 'ahmed']);
+  assert.deepEqual(res.posts[0].repost_seen_ids, [101, 100]);
+});
+
+test('getFeed merges a plain repost with the original\'s own appearance (no extra fetch, one card)', async () => {
+  seedQueryOne({ tags: [] });
+  // The original (#5) is already on the page AND a repost of it is too → no second
+  // query needed (only feed + embedTopComments), and they collapse to one card.
+  seedQuery(
+    [
+      plainRepostRow({ id: 100, repost_of: 5, username: 'sara', first_name: 'Sara' }),
+      feedRow({ id: 5, username: 'orig' }),
+    ],
+    [],
+  );
+
+  const res = await posts.getFeed(USER_ID, { tier: 'seen' });
+
+  assert.equal(res.posts.length, 1, 'the original is not duplicated by a repost of it');
+  assert.equal(res.posts[0].id, 5);
+  assert.equal(res.posts[0].reposted_by.total, 1);
+  assert.equal(db.query.mock.calls.length, 2, 'no batched original-fetch when the original is already on the page');
+});
+
+test('getFeed keyset cursor advances over the RAW rows, not the collapsed low-id original', async () => {
+  seedQueryOne({ tags: [] });
+  // Deeper keyset page (limit 2, exactly full ⇒ has_more). A plain repost (id 100)
+  // of original #5 plus a normal post (id 90). The original #5 is fetched by
+  // collapse. next_cursor MUST be 90 (smallest RAW id), never 5 — else the next
+  // page would skip everything between 90 and 5.
+  seedQuery(
+    [plainRepostRow({ id: 100, repost_of: 5 }), feedRow({ id: 90 })],
+    [feedRow({ id: 5 })],
+    [],
+  );
+
+  const res = await posts.getFeed(USER_ID, { tier: 'unseen', cursor: 200, limit: 2 });
+
+  assert.equal(res.has_more, true);
+  assert.equal(res.next_cursor, 90, 'cursor tracks the raw posts.id stream, not the substituted original');
+  assert.equal(res.posts[0].id, 5, 'but the rendered card is still the collapsed original');
 });
 
 test('createPost quote accepts an image-only quote (no text)', async () => {

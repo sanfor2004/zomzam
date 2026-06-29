@@ -33,6 +33,15 @@ import {
 // style. Defined once at module scope so it isn't rebuilt on every card render.
 const compactCount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
+// Twitter-style boost label for a plain-reposted original ("<name> reposted" /
+// "<a> and <b> reposted" / "<a> and N others reposted").
+function repostedByLabel(rb: NonNullable<Post['reposted_by']>): string {
+  const names = rb.users.map((u) => displayName(u));
+  if (rb.total <= 1) return `${names[0] ?? 'Someone'} reposted`;
+  if (rb.total === 2) return `${names[0]} and ${names[1] ?? 'someone'} reposted`;
+  return `${names[0]} and ${rb.total - 1} others reposted`;
+}
+
 // ── Post card ─────────────────────────────────────────────────
 // Shared between the home feed and the /saved page (and any future feed-style
 // list). memo'd so composer keystrokes (and other host-page state churn) don't
@@ -51,7 +60,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   onReposted?: (post: Post) => void;
   currentUser: CurrentUser | null;
   friends: MentionUser[];
-  observe: (el: HTMLElement | null, postId: number) => void;
+  observe: (el: HTMLElement | null, postId: number, alsoMark?: number[]) => void;
   /** Showcase mode (the /ui-kit page). Keeps every interaction optimistic but
    *  skips the /api/posts mutations (like/bookmark/repost/delete) so the
    *  data-free reference page can render a fully live-feeling card. */
@@ -97,7 +106,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
 
   // Register this card's outer node with the feed-wide seen-tracker (read receipt
   // on viewport dwell). Stable per card so memo isn't invalidated each render.
-  const seenRef = useCallback((el: HTMLElement | null) => observe(el, post.id), [observe, post.id]);
+  const seenRef = useCallback((el: HTMLElement | null) => observe(el, post.id, post.repost_seen_ids), [observe, post.id, post.repost_seen_ids]);
 
   const topComments = post.top_comments ?? [];
 
@@ -186,6 +195,15 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
       // next post in the feed.
       className={`post-item relative ${repostMenuOpen ? 'z-30' : ''}`}
     >
+      {/* ─── Twitter-style boost label: this original was plain-reposted by one or
+          more users (the plain repost itself never renders as a card). ─── */}
+      {post.reposted_by && (
+        <div className="flex items-center gap-1.5 px-4 pb-1.5 text-[11px] font-semibold text-slate-500">
+          <Repeat2 className="w-3.5 h-3.5 flex-shrink-0" />
+          <span className="truncate">{repostedByLabel(post.reposted_by)}</span>
+        </div>
+      )}
+
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST CARD — MAIN GLASS CARD
           Contains: owner quarter-circle (own posts), header, content

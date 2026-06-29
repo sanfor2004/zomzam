@@ -114,6 +114,7 @@ function normalizeFeedRow(p: any) {
     orig_accepted_answer_id, orig_resolved_at, orig_created_at,
     orig_like_count, orig_comment_count,
     repost_count, reposted_by_me,
+    _reposted_by, _repost_seen_ids,
     ...rest
   } = p;
   // Reference the destructured-out fields so noUnusedLocals/lint stays quiet.
@@ -121,6 +122,13 @@ function normalizeFeedRow(p: any) {
   void orig_last_name; void orig_avatar; void orig_content_html; void orig_type;
   void orig_skill_tag; void orig_accepted_answer_id; void orig_resolved_at; void orig_created_at;
   void orig_like_count; void orig_comment_count; void orig_id; void orig_public_id;
+
+  // Twitter-style boost attribution attached by collapsePlainReposts (absent on a
+  // normal/quote card). Cap the named reposters for the label; keep the full total.
+  const reposters: any[] = Array.isArray(_reposted_by) ? _reposted_by : [];
+  const reposted_by = reposters.length
+    ? { users: reposters.slice(0, 3).map((u: any) => ({ username: u.username, first_name: u.first_name, last_name: u.last_name })), total: reposters.length }
+    : undefined;
 
   return {
     ...normalizeAvatar(rest),
@@ -134,8 +142,90 @@ function normalizeFeedRow(p: any) {
     repost_count: parseInt(repost_count || 0),
     reposted_by_me: parseInt(reposted_by_me || 0) > 0,
     repost_of,
+    reposted_by,
+    repost_seen_ids: Array.isArray(_repost_seen_ids) ? _repost_seen_ids : undefined,
     top_comments: [] as any[],
   };
+}
+
+// A PLAIN repost is the empty pointer row: repost_of set, no text AND no image.
+// (An image-only quote has content_html='' but image_path set, so it is NOT plain.)
+// Mirrors the predicate in reposts.ts toggleRepost.
+function isPlainRepostRow(r: any): boolean {
+  return r.repost_of != null && !(r.content_html || '').trim() && !r.image_path;
+}
+
+/**
+ * Twitter-style repost collapse. A plain repost (empty pointer) must NOT render as
+ * its own empty reposter card; instead its ORIGINAL surfaces with a "<reposter>
+ * reposted" label. This runs AFTER the page rows are fetched, so the feed's
+ * recency ordering / keyset cursor (which advance over the raw posts.id stream)
+ * are untouched — the pointer row's fresh id still floats its original up (the
+ * reach boost).
+ *
+ * For each plain-repost row it substitutes the ORIGINAL post (full viewer state —
+ * fetched in one batched query when the original isn't already on the page), so
+ * like/bookmark/comment target the original, not the empty pointer. Multiple
+ * reposts of the same original — and an original that ALSO appears on its own —
+ * collapse to ONE card at the highest (most recent) position, with the reposters
+ * aggregated into `_reposted_by`. Each absorbed pointer id rides along in
+ * `_repost_seen_ids` so the viewer's read-receipt marks it seen and the boost
+ * doesn't loop. A plain repost of a deleted/invisible original is dropped (no
+ * feed tombstone — that's a quote-only affordance). Quote reposts are untouched.
+ *
+ * ponytail: dedup is per-page; an original boosted on one page can still re-appear
+ * via its own recency on a deeper page, but the client feed already de-dups by
+ * post id across pages, so it never double-renders. Cross-page collapse would need
+ * stateful cursors — not worth it until it measurably matters.
+ */
+async function collapsePlainReposts(userId: number, rows: any[]): Promise<any[]> {
+  if (!rows.some(isPlainRepostRow)) return rows; // fast path: no plain reposts
+
+  // Originals already on the page are reused directly; the rest are fetched once.
+  const byId = new Map<number, any>();
+  for (const r of rows) if (!isPlainRepostRow(r)) byId.set(Number(r.id), r);
+
+  const missing = new Set<number>();
+  for (const r of rows) {
+    if (isPlainRepostRow(r)) {
+      const oid = Number(r.repost_of);
+      if (!byId.has(oid)) missing.add(oid);
+    }
+  }
+  if (missing.size) {
+    const ids = [...missing];
+    const ph = ids.map(() => '?').join(',');
+    const fetched = await query(
+      `SELECT ${FEED_COLUMNS} ${FEED_FROM} WHERE p.id IN (${ph})`,
+      [...feedColParams(userId), ...ids]
+    );
+    for (const o of fetched) byId.set(Number(o.id), o);
+  }
+
+  const reposterOf = (r: any) => ({ username: r.username, first_name: r.first_name, last_name: r.last_name });
+
+  const out: any[] = [];
+  const emitted = new Map<number, any>(); // effective post id → the row already placed
+  for (const r of rows) {
+    const plain = isPlainRepostRow(r);
+    const effId = plain ? Number(r.repost_of) : Number(r.id);
+    const subject = plain ? byId.get(effId) : r;
+    if (!subject) continue; // plain repost of a gone/invisible original → drop the boost
+
+    let card = emitted.get(effId);
+    if (!card) {
+      // Clone a substituted original (it may be shared via byId); a direct row is
+      // emitted as-is.
+      card = plain ? { ...subject } : subject;
+      out.push(card);
+      emitted.set(effId, card);
+    }
+    if (plain) {
+      (card._reposted_by ??= []).push(reposterOf(r));
+      (card._repost_seen_ids ??= []).push(Number(r.id));
+    }
+  }
+  return out;
 }
 
 // Embed the top-2 root comments per post in one windowed query (rn <= 2), then
@@ -253,14 +343,12 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     filterParams.push(...viewerTags);
   }
 
-  // Plain reposts DO enter the feed: the pointer row carries a fresh id, so
-  // `id DESC` recency floats it (and the old original it points at) back to the
-  // top of everyone's unseen feed — that re-surfacing IS the repost's reach
-  // boost, since this feed already shows every public post to everyone. It
-  // renders as "<reposter> reposted <original>" via PostCard's nested-original
-  // embed; the scoring window keeps it recency-only (no relevance boost).
-  // ponytail: no per-original dedup — N reposters of the same post yield N rows.
-  // Add a "collapse to one + N others" pass here only if it actually floods.
+  // Plain reposts are FETCHED into the page (the pointer row's fresh id makes
+  // `id DESC` recency float its original back to the top — the reach boost), but
+  // they never render as their own empty card: collapsePlainReposts (below)
+  // substitutes the ORIGINAL with a "<reposter> reposted" label and de-dups
+  // multiple reposters to ONE card. Quote reposts stay their own cards. The
+  // scoring window keeps a repost recency-only (no relevance boost).
   const isScoredFirstPage = tier === 'unseen' && !cursor && !filter;
 
   let rows: any[];
@@ -312,14 +400,15 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     hasMore = rows.length === limit;
   }
 
-  const normalized = rows.map(normalizeFeedRow);
-
-  await embedTopComments(userId, normalized);
-
-  // Cursor for the next page is the smallest id we just delivered.
-  const next_cursor = hasMore && normalized.length
-    ? Math.min(...normalized.map((p) => Number(p.id)))
+  // The keyset cursor advances over the RAW rows fetched (real posts.id values,
+  // incl. plain-repost pointers), computed BEFORE collapse — otherwise a boosted
+  // original's low id would seed the next page and skip the rows between.
+  const next_cursor = hasMore && rows.length
+    ? Math.min(...rows.map((r) => Number(r.id)))
     : null;
+
+  const normalized = (await collapsePlainReposts(userId, rows)).map(normalizeFeedRow);
+  await embedTopComments(userId, normalized);
 
   return { posts: normalized, next_cursor, has_more: hasMore, tier };
 }

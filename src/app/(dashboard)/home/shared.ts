@@ -75,6 +75,16 @@ export interface Post {
   repost_of?: Post | null;
   repost_count?: number;
   reposted_by_me?: boolean;
+  // Twitter-style boost attribution. When present, THIS card is an original post
+  // surfaced into the feed because one or more users plain-reposted it (a plain
+  // repost never renders as its own empty card — only quote reposts do). The card
+  // shows a "<name> [and N others] reposted" label; like/comment/bookmark target
+  // this original. Built by the feed's collapse pass, never stored. `users` is
+  // capped (first few reposters) for the label; `total` is the full count.
+  reposted_by?: { users: { username: string; first_name: string | null; last_name: string | null }[]; total: number };
+  // Plain-repost pointer ids this card absorbed during collapse — marked seen
+  // alongside this post's id so a boosted original stops re-surfacing once viewed.
+  repost_seen_ids?: number[];
   // Server-computed viewer↔author relationship (drives the Follow button).
   is_following?: boolean;
   is_friend?: boolean;

@@ -26,6 +26,9 @@ export function usePostSeenTracker() {
   const flushedRef = useRef<Set<number>>(new Set());   // already sent (don't re-fire)
   const elToId = useRef<Map<Element, number>>(new Map());
   const idToEl = useRef<Map<number, Element>>(new Map());
+  // Extra ids to mark seen alongside a card's own id — the plain-repost pointer
+  // rows a boosted original absorbed, so the boost stops re-surfacing once viewed.
+  const elToExtra = useRef<Map<Element, number[]>>(new Map());
   const dwellTimers = useRef<Map<Element, ReturnType<typeof setTimeout>>>(new Map());
   const flushTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -66,14 +69,17 @@ export function usePostSeenTracker() {
             if (!dwellTimers.current.has(el)) {
               const timer = setTimeout(() => {
                 dwellTimers.current.delete(el);
-                if (!flushedRef.current.has(id)) {
-                  pendingRef.current.add(id);
-                  scheduleFlush();
+                // Mark the card's own id plus any absorbed plain-repost pointer
+                // ids (markPostsSeen de-dups + caps server-side).
+                for (const seenId of [id, ...(elToExtra.current.get(el) ?? [])]) {
+                  if (!flushedRef.current.has(seenId)) pendingRef.current.add(seenId);
                 }
+                if (pendingRef.current.size) scheduleFlush();
                 // This card is settled — stop watching it.
                 obs.unobserve(el);
                 elToId.current.delete(el);
                 idToEl.current.delete(id);
+                elToExtra.current.delete(el);
               }, DWELL_MS);
               dwellTimers.current.set(el, timer);
             }
@@ -102,7 +108,7 @@ export function usePostSeenTracker() {
     };
   }, [flush, scheduleFlush]);
 
-  const observe = useCallback((el: HTMLElement | null, postId: number) => {
+  const observe = useCallback((el: HTMLElement | null, postId: number, alsoMark?: number[]) => {
     const obs = observerRef.current;
     if (!obs) return;
 
@@ -113,6 +119,7 @@ export function usePostSeenTracker() {
       obs.unobserve(prev);
       elToId.current.delete(prev);
       idToEl.current.delete(postId);
+      elToExtra.current.delete(prev);
       const timer = dwellTimers.current.get(prev);
       if (timer) { clearTimeout(timer); dwellTimers.current.delete(prev); }
     }
@@ -120,6 +127,7 @@ export function usePostSeenTracker() {
     if (!el || flushedRef.current.has(postId)) return;
     idToEl.current.set(postId, el);
     elToId.current.set(el, postId);
+    if (alsoMark && alsoMark.length) elToExtra.current.set(el, alsoMark);
     obs.observe(el);
   }, []);
 
