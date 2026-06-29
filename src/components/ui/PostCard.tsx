@@ -21,6 +21,7 @@ import { Modal } from './Modal';
 import { Dropdown } from './Dropdown';
 import { PostComposer } from './PostComposer';
 import { PostImageGrid, postImages } from './PostImageGrid';
+import { usePostActions } from './usePostActions';
 import { FollowButton } from '@/components/social/FollowButton';
 // Feature-owned domain types still live with the home feed; the card is a
 // data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
@@ -60,14 +61,11 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const { toast } = useToast();
 
   const router = useRouter();
-  const [liked, setLiked] = useState(post.liked_by_me);
-  const [likeCount, setLikeCount] = useState(post.like_count);
+  // Purely-visual interaction state stays here; the data mutations + optimistic
+  // counters live in usePostActions (wired up after repostTargetId below).
   const [deleteConfirming, setDeleteConfirming] = useState(false);
   const [postDeleting, setPostDeleting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
-  const [bookmarked, setBookmarked] = useState(!!post.bookmarked_by_me);
-  const [reposted, setReposted] = useState(!!post.reposted_by_me);
-  const [repostCount, setRepostCount] = useState(post.repost_count ?? 0);
   const [repostMenuOpen, setRepostMenuOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
 
@@ -90,6 +88,12 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   // Reposting a repost collapses to the root — send the original's id when this
   // card is itself a repost, else the post's own id (the service also collapses).
   const repostTargetId = isRepost && original ? original.id : post.id;
+
+  // Optimistic like / bookmark / repost state + network mutations.
+  const {
+    liked, likeCount, bookmarked, reposted, repostCount,
+    toggleLike, toggleBookmark, togglePlainRepost, deletePost,
+  } = usePostActions({ post, demo, repostTargetId, onUnbookmark });
 
   // Register this card's outer node with the feed-wide seen-tracker (read receipt
   // on viewport dwell). Stable per card so memo isn't invalidated each render.
@@ -140,19 +144,6 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     };
   }, [deleteConfirming]);
 
-  // Throws on failure so the caller (handleWedgeDelete) can keep the confirm armed.
-  const handleDelete = async () => {
-    if (demo) { onDelete(post.id); return; } // showcase: no network, just unmount
-    const res = await fetch('/api/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'delete', post_id: post.id }),
-    });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message || 'Failed to delete post');
-    onDelete(post.id);
-  };
-
   // Two-step inline confirm for the quarter-circle delete wedge: first click
   // arms it (wedge fills red, trash icon → checkmark), the second runs the
   // delete; pointer-leave/blur disarms. Icon-only — the colour+icon swap is the
@@ -161,26 +152,14 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
     if (!deleteConfirming) { setDeleteConfirming(true); return; }
     setPostDeleting(true);
     try {
-      await handleDelete(); // on success the row unmounts via onDelete
+      await deletePost();   // network (no-op in demo); throws on failure
+      onDelete(post.id);    // unmount the row
       toast({ variant: 'success', title: 'Post deleted', description: 'Your post has been removed from the feed.' });
     } catch {
       setDeleteConfirming(false);
     } finally {
       setPostDeleting(false);
     }
-  };
-
-  const toggleLike = async () => {
-    setLiked((prev) => !prev);
-    setLikeCount((prev) => liked ? prev - 1 : prev + 1);
-    if (demo) return; // showcase: keep the optimistic flip, skip the write
-    try {
-      await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'like', post_id: post.id }),
-      });
-    } catch { /* non-blocking */ }
   };
 
   const handleLike = () => {
@@ -191,48 +170,6 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
       tl.to(heartIconRef.current, { scale: 1.5, duration: 0.12, ease: 'power2.out' })
         .to(heartIconRef.current, { scale: 1, duration: 0.25, ease: 'back.out(2)' });
     });
-  };
-
-  // Optimistic private bookmark toggle. On the /saved page an un-bookmark drops
-  // the card via onUnbookmark; in the feed the icon just empties.
-  const toggleBookmark = async () => {
-    const next = !bookmarked;
-    setBookmarked(next);
-    if (demo) return; // showcase: keep the optimistic flip, skip the write
-    try {
-      await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'bookmark', post_id: post.id }),
-      });
-      if (!next) onUnbookmark?.(post.id);
-    } catch { /* non-blocking */ }
-  };
-
-  // Plain repost toggle (optimistic). The pointer row enters the feed on the
-  // next fetch (re-floating the original — the reach boost); nothing is prepended
-  // in place, so just flip the count/active state on this card.
-  const togglePlainRepost = async () => {
-    setRepostMenuOpen(false);
-    const next = !reposted;
-    setReposted(next);
-    setRepostCount((c) => Math.max(0, next ? c + 1 : c - 1));
-    if (demo) return; // showcase: keep the optimistic flip, skip the write
-    try {
-      const res = await fetch('/api/posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'repost', post_id: repostTargetId }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        setReposted(!next);
-        setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
-      }
-    } catch {
-      setReposted(!next);
-      setRepostCount((c) => Math.max(0, next ? c - 1 : c + 1));
-    }
   };
 
   // The quote target is the live original (its own card when this IS a repost,
@@ -522,7 +459,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
               >
                 <Dropdown.Item
                   leading={<Repeat2 className="w-4 h-4" />}
-                  onClick={togglePlainRepost}
+                  onClick={() => { setRepostMenuOpen(false); togglePlainRepost(); }}
                 >
                   {reposted ? 'Undo repost' : 'Repost'}
                 </Dropdown.Item>
