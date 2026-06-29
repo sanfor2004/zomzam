@@ -985,10 +985,15 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             <span>{t('nav_settings') || 'Settings'}</span>
           </Button>
 
-          {/* Active Now + Suggested — folded in from the right sidebar (no phone FAB) */}
-          <div className="pt-2 mt-1 border-t border-slate-800/60">
-            <SidebarBody onNavigate={() => setMobileMenuOpen(false)} />
-          </div>
+          {/* Active Now + Suggested — folded in from the right sidebar (no phone
+              FAB). Mounted only once the sheet opens so its /discover fetch never
+              fires on page load (it would otherwise race the feed's initial load
+              on every phone navigation, even for users who never open the menu). */}
+          {mobileMenuOpen && (
+            <div className="pt-2 mt-1 border-t border-slate-800/60">
+              <SidebarBody onNavigate={() => setMobileMenuOpen(false)} />
+            </div>
+          )}
 
           {/* Sign Out */}
           <Button
