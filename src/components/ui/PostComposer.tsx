@@ -15,6 +15,7 @@ import { Input } from './Input';
 import { Tooltip } from './Tooltip';
 import { useToast } from './Toast';
 import { gsap } from '@/lib/gsap';
+import { cn } from '@/lib/utils';
 import { postImages } from './PostImageGrid';
 // Feature-owned domain types still live with the home feed; the composer is a
 // data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
@@ -73,6 +74,23 @@ interface PostComposerProps {
    *  submit — just clears the editor + toasts — so the data-free reference page
    *  can render a fully interactive composer without ever writing a real post. */
   demo?: boolean;
+  /** Render without the composer's own card chrome (border/bg/blur/shadow/padding)
+   *  so a host Modal is the single surface. Also reveals the formatting toolbar
+   *  immediately, shows an author-identity header (create mode), and renders a
+   *  labeled primary submit instead of the bare send glyph. */
+  bare?: boolean;
+  /** Seed the post type (create mode only) — lets a banner quick-action open the
+   *  composer already on Ask / Win. */
+  initialType?: PostType;
+  /** Fire the OS file picker on mount (the banner's "Photo" quick-action). */
+  initialPhoto?: boolean;
+  /** Reports whether the editor holds an unsaved draft (text or images) so a host
+   *  modal can confirm before discarding it on close. */
+  onDirtyChange?: (dirty: boolean) => void;
+  /** Bare create mode only: when provided, the composer renders its own close (X)
+   *  inline in the identity header so the host Modal can drop its empty header
+   *  (kills the dead space above the composer). Edit/quote keep the Modal title+X. */
+  onClose?: () => void;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -81,10 +99,9 @@ interface PostComposerProps {
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
 // ──────────────────────────────────────────────────────────
-// `currentUser` stays in the props contract (callers still pass it) but is no
-// longer read here — the composer dropped its leading avatar and personalised
-// placeholder in the toolbar-on-focus redesign.
-export function PostComposer({ friends, onPosted, editing, quoting, demo }: PostComposerProps) {
+// `currentUser` is read again in `bare` (modal) create mode to render the author
+// identity header; the inline/non-bare layout still omits it.
+export function PostComposer({ currentUser, friends, onPosted, editing, quoting, demo, bare, initialType, initialPhoto, onDirtyChange, onClose }: PostComposerProps) {
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
@@ -100,8 +117,9 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
   const [activeFormats, setActiveFormats] = useState<Record<string, boolean>>({});
   // The rich-text settings toolbar is revealed only once the user clicks into
   // the editor (kept hidden until then for a clean, distraction-free resting
-  // state — matches the "settings appear on click" interaction).
-  const [showToolbar, setShowToolbar] = useState(false);
+  // state). In `bare` (modal) mode the user already committed to composing, so
+  // it's shown from the start — no focus-to-reveal jump.
+  const [showToolbar, setShowToolbar] = useState<boolean>(!!bare);
 
   // Emoji picker + image attachment
   const [showEmoji, setShowEmoji] = useState(false);
@@ -124,7 +142,7 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
   // Favor economy: one composer, branch on type. Ask reveals a skill/topic tag
   // for routing/matching; Win posts share milestones (amount stays opt-in, body
   // text only — never a column).
-  const [postType, setPostType] = useState<PostType>('status');
+  const [postType, setPostType] = useState<PostType>(initialType ?? 'status');
   const [skillTag, setSkillTag] = useState('');
 
   // ── Sync which formats are active at the caret/selection ────
@@ -411,6 +429,21 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Banner "Photo" quick-action: open the OS file picker as the modal mounts.
+  // ponytail: a programmatic file-input click one render after the originating
+  // user gesture is honored in Chrome but may be ignored by stricter browsers;
+  // the toolbar's always-visible Photo button is the guaranteed fallback.
+  useEffect(() => {
+    if (initialPhoto) fileInputRef.current?.click();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Surface draft-dirty state (text or images) so a host modal can confirm
+  // before discarding the draft on close.
+  useEffect(() => {
+    onDirtyChange?.(charCount > 0 || images.length > 0);
+  }, [charCount, images.length, onDirtyChange]);
+
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []);
     e.target.value = ''; // reset so re-picking the same file still fires onChange
@@ -465,7 +498,9 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
   // The settings toolbar appears on editor focus and stays up while the user
   // works anywhere inside the card; a click outside the composer retires it.
   useEffect(() => {
-    if (!showToolbar) return;
+    // In bare (modal) mode the toolbar is permanent — never retire it on an
+    // outside click (the emoji picker keeps its own separate dismissal below).
+    if (bare || !showToolbar) return;
     const onDown = (e: PointerEvent) => {
       if (composerCardRef.current && !composerCardRef.current.contains(e.target as Node)) {
         setShowToolbar(false);
@@ -474,7 +509,7 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
     };
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
-  }, [showToolbar]);
+  }, [showToolbar, bare]);
 
   // ── Emoji picker dismissal (outside-click / Escape) ─────────
   useEffect(() => {
@@ -635,6 +670,61 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
       : "What's on your mind?";
   const submitLabel = quoting ? 'Repost' : editing ? 'Save' : postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
 
+  // Author-identity header: only in bare (modal) create mode. Edit/quote carry
+  // their own modal titles and a fixed audience, so they skip it. When shown it
+  // owns the audience switch, so the type row below doesn't repeat it.
+  const showIdentityHeader = bare && !editing && !quoting && !!currentUser;
+
+  // The formatting / insert controls, factored out so they can sit in the
+  // bottom action bar (bare/modal — X-style) OR in the on-focus top toolbar
+  // (inline/non-modal). The hidden file input rides along so it mounts once.
+  const toolbarControls = (
+    <>
+      <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
+        <Bold className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
+        <Italic className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
+        <Underline className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
+        <List className="w-4 h-4" />
+      </ToolbarButton>
+      <span className="w-px h-5 bg-slate-800 mx-1" />
+      <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
+        <AtSign className="w-4 h-4" />
+      </ToolbarButton>
+      <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
+        <Hash className="w-4 h-4" />
+      </ToolbarButton>
+      <div ref={emojiGroupRef} className="relative inline-flex items-center">
+        <ToolbarButton label="Emoji" active={showEmoji} onClick={() => setShowEmoji((v) => !v)}>
+          <Smile className="w-4 h-4" />
+        </ToolbarButton>
+        {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
+      </div>
+      <ToolbarButton
+        label={images.length >= MAX_POST_IMAGES ? `Up to ${MAX_POST_IMAGES} images` : 'Add a photo'}
+        disabled={images.length >= MAX_POST_IMAGES}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <ImageIcon className="w-4 h-4" />
+      </ToolbarButton>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={POST_IMAGE_ACCEPT}
+        multiple
+        onChange={handleImageSelect}
+        className="hidden"
+        aria-hidden
+        tabIndex={-1}
+      />
+    </>
+  );
+
   return (
     /* ──────────────────────────────────────────────────────────
         DEVELOPMENT NAVIGATOR: POST COMPOSER
@@ -645,8 +735,14 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
         ────────────────────────────────────────────────────────── */
     <div
       ref={composerCardRef}
-      className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-apple-lg"
+      className={cn(
+        'relative',
+        // Card chrome only outside a modal. In bare mode the host Modal is the
+        // single surface, so we shed border/bg/blur/shadow/padding.
+        !bare && 'bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-4 sm:p-5 shadow-apple-lg',
+      )}
       onFocusCapture={() => {
+        if (bare) return; // no card shadow to bloom in bare mode
         gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
           gsap.to(composerCardRef.current, {
             boxShadow: '0 0 40px rgba(238,87,18,0.12), 0 25px 50px rgba(0,0,0,0.5)',
@@ -656,6 +752,7 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
         });
       }}
       onBlurCapture={() => {
+        if (bare) return;
         gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
           gsap.to(composerCardRef.current, {
             boxShadow: '0 0 0px rgba(238,87,18,0), 0 25px 50px rgba(0,0,0,0.5)',
@@ -665,16 +762,55 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
         });
       }}
     >
-      {/* Top-edge highlight */}
-      <div
-        aria-hidden
-        className="absolute inset-x-0 top-0 h-px rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
-      />
+      {/* Top-edge highlight — a card-chrome detail; the Modal owns the surface in bare mode. */}
+      {!bare && (
+        <div
+          aria-hidden
+          className="absolute inset-x-0 top-0 h-px rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+        />
+      )}
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: AUTHOR IDENTITY HEADER (bare create mode)
+          Contains: author avatar + name + handle, the audience chip (under the
+          handle), and the self-rendered close (X) on the right
+          ────────────────────────────────────────────────────────── */}
+      {showIdentityHeader && (
+        <div className="flex items-start justify-between gap-3 mb-5">
+          <div className="flex items-start gap-3 min-w-0">
+            <Image
+              src={currentUser!.avatar || '/Assets/Img/default-avatar.png'}
+              alt=""
+              width={44}
+              height={44}
+              className="w-11 h-11 rounded-full object-cover border border-slate-800"
+            />
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-white truncate leading-tight">{displayName(currentUser!)}</p>
+              <p className="text-[11px] text-slate-500 truncate">@{currentUser!.username}</p>
+              <div className="mt-1.5">
+                <AudienceSwitch value={visibility} onChange={setVisibility} align="left" />
+              </div>
+            </div>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="-mt-1 -mr-1 p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors focus:outline-none"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST TYPE + AUDIENCE ROW
           Contains: segmented post-type selector (+ Ask skill/topic field) on
-          the left, audience switch (Friends / Public) on the right
+          the left; audience switch on the right unless the identity header
+          above already owns it
           ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         {/* Type + skill are fixed in edit/quote mode (only the comment changes). */}
@@ -694,12 +830,13 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
           </div>
         )}
         {/* A quote is always public (it republishes already-public content), so the
-            audience is locked and shown as a static note instead of a switch. */}
+            audience is locked and shown as a static note instead of a switch.
+            Otherwise show the switch here — unless the identity header has it. */}
         {quoting ? (
           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 bg-[#111318] border border-slate-800/60 rounded-xl px-2.5 py-1.5">
             <Users className="w-3.5 h-3.5" /> Public repost
           </span>
-        ) : (
+        ) : showIdentityHeader ? null : (
           <AudienceSwitch value={visibility} onChange={setVisibility} />
         )}
       </div>
@@ -735,51 +872,11 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
           contenteditable editor ("What's on your mind?")
           ────────────────────────────────────────────────────────── */}
       <div className="relative">
-        {/* Settings toolbar — revealed once the editor is clicked/focused */}
-        {showToolbar && (
+        {/* Inline (non-modal) only: the boxed settings toolbar, revealed on focus.
+            In bare/modal mode the same controls live in the bottom action bar. */}
+        {!bare && showToolbar && (
           <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 mb-2 p-1 rounded-xl bg-[#111318] border border-slate-800/60 origin-top animate-in">
-            <ToolbarButton label="Bold" active={activeFormats.bold} onClick={() => applyFormat('bold')}>
-              <Bold className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton label="Italic" active={activeFormats.italic} onClick={() => applyFormat('italic')}>
-              <Italic className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton label="Underline" active={activeFormats.underline} onClick={() => applyFormat('underline')}>
-              <Underline className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton label="Bullet list" active={activeFormats.insertUnorderedList} onClick={() => applyFormat('insertUnorderedList')}>
-              <List className="w-4 h-4" />
-            </ToolbarButton>
-            <span className="w-px h-5 bg-slate-800 mx-1" />
-            <ToolbarButton label="Mention someone (@)" onClick={() => insertChar('@')}>
-              <AtSign className="w-4 h-4" />
-            </ToolbarButton>
-            <ToolbarButton label="Add a tag (#)" onClick={() => insertChar('#')}>
-              <Hash className="w-4 h-4" />
-            </ToolbarButton>
-            <div ref={emojiGroupRef} className="relative">
-              <ToolbarButton label="Emoji" active={showEmoji} onClick={() => setShowEmoji((v) => !v)}>
-                <Smile className="w-4 h-4" />
-              </ToolbarButton>
-              {showEmoji && <EmojiPicker onPick={(emoji) => insertChar(emoji)} />}
-            </div>
-            <ToolbarButton
-              label={images.length >= MAX_POST_IMAGES ? `Up to ${MAX_POST_IMAGES} images` : 'Add a photo'}
-              disabled={images.length >= MAX_POST_IMAGES}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <ImageIcon className="w-4 h-4" />
-            </ToolbarButton>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept={POST_IMAGE_ACCEPT}
-              multiple
-              onChange={handleImageSelect}
-              className="hidden"
-              aria-hidden
-              tabIndex={-1}
-            />
+            {toolbarControls}
           </div>
         )}
 
@@ -790,7 +887,14 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
           onKeyDown={handleKeyDown}
           onFocus={() => setShowToolbar(true)}
           data-placeholder={editorPlaceholder}
-          className="w-full min-h-[88px] max-w-full bg-[#111318] rounded-2xl px-4 py-3 border border-slate-800/60 text-sm text-slate-200 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden outline-none focus:border-primary-500/40 transition-colors"
+          className={cn(
+            'w-full max-w-full text-slate-200 leading-relaxed whitespace-pre-wrap break-words [overflow-wrap:anywhere] overflow-x-hidden outline-none',
+            bare
+              // Airy modal editor: borderless, flush on the modal surface, larger type.
+              ? 'min-h-[140px] bg-transparent px-0 py-1 text-base'
+              // Inline editor: boxed, focus-ring border.
+              : 'min-h-[88px] bg-[#111318] rounded-2xl px-4 py-3 border border-slate-800/60 text-sm focus:border-primary-500/40 transition-colors',
+          )}
         />
         <style jsx>{`
           div[contenteditable]:empty:before {
@@ -847,37 +951,62 @@ export function PostComposer({ friends, onPosted, editing, quoting, demo }: Post
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: COMPOSER ACTION BAR
-          Contains: live character counter (left of the CTA),
-                    icon-only send button
+          Contains: in bare/modal mode — the borderless formatting + insert
+          controls (left) and the char counter + labeled Post (right); inline —
+          just the counter + bare send glyph
           ────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-end gap-3 mt-4 pt-4 border-t border-slate-800/60">
-        {/* Character counter — amber near limit, rose when over */}
-        <span
-          aria-live="polite"
-          title={`${MAX_POST_CHARS - charCount} characters remaining`}
-          className={`text-[11px] font-bold tabular-nums transition-colors ${
-            charCount > MAX_POST_CHARS
-              ? 'text-rose-500'
-              : charCount >= MAX_POST_CHARS * 0.9
-              ? 'text-amber-400'
-              : 'text-slate-600'
-          }`}
-        >
-          {charCount}/{MAX_POST_CHARS}
-        </span>
+      <div className={cn('flex items-center gap-3 mt-4 pt-3 border-t border-slate-800/60', bare ? 'justify-between' : 'justify-end')}>
+        {/* Borderless toolbar — bare/modal only (inline keeps the on-focus top bar). */}
+        {bare && (
+          <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 min-w-0">
+            {toolbarControls}
+          </div>
+        )}
 
-        {/* Send — no chrome at rest: the orange-filled glyph is the affordance.
-            Hover blooms a soft primary tint + lift; active presses it in. */}
-        <Button
-          variant="unstyled"
-          onClick={handlePost}
-          disabled={!canSubmit}
-          loading={postingLoading}
-          aria-label={submitLabel}
-          title={submitLabel}
-          leftIcon={!postingLoading && <Send className="w-5 h-5" fill="currentColor" strokeWidth={0} />}
-          className="flex items-center justify-center w-10 h-10 rounded-xl text-primary-500 transition-all duration-150 hover:bg-primary-500/10 hover:text-primary-600 hover:-translate-y-px active:scale-95 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
-        />
+        <div className="flex items-center gap-3 shrink-0">
+          {/* Character counter — amber near limit, rose when over */}
+          <span
+            aria-live="polite"
+            title={`${MAX_POST_CHARS - charCount} characters remaining`}
+            className={`text-[11px] font-bold tabular-nums transition-colors ${
+              charCount > MAX_POST_CHARS
+                ? 'text-rose-500'
+                : charCount >= MAX_POST_CHARS * 0.9
+                ? 'text-amber-400'
+                : 'text-slate-600'
+            }`}
+          >
+            {charCount}/{MAX_POST_CHARS}
+          </span>
+
+          {/* Submit. In the roomy modal (bare) a labeled primary button reads as
+              the clear, intentional primary action; inline it's the bare
+              orange-filled glyph (no chrome at rest). */}
+          {bare ? (
+            <Button
+              variant="primary"
+              size="md"
+              shape="pill"
+              onClick={handlePost}
+              disabled={!canSubmit}
+              loading={postingLoading}
+              rightIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
+            >
+              {submitLabel}
+            </Button>
+          ) : (
+            <Button
+              variant="unstyled"
+              onClick={handlePost}
+              disabled={!canSubmit}
+              loading={postingLoading}
+              aria-label={submitLabel}
+              title={submitLabel}
+              leftIcon={!postingLoading && <Send className="w-5 h-5" fill="currentColor" strokeWidth={0} />}
+              className="flex items-center justify-center w-10 h-10 rounded-xl text-primary-500 transition-all duration-150 hover:bg-primary-500/10 hover:text-primary-600 hover:-translate-y-px active:scale-95 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
+            />
+          )}
+        </div>
       </div>
 
       {/* ──────────────────────────────────────────────────────────
@@ -1043,9 +1172,10 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
   );
 }
 
-// Segmented Status·Ask·Win selector. Mirrors the Kit AudienceSwitch styling but
-// is a distinct domain (post type, not visibility); if a third segmented control
-// appears, promote a generic primitive into the Kit (CLAUDE 2.0 one-off rule).
+// Status·Ask·Win selector — soft ghost pills (active = tinted primary, no heavy
+// fill or boxed container), part of the airy composer redesign. Distinct domain
+// from the Kit AudienceSwitch; promote a generic primitive only if a third
+// caller appears (CLAUDE 2.0 one-off rule).
 const POST_TYPE_OPTIONS: { value: PostType; label: string; icon: LucideIcon; hint: string }[] = [
   { value: 'status', label: 'Status', icon: MessageSquare, hint: 'Share an update' },
   { value: 'ask', label: 'Ask', icon: HelpCircle, hint: 'Ask for help — get unblocked' },
@@ -1057,7 +1187,7 @@ function PostTypeSwitch({ value, onChange }: { value: PostType; onChange: (v: Po
     <div
       role="radiogroup"
       aria-label="Post type"
-      className="flex items-center gap-0.5 bg-[#111318] border border-slate-800/60 rounded-xl p-0.5"
+      className="flex items-center gap-1"
     >
       {POST_TYPE_OPTIONS.map(({ value: optionValue, label, icon: Icon, hint }) => {
         const isActive = value === optionValue;
@@ -1069,14 +1199,15 @@ function PostTypeSwitch({ value, onChange }: { value: PostType; onChange: (v: Po
             aria-checked={isActive}
             title={hint}
             onClick={() => onChange(optionValue)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all active:scale-[0.97] ${
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-[0.97]',
               isActive
-                ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-            }`}
+                ? 'bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/25'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/50',
+            )}
           >
             <Icon className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">{label}</span>
+            <span>{label}</span>
           </button>
         );
       })}

@@ -142,6 +142,11 @@
 
 @media (prefers-reduced-motion: reduce) {
   .win-shine { animation: none; }
+  /* Composer modal enters statically — the resting state (full blur, no
+     transform/opacity offset) is already the keyframe end, so dropping the
+     animation leaves it correctly placed and fully legible. */
+  .composer-modal-enter,
+  .composer-backdrop-enter { animation: none; }
 }
 
 @keyframes fadeIn {
@@ -152,6 +157,24 @@
 @keyframes fadeOut {
   0% { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(0.95); }
+}
+
+/* Composer modal entrance — a soft, dynamic open (not a hard pop): the card
+   lifts ~10px and scales up while the backdrop's blur fades in. `both` holds the
+   end frame so the card settles and the backdrop stays blurred after the run. */
+@keyframes composerModalIn {
+  0%   { opacity: 0; transform: translateY(10px) scale(0.96); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.composer-modal-enter {
+  animation: composerModalIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+@keyframes composerBackdropIn {
+  0%   { opacity: 0; -webkit-backdrop-filter: blur(0); backdrop-filter: blur(0); }
+  100% { opacity: 1; -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+}
+.composer-backdrop-enter {
+  animation: composerBackdropIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 /* Partner marquee: motion is driven by GSAP (see page.tsx). This only provides

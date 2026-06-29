@@ -528,14 +528,9 @@ export default function UiKitPage() {
         </Section>
 
         {/* Post Composer */}
-        <Section title="Post Composer" description="The home-feed composer — rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience. The only data-coupled Kit member; rendered here in demo mode (the Post button never hits the API). Fully responsive — resize to a phone width to see it stack.">
+        <Section title="Post Composer" description="The home-feed composer — now a resting banner that opens the full composer (rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience) in a modal: an xl card on desktop, a full-screen sheet on mobile, with a soft rise-in motion. Rendered here in demo mode (the Post button never hits the API). Resize to a phone width to see the full-screen sheet.">
           <ToastProvider>
-            <PostComposer
-              demo
-              currentUser={DEMO_CURRENT_USER}
-              friends={DEMO_FRIENDS}
-              onPosted={() => {}}
-            />
+            <ComposerShowcase />
           </ToastProvider>
         </Section>
 
@@ -554,6 +549,65 @@ export default function UiKitPage() {
         </Section>
       </div>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// DEVELOPMENT NAVIGATOR: COMPOSER SHOWCASE (banner → modal)
+// Mirrors the shipped home pattern: a resting banner opens the demo composer
+// (bare) in the xl / full-screen-mobile modal with the rise-in motion. Local
+// state so the big page component stays untouched.
+// ──────────────────────────────────────────────────────────
+function ComposerShowcase() {
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<'status' | 'ask' | 'win'>('status');
+  const [photo, setPhoto] = useState(false);
+  const openWith = (t: 'status' | 'ask' | 'win' = 'status', p = false) => {
+    setType(t);
+    setPhoto(p);
+    setOpen(true);
+  };
+  return (
+    <>
+      <div className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-apple-lg">
+        <div className="flex items-center gap-3">
+          {/* Plain <img> (not next/image) — this showcase keeps zero data deps. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/Assets/Img/default-avatar.png" alt="" className="w-11 h-11 rounded-full object-cover border border-slate-800 flex-shrink-0" />
+          <button
+            type="button"
+            onClick={() => openWith()}
+            className="flex-1 text-left px-4 py-2.5 rounded-full bg-[#111318] border border-slate-800/60 text-sm text-slate-500 hover:border-primary-500/40 hover:text-slate-400 transition-colors"
+          >
+            What&apos;s on your mind?
+          </button>
+        </div>
+        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-slate-800/60">
+          {(['Photo', 'Ask', 'Win'] as const).map((label) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => openWith(label === 'Ask' ? 'ask' : label === 'Win' ? 'win' : 'status', label === 'Photo')}
+              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors active:scale-[0.98]"
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Modal isOpen={open} onClose={() => setOpen(false)} size="xl" fullScreenMobile entrance="rise" surface="glass" showClose={false}>
+        <PostComposer
+          demo
+          bare
+          currentUser={DEMO_CURRENT_USER}
+          friends={DEMO_FRIENDS}
+          onPosted={() => setOpen(false)}
+          initialType={type}
+          initialPhoto={photo}
+          onClose={() => setOpen(false)}
+        />
+      </Modal>
+    </>
   );
 }
 

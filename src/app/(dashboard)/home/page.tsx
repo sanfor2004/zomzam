@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   Loader2, MessagesSquare, HelpCircle, Sparkles, ArrowUp,
+  Image as ImageIcon, Trophy,
 } from 'lucide-react';
-import { Button, PostComposer, PostCard } from '@/components/ui';
+import { Button, PostComposer, PostCard, Modal } from '@/components/ui';
 import { usePostSeenTracker } from './usePostSeenTracker';
 import {
-  type CurrentUser, type MentionUser, type Post,
+  displayName, type CurrentUser, type MentionUser, type Post, type PostType,
 } from './shared';
 
 export default function HomePage() {
@@ -21,6 +23,17 @@ export default function HomePage() {
   // Live SSE `zz-new-post` signals from people in the network bump this counter;
   // a soft pill offers to refresh instead of yanking the user's scroll position.
   const [newPostsCount, setNewPostsCount] = useState(0);
+
+  // ── Composer modal ──────────────────────────────────────────
+  // The inline composer is now a resting banner; clicking it (or a quick-action
+  // chip) opens the full composer in a modal. Chips pre-seed the post type /
+  // photo picker. `composerDirty` (reported by the composer) gates a discard
+  // confirmation when the user closes a modal that holds an unsaved draft.
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerType, setComposerType] = useState<PostType>('status');
+  const [composerPhoto, setComposerPhoto] = useState(false);
+  const [composerDirty, setComposerDirty] = useState(false);
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -71,6 +84,29 @@ export default function HomePage() {
   // Patch a post in place after an inline edit (content/image/visibility) — no refetch.
   const handlePostEdited = useCallback((updated: Post) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
+  }, []);
+
+  // ── Composer open/close ─────────────────────────────────────
+  const openComposer = useCallback((type: PostType = 'status', photo = false) => {
+    setComposerType(type);
+    setComposerPhoto(photo);
+    setComposerDirty(false);
+    setComposerOpen(true);
+  }, []);
+  const closeComposer = useCallback(() => {
+    setComposerOpen(false);
+    setConfirmDiscard(false);
+  }, []);
+  // X / Esc / backdrop: confirm first if the draft has unsaved content.
+  const requestCloseComposer = useCallback(() => {
+    if (composerDirty) setConfirmDiscard(true);
+    else setComposerOpen(false);
+  }, [composerDirty]);
+  // Success: prepend the new post and dismiss the modal. (The composer reports
+  // dirty=false again when it remounts on the next open.)
+  const handleComposerPosted = useCallback((post: Post) => {
+    setPosts((prev) => [post, ...prev]);
+    setComposerOpen(false);
   }, []);
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -270,9 +306,7 @@ export default function HomePage() {
       <div>
         <div ref={feedRef} className="space-y-4">
 
-          <div id="post-composer">
-            <PostComposer currentUser={currentUser} friends={friends} onPosted={handlePostCreated} />
-          </div>
+          <ComposerBanner currentUser={currentUser} onOpen={openComposer} />
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: FEED FILTER (All · Help requests · Matching skills)
@@ -384,7 +418,110 @@ export default function HomePage() {
           )}
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: COMPOSER MODAL
+          Contains: the full PostComposer (bare) hosted in an xl modal — a
+          full-screen sheet on mobile — opened from the banner; soft rise-in
+          motion; closing a dirty draft routes through the discard confirm
+          ────────────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={composerOpen}
+        onClose={requestCloseComposer}
+        size="xl"
+        fullScreenMobile
+        entrance="rise"
+        surface="glass"
+        showClose={false}
+      >
+        <PostComposer
+          bare
+          currentUser={currentUser}
+          friends={friends}
+          onPosted={handleComposerPosted}
+          initialType={composerType}
+          initialPhoto={composerPhoto}
+          onDirtyChange={setComposerDirty}
+          onClose={requestCloseComposer}
+        />
+      </Modal>
+
+      {/* Discard-draft confirmation — only reached when closing a dirty composer. */}
+      <Modal
+        isOpen={confirmDiscard}
+        onClose={() => setConfirmDiscard(false)}
+        variant="danger"
+        title="Discard this post?"
+        footer={
+          <>
+            <Button variant="secondary" fullWidth onClick={() => setConfirmDiscard(false)}>Keep editing</Button>
+            <Button variant="danger" fullWidth onClick={closeComposer}>Discard</Button>
+          </>
+        }
+      >
+        <p>Your draft will be lost. This can&rsquo;t be undone.</p>
+      </Modal>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────
+// DEVELOPMENT NAVIGATOR: COMPOSER BANNER (resting-state trigger)
+// Contains: author avatar, "What's on your mind?" pill (opens the composer
+// modal), and Photo / Ask / Win quick-action chips (open it pre-configured)
+// ──────────────────────────────────────────────────────────
+function ComposerBanner({
+  currentUser,
+  onOpen,
+}: {
+  currentUser: CurrentUser | null;
+  onOpen: (type?: PostType, photo?: boolean) => void;
+}) {
+  return (
+    <div
+      id="post-composer"
+      className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-apple-lg"
+    >
+      {/* Top-edge highlight */}
+      <div
+        aria-hidden
+        className="absolute inset-x-0 top-0 h-px rounded-t-2xl sm:rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
+      />
+      <div className="flex items-center gap-3">
+        <Image
+          src={currentUser?.avatar || '/Assets/Img/default-avatar.png'}
+          alt=""
+          width={44}
+          height={44}
+          className="w-11 h-11 rounded-full object-cover border border-slate-800 flex-shrink-0"
+        />
+        <button
+          type="button"
+          onClick={() => onOpen()}
+          className="flex-1 text-left px-4 py-2.5 rounded-full bg-[#111318] border border-slate-800/60 text-sm text-slate-500 hover:border-primary-500/40 hover:text-slate-400 transition-colors"
+        >
+          {currentUser ? `What's on your mind, ${displayName(currentUser).split(' ')[0]}?` : "What's on your mind?"}
+        </button>
+      </div>
+      <div className="flex items-center gap-1 mt-3 pt-3 border-t border-slate-800/60">
+        <BannerAction icon={<ImageIcon className="w-4 h-4 text-emerald-400" />} label="Photo" onClick={() => onOpen('status', true)} />
+        <BannerAction icon={<HelpCircle className="w-4 h-4 text-sky-400" />} label="Ask" onClick={() => onOpen('ask')} />
+        <BannerAction icon={<Trophy className="w-4 h-4 text-amber-400" />} label="Win" onClick={() => onOpen('win')} />
+      </div>
+    </div>
+  );
+}
+
+function BannerAction({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors active:scale-[0.98]"
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 }
 
