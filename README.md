@@ -96,7 +96,7 @@ zomzam.com/
 │   │   │   └── layout.tsx     # Sidebar nav, topbar, notifications, presence, ambient WebGL background
 │   │   ├── api/                # Serverless API routes
 │   │   │   ├── auth/           # Login, registration, logout, session check, settings
-│   │   │   │   ├── forgot-password/  # Issue password-reset tokens
+│   │   │   │   ├── forgot-password/  # Issue + email a password-reset link (Resend)
 │   │   │   │   └── reset-password/   # Consume a reset token, set new password
 │   │   │   ├── crm/            # Leads, scrape jobs, pipeline, contacts, projects, AI outreach, Notion sync settings
 │   │   │   ├── dashboard/      # Aggregated cross-suite metrics for /dashboard
@@ -144,6 +144,7 @@ zomzam.com/
 │   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
 │   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle, bug-report throttle)
 │   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, throttled, never throws; recipient defaults to 2004.Sanfor@gmail.com)
+│   │   ├── email.ts             # canonicalEmail (inbox-identity key) + sendEmail (transactional Resend sender used by the password-reset flow)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
 │   │   ├── db.ts                # MySQL connection pool + transaction helpers
@@ -278,9 +279,18 @@ BLOB_READ_WRITE_TOKEN=
 #   BUG_REPORT_TO:  recipient(s), comma-separated. Defaults to 2004.Sanfor@gmail.com
 #   BUG_REPORT_FROM: sender; must be a Resend-verified domain. Defaults to
 #     onboarding@resend.dev (Resend test mode only delivers to the account owner).
+# The same RESEND_API_KEY also powers transactional email (src/lib/email.ts) —
+# currently the password-reset link. Without it, forgot-password no-ops the send
+# (and returns a demo_token in development so the flow stays testable).
+#   EMAIL_FROM: transactional sender; must be a Resend-verified domain. Defaults
+#     to onboarding@resend.dev.
+#   APP_URL: public origin used to build links in emails (e.g. the reset link).
+#     Falls back to the request origin when unset.
 RESEND_API_KEY=
 BUG_REPORT_TO=2004.Sanfor@gmail.com
 BUG_REPORT_FROM=
+EMAIL_FROM=
+APP_URL=
 ```
 
 ### 3. Initialize & Seed the Database

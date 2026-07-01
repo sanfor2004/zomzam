@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { canonicalEmail } from '@/lib/email';
+import { canonicalEmail, sendEmail } from '@/lib/email';
 
 test('lowercases and trims', () => {
   assert.equal(canonicalEmail('  John.Doe@Example.COM '), 'john.doe@example.com');
@@ -39,4 +39,16 @@ test('non-Gmail: +tag is still folded (common sub-addressing convention)', () =>
 test('degrades gracefully on a non-address input', () => {
   assert.equal(canonicalEmail('not-an-email'), 'not-an-email');
   assert.equal(canonicalEmail(''), '');
+});
+
+test('sendEmail no-ops (skipped) when RESEND_API_KEY is unset', async () => {
+  const prev = process.env.RESEND_API_KEY;
+  delete process.env.RESEND_API_KEY;
+  try {
+    const result = await sendEmail({ to: 'a@b.com', subject: 'x', html: '<p>x</p>' });
+    assert.equal(result.ok, false);
+    assert.equal(result.skipped, true);
+  } finally {
+    if (prev !== undefined) process.env.RESEND_API_KEY = prev;
+  }
 });
