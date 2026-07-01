@@ -12,6 +12,18 @@ export interface Task {
   status: string;
   priority: string;
   duration_block: number;
+  // Carried through so an in-editor edit doesn't clobber an existing plan link
+  // (the /api/time update_task action rewrites horizon_id on every save).
+  horizon_id?: number | null;
+}
+
+// The fields the in-editor pill editor can change: rename, re-prioritise, and
+// set the focus timer (duration_block minutes) that feeds the Pomodoro page.
+export interface TaskInfoInput {
+  title: string;
+  priority: string;
+  duration_block: number;
+  horizonId: number | null;
 }
 
 export interface Horizon {
@@ -55,6 +67,34 @@ export async function loadIdeasData(): Promise<{ ideas: Idea[]; tasks: Task[]; h
     tasks: data.tasks || [],
     horizons: [...(h.week || []), ...(h.month || []), ...(h.year || [])],
   };
+}
+
+// Quick-creates a task straight from an unmatched `@mention` in the editor,
+// with sensible defaults (medium priority, a 25-minute focus block) the user
+// can refine later by clicking the pill.
+export async function quickAddTaskRequest(title: string): Promise<Task | null> {
+  const data = await timeAction({
+    action: 'add_task',
+    title: title.trim(),
+    priority: 'medium',
+    duration_block: 25,
+    horizon_id: null,
+  });
+  return data.success && data.task ? data.task : null;
+}
+
+// Saves the pill editor's changes (title / priority / focus timer). Passes the
+// task's existing horizon_id back so the update doesn't null out a plan link.
+export async function updateTaskInfoRequest(id: number, input: TaskInfoInput): Promise<Task | null> {
+  const data = await timeAction({
+    action: 'update_task',
+    id,
+    title: input.title.trim(),
+    priority: input.priority,
+    duration_block: input.duration_block,
+    horizon_id: input.horizonId,
+  });
+  return data.success && data.task ? data.task : null;
 }
 
 export async function addIdeaRequest(input: IdeaInput): Promise<Idea | null> {

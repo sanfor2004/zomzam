@@ -1,17 +1,31 @@
 'use client';
-import { Button } from '@/components/ui';
+import { Button, Modal, Input, Select, NumberInput } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Lightbulb, Plus, Trash2, Edit2, X, Check, Save } from 'lucide-react';
+import { Lightbulb, Plus, Trash2, Edit2, X, Check, Save, Sparkles, Timer } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import {
   loadIdeasData, addIdeaRequest, updateIdeaRequest, deleteIdeaRequest,
+  quickAddTaskRequest, updateTaskInfoRequest,
   type Task, type Horizon, type Idea,
 } from './page.services';
 
-type MentionItem = (Task & { _tagType: 'task' }) | (Horizon & { _tagType: 'plan' });
+// A live task/plan the mention engine can link to, plus a synthetic "create"
+// row shown when the query matches no existing task.
+type CreateItem = { _tagType: 'create'; label: string };
+type MentionItem =
+  | (Task & { _tagType: 'task' })
+  | (Horizon & { _tagType: 'plan' })
+  | CreateItem;
+
+const PRIORITY_OPTIONS = [
+  { value: 'urgent', label: 'Urgent' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'maybe', label: 'Maybe' },
+  { value: 'free', label: 'Free' },
+];
 
 export default function IdeaCapturePage() {
   const { t } = useTranslation();
@@ -34,10 +48,19 @@ export default function IdeaCapturePage() {
 
   // Mentions Dropdown State
   const [mentionActive, setMentionActive] = useState(false);
-  const [mentionQuery, setMentionQuery] = useState('');
   const [mentionList, setMentionList] = useState<MentionItem[]>([]);
   const [mentionIndex, setSelectedIndex] = useState(0);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  // Snapshot of the caret at the moment `@…` is typed, so a pill can still be
+  // inserted after an async create round-trip has blurred the live selection.
+  const mentionRangeRef = useRef<Range | null>(null);
+
+  // Inline Task Editor (opened by clicking a task pill)
+  const [taskEditor, setTaskEditor] = useState<Task | null>(null);
+  const [editorTitle, setEditorTitle] = useState('');
+  const [editorPriority, setEditorPriority] = useState('medium');
+  const [editorTimer, setEditorTimer] = useState('25');
+  const [savingTask, setSavingTask] = useState(false);
 
   // Expanded Ideas Vault items
   const [expandedIdeaIds, setExpandedIdeaIds] = useState<Record<number, boolean>>({});
@@ -93,15 +116,13 @@ export default function IdeaCapturePage() {
     // Replace task tags
     escaped = escaped.replace(/@task:(\d+)/g, (match, id) => {
       const task = tasks.find((t) => t.id === parseInt(id));
-      const title = task ? task.title : `Task:${id}`;
-      return `<span contenteditable="false" data-type="task" data-id="${id}" class="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-xs font-bold border cursor-default select-none bg-primary-50 text-primary-600 border-primary-200 dark:bg-primary-900/20 dark:text-primary-400 dark:border-primary-800 hover:bg-primary-100">@${title}</span>`;
+      return buildPillHtml('task', parseInt(id), task ? task.title : `Task:${id}`);
     });
 
     // Replace plan tags
     escaped = escaped.replace(/@plan:(\d+)/g, (match, id) => {
       const plan = horizons.find((h) => h.id === parseInt(id));
-      const title = plan ? plan.content : `Plan:${id}`;
-      return `<span contenteditable="false" data-type="plan" data-id="${id}" class="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-xs font-bold border cursor-default select-none bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 hover:bg-purple-100">@${title}</span>`;
+      return buildPillHtml('plan', parseInt(id), plan ? plan.content : `Plan:${id}`);
     });
 
     return escaped;
@@ -119,7 +140,7 @@ export default function IdeaCapturePage() {
       } else if (e.key === 'Enter' || e.key === 'Tab') {
         if (mentionList.length > 0) {
           e.preventDefault();
-          insertTagPill(mentionList[mentionIndex]);
+          handleSelectMention(mentionList[mentionIndex]);
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
@@ -151,27 +172,42 @@ export default function IdeaCapturePage() {
     }
 
     const textBeforeCaret = node.textContent?.substring(0, range.startOffset) || '';
-    const match = textBeforeCaret.match(/@(\w*)$/);
+    // Allow spaces so multi-word task names ("@buy groceries") can be created,
+    // but never after a double-space and cap the length so `@` in ordinary prose
+    // doesn't leave the menu hanging open across a whole sentence.
+    const match = textBeforeCaret.match(/@([\w]+(?: [\w]+)*)?$/);
 
-    if (match) {
-      const queryStr = match[1].toLowerCase();
+    if (match && (match[1]?.length ?? 0) <= 40) {
+      const rawQuery = (match[1] || '').trim();
+      const queryStr = rawQuery.toLowerCase();
       setMentionActive(true);
-      setMentionQuery(queryStr);
       setSelectedIndex(0);
+      // Freeze the caret position now — a click on a create row will blur the
+      // editor before the async task insert completes.
+      mentionRangeRef.current = range.cloneRange();
 
       // Filter tasks and plans
       const pendingTasks = tasks.filter((t) => t.status === 'pending').map((t) => ({ ...t, _tagType: 'task' as const }));
       const activePlans = horizons.filter((h) => h.status === 'active').map((h) => ({ ...h, _tagType: 'plan' as const }));
-      let combined = [...pendingTasks, ...activePlans];
+      let combined: MentionItem[] = [...pendingTasks, ...activePlans];
 
       if (queryStr) {
         combined = combined.filter((item) => {
-          const title = item._tagType === 'task' ? item.title : item.content;
+          const title = item._tagType === 'task' ? item.title : (item as Horizon).content;
           return title.toLowerCase().includes(queryStr);
         });
       }
 
-      setMentionList(combined.slice(0, 8));
+      combined = combined.slice(0, 7);
+
+      // Offer to spin up a brand-new task when the query names something that
+      // doesn't exist yet (no exact title match among pending tasks).
+      const exactExists = tasks.some((t) => t.title.toLowerCase() === queryStr);
+      if (rawQuery && !exactExists) {
+        combined.push({ _tagType: 'create', label: rawQuery });
+      }
+
+      setMentionList(combined);
 
       // Position dropdown
       const rect = range.getBoundingClientRect();
@@ -192,58 +228,120 @@ export default function IdeaCapturePage() {
     }
   };
 
-  // Insert tag pill at caret position
-  const insertTagPill = (item: MentionItem) => {
-    const selection = window.getSelection();
-    if (!selection || !selection.rangeCount || !editorRef.current) return;
+  // Pill markup for a linked task/plan (shared by insert + deserialize).
+  const buildPillHtml = (type: 'task' | 'plan', id: number, label: string): string => {
+    const styles = type === 'task'
+      ? 'bg-primary-50 text-primary-600 border-primary-200 dark:bg-primary-900/20 dark:text-primary-400 dark:border-primary-800 hover:bg-primary-100'
+      : 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 hover:bg-purple-100';
+    const editable = type === 'task' ? ' cursor-pointer' : ' cursor-default';
+    return `<span contenteditable="false" data-type="${type}" data-id="${id}" class="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-xs font-bold border select-none${editable} ${styles}">@${label}</span>`;
+  };
 
-    const range = selection.getRangeAt(0);
+  // Insert a resolved task/plan pill at the frozen `@\u2026` caret snapshot, replacing
+  // the `@query` text. Uses mentionRangeRef so it survives an async create.
+  const performInsert = (type: 'task' | 'plan', id: number, label: string) => {
+    const range = mentionRangeRef.current;
+    if (!range || !editorRef.current) return;
+
     const node = range.startContainer;
     if (node.nodeType !== Node.TEXT_NODE) return;
 
     const text = node.textContent || '';
-    const queryLength = mentionQuery.length;
-    // Find where the '@' is
-    const offset = text.substring(0, range.startOffset).lastIndexOf('@');
-    if (offset === -1) return;
+    const caretOffset = range.startOffset;
+    const atOffset = text.substring(0, caretOffset).lastIndexOf('@');
+    if (atOffset === -1) return;
 
-    const textBefore = text.substring(0, offset);
-    const textAfter = text.substring(offset + 1 + queryLength);
+    const textBefore = text.substring(0, atOffset);
+    const textAfter = text.substring(caretOffset);
 
-    const isTask = item._tagType === 'task';
-    const label = isTask ? item.title : item.content;
-    const pillHtml = `<span contenteditable="false" data-type="${item._tagType}" data-id="${item.id}" class="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-xs font-bold border cursor-default select-none ${
-      isTask 
-        ? 'bg-primary-50 text-primary-600 border-primary-200 dark:bg-primary-900/20 dark:text-primary-400 dark:border-primary-800 hover:bg-primary-100' 
-        : 'bg-purple-50 text-purple-600 border-purple-200 dark:bg-purple-900/20 dark:text-purple-400 dark:border-purple-800 hover:bg-purple-100'
-    }">@${label}</span>`;
-
-    // Replace the text node content
     const frag = document.createDocumentFragment();
     frag.appendChild(document.createTextNode(textBefore));
 
     const temp = document.createElement('div');
-    temp.innerHTML = pillHtml;
-    const pillNode = temp.firstChild!;
-    frag.appendChild(pillNode);
+    temp.innerHTML = buildPillHtml(type, id, label);
+    frag.appendChild(temp.firstChild!);
 
-    // Add a trailing non-breaking space so user can type after the pill
+    // Trailing non-breaking space so the user can keep typing after the pill.
     const spaceNode = document.createTextNode('\u00A0' + textAfter);
     frag.appendChild(spaceNode);
 
-    const parent = node.parentNode!;
-    parent.replaceChild(frag, node);
+    node.parentNode!.replaceChild(frag, node);
 
-    // Move cursor after the space
+    // Move cursor after the inserted space.
     const newRange = document.createRange();
     newRange.setStart(spaceNode, 1);
     newRange.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(newRange);
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
 
+    mentionRangeRef.current = null;
     setMentionActive(false);
     editorRef.current.focus();
     updateCharCount();
+  };
+
+  // Dropdown selection \u2014 resolves a live task/plan, or quick-creates a task
+  // from an unmatched query, then drops the pill in.
+  const handleSelectMention = async (item: MentionItem) => {
+    if (item._tagType === 'create') {
+      const newTask = await quickAddTaskRequest(item.label);
+      if (!newTask) return;
+      setTasks((prev) => [...prev, newTask]);
+      performInsert('task', newTask.id, newTask.title);
+      return;
+    }
+    if (item._tagType === 'task') {
+      performInsert('task', item.id, item.title);
+    } else {
+      performInsert('plan', item.id, item.content);
+    }
+  };
+
+  // Click a task pill inside the editor \u2192 open the inline task editor.
+  const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const pill = (e.target as HTMLElement).closest('[data-type="task"]');
+    if (!pill) return;
+    const id = parseInt(pill.getAttribute('data-id') || '0');
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    setTaskEditor(task);
+    setEditorTitle(task.title);
+    setEditorPriority(task.priority || 'medium');
+    setEditorTimer(String(task.duration_block || 25));
+  };
+
+  // Save the inline task editor: persist, refresh linked state, and relabel any
+  // live pills pointing at this task so the editor stays truthful.
+  const handleSaveTaskInfo = async () => {
+    if (!taskEditor) return;
+    const title = editorTitle.trim();
+    if (!title) return;
+    setSavingTask(true);
+    try {
+      const updated = await updateTaskInfoRequest(taskEditor.id, {
+        title,
+        priority: editorPriority,
+        duration_block: Math.max(5, parseInt(editorTimer) || 25),
+        horizonId: taskEditor.horizon_id ?? null,
+      });
+      if (updated) {
+        setTasks((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
+        if (editorRef.current) {
+          editorRef.current
+            .querySelectorAll(`[data-type="task"][data-id="${updated.id}"]`)
+            .forEach((pill) => { pill.textContent = `@${updated.title}`; });
+          updateCharCount();
+        }
+        setTaskEditor(null);
+      }
+    } catch (err) {
+      console.error('Error saving task info:', err);
+    } finally {
+      setSavingTask(false);
+    }
   };
 
   // Submit / Capture Idea
@@ -394,23 +492,45 @@ export default function IdeaCapturePage() {
           <div className="space-y-0.5">
             {mentionList.map((item, idx) => {
               const isSelected = idx === mentionIndex;
+
+              // Synthetic "create new task" row.
+              if (item._tagType === 'create') {
+                return (
+                  <Button variant="unstyled"
+                    key="create-new-task"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => handleSelectMention(item)}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-colors ${
+                      isSelected ? 'bg-emerald-500/15 text-emerald-400' : 'text-slate-400 hover:bg-slate-850/50'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                    <span className="truncate">
+                      Create task <span className="text-emerald-400">“{item.label}”</span>
+                    </span>
+                  </Button>
+                );
+              }
+
               const isTask = item._tagType === 'task';
-              const title = isTask ? item.title : item.content;
+              const title = isTask ? item.title : (item as Horizon).content;
               return (
                 <Button variant="unstyled"
                   key={`${item._tagType}-${item.id}`}
-                  onClick={() => insertTagPill(item)}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelectMention(item)}
                   onMouseEnter={() => setSelectedIndex(idx)}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-colors${
-                    isSelected 
-                      ? 'bg-slate-800 text-white' 
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-colors ${
+                    isSelected
+                      ? 'bg-slate-800 text-white'
                       : 'text-slate-400 hover:bg-slate-850/50'
                   }`}
                 >
                   <span className="truncate max-w-[150px]">{title}</span>
-                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full${
-                    isTask 
-                      ? 'bg-primary-500/15 text-primary-500' 
+                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                    isTask
+                      ? 'bg-primary-500/15 text-primary-500'
                       : 'bg-purple-500/15 text-purple-500'
                   }`}>
                     {isTask ? 'Task' : 'Plan'}
@@ -421,6 +541,70 @@ export default function IdeaCapturePage() {
           </div>
         </div>
       )}
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: INLINE TASK EDITOR MODAL
+          Opened by clicking a task pill — sets title, priority, and the
+          focus timer (duration_block) that drives the Pomodoro page
+          ────────────────────────────────────────────────────────── */}
+      <Modal
+        isOpen={!!taskEditor}
+        onClose={() => setTaskEditor(null)}
+        title="Edit task"
+        description="Set the details and the focus timer for this linked task."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setTaskEditor(null)} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSaveTaskInfo}
+              disabled={savingTask || !editorTitle.trim()}
+              className="flex-1"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {savingTask ? 'Saving…' : 'Save task'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <Input
+            label="Task title"
+            value={editorTitle}
+            onChange={(e) => setEditorTitle(e.target.value)}
+            placeholder="What needs doing?"
+            leftIcon={<Check className="w-4 h-4" />}
+            onKeyDown={(e) => { if (e.key === 'Enter') handleSaveTaskInfo(); }}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <Select
+              label="Priority"
+              value={editorPriority}
+              onChange={(v) => setEditorPriority(String(v))}
+              options={PRIORITY_OPTIONS}
+            />
+
+            <div>
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                Focus timer
+              </label>
+              <NumberInput
+                value={editorTimer}
+                onChange={setEditorTimer}
+                min={5}
+                max={120}
+                step={5}
+                prefix={<Timer className="w-4 h-4" />}
+                ariaLabel="Focus timer in minutes"
+              />
+              <p className="mt-1.5 text-[11px] text-slate-500">Minutes per focus block</p>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER SECTION
@@ -457,6 +641,7 @@ export default function IdeaCapturePage() {
                 contentEditable
                 onKeyDown={handleEditorKeyDown}
                 onInput={handleEditorInput}
+                onClick={handleEditorClick}
                 className="w-full min-h-[220px] bg-transparent text-sm text-slate-200 focus:outline-none leading-relaxed whitespace-pre-wrap outline-none"
                 data-placeholder="Start writing your idea... Type @ to link a task or dream goal. Press Ctrl+Enter to save instantly."
               />
@@ -509,7 +694,7 @@ export default function IdeaCapturePage() {
               Mentions Engine
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. You can search and link task entries or dream horizons, turning a simple brain dump into an actionable network of thoughts.
+              When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. Link an existing task or dream horizon — or, if none matches, hit <span className="text-emerald-400 font-semibold">Create task</span> to spin up a new one on the spot. Click any <span className="text-primary-400 font-semibold">task pill</span> to set its priority and focus timer.
             </p>
           </div>
         </div>
