@@ -11,28 +11,32 @@
 const GMAIL_DOMAINS = new Set(['gmail.com', 'googlemail.com']);
 
 // ──────────────────────────────────────────────────────────
-// TRANSACTIONAL EMAIL (Resend HTTP API)
-// A tiny, zero-dependency sender shared by every outbound email (password
-// resets today; anything transactional tomorrow). Mirrors bug-report.ts:
-// delivers via the Resend HTTP API over native fetch (no nodemailer/SMTP,
-// which is flaky on serverless), and is env-gated so the app runs fine
-// unconfigured — it simply no-ops with a warning until RESEND_API_KEY is set.
+// TRANSACTIONAL EMAIL (SMTP — e.g. Hostinger)
+// A small sender shared by every outbound email (password resets today;
+// anything transactional tomorrow). Delivers via SMTP with nodemailer, so the
+// app can send through your own Hostinger mailbox (mail authenticated as your
+// domain → decent inbox delivery). Env-gated: it no-ops with a warning until
+// the SMTP_* vars are set, so local/unconfigured environments still run.
 //
-// Setup (.env + Vercel project env):
-//   RESEND_API_KEY=re_xxx                          # https://resend.com/api-keys
-//   EMAIL_FROM=Zomzam <no-reply@yourdomain.com>    # optional; sender must be a
-//     Resend-verified domain. Defaults to onboarding@resend.dev (Resend test
-//     mode only delivers that to the account owner's own verified address).
+// Serverless note: the transporter is cached at module scope so a warm Vercel
+// container reuses one connection pool instead of doing a fresh TLS handshake
+// per send. Hostinger caps sends (hundreds/day) — fine for auth email.
+//
+// Setup (.env + Vercel project env), from hPanel → Emails (create the mailbox):
+//   SMTP_HOST=smtp.hostinger.com
+//   SMTP_PORT=465                                # 465 = SSL, 587 = STARTTLS
+//   SMTP_USER=no-reply@yourdomain.com            # the full mailbox address
+//   SMTP_PASS=••••••••                           # that mailbox's password
+//   EMAIL_FROM=Zomzam <no-reply@yourdomain.com>  # optional; defaults to SMTP_USER
 // ──────────────────────────────────────────────────────────
 
-const RESEND_ENDPOINT = 'https://api.resend.com/emails';
-const DEFAULT_FROM = 'Zomzam <onboarding@resend.dev>';
+import nodemailer, { type Transporter } from 'nodemailer';
 
 export interface SendEmailInput {
   to: string | string[];
   subject: string;
   html: string;
-  /** Override the sender. Defaults to EMAIL_FROM, then onboarding@resend.dev. */
+  /** Override the sender. Defaults to EMAIL_FROM, then SMTP_USER. */
   from?: string;
   /** Optional Reply-To address. */
   replyTo?: string;
@@ -40,48 +44,60 @@ export interface SendEmailInput {
 
 export interface SendEmailResult {
   ok: boolean;
-  /** True when no RESEND_API_KEY is configured — nothing was sent. */
+  /** True when SMTP isn't configured — nothing was sent. */
   skipped?: boolean;
   error?: string;
 }
 
+// Cached across invocations on a warm container so we don't rebuild the pool
+// (and re-handshake TLS) on every send.
+let transporter: Transporter | null = null;
+
+/** Build (once) the SMTP transport, or null when SMTP isn't configured. */
+function getTransport(): Transporter | null {
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  if (!host || !user || !pass) return null;
+
+  if (!transporter) {
+    const port = parseInt(process.env.SMTP_PORT || '465', 10);
+    transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465, // implicit TLS on 465; STARTTLS on 587
+      auth: { user, pass },
+    });
+  }
+  return transporter;
+}
+
 /**
- * Send one transactional email via Resend. Never throws — returns a result the
- * caller can branch on. No-ops (skipped:true) when RESEND_API_KEY is unset so
+ * Send one transactional email over SMTP. Never throws — returns a result the
+ * caller can branch on. No-ops (skipped:true) when SMTP isn't configured so
  * local/unconfigured environments don't error on password-reset requests.
  */
 export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult> {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    console.warn('[email] RESEND_API_KEY not set — skipping send:', input.subject);
+  const transport = getTransport();
+  if (!transport) {
+    console.warn('[email] SMTP not configured (SMTP_HOST/SMTP_USER/SMTP_PASS) — skipping send:', input.subject);
     return { ok: false, skipped: true };
   }
 
-  const from = input.from || process.env.EMAIL_FROM || DEFAULT_FROM;
+  const from = input.from || process.env.EMAIL_FROM || process.env.SMTP_USER!;
   const to = Array.isArray(input.to) ? input.to : [input.to];
 
   try {
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: input.subject,
-        html: input.html,
-        ...(input.replyTo ? { reply_to: input.replyTo } : {}),
-      }),
+    await transport.sendMail({
+      from,
+      to,
+      subject: input.subject,
+      html: input.html,
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => '');
-      console.error('[email] Resend rejected the send:', res.status, detail);
-      return { ok: false, error: `${res.status} ${detail}` };
-    }
-
     return { ok: true };
   } catch (err: any) {
-    console.error('[email] send failed:', err);
+    console.error('[email] SMTP send failed:', err);
     return { ok: false, error: String(err?.message || err) };
   }
 }

@@ -41,14 +41,22 @@ test('degrades gracefully on a non-address input', () => {
   assert.equal(canonicalEmail(''), '');
 });
 
-test('sendEmail no-ops (skipped) when RESEND_API_KEY is unset', async () => {
-  const prev = process.env.RESEND_API_KEY;
-  delete process.env.RESEND_API_KEY;
+test('sendEmail no-ops (skipped) when SMTP is not configured', async () => {
+  const prev = {
+    host: process.env.SMTP_HOST,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  };
+  delete process.env.SMTP_HOST;
+  delete process.env.SMTP_USER;
+  delete process.env.SMTP_PASS;
   try {
     const result = await sendEmail({ to: 'a@b.com', subject: 'x', html: '<p>x</p>' });
     assert.equal(result.ok, false);
     assert.equal(result.skipped, true);
   } finally {
-    if (prev !== undefined) process.env.RESEND_API_KEY = prev;
+    if (prev.host !== undefined) process.env.SMTP_HOST = prev.host;
+    if (prev.user !== undefined) process.env.SMTP_USER = prev.user;
+    if (prev.pass !== undefined) process.env.SMTP_PASS = prev.pass;
   }
 });

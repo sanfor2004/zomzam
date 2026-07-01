@@ -69,6 +69,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | **Icons** | **Lucide React** | Consistent, tree-shakeable icon set across the Kit and every feature page. |
 | **Maps** | **`@vis.gl/react-google-maps`** | Powers the CRM Map Leads Scraper's Place Search interface. |
 | **Image Processing** | **`sharp` + `@vercel/blob`** | `sharp` re-encodes/resizes avatar and post images server-side (strips EXIF); the result is uploaded to Vercel Blob (`src/lib/uploads.ts`) rather than local disk, since Vercel's serverless functions have a read-only filesystem at runtime. |
+| **Transactional Email** | **`nodemailer` (SMTP)** | The password-reset link sends via SMTP (`src/lib/email.ts`) through your own mailbox — e.g. Hostinger (`smtp.hostinger.com`) — so mail is authenticated as your domain. Env-gated (`SMTP_*`); no-ops with a warning when unconfigured. Separately, `src/lib/bug-report.ts` emails uncaught errors via the Resend HTTP API. |
 
 ---
 
@@ -96,7 +97,7 @@ zomzam.com/
 │   │   │   └── layout.tsx     # Sidebar nav, topbar, notifications, presence, ambient WebGL background
 │   │   ├── api/                # Serverless API routes
 │   │   │   ├── auth/           # Login, registration, logout, session check, settings
-│   │   │   │   ├── forgot-password/  # Issue + email a password-reset link (Resend)
+│   │   │   │   ├── forgot-password/  # Issue + email a password-reset link (SMTP)
 │   │   │   │   └── reset-password/   # Consume a reset token, set new password
 │   │   │   ├── crm/            # Leads, scrape jobs, pipeline, contacts, projects, AI outreach, Notion sync settings
 │   │   │   ├── dashboard/      # Aggregated cross-suite metrics for /dashboard
@@ -144,7 +145,7 @@ zomzam.com/
 │   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
 │   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle, bug-report throttle)
 │   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, throttled, never throws; recipient defaults to 2004.Sanfor@gmail.com)
-│   │   ├── email.ts             # canonicalEmail (inbox-identity key) + sendEmail (transactional Resend sender used by the password-reset flow)
+│   │   ├── email.ts             # canonicalEmail (inbox-identity key) + sendEmail (transactional SMTP sender via nodemailer, e.g. Hostinger; used by the password-reset flow)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
 │   │   ├── google-oauth.ts      # Google Sign-In: auth URL builder, code exchange, id_token verify (jose remote JWKS)
 │   │   ├── db.ts                # MySQL connection pool + transaction helpers
@@ -279,16 +280,24 @@ BLOB_READ_WRITE_TOKEN=
 #   BUG_REPORT_TO:  recipient(s), comma-separated. Defaults to 2004.Sanfor@gmail.com
 #   BUG_REPORT_FROM: sender; must be a Resend-verified domain. Defaults to
 #     onboarding@resend.dev (Resend test mode only delivers to the account owner).
-# The same RESEND_API_KEY also powers transactional email (src/lib/email.ts) —
-# currently the password-reset link. Without it, forgot-password no-ops the send
-# (and returns a demo_token in development so the flow stays testable).
-#   EMAIL_FROM: transactional sender; must be a Resend-verified domain. Defaults
-#     to onboarding@resend.dev.
+# Transactional email — the password-reset link sends via SMTP (src/lib/email.ts,
+# nodemailer). Create a mailbox in Hostinger hPanel → Emails and use its creds.
+# Without these, forgot-password no-ops the send (and returns a demo_token in
+# development so the flow stays testable).
+#   SMTP_HOST: smtp.hostinger.com
+#   SMTP_PORT: 465 (SSL) or 587 (STARTTLS)
+#   SMTP_USER: the full mailbox address (also the default From)
+#   SMTP_PASS: that mailbox's password
+#   EMAIL_FROM: optional display sender; defaults to SMTP_USER
 #   APP_URL: public origin used to build links in emails (e.g. the reset link).
 #     Falls back to the request origin when unset.
 RESEND_API_KEY=
 BUG_REPORT_TO=2004.Sanfor@gmail.com
 BUG_REPORT_FROM=
+SMTP_HOST=smtp.hostinger.com
+SMTP_PORT=465
+SMTP_USER=
+SMTP_PASS=
 EMAIL_FROM=
 APP_URL=
 ```
