@@ -73,6 +73,9 @@ interface MessagesContextType {
   contacts: ChatContact[];
   unreadTotal: number;
   windows: ChatWindow[];
+  /** Ids of peers currently typing a message TO me — drives the "typing…"
+   *  indicator everywhere their presence surfaces, not just an open window. */
+  typingContacts: Set<number>;
   loadContacts: () => Promise<void>;
   openChat: (user: ChatUser, conversationId?: number | null) => void;
   closeChat: (otherId: number) => void;
@@ -90,6 +93,7 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   const me = useCurrentUser();
   const [contacts, setContacts] = useState<ChatContact[]>([]);
   const [windows, setWindows] = useState<ChatWindow[]>([]);
+  const [typingContacts, setTypingContacts] = useState<Set<number>>(new Set());
 
   // Mirror windows into a ref so the stable `zz-new-message` listener can read
   // the current open set without re-subscribing on every window change.
@@ -321,15 +325,27 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   }, [hydrateWindow, loadContacts, markConversationReadApi]);
 
   // ── Incoming typing indicator ───────────────────────────────
-  // Flip `peerTyping` on the matching open window and (re)arm a ~4s auto-expire
-  // timer. We only show it for windows that are already open — a typing ping
-  // never pops a new window (that would be noisy); the message itself will.
+  // A `typing` ping (delivered live via the SSE/heartbeat sync channel) drives
+  // two things, each (re)armed on a ~4s auto-expire so a steady stream of
+  // keystrokes keeps it alive and a pause lets it fade:
+  //   • the in-window three-dot bubble (`peerTyping`), only for an OPEN window —
+  //     a ping never pops a new window (that would be noisy; the message will);
+  //   • the global `typingContacts` set, which surfaces "typing…" ON THE
+  //     PRESENCE ICON everywhere that peer appears (Active-now rail, dock
+  //     header, messages list) whether or not their window is open.
   const typingTimersRef = useRef<Map<number, ReturnType<typeof setTimeout>>>(new Map());
   useEffect(() => {
     const timers = typingTimersRef.current;
     const onTyping = (e: Event) => {
       const { sender_id } = (e as CustomEvent).detail || {};
       if (!sender_id) return;
+
+      setTypingContacts((prev) => {
+        if (prev.has(sender_id)) return prev;
+        const next = new Set(prev);
+        next.add(sender_id);
+        return next;
+      });
 
       setWindows((prev) => {
         if (!prev.some((w) => w.otherUser.id === sender_id)) return prev;
@@ -339,6 +355,12 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
       const existing = timers.get(sender_id);
       if (existing) clearTimeout(existing);
       timers.set(sender_id, setTimeout(() => {
+        setTypingContacts((prev) => {
+          if (!prev.has(sender_id)) return prev;
+          const next = new Set(prev);
+          next.delete(sender_id);
+          return next;
+        });
         setWindows((prev) => prev.map((w) => (w.otherUser.id === sender_id ? { ...w, peerTyping: false } : w)));
         timers.delete(sender_id);
       }, 4000));
@@ -407,9 +429,9 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
   );
 
   const value = useMemo<MessagesContextType>(() => ({
-    contacts, unreadTotal, windows,
+    contacts, unreadTotal, windows, typingContacts,
     loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping,
-  }), [contacts, unreadTotal, windows, loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping]);
+  }), [contacts, unreadTotal, windows, typingContacts, loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping]);
 
   // Expose the current user id to consumers that render message bubbles.
   return (

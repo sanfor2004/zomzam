@@ -8,6 +8,7 @@ import { Users, X, MessagesSquare, UserPlus, Check, ChevronLeft, ChevronRight } 
 import { Button } from '@/components/ui';
 import { useMessages, type ChatContact, type ChatUser } from '@/context/MessagesContext';
 import { displayName } from '@/app/(dashboard)/home/shared';
+import { TypingBadge } from './TypingDots';
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR (global)
@@ -59,7 +60,7 @@ const CARD = 'bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-app
  *  phone Menu sheet (folded in there instead of a separate FAB).
  *  `onNavigate` lets the host close itself once the user opens a chat/link. */
 export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
-  const { contacts, openChat } = useMessages();
+  const { contacts, typingContacts, openChat } = useMessages();
   const [suggestions, setSuggestions] = useState<SuggestedUser[]>([]);
   const [sent, setSent] = useState<Set<number>>(new Set());
 
@@ -132,6 +133,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           <div className="space-y-1 -mx-1.5">
             {friends.map((c) => {
               const bucket = bucketOf(c);
+              const isTyping = typingContacts.has(c.other_id);
               return (
                 <button
                   key={c.other_id}
@@ -146,14 +148,18 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                       height={36}
                       className="w-9 h-9 rounded-xl object-cover border border-slate-800"
                     />
-                    <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${DOT[bucket]}`} />
+                    {isTyping ? (
+                      <TypingBadge />
+                    ) : (
+                      <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${DOT[bucket]}`} />
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs truncate ${bucket === 'offline' ? 'text-slate-400' : 'font-semibold text-slate-200'}`}>
+                    <p className={`text-xs truncate ${bucket === 'offline' && !isTyping ? 'text-slate-400' : 'font-semibold text-slate-200'}`}>
                       {displayName(c)}
                     </p>
-                    <p className="text-[10px] text-slate-600 truncate">
-                      {bucket === 'online' ? 'Active now' : bucket === 'away' ? 'Away' : c.online_label || 'Offline'}
+                    <p className={`text-[10px] truncate ${isTyping ? 'text-primary-400 font-semibold' : 'text-slate-600'}`}>
+                      {isTyping ? 'typing…' : bucket === 'online' ? 'Active now' : bucket === 'away' ? 'Away' : c.online_label || 'Offline'}
                     </p>
                   </div>
                   {c.unread_count > 0 && (
@@ -229,7 +235,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 /** Collapsed mode: a slim strip of avatars — people you're chatting with, then
  *  online friends. Click opens a chat. */
 function CollapsedRail() {
-  const { contacts, openChat } = useMessages();
+  const { contacts, typingContacts, openChat } = useMessages();
   const router = useRouter();
 
   const threads = contacts.filter((c) => c.conversation_id);
@@ -248,12 +254,14 @@ function CollapsedRail() {
         <MessagesSquare className="w-4 h-4" />
       </button>
       {shown.length > 0 && <div className="w-8 h-px bg-slate-800/80 my-1" />}
-      {shown.map((c) => (
+      {shown.map((c) => {
+        const isTyping = typingContacts.has(c.other_id);
+        return (
         <button
           key={c.other_id}
           type="button"
           onClick={() => openChat(toChatUser(c), c.conversation_id)}
-          title={`${displayName(c)}${c.is_online ? (c.is_idle ? ' · Away' : ' · Active now') : ''}`}
+          title={`${displayName(c)}${isTyping ? ' · typing…' : c.is_online ? (c.is_idle ? ' · Away' : ' · Active now') : ''}`}
           className="relative"
         >
           <Image
@@ -263,14 +271,19 @@ function CollapsedRail() {
             height={40}
             className="w-10 h-10 rounded-2xl object-cover border border-slate-800 hover:border-primary-500/40 transition-colors"
           />
-          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface-dark ${DOT[bucketOf(c)]}`} />
+          {isTyping ? (
+            <TypingBadge borderClass="border-surface-dark" />
+          ) : (
+            <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface-dark ${DOT[bucketOf(c)]}`} />
+          )}
           {c.unread_count > 0 && (
             <span className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[9px] font-bold flex items-center justify-center border-2 border-surface-dark">
               {c.unread_count}
             </span>
           )}
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMessages, type ChatContact, type ChatUser } from '@/context/MessagesContext';
 import { useMyId } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '../home/shared';
+import { TypingBadge } from '@/components/chat/TypingDots';
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: MESSAGES (MESSENGER HUB)
@@ -29,7 +30,7 @@ function toChatUser(c: ChatContact): ChatUser {
 }
 
 export default function MessagesPage() {
-  const { contacts, unreadTotal, openChat } = useMessages();
+  const { contacts, typingContacts, unreadTotal, openChat } = useMessages();
   const myId = useMyId();
   const [search, setSearch] = useState('');
   const pageRef = useRef<HTMLDivElement>(null);
@@ -87,10 +88,10 @@ export default function MessagesPage() {
         ) : (
           <div className="space-y-5">
             {recent.length > 0 && (
-              <Section title="Recent" rows={recent} myId={myId} onPick={(c) => openChat(toChatUser(c), c.conversation_id)} />
+              <Section title="Recent" rows={recent} myId={myId} typing={typingContacts} onPick={(c) => openChat(toChatUser(c), c.conversation_id)} />
             )}
             {others.length > 0 && (
-              <Section title="Friends" rows={others} myId={myId} onPick={(c) => openChat(toChatUser(c), c.conversation_id)} />
+              <Section title="Friends" rows={others} myId={myId} typing={typingContacts} onPick={(c) => openChat(toChatUser(c), c.conversation_id)} />
             )}
           </div>
         )}
@@ -100,18 +101,21 @@ export default function MessagesPage() {
 }
 
 function Section({
-  title, rows, myId, onPick,
+  title, rows, myId, typing, onPick,
 }: {
   title: string;
   rows: ChatContact[];
   myId: number;
+  typing: Set<number>;
   onPick: (c: ChatContact) => void;
 }) {
   return (
     <div>
       <p className="text-[10px] font-black uppercase tracking-widest text-slate-600 mb-2 px-1">{title}</p>
       <div className="space-y-1">
-        {rows.map((c) => (
+        {rows.map((c) => {
+          const isTyping = typing.has(c.other_id);
+          return (
           <button
             key={c.other_id}
             data-entrance="list-item"
@@ -126,22 +130,30 @@ function Section({
                 height={44}
                 className="w-11 h-11 rounded-2xl object-cover border border-slate-800"
               />
-              <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1A1D24] ${c.is_online ? (c.is_idle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600'}`} />
+              {isTyping ? (
+                <TypingBadge />
+              ) : (
+                <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1A1D24] ${c.is_online ? (c.is_idle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600'}`} />
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
                 <p className={`text-sm truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-200'}`}>
                   {displayName(c)}
                 </p>
-                {c.last_message_at && (
+                {c.last_message_at && !isTyping && (
                   <span className="text-[10px] text-slate-600 flex-shrink-0">{relativeTime(c.last_message_at)}</span>
                 )}
               </div>
-              <p className={`text-xs truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
-                {c.last_message
-                  ? `${c.last_sender_id === myId ? 'You: ' : ''}${c.last_message}`
-                  : `@${c.username}`}
-              </p>
+              {isTyping ? (
+                <p className="text-xs truncate text-primary-400 font-semibold">typing…</p>
+              ) : (
+                <p className={`text-xs truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
+                  {c.last_message
+                    ? `${c.last_sender_id === myId ? 'You: ' : ''}${c.last_message}`
+                    : `@${c.username}`}
+                </p>
+              )}
             </div>
             {c.unread_count > 0 && (
               <span className="flex-shrink-0 min-w-[20px] h-5 px-1.5 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
@@ -149,7 +161,8 @@ function Section({
               </span>
             )}
           </button>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

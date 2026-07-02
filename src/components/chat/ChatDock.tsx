@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Loader2, Send, X, Minus, ChevronUp, Smile } from 'lucide-react';
 import { useMessages, useMyId, type ChatWindow } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
+import { TypingDots, TypingBadge } from './TypingDots';
 
 // A compact, curated emoji set for the quick-insert picker — no external lib
 // (none installed; see CLAUDE.md §5). Covers the common reactions people reach
@@ -37,7 +38,7 @@ export function ChatDock() {
 }
 
 function ChatWindowCard({ win }: { win: ChatWindow }) {
-  const { contacts, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping } = useMessages();
+  const { contacts, typingContacts, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping } = useMessages();
   const myId = useMyId();
   const endRef = useRef<HTMLDivElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -59,7 +60,10 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
   const onlineLabel = live?.online_label ?? win.otherUser.online_label;
   // online & idle → amber, online & active → emerald, offline → slate.
   const dotColor = isOnline ? (isIdle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600';
-  const presence = isIdle ? 'Away' : (onlineLabel || (isOnline ? 'Active now' : 'Offline'));
+  // Typing wins over every presence state: while the peer composes, their icon
+  // and subtitle both flip to a live "typing…" signal.
+  const isTyping = typingContacts.has(otherId);
+  const presence = isTyping ? 'typing…' : isIdle ? 'Away' : (onlineLabel || (isOnline ? 'Active now' : 'Offline'));
 
   const insertEmoji = (emoji: string) => {
     setDraft(otherId, win.text + emoji);
@@ -84,9 +88,13 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             height={32}
             className="w-8 h-8 rounded-lg object-cover border border-slate-800"
           />
-          <span
-            className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${dotColor}`}
-          />
+          {isTyping ? (
+            <TypingBadge borderClass="border-[#1A1D24]" />
+          ) : (
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${dotColor}`}
+            />
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs font-bold text-white truncate flex items-center gap-1.5">
@@ -99,7 +107,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             </Link>
             {win.unread && <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse flex-shrink-0" />}
           </p>
-          <p className="text-[10px] text-slate-500 truncate">{presence}</p>
+          <p className={`text-[10px] truncate ${isTyping ? 'text-primary-400 font-semibold' : 'text-slate-500'}`}>{presence}</p>
         </div>
         <button
           type="button"
@@ -164,10 +172,8 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             {/* ── Typing indicator (peer is composing) ── */}
             {win.peerTyping && (
               <div className="flex justify-start" aria-label={`${name} is typing`}>
-                <div className="bg-slate-800/70 rounded-2xl rounded-bl-md px-3.5 py-2.5 flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.3s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:-0.15s]" />
-                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-bounce" />
+                <div className="bg-slate-800/70 rounded-2xl rounded-bl-md px-3.5 py-2.5">
+                  <TypingDots />
                 </div>
               </div>
             )}
