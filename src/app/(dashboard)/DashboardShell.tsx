@@ -373,8 +373,10 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           Contains: Logo, Main Nav, and User Mini Profile (Status indicator)
           ────────────────────────────────────────────────────────── */}
       <aside className={`hidden md:flex flex-col ${leftCollapsed ? 'w-[76px]' : 'w-64'} h-[calc(100vh-20px)] m-2.5 flex-shrink-0 transition-all duration-300 relative z-10`}>
-        {/* Logo — wordmark when expanded, square mark when collapsed */}
-        <div className={`h-20 flex items-center ${leftCollapsed ? 'justify-center' : 'px-6'}`}>
+        {/* Logo — wordmark when expanded, square mark when collapsed. Height +
+            negative top margin cancel the aside's m-2.5 so the logo's centerline
+            aligns with the h-[75px] top header bar on the right, not sitting low. */}
+        <div className={`h-[75px] -mt-2.5 flex items-center ${leftCollapsed ? 'justify-center' : 'px-6'}`}>
           <a href="/home" className="flex items-center group">
             {leftCollapsed ? (
               <img src="/Assets/Img/Icon-white.svg" alt="zomzam" className="h-8 w-8" />
