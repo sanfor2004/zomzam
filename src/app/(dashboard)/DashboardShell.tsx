@@ -21,8 +21,9 @@ import { describeNotification, notifTimeAgo } from '@/lib/notifications';
 
 type NavGroupKey = 'time' | 'money' | 'community';
 
-// One slot of the mobile bottom nav bar. Icon-only; active = orange (stroke +
-// faint fill); optional count badge (Messages unread / Notifications).
+// One slot of the mobile bottom nav bar. 24px icon over a small label (app
+// bottom-navbar guidelines); active = orange (stroke + faint fill + label);
+// optional count badge (Messages unread / Notifications) rides the icon.
 function BarTab({ Icon, label, active, badge, onClick }: {
   Icon: LucideIcon; label: string; active: boolean; badge?: number; onClick: () => void;
 }) {
@@ -32,14 +33,19 @@ function BarTab({ Icon, label, active, badge, onClick }: {
       onClick={onClick}
       aria-label={label}
       aria-current={active ? 'page' : undefined}
-      className="relative flex-1 flex items-center justify-center group"
+      className="relative flex-1 flex flex-col items-center justify-center gap-1 group"
     >
-      <Icon className={cn('w-6 h-6 transition-colors', active ? 'text-primary-500 fill-primary-500/20' : 'text-slate-400 group-hover:text-slate-200')} />
-      {badge ? (
-        <span className="absolute top-2 left-1/2 translate-x-2 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[9px] font-bold flex items-center justify-center">
-          {badge > 99 ? '99+' : badge}
-        </span>
-      ) : null}
+      <span className="relative">
+        <Icon className={cn('w-6 h-6 transition-colors', active ? 'text-primary-500 fill-primary-500/20' : 'text-slate-400 group-hover:text-slate-200')} />
+        {badge ? (
+          <span className="absolute -top-1.5 left-full -translate-x-1.5 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[9px] font-bold flex items-center justify-center">
+            {badge > 99 ? '99+' : badge}
+          </span>
+        ) : null}
+      </span>
+      <span className={cn('text-[10px] font-bold leading-none transition-colors', active ? 'text-primary-500' : 'text-slate-500 group-hover:text-slate-300')}>
+        {label}
+      </span>
     </button>
   );
 }
@@ -829,7 +835,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             Viewport-locked, scrollable area where dashboard pages render
             ────────────────────────────────────────────────────────── */}
         {/* pb on phone clears the fixed bottom nav bar (+ safe area). */}
-        <main onScroll={handleMainScroll} className="flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:pb-8">
+        <main onScroll={handleMainScroll} className="flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
           {children}
         </main>
       </div>
@@ -854,22 +860,23 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
       <nav
         aria-label="Primary"
         className={cn(
-          'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-dark/90 backdrop-blur-xl border-t border-slate-800 pb-[env(safe-area-inset-bottom)]',
+          'md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface-dark/90 backdrop-blur-xl rounded-t-[28px] border-t border-x border-slate-800 pb-[env(safe-area-inset-bottom)]',
           'transition-transform duration-300 ease-out motion-reduce:transition-none',
           barHidden ? 'translate-y-full' : 'translate-y-0',
         )}
       >
-        <div className="flex items-stretch justify-around h-16 px-1">
+        <div className="flex items-stretch justify-around h-[72px] px-1">
           <BarTab Icon={Home} label="Home" active={pathname === '/home'} onClick={() => router.push('/home')} />
           <BarTab Icon={MessageCircle} label="Messages" active={pathname.startsWith('/messages')} badge={unreadTotal} onClick={() => router.push('/messages')} />
 
-          {/* Raised center Create — breaks above the bar line */}
+          {/* Raised center Create — breaks above the bar line. No drop shadow;
+              an inset top highlight + bottom shade gives it soft physical depth. */}
           <div className="flex items-center justify-center px-1">
             <Button
               variant="unstyled"
               onClick={handleCreate}
               aria-label="Create post"
-              className="-mt-7 w-14 h-14 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-lg shadow-primary-500/40 flex items-center justify-center transition-colors active:scale-95 ring-4 ring-surface-dark"
+              className="-mt-10 w-16 h-16 rounded-full bg-primary-500 hover:bg-primary-600 text-white shadow-[inset_0_2px_3px_rgba(255,255,255,0.3),inset_0_-3px_5px_rgba(0,0,0,0.3)] flex items-center justify-center transition-colors active:scale-95 ring-4 ring-surface-dark"
             >
               <Plus className="w-6 h-6" />
             </Button>
