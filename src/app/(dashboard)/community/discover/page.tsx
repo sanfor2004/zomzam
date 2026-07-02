@@ -117,7 +117,7 @@ export default function DiscoverPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
+            <p className="text-xs text-slate-400">Grow your network — connect with people who match your skills.</p>
           </div>
         </div>
 
@@ -170,7 +170,7 @@ export default function DiscoverPage() {
                       <Button variant="unstyled"
                         onClick={() => executeSocialAction('friend_request', usr.id)}
                         className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
-                        title="Add Friend"
+                        title="Connect"
                       >
                         <UserPlus className="w-4 h-4" />
                       </Button>
@@ -185,7 +185,7 @@ export default function DiscoverPage() {
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: CONTENT — SUGGESTED PEOPLE
-          Contains: Discoverable people grid with follow/connect actions
+          Contains: Discoverable people grid with the Connect action
           ────────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
@@ -239,19 +239,15 @@ export default function DiscoverPage() {
                     )
                   )}
 
+                  {/* One Connect action (LinkedIn-style): sends the request and
+                      follows them until they connect back. */}
                   <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-850">
                     <Button variant="unstyled"
                       onClick={() => executeSocialAction('friend_request', usr.id)}
                       className="flex-grow h-10 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1 shadow-sm"
                     >
                       <UserPlus className="w-3.5 h-3.5" />
-                      Add Friend
-                    </Button>
-                    <Button variant="unstyled"
-                      onClick={() => executeSocialAction('follow', usr.id)}
-                      className="h-10 px-4 bg-slate-900/30 text-slate-350 hover:bg-slate-100 border border-slate-800 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all"
-                    >
-                      Follow
+                      Connect
                     </Button>
                   </div>
                 </div>

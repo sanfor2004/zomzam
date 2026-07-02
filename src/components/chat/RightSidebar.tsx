@@ -13,8 +13,8 @@ import { displayName } from '@/app/(dashboard)/home/shared';
 // DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR (global)
 // The persistent right navbar for the whole dashboard (rendered by the shell,
 // not by any page). Consolidates what used to be the /home right column +
-// the old presence rail into one place: Active Now (friends presence) and
-// Suggested people. Self-contained — reads contacts from MessagesContext and
+// the old presence rail into one place: Active now (connections presence) and
+// Suggested connects. Self-contained — reads contacts from MessagesContext and
 // fetches its own suggestions. Desktop = sticky column; mobile = FAB + drawer.
 // ──────────────────────────────────────────────────────────
 
@@ -73,7 +73,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     })();
   }, []);
 
-  // All friends, ordered online → away → offline for the "Active Now" list.
+  // All connections, ordered online → away → offline for the "Active now" list.
   const friends = useMemo(
     () => [...contacts].sort((a, b) => {
       const r = RANK[bucketOf(a)] - RANK[bucketOf(b)];
@@ -88,7 +88,9 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     onNavigate?.();
   };
 
-  const addFriend = async (userId: number) => {
+  // Connect (LinkedIn-style): one action sends the request and follows them
+  // until they connect back — see /api/social friend_request.
+  const connect = async (userId: number) => {
     setSent((prev) => new Set(prev).add(userId));
     try {
       await fetch('/api/social', {
@@ -101,12 +103,12 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {/* ── Active Now (friends presence) ── */}
+      {/* ── Active now (connections presence) ── */}
       <div className={CARD}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-slate-400" />
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Active Now</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Active now</h3>
             {onlineCount > 0 && (
               <span className="text-[10px] font-bold bg-emerald-500/15 text-emerald-400 px-1.5 py-0.5 rounded-full">
                 {onlineCount}
@@ -124,7 +126,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
         {friends.length === 0 ? (
           <p className="text-xs text-slate-600 text-center py-4">
-            No friends yet — discover people below.
+            No connections yet — discover people below.
           </p>
         ) : (
           <div className="space-y-1 -mx-1.5">
@@ -166,11 +168,11 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </div>
 
-      {/* ── Suggested For You ── */}
+      {/* ── Suggested connects ── */}
       {suggestions.length > 0 && (
         <div className={CARD}>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Suggested For You</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Suggested connects</h3>
             <Link
               href="/community/discover"
               onClick={onNavigate}
@@ -202,9 +204,9 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                 </div>
                 <Button
                   variant="unstyled"
-                  onClick={() => addFriend(u.id)}
+                  onClick={() => connect(u.id)}
                   disabled={sent.has(u.id)}
-                  title={sent.has(u.id) ? 'Request sent' : 'Add friend'}
+                  title={sent.has(u.id) ? 'Request sent — you follow them until they accept' : 'Connect'}
                   className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all disabled:cursor-default ${
                     sent.has(u.id)
                       ? 'bg-emerald-500/10 text-emerald-400'
@@ -213,7 +215,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                 >
                   {sent.has(u.id)
                     ? <><Check className="w-3 h-3" /> Sent</>
-                    : <><UserPlus className="w-3 h-3" /> Add</>}
+                    : <><UserPlus className="w-3 h-3" /> Connect</>}
                 </Button>
               </div>
             ))}

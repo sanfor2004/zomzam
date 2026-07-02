@@ -37,3 +37,10 @@ export async function repostRequest(targetId: number): Promise<boolean> {
   const data = await postAction({ action: 'repost', post_id: targetId });
   return !!data.success;
 }
+
+// Report a post (3-dot menu on someone else's card). Throws with the server's
+// message so the card can toast a real reason instead of a generic failure.
+export async function reportPostRequest(postId: number): Promise<void> {
+  const data = await postAction({ action: 'report', post_id: postId });
+  if (!data.success) throw new Error(data.message || 'Failed to report post');
+}

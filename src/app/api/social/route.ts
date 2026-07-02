@@ -49,13 +49,21 @@ export const POST = withAuth(async (request, user) => {
     return NextResponse.json({ success: false, message: 'Action is required' }, { status: 400 });
   }
 
-  if (['friend_request', 'friend_accept', 'friend_decline', 'friend_cancel', 'unfriend', 'block', 'unblock', 'follow', 'unfollow'].includes(action)) {
+  if (['friend_request', 'friend_accept', 'friend_decline', 'friend_cancel', 'unfriend', 'block', 'unblock'].includes(action)) {
     if (!targetId || targetId === user.id) {
       return NextResponse.json({ success: false, message: 'Invalid target user' }, { status: 400 });
     }
   }
 
   switch (action) {
+    // ── Connect (LinkedIn-style) ────────────────────────────────
+    // One action covers the old follow + add-friend pair: sending a connect
+    // request ALSO creates a follow edge, so until (unless) the other side
+    // accepts, "pending connect" behaves as "I follow them" — their public
+    // posts reach my feed via getFeedAudience. Accepting upgrades the pair to
+    // friends; declining silently leaves the requester as a follower.
+    // The action keeps its historical name so stored notification rows and
+    // the existing DB enum stay valid.
     case 'friend_request': {
       const target = await getUserById(targetId);
       if (!target) {
@@ -73,20 +81,20 @@ export const POST = withAuth(async (request, user) => {
       if (existing) {
         switch (existing.status) {
           case 'accepted':
-            return NextResponse.json({ success: false, message: 'Already friends' }, { status: 400 });
+            return NextResponse.json({ success: false, message: 'Already connected' }, { status: 400 });
           case 'pending':
             if (existing.requester_id === user.id) {
               return NextResponse.json({ success: false, message: 'Request already sent' }, { status: 400 });
             }
-            // Auto accept if they requested first
+            // They asked first — connecting back completes the pair (friends).
             await execute(`UPDATE user_connections SET status = 'accepted', updated_at = NOW() WHERE id = ?`, [existing.id]);
             await createNotification(user.id, 'friend_accept', {
               from_user_id: user.id,
               from_username: user.username,
               from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
-              message: 'accepted your friend request',
+              message: 'accepted your connection request',
             });
-            return NextResponse.json({ success: true, message: 'Friend request accepted' });
+            return NextResponse.json({ success: true, message: 'You are now connected' });
           case 'blocked':
             return NextResponse.json({ success: false, message: 'Cannot send request' }, { status: 400 });
           case 'declined':
@@ -100,14 +108,22 @@ export const POST = withAuth(async (request, user) => {
         [user.id, targetId]
       );
 
+      // The follow half of Connect — until they accept, I follow them. Silent
+      // (no new_follower notification): the connect-request notification below
+      // is the single signal, not two.
+      await execute(
+        `INSERT IGNORE INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'follow', 'accepted')`,
+        [user.id, targetId]
+      );
+
       await createNotification(targetId, 'friend_request', {
         from_user_id: user.id,
         from_username: user.username,
         from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
-        message: 'sent you a friend request',
+        message: 'wants to connect with you',
       });
 
-      return NextResponse.json({ success: true, message: 'Friend request sent' });
+      return NextResponse.json({ success: true, message: 'Connection request sent' });
     }
 
     case 'friend_accept': {
@@ -127,10 +143,10 @@ export const POST = withAuth(async (request, user) => {
         from_user_id: user.id,
         from_username: user.username,
         from_avatar: acceptor?.avatar || '/Assets/Img/default-avatar.png',
-        message: 'accepted your friend request',
+        message: 'accepted your connection request',
       });
 
-      return NextResponse.json({ success: true, message: 'Friend request accepted' });
+      return NextResponse.json({ success: true, message: 'Connection accepted' });
     }
 
     case 'friend_decline': {
@@ -156,6 +172,13 @@ export const POST = withAuth(async (request, user) => {
         return NextResponse.json({ success: false, message: 'No pending request to cancel' }, { status: 400 });
       }
 
+      // Withdraw the follow half of Connect too — cancelling means "never mind",
+      // not "keep me as a follower".
+      await execute(
+        `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'follow'`,
+        [user.id, targetId]
+      );
+
       // Clean up ghost notifications
       await execute(
         `DELETE FROM notifications WHERE user_id = ? AND type = 'friend_request' AND JSON_UNQUOTE(JSON_EXTRACT(data, '$.from_user_id')) = ?`,
@@ -179,15 +202,23 @@ export const POST = withAuth(async (request, user) => {
       );
 
       if (res.affectedRows === 0) {
-        return NextResponse.json({ success: false, message: 'Not friends' }, { status: 400 });
+        return NextResponse.json({ success: false, message: 'Not connected' }, { status: 400 });
       }
+
+      // Disconnecting severs the implied follows in BOTH directions — with no
+      // standalone follow UI left, a leftover edge would be invisible and
+      // unmanageable.
+      await execute(
+        `DELETE FROM user_connections WHERE type = 'follow' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?))`,
+        [user.id, targetId, targetId, user.id]
+      );
 
       await pushStreamOrder(targetId, 'social_update', {
         action: 'unfriended',
         from_user_id: user.id,
       }, false);
 
-      return NextResponse.json({ success: true, message: 'Unfriended' });
+      return NextResponse.json({ success: true, message: 'Disconnected' });
     }
 
     case 'block': {
@@ -213,51 +244,10 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true, message: 'User unblocked' });
     }
 
-    case 'follow': {
-      const blockCheck = await queryOne(
-        `SELECT id FROM user_connections WHERE status = 'blocked' AND ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) LIMIT 1`,
-        [user.id, targetId, targetId, user.id]
-      );
-
-      if (blockCheck) {
-        return NextResponse.json({ success: false, message: 'Cannot follow this user' }, { status: 400 });
-      }
-
-      const followResult = await execute(
-        `INSERT IGNORE INTO user_connections (requester_id, addressee_id, type, status) VALUES (?, ?, 'follow', 'accepted')`,
-        [user.id, targetId]
-      );
-
-      // Notify only on a genuinely NEW follow — INSERT IGNORE reports
-      // affectedRows = 0 when the follow already exists, so a re-follow is silent.
-      if (followResult.affectedRows > 0) {
-        const me = await getUserById(user.id);
-        // Batch followers into one roster ("X and N others started following
-        // you") — no per-target id, so bucket purely by type.
-        await createNotification(
-          targetId,
-          'new_follower',
-          {
-            from_user_id: user.id,
-            from_username: user.username,
-            from_avatar: me?.avatar || DEFAULT_AVATAR,
-            message: 'started following you',
-          },
-          { aggregate: true }
-        );
-      }
-
-      return NextResponse.json({ success: true, message: 'Now following' });
-    }
-
-    case 'unfollow': {
-      await execute(
-        `DELETE FROM user_connections WHERE requester_id = ? AND addressee_id = ? AND type = 'follow'`,
-        [user.id, targetId]
-      );
-
-      return NextResponse.json({ success: true, message: 'Unfollowed' });
-    }
+    // The standalone follow / unfollow actions were retired with the Connect
+    // rework: the follow edge is now created and withdrawn only as part of the
+    // connect lifecycle above. Follow ROWS still power feed reach
+    // (getFeedAudience) — only the independent toggles are gone.
 
     default:
       return NextResponse.json({ success: false, message: 'Invalid action' }, { status: 400 });
@@ -346,30 +336,6 @@ export const GET = withAuth(async (request, user) => {
         [user.id]
       );
       return NextResponse.json({ success: true, requests: requests.map(normalizeAvatar) });
-    }
-
-    case 'followers': {
-      const followers = await query(
-        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS followed_at
-         FROM user_connections uc
-         JOIN users u ON u.id = uc.requester_id
-         WHERE uc.addressee_id = ? AND uc.type = 'follow' AND uc.status = 'accepted'
-         ORDER BY uc.created_at DESC`,
-        [user.id]
-      );
-      return NextResponse.json({ success: true, followers: followers.map(normalizeAvatar) });
-    }
-
-    case 'following': {
-      const following = await query(
-        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar, u.bio, u.tags, uc.created_at AS followed_at
-         FROM user_connections uc
-         JOIN users u ON u.id = uc.addressee_id
-         WHERE uc.requester_id = ? AND uc.type = 'follow' AND uc.status = 'accepted'
-         ORDER BY uc.created_at DESC`,
-        [user.id]
-      );
-      return NextResponse.json({ success: true, following: following.map(normalizeAvatar) });
     }
 
     case 'discover': {

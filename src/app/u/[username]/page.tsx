@@ -58,15 +58,15 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const viewer = await getSessionUser();
   const viewerId = viewer ? viewer.id : null;
 
-  // Query friendship and follow relations if viewer is authenticated
+  // Resolve the connect status if the viewer is authenticated (pending-out
+  // already implies "following" — the follow edge rides the connect request).
   let initialStatus = 'none';
-  let initialIsFollowing = false;
 
   if (viewerId && viewerId !== profileUserId) {
     const connectionRows = await query<ConnectionRow>(
-      `SELECT requester_id, addressee_id, type, status 
-       FROM user_connections 
-       WHERE ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?)) 
+      `SELECT requester_id, addressee_id, type, status
+       FROM user_connections
+       WHERE ((requester_id = ? AND addressee_id = ?) OR (requester_id = ? AND addressee_id = ?))
        ORDER BY type ASC, created_at DESC`,
       [viewerId, profileUserId, profileUserId, viewerId]
     );
@@ -84,9 +84,6 @@ export default async function PublicProfilePage({ params }: PageProps) {
         if (row.status === 'pending') {
           initialStatus = row.requester_id === viewerId ? 'friend_pending_out' : 'friend_pending_in';
         }
-      }
-      if (row.type === 'follow' && row.status === 'accepted' && row.requester_id === viewerId) {
-        initialIsFollowing = true;
       }
     }
   }
@@ -388,13 +385,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
                   {viewerId ? (
                     <span>Connect with @{profileUser.username} to collaborate.</span>
                   ) : (
-                    <span>Sign in to follow or add @{profileUser.username} as a friend.</span>
+                    <span>Sign in to connect with @{profileUser.username}.</span>
                   )}
                 </div>
                 <SocialButtons
                   targetUserId={profileUserId}
                   initialStatus={initialStatus}
-                  initialIsFollowing={initialIsFollowing}
                   viewerId={viewerId}
                 />
               </>

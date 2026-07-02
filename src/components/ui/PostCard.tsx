@@ -1,15 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
+import React, { useState, useRef, useCallback, memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { gsap } from '@/lib/gsap';
 import {
-  Loader2, Heart, MessageCircle, Trash2,
-  Check, ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
+  Heart, MessageCircle, Trash2,
+  ArrowBigUp, Pencil, Bookmark, BookmarkCheck,
   HelpCircle, Trophy, CheckCircle2, Hash, Repeat2, MessageSquareQuote,
-  Globe, Users, Lock,
+  Globe, Users, Lock, MoreHorizontal, Flag,
 } from 'lucide-react';
 // Sibling Kit primitives — imported directly (not via the './index' barrel) so
 // this component, which the barrel itself re-exports, never imports the barrel.
@@ -18,11 +18,12 @@ import { Tooltip } from './Tooltip';
 import { ShareButton } from './ShareButton';
 import { useToast } from './Toast';
 import { Modal } from './Modal';
+import { ConfirmDialog } from './ConfirmDialog';
 import { Dropdown } from './Dropdown';
 import { PostComposer } from './PostComposer';
 import { PostImageGrid, postImages } from './PostImageGrid';
 import { usePostActions } from './usePostActions';
-import { FollowButton } from '@/components/social/FollowButton';
+import { reportPostRequest } from './PostCard.services';
 // Feature-owned domain types still live with the home feed; the card is a
 // data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
 import {
@@ -72,13 +73,13 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   const router = useRouter();
   // Purely-visual interaction state stays here; the data mutations + optimistic
   // counters live in usePostActions (wired up after repostTargetId below).
-  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [postDeleting, setPostDeleting] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [repostMenuOpen, setRepostMenuOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
 
-  const cardRef = useRef<HTMLDivElement>(null);
   const heartIconRef = useRef<SVGSVGElement>(null);
 
   // ── Repost shape ──────────────────────────────────────────────
@@ -133,41 +134,34 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   // in globals.css) — calmer than the old confetti burst and zero-JS. The sweep
   // honors prefers-reduced-motion via the media query in the stylesheet.
 
-  // Disarm the armed delete wedge on outside-click or Escape — the cross-device
-  // replacement for the old pointer-leave disarm (touch never had a "leave").
-  // This card's own wedge is excluded so its second click can still confirm.
-  useEffect(() => {
-    if (!deleteConfirming) return;
-    const disarm = () => setDeleteConfirming(false);
-    const onPointerDown = (e: PointerEvent) => {
-      const wedge = (e.target as Element)?.closest?.('[data-delete-wedge]');
-      if (wedge && cardRef.current?.contains(wedge)) return;
-      disarm();
-    };
-    const onKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') disarm(); };
-    document.addEventListener('pointerdown', onPointerDown);
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', onPointerDown);
-      document.removeEventListener('keydown', onKeyDown);
-    };
-  }, [deleteConfirming]);
-
-  // Two-step inline confirm for the quarter-circle delete wedge: first click
-  // arms it (wedge fills red, trash icon → checkmark), the second runs the
-  // delete; pointer-leave/blur disarms. Icon-only — the colour+icon swap is the
-  // signifier (never colour alone, per HIG/accessibility).
-  const handleWedgeDelete = async () => {
-    if (!deleteConfirming) { setDeleteConfirming(true); return; }
+  // Delete — reached through the 3-dot menu, confirmed in a ConfirmDialog
+  // (destructive + irreversible, so a real confirm rather than one-click).
+  const handleConfirmedDelete = async () => {
     setPostDeleting(true);
     try {
       await deletePost();   // network (no-op in demo); throws on failure
+      setConfirmDeleteOpen(false);
       onDelete(post.id);    // unmount the row
       toast({ variant: 'success', title: 'Post deleted', description: 'Your post has been removed from the feed.' });
     } catch {
-      setDeleteConfirming(false);
+      toast({ variant: 'error', title: "Couldn't delete", description: 'Something went wrong. Please try again.' });
     } finally {
       setPostDeleting(false);
+    }
+  };
+
+  // Report — the 3-dot action on someone else's post. Fire-and-acknowledge;
+  // the server dedupes repeat reports silently.
+  const handleReport = async () => {
+    if (demo) {
+      toast({ variant: 'success', title: 'Report received', description: 'Thanks — our team will take a look. (Demo: nothing was sent.)' });
+      return;
+    }
+    try {
+      await reportPostRequest(post.id);
+      toast({ variant: 'success', title: 'Report received', description: 'Thanks — our team will take a look.' });
+    } catch (err) {
+      toast({ variant: 'error', title: "Couldn't report", description: err instanceof Error ? err.message : 'Something went wrong. Please try again.' });
     }
   };
 
@@ -190,10 +184,10 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
       ref={seenRef}
       id={`post-${post.id}`}
       data-entrance="card"
-      // Lift above sibling cards while the repost menu is open so its dropdown
-      // panel (which overflows the card's bottom edge) isn't painted over by the
-      // next post in the feed.
-      className={`post-item relative ${repostMenuOpen ? 'z-30' : ''}`}
+      // Lift above sibling cards while the repost or 3-dot menu is open so its
+      // dropdown panel (which overflows the card's edge) isn't painted over by
+      // the next post in the feed.
+      className={`post-item relative ${repostMenuOpen || menuOpen ? 'z-30' : ''}`}
     >
       {/* ─── Twitter-style boost label: this original was plain-reposted by one or
           more users (the plain repost itself never renders as a card). ─── */}
@@ -206,12 +200,9 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST CARD — MAIN GLASS CARD
-          Contains: owner quarter-circle (own posts), header, content
+          Contains: header (author + 3-dot menu), content, action bar
           ────────────────────────────────────────────────────────── */}
-      <div
-        ref={cardRef}
-        className="relative z-[3] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg"
-      >
+      <div className="relative z-[3] bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-3xl shadow-apple-lg">
         {/* Win celebration: a one-shot diagonal shine sweep clipped to the card
             (replaces the old confetti burst). CSS-only, reduced-motion-safe. */}
         {isWin && <span aria-hidden className="win-shine" />}
@@ -239,14 +230,16 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
           className="absolute inset-x-0 top-0 h-px rounded-t-3xl bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none"
         />
 
-        {/* ─── Owner quarter-circle: Edit (top wedge) + Delete (right wedge) ─── */}
+        {/* ─── Delete confirmation (own posts, via the 3-dot menu) ─── */}
         {isOwn && (
-          <OwnerWedge
-            deleteConfirming={deleteConfirming}
-            postDeleting={postDeleting}
-            onEdit={() => setEditOpen(true)}
-            onDelete={handleWedgeDelete}
-            onDisarm={() => setDeleteConfirming(false)}
+          <ConfirmDialog
+            isOpen={confirmDeleteOpen}
+            loading={postDeleting}
+            onClose={() => setConfirmDeleteOpen(false)}
+            onConfirm={handleConfirmedDelete}
+            title="Delete this post?"
+            description="It will be removed from the feed for everyone. This can't be undone."
+            confirmLabel="Delete"
           />
         )}
 
@@ -291,12 +284,10 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: POST HEADER (Instagram-style)
             Contains: story-ring avatar, name + verified check, secondary line
-            (@user · audience · time), inline Follow (non-friends)
+            (@user · audience · time), 3-dot menu (own → Edit/Delete, other → Report)
             ────────────────────────────────────────────────────────── */}
         <div className="p-4 sm:p-5 pb-3">
-          {/* On own posts the corner wedge occupies the top-right, so reserve
-              space (pr-12) for it. */}
-          <div className={`flex items-center gap-3 ${isOwn ? 'pr-12' : ''}`}>
+          <div className="flex items-center gap-3">
             {/* Story-ring avatar — a gradient ring nods to the IG look; the inner
                 surface-dark gap keeps the photo from touching the gradient. */}
             <Link href={`/u/${post.username}`} className="flex-shrink-0 group">
@@ -333,15 +324,52 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
               </div>
             </div>
 
-            {/* Follow — non-friends only (own posts use the corner wedge; friends
-                already connect, so they never see it). */}
-            {!isOwn && !post.is_friend && (
-              <FollowButton
-                targetUserId={post.user_id}
-                initialIsFollowing={!!post.is_following}
-                viewerId={currentUser?.id ?? 0}
-              />
-            )}
+            {/* 3-dot actions — every viewer gets the same affordance: the owner
+                manages the post (Edit / Delete), everyone else can Report it. */}
+            <Dropdown
+              mode="menu"
+              open={menuOpen}
+              onClose={() => setMenuOpen(false)}
+              align="right"
+              dropdownClassName="min-w-[11rem] p-1.5 space-y-0.5"
+              trigger={
+                <Button
+                  variant="unstyled"
+                  onClick={() => setMenuOpen((o) => !o)}
+                  aria-label="Post options"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className="flex-shrink-0 p-2 -mr-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors"
+                >
+                  <MoreHorizontal className="w-5 h-5" />
+                </Button>
+              }
+            >
+              {isOwn ? (
+                <>
+                  <Dropdown.Item
+                    leading={<Pencil className="w-4 h-4" />}
+                    onClick={() => { setMenuOpen(false); setEditOpen(true); }}
+                  >
+                    Edit post
+                  </Dropdown.Item>
+                  <Dropdown.Item
+                    leading={<Trash2 className="w-4 h-4" />}
+                    onClick={() => { setMenuOpen(false); setConfirmDeleteOpen(true); }}
+                    className="text-rose-400 hover:bg-rose-500/10"
+                  >
+                    Delete post
+                  </Dropdown.Item>
+                </>
+              ) : (
+                <Dropdown.Item
+                  leading={<Flag className="w-4 h-4" />}
+                  onClick={() => { setMenuOpen(false); handleReport(); }}
+                >
+                  Report post
+                </Dropdown.Item>
+              )}
+            </Dropdown>
           </div>
         </div>
 
@@ -564,76 +592,6 @@ function CardMedia({ images }: { images: string[] }) {
   return (
     <div className="px-4 sm:px-5 pb-1">
       <PostImageGrid images={images} />
-    </div>
-  );
-}
-
-// ── Owner quarter-circle control ──────────────────────────────
-// A 90° corner wedge pinned to the card's top-right, split by a 45° bisector
-// into two icon-only buttons: Edit (upper wedge — placeholder) and Delete
-// (right wedge — two-step confirm). Static, no hover reveal. The quarter-disc
-// arc is approximated with clip-path polygons whose apex is the top-right
-// corner (the disc centre); the container's rounded-tr-3xl + overflow-hidden
-// makes the outer corner sit flush with the card.
-const WEDGE_EDIT_CLIP = 'polygon(100% 0, 0 0, 3.4% 25.9%, 13.4% 50%, 29.3% 70.7%)';
-const WEDGE_DELETE_CLIP = 'polygon(100% 0, 29.3% 70.7%, 50% 86.6%, 74.1% 96.6%, 100% 100%)';
-
-function OwnerWedge({
-  deleteConfirming,
-  postDeleting,
-  onEdit,
-  onDelete,
-  onDisarm,
-}: {
-  deleteConfirming: boolean;
-  postDeleting: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onDisarm: () => void;
-}) {
-  return (
-    <div className="absolute top-0 right-0 z-[4] w-[60px] h-[60px] rounded-tr-3xl overflow-hidden pointer-events-none">
-      {/* Edit — upper wedge: opens the edit modal */}
-      <Button
-        variant="unstyled"
-        onClick={onEdit}
-        title="Edit post"
-        aria-label="Edit post"
-        className="group absolute inset-0 pointer-events-auto bg-white/[0.04] hover:bg-primary-500/20 transition-colors"
-        style={{ clipPath: WEDGE_EDIT_CLIP }}
-      >
-        <Pencil className="absolute right-[26px] top-[8px] w-3.5 h-3.5 text-slate-400 group-hover:text-primary-400 transition-colors" />
-      </Button>
-
-      {/* Delete — right wedge: first click arms (red fill + checkmark), second deletes */}
-      <Button
-        variant="unstyled"
-        data-delete-wedge
-        onClick={onDelete}
-        onBlur={onDisarm}
-        disabled={postDeleting}
-        aria-label={deleteConfirming ? 'Confirm delete post' : 'Delete post'}
-        title={deleteConfirming ? 'Click again to confirm' : 'Delete post'}
-        className={`group absolute inset-0 pointer-events-auto transition-colors disabled:opacity-60 ${
-          deleteConfirming ? 'bg-red-600' : 'bg-white/[0.04] hover:bg-red-600/30'
-        }`}
-        style={{ clipPath: WEDGE_DELETE_CLIP }}
-      >
-        {postDeleting ? (
-          <Loader2 className="absolute right-[10px] top-[26px] w-3.5 h-3.5 text-white animate-spin" />
-        ) : deleteConfirming ? (
-          <Check className="absolute right-[10px] top-[26px] w-3.5 h-3.5 text-white" />
-        ) : (
-          <Trash2 className="absolute right-[10px] top-[26px] w-3.5 h-3.5 text-slate-400 group-hover:text-red-300 transition-colors" />
-        )}
-      </Button>
-
-      {/* 45° bisector hairline — signifies the two distinct halves */}
-      <span
-        aria-hidden
-        className="absolute top-0 right-0 w-px h-[60px] bg-white/10 pointer-events-none"
-        style={{ transformOrigin: 'top', transform: 'rotate(45deg)' }}
-      />
     </div>
   );
 }

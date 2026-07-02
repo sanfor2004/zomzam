@@ -199,10 +199,9 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     },
     {
       key: 'community', label: t('nav_community') || 'Community', Icon: Users, items: [
-        { label: 'Friends Grid', path: '/community/friends' },
+        { label: 'Connections', path: '/community/friends' },
         { label: 'Discover People', path: '/community/discover' },
-        { label: 'Friend Requests', path: '/community/requests' },
-        { label: 'Connections & Follows', path: '/community/following' },
+        { label: 'Invitations', path: '/community/requests' },
       ],
     },
   ];

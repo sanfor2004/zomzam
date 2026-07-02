@@ -121,7 +121,7 @@ export default function RequestsPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
+            <p className="text-xs text-slate-400">Invitations — respond to people who want to connect.</p>
           </div>
         </div>
 
@@ -174,7 +174,7 @@ export default function RequestsPage() {
                       <Button variant="unstyled"
                         onClick={() => executeSocialAction('friend_request', usr.id)}
                         className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
-                        title="Add Friend"
+                        title="Connect"
                       >
                         <UserPlus className="w-4 h-4" />
                       </Button>
@@ -223,7 +223,7 @@ export default function RequestsPage() {
                             >
                               {r.username}
                             </Button>
-                            <span className="block text-[9px] text-slate-400 font-semibold uppercase mt-0.5">Friend request received</span>
+                            <span className="block text-[9px] text-slate-400 font-semibold uppercase mt-0.5">Wants to connect</span>
                           </div>
                         </div>
 

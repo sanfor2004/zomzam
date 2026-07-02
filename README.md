@@ -85,7 +85,7 @@ zomzam.com/
 ├── src/
 │   ├── app/                   # Next.js App Router root
 │   │   ├── (dashboard)/       # Authenticated dashboard route group (shares layout.tsx wrapper)
-│   │   │   ├── community/     # /community, /community/discover, /following, /friends, /requests
+│   │   │   ├── community/     # /community, /community/discover, /friends (connections), /requests (invitations)
 │   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
 │   │   │   ├── dashboard/     # /dashboard — primary metrics dashboard
 │   │   │   ├── home/          # /home — social feed (composer + PostCard live in the Kit; shared.ts holds the feed types)
@@ -204,7 +204,7 @@ zomzam.com/
 | `/crm/contacts` | Protected | Standardized client contact directory. |
 | `/crm/outreach` | Protected | AI-assisted cold email writer (Claude Sonnet, template fallback). |
 | `/crm/projects` | Protected | Delivery tracker mapped to milestone stages. |
-| `/community` | Protected | Member directory: `/discover`, `/following`, `/friends`, `/requests`. |
+| `/community` | Protected | Member directory: `/discover`, `/friends` (connections), `/requests` (invitations). |
 | `/me` | Protected | Profile settings — avatar upload, bio, tags. |
 | `/settings` | Protected | Timezone, language, primary/secondary currency preferences. |
 | `/u/[username]` | Public | Vanity public profile with real-time presence badge. |
@@ -226,8 +226,8 @@ zomzam.com/
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
 | `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
 | `/api/notion` | `sync`, `update_settings` | Notion integration for CRM lead sync. |
-| `/api/posts` | `feed` (tiered `tier=unseen`/`seen` + keyset `cursor` + `filter=help`), `saved` (keyset bookmarked posts), `mark_seen` (batch read receipts), `comments`, `top_comments`, `create` (status/ask/win, or a quote repost via `repost_of` — text and/or own image), `like`, `bookmark`, `repost` (plain repost toggle, public-only, root-collapse), `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement (like/bookmark/repost) + favor economy (ask/win, accept-answer bridge). Chat-style feed: unseen posts first (tracked in `post_views`), then seen backfill. Reposts use a `posts.repost_of` pointer: a **plain** repost (empty pointer) boosts the original and surfaces on the reposter's profile (not duplicated in the feed, Twitter-style); a **quote** repost is a real feed post with its own numbers that embeds the original as text (the original's image is never republished). |
-| `/api/social` | `status`, `friends`, `requests_in/out`, `followers/following`, `discover`, `search`, `friend_request/accept/decline/cancel`, `unfriend`, `block/unblock`, `follow/unfollow` | Full social graph. |
+| `/api/posts` | `feed` (tiered `tier=unseen`/`seen` + keyset `cursor` + `filter=help`), `saved` (keyset bookmarked posts), `mark_seen` (batch read receipts), `comments`, `top_comments`, `create` (status/ask/win, or a quote repost via `repost_of` — text and/or own image), `like`, `bookmark`, `report` (one row per post+reporter into `post_reports`), `repost` (plain repost toggle, public-only, root-collapse), `comment_vote`, `comment_edit`, `comment_delete`, `delete`, `comment`, `accept_answer`, `resolve_ask` | Home feed CRUD + engagement (like/bookmark/repost) + favor economy (ask/win, accept-answer bridge). Chat-style feed: unseen posts first (tracked in `post_views`), then seen backfill. Reposts use a `posts.repost_of` pointer: a **plain** repost (empty pointer) boosts the original and surfaces on the reposter's profile (not duplicated in the feed, Twitter-style); a **quote** repost is a real feed post with its own numbers that embeds the original as text (the original's image is never republished). |
+| `/api/social` | `status`, `friends`, `requests_in/out`, `discover`, `search`, `friend_request/accept/decline/cancel` (the LinkedIn-style **Connect** lifecycle — sending also creates a follow edge so a pending connect behaves as "I follow them"; accept ⇒ connected/friends), `unfriend` (disconnect, severs follows too), `block/unblock` | Full social graph. Standalone `follow`/`unfollow` + `followers`/`following` reads were retired with the Connect rework; follow rows remain internally for feed reach. |
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read`, `typing` (transient peer-is-typing ping, no DB write) | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |

@@ -24,8 +24,8 @@ export { addComment, editComment, deleteComment, toggleCommentVote, getComments,
 export { acceptAnswer, findAskNotifyRecipients, resolveAsk, reopenAsk } from './asks';
 export type { AcceptAnswerResult } from './asks';
 
-// ── Post engagement (like / bookmark) ─────────────────────────
-export { toggleLike, toggleBookmark } from './engagement';
+// ── Post engagement (like / bookmark / report) ────────────────
+export { toggleLike, toggleBookmark, reportPost } from './engagement';
 
 // ── Shared constants ──────────────────────────────────────────
 export { MAX_POST_IMAGES } from './shared';

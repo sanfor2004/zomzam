@@ -32,3 +32,18 @@ export async function toggleBookmark(userId: number, postId: number): Promise<{ 
   await execute(`INSERT INTO post_bookmarks (post_id, user_id) VALUES (?, ?)`, [postId, userId]);
   return { bookmarked: true };
 }
+
+/**
+ * Report a post (the card's 3-dot "Report"). One row per (post, reporter) —
+ * INSERT IGNORE makes a repeat report a silent no-op, so the caller always gets
+ * the same acknowledgment without leaking whether it was a duplicate. Own posts
+ * can't be reported (own cards offer Edit/Delete instead).
+ */
+export async function reportPost(userId: number, postId: number): Promise<{ reported: boolean }> {
+  if (!postId) throw new HttpError(400, 'post_id required');
+  const post = await queryOne<{ user_id: number }>(`SELECT user_id FROM posts WHERE id = ?`, [postId]);
+  if (!post) throw new HttpError(404, 'Post not found');
+  if (post.user_id === userId) throw new HttpError(400, 'You cannot report your own post');
+  await execute(`INSERT IGNORE INTO post_reports (post_id, user_id) VALUES (?, ?)`, [postId, userId]);
+  return { reported: true };
+}

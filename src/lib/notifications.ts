@@ -82,9 +82,9 @@ export function describeNotification(n: NotificationRow): NotificationView {
     case 'answer_accepted':
       return { avatar, text: `${subject} accepted your answer`, href: postHref, emoji: '🎉' };
     case 'friend_request':
-      return { avatar, text: `${subject} sent you a friend request`, href: profileHref, emoji: '👋' };
+      return { avatar, text: `${subject} wants to connect with you`, href: profileHref, emoji: '👋' };
     case 'friend_accept':
-      return { avatar, text: `${subject} accepted your friend request`, href: profileHref, emoji: '🤝' };
+      return { avatar, text: `${subject} accepted your connection request`, href: profileHref, emoji: '🤝' };
     default:
       // Unknown/legacy types fall back to the stored message; a "message" lands
       // in the inbox, anything else on the actor's profile.

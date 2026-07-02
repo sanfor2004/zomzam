@@ -117,7 +117,7 @@ export default function FriendsPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Manage your social grid, follows, and live interactions.</p>
+            <p className="text-xs text-slate-400">Your connections — the people you've linked up with.</p>
           </div>
         </div>
 
@@ -170,7 +170,7 @@ export default function FriendsPage() {
                       <Button variant="unstyled"
                         onClick={() => executeSocialAction('friend_request', usr.id)}
                         className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
-                        title="Add Friend"
+                        title="Connect"
                       >
                         <UserPlus className="w-4 h-4" />
                       </Button>
@@ -197,7 +197,7 @@ export default function FriendsPage() {
             {friends.length === 0 ? (
               <div className="col-span-full bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-16 text-center shadow-apple text-slate-400">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-25" />
-                <p className="text-sm font-semibold">Your friend circle is currently empty.</p>
+                <p className="text-sm font-semibold">You have no connections yet.</p>
                 <Button variant="unstyled"
                   onClick={() => router.push('/community/discover')}
                   className="mt-4 px-4 py-2 bg-primary-500 text-white rounded-xl text-xs font-bold hover:bg-primary-600 transition-colors shadow-sm"
@@ -259,9 +259,10 @@ export default function FriendsPage() {
                   <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-850 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="unstyled"
                       onClick={() => executeSocialAction('unfriend', f.id)}
+                      title="Remove this connection"
                       className="flex-1 py-2 bg-slate-900/30 text-rose-500 hover:bg-rose-500/10 rounded-xl text-[10px] font-black uppercase tracking-wider transition-colors border border-transparent hover:border-rose-500/20"
                     >
-                      Unfriend
+                      Disconnect
                     </Button>
                     <Button variant="unstyled"
                       onClick={() => executeSocialAction('block', f.id)}

@@ -289,6 +289,15 @@ const schema: Record<string, Record<string, string>> = {
     user_id: 'INT NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // User reports on posts (the card's 3-dot "Report" action). One row per
+  // (post, reporter) — re-reporting is a silent no-op. Append-only moderation
+  // inbox; nothing reads it in-app yet.
+  post_reports: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    post_id: 'BIGINT UNSIGNED NOT NULL',
+    user_id: 'INT NOT NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   // Append-only log the future credits engine consumes (NOT a ledger): one row
   // each time an asker accepts an answer. No balance is ever touched here.
   helpful_events: {
@@ -360,6 +369,9 @@ const indexes: Record<string, Record<string, string>> = {
   post_bookmarks: {
     uq_user_post: 'UNIQUE INDEX uq_user_post (user_id, post_id)',  // toggle target + one-per-user
     idx_user_id: 'INDEX idx_user_id (user_id, id)',                // newest-saved-first keyset
+  },
+  post_reports: {
+    uq_post_user: 'UNIQUE INDEX uq_post_user (post_id, user_id)',  // one report per viewer (INSERT IGNORE target)
   },
   rate_limit_events: {
     // The count-within-window + per-bucket purge both filter by (bucket, time).

@@ -558,14 +558,14 @@ export default function UiKitPage() {
         </Section>
 
         {/* Post Card */}
-        <Section title="Post Card" description="The feed/saved post box, Instagram-style — story-ring avatar, verified check, full-width caption + full-bleed image, and the action bar (like / comment / repost / save / share). Demo mode keeps every interaction live (optimistic) but skips the API writes. Resize to phone width to see the padding/spacing adapt.">
+        <Section title="Post Card" description="The feed/saved post box, Instagram-style — story-ring avatar, verified check, full-width caption + full-bleed image, a 3-dot menu (Edit/Delete on your own posts, Report on everyone else's), and the action bar (like / comment / repost / save / share). Demo mode keeps every interaction live (optimistic) but skips the API writes. Resize to phone width to see the padding/spacing adapt.">
           <ToastProvider>
             <div className="space-y-4 max-w-xl">
               {/* Image post — full-bleed photo, verified author */}
               <PostCard demo post={DEMO_POST_IMAGE} isOwn={false} currentUser={DEMO_CURRENT_USER} friends={DEMO_FRIENDS} onDelete={() => {}} onEdited={() => {}} observe={() => {}} />
               {/* A friend's "Win" post with a top comment (text-only) */}
               <PostCard demo post={DEMO_POST_WIN} isOwn={false} currentUser={DEMO_CURRENT_USER} friends={DEMO_FRIENDS} onDelete={() => {}} onEdited={() => {}} observe={() => {}} />
-              {/* Your own status post — shows the owner edit/delete corner wedge */}
+              {/* Your own status post — the 3-dot menu offers Edit/Delete here */}
               <PostCard demo post={DEMO_POST_OWN} isOwn currentUser={DEMO_CURRENT_USER} friends={DEMO_FRIENDS} onDelete={() => {}} onEdited={() => {}} observe={() => {}} />
             </div>
           </ToastProvider>

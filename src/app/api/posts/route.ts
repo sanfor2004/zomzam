@@ -156,6 +156,9 @@ export const POST = withAuth(async (request, user) => {
     case 'bookmark':
       return NextResponse.json({ success: true, ...await posts.toggleBookmark(user.id, parseInt(body.post_id || 0)) });
 
+    case 'report':
+      return NextResponse.json({ success: true, ...await posts.reportPost(user.id, parseInt(body.post_id || 0)) });
+
     case 'repost': {
       // Plain (empty-pointer) repost toggle. The pointer row surfaces in the
       // feed on the next fetch (recency re-floats the original — the reach

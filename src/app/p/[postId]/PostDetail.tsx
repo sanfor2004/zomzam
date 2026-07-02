@@ -6,7 +6,6 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Heart, MessageCircle, Share2, Send, Loader2, ArrowLeft, Check, HelpCircle, Trophy, CheckCircle2, Hash, RotateCcw, Bookmark, BookmarkCheck, Repeat2, Globe, Users, Lock } from 'lucide-react';
-import { FollowButton } from '@/components/social/FollowButton';
 import { SignInPrompt } from '@/components/social/SignInPrompt';
 import { PostImageGrid, postImages } from '@/components/ui';
 import {
@@ -99,7 +98,7 @@ export default function PostDetail({
   const [commentText, setCommentText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
-  // Public page: an anonymous tap on follow/bookmark/repost opens this prompt.
+  // Public page: an anonymous tap on bookmark/repost opens this prompt.
   const [signInOpen, setSignInOpen] = useState(false);
   const [bookmarked, setBookmarked] = useState(!!post.bookmarked_by_me);
   const [reposted, setReposted] = useState(!!post.reposted_by_me);
@@ -223,7 +222,7 @@ export default function PostDetail({
   return (
     <div ref={containerRef} className="space-y-5">
 
-      <SignInPrompt open={signInOpen} onClose={() => setSignInOpen(false)} action="follow people, save & repost" />
+      <SignInPrompt open={signInOpen} onClose={() => setSignInOpen(false)} action="connect with people, save & repost" />
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: BREADCRUMB
@@ -288,16 +287,6 @@ export default function PostDetail({
             )}
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            {/* Follow: non-owner, non-friend only. Anonymous → sign-in prompt. */}
-            {!isOwner && !post.is_friend && (
-              <FollowButton
-                targetUserId={post.user_id}
-                initialIsFollowing={!!post.is_following}
-                viewerId={viewerId}
-                onRequireSignIn={() => setSignInOpen(true)}
-                size="md"
-              />
-            )}
             <div className="flex items-center gap-1.5 text-xs text-slate-500">
               <time className="tabular-nums">
                 {new Date(post.created_at).toLocaleDateString(undefined, {

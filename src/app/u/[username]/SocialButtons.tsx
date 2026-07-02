@@ -3,26 +3,33 @@ import { Button, useToast } from '@/components/ui';
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, UserMinus, UserCheck, UserX, Heart, HeartOff, Loader2 } from 'lucide-react';
+import { UserPlus, UserMinus, UserCheck, UserX, Clock, Loader2 } from 'lucide-react';
 import { socialSuccessToast } from '@/lib/social-actions';
+
+// ──────────────────────────────────────────────────────────
+// DEVELOPMENT NAVIGATOR: PROFILE CONNECT BUTTONS (LinkedIn-style)
+// One Connect action replaces the old Follow + Add Friend pair:
+//   Connect → pending ("you follow them" until they respond; cancel withdraws)
+//   They connect back / accept → Connected (friends)
+//   Connected → hover reveals Disconnect
+// The follow edge is created/withdrawn server-side as part of the connect
+// lifecycle — there is no standalone follow control anymore.
+// ──────────────────────────────────────────────────────────
 
 interface SocialButtonsProps {
   targetUserId: number;
   initialStatus: string;
-  initialIsFollowing: boolean;
   viewerId: number | null;
 }
 
 export default function SocialButtons({
   targetUserId,
   initialStatus,
-  initialIsFollowing,
   viewerId,
 }: SocialButtonsProps) {
   const router = useRouter();
   const { toast } = useToast();
   const [status, setStatus] = useState<string>(initialStatus);
-  const [isFollowing, setIsFollowing] = useState<boolean>(initialIsFollowing);
   const [loading, setLoading] = useState<boolean>(false);
 
   if (!viewerId) {
@@ -50,17 +57,13 @@ export default function SocialButtons({
       });
       const data = await res.json();
       if (data.success) {
-        // Update state based on action
         if (action === 'friend_request') {
-          setStatus('friend_pending_out');
+          // If they had already sent us a request, the server auto-accepts.
+          setStatus(data.message === 'You are now connected' ? 'friends' : 'friend_pending_out');
         } else if (action === 'friend_cancel' || action === 'friend_decline' || action === 'unfriend') {
           setStatus('none');
         } else if (action === 'friend_accept') {
           setStatus('friends');
-        } else if (action === 'follow') {
-          setIsFollowing(true);
-        } else if (action === 'unfollow') {
-          setIsFollowing(false);
         }
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
@@ -78,7 +81,7 @@ export default function SocialButtons({
   return (
     <div className="space-y-3 w-full sm:w-auto">
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Friend Connection Button */}
+        {/* Connect — the single entry point into the relationship */}
         {status === 'none' && (
           <Button variant="unstyled"
             onClick={() => handleAction('friend_request')}
@@ -86,21 +89,32 @@ export default function SocialButtons({
             className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-400 text-white font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer shadow-md hover:shadow-lg active:scale-[0.98]"
           >
             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
-            Add Friend
+            Connect
           </Button>
         )}
 
+        {/* Pending (sent) — you follow them until they respond; hover to cancel */}
         {status === 'friend_pending_out' && (
           <Button variant="unstyled"
             onClick={() => handleAction('friend_cancel')}
             disabled={loading}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-200 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98]"
+            title="You follow them until they accept — click to withdraw"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-750 disabled:opacity-50 text-slate-200 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] group"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserX className="w-4 h-4" />}
-            Cancel Request
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <Clock className="w-4 h-4 group-hover:hidden" />
+                <UserX className="w-4 h-4 hidden group-hover:block" />
+              </>
+            )}
+            <span className="group-hover:hidden">Pending</span>
+            <span className="hidden group-hover:inline">Withdraw</span>
           </Button>
         )}
 
+        {/* Incoming request — accept completes the connection */}
         {status === 'friend_pending_in' && (
           <div className="flex gap-2 flex-grow sm:flex-grow-0">
             <Button variant="unstyled"
@@ -122,6 +136,7 @@ export default function SocialButtons({
           </div>
         )}
 
+        {/* Connected — hover reveals Disconnect */}
         {status === 'friends' && (
           <Button variant="unstyled"
             onClick={() => handleAction('unfriend')}
@@ -136,30 +151,8 @@ export default function SocialButtons({
                 <UserMinus className="w-4 h-4 hidden group-hover:block" />
               </>
             )}
-            <span className="group-hover:hidden">Friends</span>
-            <span className="hidden group-hover:inline">Unfriend</span>
-          </Button>
-        )}
-
-        {/* Follow Button */}
-        {status !== 'blocked_by_me' && status !== 'blocked_by_them' && (
-          <Button variant="unstyled"
-            onClick={() => handleAction(isFollowing ? 'unfollow' : 'follow')}
-            disabled={loading}
-            className={`flex-1 sm:flex-none flex items-center justify-center gap-2 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] border${
-              isFollowing
-                ? 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/20'
-                : 'bg-transparent border-slate-700 text-slate-350 hover:bg-slate-800'
-            }`}
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isFollowing ? (
-              <HeartOff className="w-4 h-4" />
-            ) : (
-              <Heart className="w-4 h-4" />
-            )}
-            {isFollowing ? 'Unfollow' : 'Follow'}
+            <span className="group-hover:hidden">Connected</span>
+            <span className="hidden group-hover:inline">Disconnect</span>
           </Button>
         )}
       </div>
