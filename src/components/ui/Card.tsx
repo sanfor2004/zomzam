@@ -7,6 +7,10 @@ export interface CardProps {
   headerExtra?: React.ReactNode;
   footer?: React.ReactNode;
   className?: string;
+  /** Let child content (popovers, dropdown menus, tooltips) spill past the card
+   *  edges instead of being clipped. The ambient corner glow stays clipped to
+   *  the card either way — it lives in its own inset overflow-hidden layer. */
+  allowOverflow?: boolean;
   children: React.ReactNode;
 }
 
@@ -15,14 +19,18 @@ export function Card({
   headerExtra,
   footer,
   className = '',
+  allowOverflow = false,
   children,
 }: CardProps) {
   return (
     <div
-      className={`bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple relative overflow-hidden transition-all duration-300 ${className}`}
+      className={`bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple relative ${allowOverflow ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ${className}`}
     >
-      {/* Glow Effect */}
-      <div className="absolute top-0 right-0 w-40 h-40 bg-primary-500/5 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none"></div>
+      {/* Glow Effect — kept in its own clipped layer so it never spills even when
+          the card itself allows overflow (popover/dropdown demos). */}
+      <div className="absolute inset-0 rounded-3xl overflow-hidden pointer-events-none">
+        <div className="absolute top-0 right-0 w-40 h-40 bg-primary-500/5 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+      </div>
 
       {/* Header */}
       {(title || headerExtra) && (

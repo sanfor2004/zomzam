@@ -64,9 +64,12 @@ import {
     Standalone route — not linked from any nav, no auth gate, no
     relation to real app data. Safe to ignore/delete at any time. */
 
+// allowOverflow so demo popovers/dropdowns/tooltips that escape the card
+// bounds (AudienceSwitch, Dropdown menu, top/left Tooltips…) stay visible
+// instead of being clipped by the card's default overflow-hidden.
 function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
-    <Card title={title} className="card-lift">
+    <Card title={title} allowOverflow className="card-lift">
       {description && <p className="text-xs text-slate-500 mb-5 -mt-2">{description}</p>}
       {children}
     </Card>
@@ -575,7 +578,7 @@ export default function UiKitPage() {
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: COMPOSER SHOWCASE (banner → modal)
 // Mirrors the shipped home pattern: the ComposerBanner primitive opens the
-// demo composer (bare) in the xl / full-screen-mobile modal with the rise-in
+// demo composer (bare) in the xl / full-width-mobile modal with the rise-in
 // motion. Local state so the big page component stays untouched.
 // ──────────────────────────────────────────────────────────
 function ComposerShowcase() {
