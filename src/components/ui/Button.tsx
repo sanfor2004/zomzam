@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 /* ──────────────────────────────────────────────────────────
     DEVELOPMENT NAVIGATOR: BUTTON — UNIVERSAL ACTION PRIMITIVE
@@ -191,6 +192,7 @@ export const Button = React.forwardRef<HTMLButtonElement & HTMLAnchorElement, Bu
     ref,
   ) => {
     const isUnstyled = variant === 'unstyled';
+    const isDisabled = Boolean(disabled) || loading;
 
     const hasLeftIcon = Boolean(leftIcon) || loading;
     const hasRightIcon = Boolean(rightIcon);
@@ -207,38 +209,65 @@ export const Button = React.forwardRef<HTMLButtonElement & HTMLAnchorElement, Bu
         }`
       : FLAT_SIZES[size];
 
+    // Spinner tracks the button scale so the loading affordance reads clearly
+    // at every size (a 16px spinner is lost inside an h-16 xl button).
+    const spinnerSize =
+      size === 'xl' || size === 'icon-lg'
+        ? 'w-6 h-6'
+        : size === 'lg'
+          ? 'w-5 h-5'
+          : 'w-4 h-4';
+
+    // An <a>/<Link> never receives the CSS :disabled state, so BASE's
+    // `disabled:*` utilities are inert on the href branch — neutralize it
+    // explicitly (both styled and unstyled) so a disabled/loading link can't
+    // be clicked, tabbed to, or navigated.
+    const linkDisabledGuard = isDisabled && Boolean(href);
+
     // `unstyled` is a pure passthrough — caller's className is the whole skin.
+    // We still enforce disabled *behaviour* (pointer-events) without imposing a
+    // *look* (no opacity), honoring the primitive's "own skin" contract.
     const combinedClasses = isUnstyled
-      ? `${fullWidth ? 'w-full ' : ''}${className}`
-      : [
+      ? cn(fullWidth && 'w-full', linkDisabledGuard && 'pointer-events-none', className)
+      : cn(
           BASE,
           VARIANTS[variant],
           sizeClasses,
           SHAPES[shape],
-          uppercase ? 'uppercase tracking-wider' : '',
-          fullWidth ? 'w-full' : '',
-          active ? 'ring-2 ring-primary-500/40' : '',
+          uppercase && 'uppercase tracking-wider',
+          fullWidth && 'w-full',
+          active && 'ring-2 ring-primary-500/40',
+          linkDisabledGuard && 'opacity-50 pointer-events-none',
           className,
-        ]
-          .filter(Boolean)
-          .join(' ');
+        );
 
     const content = (
       <>
-        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : leftIcon}
+        {loading ? <Loader2 className={cn(spinnerSize, 'animate-spin')} /> : leftIcon}
         {children}
         {rightIcon}
       </>
     );
 
     if (href) {
+      const { onClick, tabIndex, ...anchorRest } =
+        props as unknown as React.AnchorHTMLAttributes<HTMLAnchorElement>;
       return (
         <Link
           href={href}
           className={combinedClasses}
           ref={ref as unknown as React.Ref<HTMLAnchorElement>}
-          aria-disabled={disabled || loading || undefined}
-          {...(props as unknown as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
+          aria-disabled={isDisabled || undefined}
+          aria-busy={loading || undefined}
+          tabIndex={isDisabled ? -1 : tabIndex}
+          onClick={(event) => {
+            if (isDisabled) {
+              event.preventDefault();
+              return;
+            }
+            onClick?.(event);
+          }}
+          {...anchorRest}
         >
           {content}
         </Link>
@@ -249,7 +278,7 @@ export const Button = React.forwardRef<HTMLButtonElement & HTMLAnchorElement, Bu
       <button
         ref={ref as unknown as React.Ref<HTMLButtonElement>}
         type={type}
-        disabled={disabled || loading}
+        disabled={isDisabled}
         aria-busy={loading || undefined}
         className={combinedClasses}
         {...props}
