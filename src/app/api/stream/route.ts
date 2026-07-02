@@ -1,24 +1,42 @@
 import { withError, getSessionUser } from '@/lib/api-auth';
-import { getOnlineStatus, updateOnlineStatus } from '@/lib/models/user';
-import { queryOne, execute } from '@/lib/db';
+import { updateOnlineStatus } from '@/lib/models/user';
+import { drainLiveSync, parseViewingUserId, isEmptySync } from '@/lib/live-sync';
 
-// Soft auth: the SSE feed also serves anonymous viewers watching another user's
-// presence, so a missing session is allowed — the logged-in-only branches just
-// skip. withError centralizes the boundary for the synchronous setup phase.
+// ──────────────────────────────────────────────────────────
+// ACTIVE-mode live channel. One SSE connection per engaged user, emitting a
+// single structured `sync` event (grouped messages/notifications/posts/social/
+// presence sections built by drainLiveSync — the same shape the AFK heartbeat
+// returns, so the client applies both through one code path).
+//
+// Server-authoritative presence: an OPEN stream ⇒ this user is ACTIVE
+// (is_idle = 0). No client flag is read — when the client goes AFK it closes
+// this connection and falls back to /api/heartbeat, whose requests mark idle.
+//
+// Soft auth: the stream also serves anonymous viewers watching another user's
+// presence (public profile), so a missing session is allowed — the logged-in
+// branches just skip.
+// ──────────────────────────────────────────────────────────
+
+/** DB poll cadence while a stream is open. */
+const TICK_MS = 2000;
+/** Contacts-presence snapshot every Nth tick (~20s) — drift, not latency-bound. */
+const CONTACTS_EVERY_TICKS = 10;
+/** Keepalive comment cadence (proxies drop silent connections). */
+const PING_MS = 20000;
+
 export const GET = withError(async (request) => {
   const { searchParams } = new URL(request.url);
-  const viewingUserIdParam = searchParams.get('viewing_user_id');
-  const viewingUserId = viewingUserIdParam ? parseInt(viewingUserIdParam) : null;
+  // Trust-Zero: strict allowlist parse — anything not a positive int is null.
+  const viewingUserId = parseViewingUserId(searchParams.get('viewing_user_id'));
 
   const user = await getSessionUser();
-
   const encoder = new TextEncoder();
 
   const customStream = new ReadableStream({
     async start(controller) {
-      const sendSSE = (event: string, data: any) => {
+      const sendSync = (data: any) => {
         try {
-          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+          controller.enqueue(encoder.encode(`event: sync\ndata: ${JSON.stringify(data)}\n\n`));
         } catch {
           // Stream might be closed
         }
@@ -30,17 +48,15 @@ export const GET = withError(async (request) => {
         } catch {}
       };
 
-      // Initial connection established message
-      sendSSE('order', {
-        order_name: 'connection_established',
-        params: { timestamp: new Date().toISOString() },
-      });
+      // Flush headers immediately so EventSource fires `open` without waiting
+      // for the first data tick.
+      sendPing();
 
-      let lastViewedStatus: any = null;
+      let lastViewedStatus: string | null = null;
       let lastPingTime = Date.now();
+      let tick = 0;
       let active = true;
 
-      // Monitor connection abort
       request.signal.addEventListener('abort', () => {
         active = false;
         try {
@@ -51,62 +67,38 @@ export const GET = withError(async (request) => {
       const loop = async () => {
         while (active) {
           try {
-            let currentIdle = 0;
-
+            // Open stream ⇒ server marks this user ACTIVE. Never client-asserted.
             if (user) {
-              const row = await queryOne<{ is_idle: number }>(
-                `SELECT is_idle FROM user_online_status WHERE user_id = ?`,
-                [user.id]
-              );
-              currentIdle = row?.is_idle || 0;
-              await updateOnlineStatus(user.id, currentIdle);
+              await updateOnlineStatus(user.id, 0);
             }
 
-            const orders: any[] = [];
+            const payload = await drainLiveSync(user?.id ?? null, viewingUserId, {
+              includeContacts: !!user && tick % CONTACTS_EVERY_TICKS === 0,
+            });
 
-            if (viewingUserId) {
-              const currentStatus = await getOnlineStatus(viewingUserId);
-              if (JSON.stringify(currentStatus) !== JSON.stringify(lastViewedStatus)) {
-                orders.push({
-                  order_name: 'update_viewed_user_status',
-                  params: currentStatus,
-                });
-                lastViewedStatus = currentStatus;
+            // Only forward the viewed user's status when it MEANINGFULLY changed —
+            // `diff` is a seconds-since-seen counter that ticks on every loop, so
+            // it's excluded from the comparison (else every tick would emit).
+            if (payload.viewed_user_status) {
+              const serialized = JSON.stringify({ ...payload.viewed_user_status, diff: 0 });
+              if (serialized === lastViewedStatus) {
+                payload.viewed_user_status = null;
+              } else {
+                lastViewedStatus = serialized;
               }
             }
 
-            if (user) {
-              const row = await queryOne<{ stream_queue: string }>(
-                `SELECT stream_queue FROM user_online_status WHERE user_id = ?`,
-                [user.id]
-              );
-
-              if (row?.stream_queue) {
-                try {
-                  const queuedOrders = JSON.parse(row.stream_queue);
-                  if (Array.isArray(queuedOrders)) {
-                    orders.push(...queuedOrders);
-                  }
-                } catch {}
-
-                await execute(`UPDATE user_online_status SET stream_queue = NULL WHERE user_id = ?`, [
-                  user.id,
-                ]);
-              }
+            if (!isEmptySync(payload)) {
+              sendSync(payload);
             }
 
-            for (const order of orders) {
-              sendSSE('order', order);
-            }
-
-            // Send keepalive ping every 20s
-            if (Date.now() - lastPingTime >= 20000) {
+            if (Date.now() - lastPingTime >= PING_MS) {
               sendPing();
               lastPingTime = Date.now();
             }
 
-            const sleepTime = currentIdle === 1 ? 5000 : 2000;
-            await new Promise((resolve) => setTimeout(resolve, sleepTime));
+            tick++;
+            await new Promise((resolve) => setTimeout(resolve, TICK_MS));
           } catch (error) {
             console.error('SSE Stream loop error:', error);
             active = false;

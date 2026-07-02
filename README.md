@@ -45,7 +45,7 @@ The platform is divided into three major suites:
 * **System Preferences** (`/settings`): Refactored to use unified UI selects for timezone adjustment (with live clock previews), multi-language configuration, and primary/secondary currency selections.
 * **Vanity Public Profiles** (`/u/[username]`): Public profile directories featuring real-time presence indicators (Online, Away, Offline) synchronized dynamically via Server-Sent Events (SSE) based on user mouse movements and idle timers.
 * **Social Connections** (`/community`): A member directory showing user availability, network contacts, follows, friend requests, and discovery suggestions.
-* **Notifications**: A heartbeat-synced notification stream (likes, comments, friend requests) with read/unread state, surfaced in the dashboard topbar.
+* **Notifications**: A live-synced notification stream (likes, comments, friend requests) with read/unread state, surfaced in the dashboard topbar.
 * **Account Recovery** (`/forgot-password`): Token-based password reset flow, independent of the authenticated session.
 * **Strict Security Guardrails**: Dynamic JWT edge middleware routing checks, cryptographically secure Bcrypt password hashing, and zero leak logs.
 
@@ -101,7 +101,7 @@ zomzam.com/
 │   │   │   │   └── reset-password/   # Consume a reset token, set new password
 │   │   │   ├── crm/            # Leads, scrape jobs, pipeline, contacts, projects, AI outreach, Notion sync settings
 │   │   │   ├── dashboard/      # Aggregated cross-suite metrics for /dashboard
-│   │   │   ├── heartbeat/      # Active/idle presence ping (every 25s or on mouse movement)
+│   │   │   ├── heartbeat/      # AFK-mode live channel (5s poll, same sync payload as /api/stream)
 │   │   │   ├── money/          # Accounts, transactions, lending ledger
 │   │   │   ├── notifications/  # Notification list + mark-as-read
 │   │   │   ├── notion/         # Notion integration settings + lead sync
@@ -110,7 +110,7 @@ zomzam.com/
 │   │   │   │   └── change-password/  # Authenticated password change
 │   │   │   ├── shops/          # Google Places proxy (nearby business search, backs the CRM map scraper)
 │   │   │   ├── social/         # Friend requests, follows, blocks, discovery, search
-│   │   │   ├── stream/         # SSE streaming connection (presence + notification push)
+│   │   │   ├── stream/         # ACTIVE-mode live channel: SSE `sync` events (messages/notifications/posts/social/presence)
 │   │   │   └── time/           # Pomodoro tasks, planning horizons, ideas
 │   │   ├── forgot-password/    # /forgot-password — public password recovery page
 │   │   ├── p/[postId]/         # /p/[id] — single post permalink view
@@ -133,7 +133,7 @@ zomzam.com/
 │   ├── context/                 # Client-side global state
 │   │   ├── MoneyContext.tsx           # Multi-currency balances, cash flows, accounts
 │   │   ├── MessagesContext.tsx        # Global DM state: contacts model, unread total, docked chat windows, live new_message delivery
-│   │   ├── StreamWaiterContext.tsx    # SSE listener, idle triggers, notification toasts
+│   │   ├── StreamWaiterContext.tsx    # 2-channel live-sync client: SSE while active, 5s heartbeat while AFK, notification state
 │   │   └── TranslationContext.tsx     # Multi-language dictionary + RTL (Arabic/Hebrew) direction control
 │   │
 │   ├── hooks/
@@ -143,7 +143,8 @@ zomzam.com/
 │   │   ├── session.ts           # jose JWT sign/verify (Edge + Node) — single secret, fail-fast on boot
 │   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
 │   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
-│   │   ├── rate-limit.ts        # In-memory sliding-window limiter (login/register throttle, bug-report throttle)
+│   │   ├── rate-limit.ts        # DB-backed sliding-window limiter (login/register, heartbeat, bug-report throttles)
+│   │   ├── live-sync.ts         # Unified live payload builder: atomic stream_queue drain → grouped sync sections (shared by /api/stream + /api/heartbeat)
 │   │   ├── bug-report.ts        # Email-on-error reporter (Resend HTTP API, throttled, never throws; recipient defaults to 2004.Sanfor@gmail.com)
 │   │   ├── email.ts             # canonicalEmail (inbox-identity key) + sendEmail (transactional SMTP sender via nodemailer, e.g. Hostinger; used by the password-reset flow)
 │   │   ├── auth.ts              # bcrypt password hashing helpers
@@ -231,8 +232,8 @@ zomzam.com/
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read`, `typing` (transient peer-is-typing ping, no DB write) | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |
-| `/api/heartbeat` | — | Out-of-band active/idle presence ping (~25s interval). |
-| `/api/stream` | — | SSE long-lived connection pushing presence + notification orders (incl. `answer_accepted` / `new_help_request` / `new_follower` / `reposted` notifications, the transient `win_prompt` nudge, `new_message` chat delivery, the transient `typing` peer-is-typing ping, the `message_read` "Seen" receipt, and the `new_post` feed-pill fan-out). |
+| `/api/heartbeat` | — | AFK-mode live channel: polled every 5s while the user is away; returns the same grouped sync payload as `/api/stream` (a beat itself marks the user idle — server-derived, no client flag). `init: true` additionally returns the notifications bootstrap. Rate-limited per user/IP. |
+| `/api/stream` | — | ACTIVE-mode live channel: one SSE connection emitting structured `sync` events with grouped sections — `messages` (`new_message` delivery, transient `typing`, `message_read` "Seen" receipts), `notifications` (`answer_accepted` / `new_help_request` / `new_follower` / `reposted`, …), `posts` (the `new_post` feed-pill fan-out), `social` (connect updates), `viewed_user_status`, and a throttled `contacts_presence` snapshot. An open stream marks the user active. |
 
 ---
 
@@ -359,30 +360,38 @@ sequenceDiagram
 
 ## 📡 Real-Time Presence & Sync Engine
 
-Zomzam avoids polling overhead by maintaining a continuous data pipeline via **Server-Sent Events (SSE)**.
+Zomzam runs exactly **two live channels**, used mutually exclusively — a single SSE stream while the user is engaged, and a 5-second heartbeat poll while they're AFK. Both emit the **identical grouped JSON payload** (built by the shared [live-sync.ts](file:///c:/www/zomzam.com/src/lib/live-sync.ts)), so switching modes changes transport only, never behavior.
 
 ```mermaid
 graph TD
-    A[Client UI Action / MouseMove] -->|Heartbeat Ping /api/heartbeat| B(Heartbeat Route)
-    B -->|Update DB: last_seen & is_idle| C[MySQL DB]
-    D[Client Browser] -->|EventSource Stream /api/stream| E(Stream Route Handler)
-    E -->|Query DB status changes every 2s/5s| C
-    E -->|Stream Order: update_viewed_user_status| D
-    E -->|Stream Order: new_notification| D
+    A[ACTIVE: EventSource /api/stream] -->|event: sync| D[Client Browser]
+    B[AFK: POST /api/heartbeat every 5s] -->|data: same grouped payload| D
+    E[drainLiveSync — shared builder] --> A
+    E --> B
+    E -->|drain stream_queue + presence| C[MySQL DB]
+    D -->|60s idle or tab hidden ⇒ close SSE, start heartbeat| B
+    D -->|activity ⇒ stop heartbeat, init catch-up, reopen SSE| A
 ```
 
+### The unified `sync` payload (both channels):
+| Section | Carries |
+| :--- | :--- |
+| `messages` | `new_message` chat delivery, transient `typing` pings, `message_read` "Seen" receipts |
+| `notifications` | live notification rows (`answer_accepted`, `new_help_request`, `new_follower`, `reposted`, …) |
+| `posts` | the `new_post` feed-pill fan-out from people the viewer is connected to |
+| `social` | connect-request / accept updates |
+| `viewed_user_status` | live status of a watched public profile (only when changed) |
+| `contacts_presence` | throttled (~20s) friends-presence snapshot for the chat dock |
+
 ### Connection Walkthrough:
-1. **Heartbeat API** ([route.ts](file:///c:/www/zomzam.com/src/app/api/heartbeat/route.ts)):
-   Every 25 seconds (or upon mouse movement), the client sends an out-of-band POST request reporting if the user is `idle` (1) or `active` (0).
-2. **EventSource Listener** ([StreamWaiterContext.tsx](file:///c:/www/zomzam.com/src/context/StreamWaiterContext.tsx)):
-   Establishes a persistent GET request to `/api/stream`. If the connection drops, it executes a custom exponential backoff reconnection protocol.
-3. **SSE Loop** ([route.ts](file:///c:/www/zomzam.com/src/app/api/stream/route.ts)):
-   Keeps the connection open with a `ReadableStream`. It monitors the connection's abort signal, executing query lookups:
-   * **Active state**: Polls every 2 seconds.
-   * **Idle state**: Down-throttles to 5 seconds to conserve server resources.
-   * Clears the user's `stream_queue` JSON array from MySQL and pushes notifications or availability changes to the client as structured SSE strings (`event: order`).
+1. **Shared builder** ([live-sync.ts](file:///c:/www/zomzam.com/src/lib/live-sync.ts)):
+   `drainLiveSync()` atomically drains the user's `stream_queue` JSON column (transaction + `FOR UPDATE`, so the two channels can never double-deliver during a mode switch) and groups the orders into the typed sections above. `parseViewingUserId()` is the strict allowlist parse both routes run on the client-supplied profile id — nothing else from the client is trusted.
+2. **ACTIVE mode — SSE** ([route.ts](file:///c:/www/zomzam.com/src/app/api/stream/route.ts)):
+   One `EventSource` per engaged user. The server loop ticks every 2s, marks the user active (`is_idle = 0` — **derived from the open stream, never a client flag**), and emits `event: sync` only when the payload is non-empty. Dropped connections reconnect with exponential backoff.
+3. **AFK mode — heartbeat** ([route.ts](file:///c:/www/zomzam.com/src/app/api/heartbeat/route.ts)):
+   After 60s without input (or a hidden tab), [StreamWaiterContext.tsx](file:///c:/www/zomzam.com/src/context/StreamWaiterContext.tsx) closes the SSE stream and POSTs `/api/heartbeat` every 5s instead. A heartbeat request marks the user idle (`is_idle = 1`) — the channel *is* the signal; the old client-asserted `idle` flag is gone. The endpoint is per-user/IP rate-limited. Any activity flips straight back: one `init: true` catch-up beat (returns the notifications bootstrap plus anything queued in the gap), then the SSE stream reopens.
 4. **Public Profile Syncing** ([PublicUserStatus.tsx](file:///c:/www/zomzam.com/src/app/u/[username]/PublicUserStatus.tsx)):
-   When a viewer visits the public profile page `/u/[username]`, the client-side `PublicUserStatus` component mounts and initializes its own `StreamWaiterProvider`. On mount, it sets the `viewingUserId` to the profile owner's ID, initiating a connection to `/api/stream?viewing_user_id=[profileUserId]`. The server's stream loop checks for status updates on that specific user and pushes `update_viewed_user_status` orders to the browser, updating the badge (ONLINE, AWAY, OFFLINE) in real-time.
+   When a viewer visits the public profile page `/u/[username]`, the client-side `PublicUserStatus` component mounts and initializes its own `StreamWaiterProvider`. On mount, it sets the `viewingUserId` to the profile owner's ID, initiating a connection to `/api/stream?viewing_user_id=[profileUserId]`. The server's stream loop pushes `viewed_user_status` inside its `sync` frames whenever it changes, updating the badge (ONLINE, AWAY, OFFLINE) in real-time — anonymous viewers get this section only.
 
 ---
 

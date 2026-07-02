@@ -373,14 +373,32 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('zz-message-read', onRead);
   }, [me.id]);
 
-  // ── Bootstrap + presence freshness ──────────────────────────
-  // Initial load, then a light poll every 20s keeps presence dots and the
-  // last-chatted ordering fresh (SSE delivers messages instantly; this is just
-  // for online/offline drift, which is not latency-sensitive).
+  // ── Live presence dots ──────────────────────────────────────
+  // The unified live channel (SSE while active, heartbeat while AFK) pushes a
+  // throttled friends-presence snapshot (~every 20s) as `zz-contacts-presence`.
+  // Merge it into the contacts model in place — this replaced the old dedicated
+  // 20s contacts poll, so messaging adds ZERO extra recurring connections.
+  useEffect(() => {
+    const onPresence = (e: Event) => {
+      const snapshot = (e as CustomEvent).detail;
+      if (!Array.isArray(snapshot)) return;
+      const byId = new Map<number, any>(snapshot.map((p: any) => [p.user_id, p]));
+      setContacts((prev) => prev.map((c) => {
+        const p = byId.get(c.other_id);
+        return p
+          ? { ...c, is_online: !!p.is_online, is_idle: !!p.is_idle, online_label: p.online_label }
+          : c;
+      }));
+    };
+    window.addEventListener('zz-contacts-presence', onPresence);
+    return () => window.removeEventListener('zz-contacts-presence', onPresence);
+  }, []);
+
+  // ── Bootstrap ───────────────────────────────────────────────
+  // One initial load; message deltas arrive live and presence drift is merged
+  // from the zz-contacts-presence snapshots above.
   useEffect(() => {
     loadContacts();
-    const timer = setInterval(loadContacts, 20000);
-    return () => clearInterval(timer);
   }, [loadContacts]);
 
   const unreadTotal = useMemo(

@@ -36,12 +36,12 @@ export function normalizeAvatar<T extends { avatar?: string | null }>(user: T): 
 }
 
 /**
- * "Online" means seen within this many seconds. Must comfortably exceed the
- * background refresh cadence (SSE loop 2–5s, out-of-band heartbeat ~25s) plus
- * slack — otherwise a genuinely-connected user whose last ping is mid-interval
- * reads as offline, and presence flickers. 7s was far too tight; 35s keeps a
- * connected user steadily online and degrades gracefully ("active recently")
- * for ~half a minute after they leave.
+ * "Online" means seen within this many seconds. Must comfortably exceed both
+ * live-channel cadences (SSE loop ticks every 2s while active; the AFK
+ * heartbeat beats every 5s) plus slack — otherwise a genuinely-connected user
+ * whose last ping is mid-interval reads as offline, and presence flickers.
+ * 35s keeps a connected user steadily online and degrades gracefully
+ * ("active recently") for ~half a minute after they leave.
  */
 export const ONLINE_WINDOW_SECONDS = 35;
 
@@ -305,11 +305,16 @@ export async function pushStreamOrder(
     if (touchLastSeen) {
       // Targeted, user-initiated push: create the row if missing, else append and
       // refresh last_seen (the user is genuinely active relative to this action).
+      // The IF() cap stops an abandoned queue (recipient offline for days) from
+      // growing unboundedly — past 500 orders new ones are dropped, and the next
+      // connect drains + clears whatever accumulated.
       await execute(
         `INSERT INTO user_online_status (user_id, stream_queue, last_seen)
          VALUES (?, JSON_ARRAY(CAST(? AS JSON)), NOW())
          ON DUPLICATE KEY UPDATE
-           stream_queue = JSON_ARRAY_APPEND(COALESCE(stream_queue, JSON_ARRAY()), '$', CAST(? AS JSON)),
+           stream_queue = IF(JSON_LENGTH(COALESCE(stream_queue, JSON_ARRAY())) < 500,
+             JSON_ARRAY_APPEND(COALESCE(stream_queue, JSON_ARRAY()), '$', CAST(? AS JSON)),
+             stream_queue),
            last_seen = NOW()`,
         [userId, orderJson, orderJson]
       );
@@ -320,7 +325,8 @@ export async function pushStreamOrder(
       await execute(
         `UPDATE user_online_status
          SET stream_queue = JSON_ARRAY_APPEND(COALESCE(stream_queue, JSON_ARRAY()), '$', CAST(? AS JSON))
-         WHERE user_id = ?`,
+         WHERE user_id = ?
+           AND (stream_queue IS NULL OR JSON_LENGTH(stream_queue) < 500)`,
         [orderJson, userId]
       );
     }

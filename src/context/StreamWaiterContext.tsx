@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 type UserStatus = 'online' | 'away' | 'offline' | 'disconnected';
+type LiveMode = 'active' | 'afk';
 
 interface ViewedUserStatus {
   is_online: boolean;
@@ -13,13 +14,22 @@ interface ViewedUserStatus {
 }
 
 // ──────────────────────────────────────────────────────────
+// Unified live-sync client — exactly TWO channels, used mutually exclusively:
+//   • ACTIVE  → one SSE connection to /api/stream ("sync" events). No client
+//               heartbeat runs; the open stream itself keeps presence fresh
+//               server-side.
+//   • AFK     → SSE closed; POST /api/heartbeat every 5s returns the identical
+//               grouped payload, so delivery continues while away.
+// Idle detection (60s without input, or tab hidden) flips ACTIVE → AFK; any
+// activity flips back instantly with one `init` catch-up beat.
+//
+// The server derives presence from the channel in use (stream ⇒ active,
+// heartbeat ⇒ idle) — no idle flag is ever sent from here.
+//
 // Split into two contexts by update cadence so a consumer only re-renders for
 // the slice it actually reads:
 //   • Presence      — high-frequency idle/online + viewed-user status
-//   • Notifications — SSE-driven notification feed + unread count
-// A single provider owns all state and the stream/heartbeat effects; it just
-// exposes two independently-memoized value objects. This keeps an incoming
-// notification from re-rendering presence-only consumers (and vice versa).
+//   • Notifications — live notification feed + unread count
 // ──────────────────────────────────────────────────────────
 
 interface PresenceContextType {
@@ -40,40 +50,112 @@ interface NotificationsContextType {
 const PresenceContext = createContext<PresenceContextType | undefined>(undefined);
 const NotificationsContext = createContext<NotificationsContextType | undefined>(undefined);
 
+/** No input for this long (or a hidden tab) ⇒ AFK mode. */
+const IDLE_TIMEOUT_MS = 60000;
+/** Heartbeat cadence while AFK. */
+const AFK_BEAT_MS = 5000;
+
 export function StreamWaiterProvider({ children }: { children: React.ReactNode }) {
   const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus>('disconnected');
   const [viewedUserStatus, setViewedUserStatus] = useState<ViewedUserStatus | null>(null);
   const [viewingUserId, setViewingUserId] = useState<number | null>(null);
-  const [isIdle, setIsIdleState] = useState(false);
+  const [mode, setMode] = useState<LiveMode>('active');
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
 
   // Mirror the latest mutable values into refs so the exposed callbacks can stay
   // referentially stable (empty deps) while always reading current state — this
   // is what lets the memoized context values keep stable identity.
-  const isIdleRef = useRef(isIdle);
   const viewingUserIdRef = useRef(viewingUserId);
   const notificationsRef = useRef(notifications);
-  useEffect(() => { isIdleRef.current = isIdle; }, [isIdle]);
   useEffect(() => { viewingUserIdRef.current = viewingUserId; }, [viewingUserId]);
   useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
 
-  const loadNotifications = useCallback(async () => {
+  // ── Unified payload applier ─────────────────────────────────
+  // BOTH channels (SSE `sync` event and heartbeat response `data`) resolve to
+  // this one function, so switching modes changes transport only, never behavior.
+  const applySync = useCallback((data: any) => {
+    if (!data || typeof data !== 'object') return;
+
+    // Messages section → the same CustomEvents MessagesContext already consumes.
+    if (Array.isArray(data.messages)) {
+      for (const m of data.messages) {
+        if (!m || typeof m.kind !== 'string') continue;
+        if (m.kind === 'new_message') {
+          window.dispatchEvent(new CustomEvent('zz-new-message', { detail: m.params }));
+        } else if (m.kind === 'typing') {
+          window.dispatchEvent(new CustomEvent('zz-typing', { detail: m.params }));
+        } else if (m.kind === 'message_read') {
+          window.dispatchEvent(new CustomEvent('zz-message-read', { detail: m.params }));
+        }
+      }
+    }
+
+    // Notifications section — replace same-id rows in place (the server reuses a
+    // notification's id when it coalesces actors into an existing roster), and
+    // only bump the unread badge when the row wasn't already counted as unread.
+    if (Array.isArray(data.notifications)) {
+      for (const params of data.notifications) {
+        if (!params || params.id == null) continue;
+        window.dispatchEvent(new CustomEvent('new-notification', { detail: params }));
+        const prior = notificationsRef.current.find((x) => x.id === params.id);
+        const alreadyUnread = prior && !prior.is_read;
+        setNotifications((list) => [
+          { ...params, is_read: 0 },
+          ...list.filter((x) => x.id !== params.id),
+        ]);
+        if (!alreadyUnread) setNotificationsCount((c) => c + 1);
+      }
+    }
+
+    // New posts from people the viewer is connected to → soft feed refresh pill.
+    if (Array.isArray(data.posts)) {
+      for (const params of data.posts) {
+        window.dispatchEvent(new CustomEvent('zz-new-post', { detail: params }));
+      }
+    }
+
+    // Connect requests / accepts.
+    if (Array.isArray(data.social)) {
+      for (const params of data.social) {
+        window.dispatchEvent(new CustomEvent('zz-social-update', { detail: params }));
+      }
+    }
+
+    if (data.viewed_user_status) {
+      setViewedUserStatus(data.viewed_user_status);
+    }
+
+    // Throttled friends-presence snapshot → chat dock dots (MessagesContext).
+    if (Array.isArray(data.contacts_presence)) {
+      window.dispatchEvent(new CustomEvent('zz-contacts-presence', { detail: data.contacts_presence }));
+    }
+
+    // Full notification list, returned only for `init` catch-up beats.
+    if (data.notifications_bootstrap) {
+      setNotificationsCount(data.notifications_bootstrap.count || 0);
+      setNotifications(data.notifications_bootstrap.items || []);
+    }
+  }, []);
+
+  // One-shot heartbeat: used for the mount bootstrap, manual re-syncs, and the
+  // AFK→active catch-up. `init` additionally returns the full notification list.
+  const syncNow = useCallback(async (init: boolean) => {
     try {
       const res = await fetch('/api/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idle: isIdleRef.current ? 1 : 0 }),
+        body: JSON.stringify({ viewing_user_id: viewingUserIdRef.current, init }),
       });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setNotificationsCount(data.data.notifications?.count || 0);
-        setNotifications(data.data.notifications?.items || []);
-      }
+      const json = await res.json();
+      if (json.success && json.data) applySync(json.data);
     } catch (err) {
-      console.error('Failed to load notifications:', err);
+      console.error('Live sync failed:', err);
     }
-  }, []);
+  }, [applySync]);
+
+  const loadNotifications = useCallback(() => syncNow(true), [syncNow]);
+  const triggerStatusSync = useCallback(() => syncNow(false), [syncNow]);
 
   const markRead = useCallback(async () => {
     try {
@@ -87,67 +169,62 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
     } catch {}
   }, []);
 
-  const triggerStatusSync = useCallback(async () => {
-    try {
-      const res = await fetch('/api/heartbeat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          idle: isIdleRef.current ? 1 : 0,
-          viewing_user_id: viewingUserIdRef.current,
-        }),
-      });
-      const json = await res.json();
-      if (json.success && json.data) {
-        if (viewingUserIdRef.current && json.data.user_status) {
-          setViewedUserStatus(json.data.user_status);
-        }
-        if (json.data.notifications) {
-          setNotificationsCount(json.data.notifications.count || 0);
-          setNotifications(json.data.notifications.items || []);
-        }
-      }
-    } catch (e) {
-      console.error('Status Sync Failed:', e);
-    }
-  }, []);
-
-  // Setup idle/active tracking
+  // ── Idle / AFK detection ────────────────────────────────────
+  // 60s without input, or a hidden tab, flips to AFK; any activity (or the tab
+  // becoming visible again) flips straight back to ACTIVE.
   useEffect(() => {
-    let idleTimer: NodeJS.Timeout;
-    const idleTimeout = 60000; // 1 minute
+    let idleTimer: ReturnType<typeof setTimeout>;
 
-    const setAwayStatus = () => {
-      setIsIdleState(true);
+    const goAfk = () => {
+      setMode('afk');
       setCurrentUserStatus('away');
     };
 
-    const resetIdleTimer = () => {
-      setIsIdleState(false);
-      setCurrentUserStatus('online');
+    const armIdleTimer = () => {
       clearTimeout(idleTimer);
-      idleTimer = setTimeout(setAwayStatus, idleTimeout);
+      idleTimer = setTimeout(goAfk, IDLE_TIMEOUT_MS);
     };
 
-    const events = ['mousemove', 'keydown', 'scroll', 'click'];
-    events.forEach((e) => window.addEventListener(e, resetIdleTimer));
+    const onActivity = () => {
+      setMode('active');
+      armIdleTimer();
+    };
 
-    resetIdleTimer();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        clearTimeout(idleTimer);
+        goAfk();
+      } else {
+        onActivity();
+      }
+    };
+
+    const events = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart'];
+    events.forEach((e) => window.addEventListener(e, onActivity, { passive: true }));
+    document.addEventListener('visibilitychange', onVisibility);
+
+    armIdleTimer();
 
     return () => {
       clearTimeout(idleTimer);
-      events.forEach((e) => window.removeEventListener(e, resetIdleTimer));
+      events.forEach((e) => window.removeEventListener(e, onActivity));
+      document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
 
-  // Update status whenever idle status or viewed user changes
+  // ── Mount bootstrap ─────────────────────────────────────────
+  // One `init` beat fetches the notification list (and drains anything queued
+  // while the client was gone); the SSE stream takes over from there.
   useEffect(() => {
-    triggerStatusSync();
-  }, [isIdle, viewingUserId, triggerStatusSync]);
+    syncNow(true);
+  }, [syncNow]);
 
-  // Establish SSE EventSource stream connection
+  // ── Channel 1: SSE (ACTIVE mode only) ───────────────────────
   useEffect(() => {
+    if (mode !== 'active') return;
+
     let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
     let reconnectAttempts = 0;
     let active = true;
 
@@ -156,59 +233,26 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
       const url = `/api/stream?viewing_user_id=${viewingUserId || ''}`;
       eventSource = new EventSource(url);
 
-      eventSource.addEventListener('order', (event) => {
-        try {
-          const order = JSON.parse(event.data);
-          const { order_name, params } = order;
+      eventSource.onopen = () => {
+        reconnectAttempts = 0;
+        setCurrentUserStatus('online');
+      };
 
-          if (order_name === 'connection_established') {
-            reconnectAttempts = 0;
-          } else if (order_name === 'update_viewed_user_status') {
-            setViewedUserStatus(params);
-          } else if (order_name === 'new_notification') {
-            // Trigger local toast notification.
-            window.dispatchEvent(new CustomEvent('new-notification', { detail: params }));
-            // The server reuses a notification's id when it coalesces actors
-            // into an existing roster (batching), so replace any same-id row in
-            // place and re-float it — never duplicate. Only bump the unread
-            // badge when the row wasn't already counted as unread.
-            const prior = notificationsRef.current.find((x) => x.id === params.id);
-            const alreadyUnread = prior && !prior.is_read;
-            setNotifications((list) => [
-              { ...params, is_read: 0 },
-              ...list.filter((x) => x.id !== params.id),
-            ]);
-            if (!alreadyUnread) setNotificationsCount((c) => c + 1);
-          } else if (order_name === 'social_update') {
-            const customEvent = new CustomEvent('zz-social-update', { detail: params });
-            window.dispatchEvent(customEvent);
-          } else if (order_name === 'new_message') {
-            const customEvent = new CustomEvent('zz-new-message', { detail: params });
-            window.dispatchEvent(customEvent);
-          } else if (order_name === 'typing') {
-            // Transient "peer is typing" ping — handled by MessagesContext, which
-            // shows the three-dot bubble and auto-expires it.
-            window.dispatchEvent(new CustomEvent('zz-typing', { detail: params }));
-          } else if (order_name === 'message_read') {
-            // The peer read our messages — drives the "Seen" marker in the dock.
-            window.dispatchEvent(new CustomEvent('zz-message-read', { detail: params }));
-          } else if (order_name === 'new_post') {
-            // Someone in the viewer's network posted — let the feed surface a
-            // soft "check for new posts" pill instead of yanking the scroll.
-            window.dispatchEvent(new CustomEvent('zz-new-post', { detail: params }));
-          }
+      eventSource.addEventListener('sync', (event) => {
+        try {
+          applySync(JSON.parse((event as MessageEvent).data));
         } catch {}
       });
 
       eventSource.onerror = () => {
         if (!active) return;
         eventSource?.close();
+        setCurrentUserStatus('disconnected');
 
-        // Reconnection logic
         if (reconnectAttempts < 15) {
           reconnectAttempts++;
           const delay = Math.min(30000, 2000 * Math.pow(1.5, reconnectAttempts));
-          setTimeout(connect, delay);
+          reconnectTimer = setTimeout(connect, delay);
         }
       };
     };
@@ -217,22 +261,26 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
 
     return () => {
       active = false;
-      if (eventSource) {
-        eventSource.close();
-      }
+      clearTimeout(reconnectTimer);
+      eventSource?.close();
     };
-  }, [viewingUserId]);
+  }, [mode, viewingUserId, applySync]);
 
-  // Periodic heartbeat backup status pings every 25 seconds. triggerStatusSync
-  // is stable, so the interval is created once rather than torn down/recreated
-  // on every idle/viewing-user change.
+  // ── Channel 2: heartbeat poll (AFK mode only) ───────────────
+  // Same payload as the stream, every 5s. On leaving AFK this interval is torn
+  // down and the ACTIVE effect above runs an `init` catch-up + reopens SSE.
   useEffect(() => {
-    const timer = setInterval(() => {
-      triggerStatusSync();
-    }, 25000);
+    if (mode !== 'afk') return;
 
-    return () => clearInterval(timer);
-  }, [triggerStatusSync]);
+    const timer = setInterval(() => syncNow(false), AFK_BEAT_MS);
+
+    return () => {
+      clearInterval(timer);
+      // Catch-up on resume: anything queued between the last beat and the SSE
+      // reopening is drained here, so the switchover is lossless.
+      syncNow(true);
+    };
+  }, [mode, syncNow]);
 
   const presenceValue = useMemo<PresenceContextType>(
     () => ({ currentUserStatus, viewedUserStatus, setViewingUserId, triggerStatusSync }),
@@ -262,7 +310,7 @@ export function usePresence() {
   return context;
 }
 
-/** Subscribe to the SSE-driven notification feed and unread count. */
+/** Subscribe to the live notification feed and unread count. */
 export function useNotifications() {
   const context = useContext(NotificationsContext);
   if (!context) {
