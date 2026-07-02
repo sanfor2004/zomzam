@@ -288,20 +288,15 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             ────────────────────────────────────────────────────────── */}
         <div className="p-4 sm:p-5 pb-3">
           <div className="flex items-center gap-3">
-            {/* Story-ring avatar — a gradient ring nods to the IG look; the inner
-                surface-dark gap keeps the photo from touching the gradient. */}
+            {/* Borderless avatar — plain circular photo, subtle hover scale. */}
             <Link href={`/u/${post.username}`} className="flex-shrink-0 group">
-              <span className="block rounded-full bg-gradient-to-tr from-primary-500 via-rose-500 to-purple-500 p-[2px] transition-transform group-hover:scale-[1.03]">
-                <span className="block rounded-full bg-surface-dark p-[2px]">
-                  <Image
-                    src={post.avatar || '/Assets/Img/default-avatar.png'}
-                    alt={name}
-                    width={44}
-                    height={44}
-                    className="w-11 h-11 rounded-full object-cover"
-                  />
-                </span>
-              </span>
+              <Image
+                src={post.avatar || '/Assets/Img/default-avatar.png'}
+                alt={name}
+                width={44}
+                height={44}
+                className="w-11 h-11 rounded-full object-cover transition-transform group-hover:scale-[1.03]"
+              />
             </Link>
 
             <div className="flex-1 min-w-0">
