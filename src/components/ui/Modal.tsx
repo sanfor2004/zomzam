@@ -100,8 +100,11 @@ export function Modal({
   // Full-width-on-mobile sizes to its content but caps at the viewport (minus
   // the overlay padding) with internal scroll, keeping the backdrop tappable
   // around it; on desktop the card sizes to its content with no scroll cap.
+  // overflow-x-hidden on the mobile scroll container is required: with only
+  // overflow-y-auto set, the CSS spec computes overflow-x up to `auto` too, so
+  // any element brushing the edge would raise a spurious horizontal scrollbar.
   const shellClass = fullWidthMobile
-    ? 'rounded-3xl p-5 sm:p-8 max-sm:max-h-[calc(100dvh-2rem)] max-sm:overflow-y-auto'
+    ? 'rounded-3xl p-5 sm:p-8 max-sm:max-h-[calc(100dvh-2rem)] max-sm:overflow-y-auto max-sm:overflow-x-hidden'
     : 'rounded-3xl p-8';
   const surfaceClass = surface === 'glass'
     ? 'bg-white/[0.04] backdrop-blur-xl border border-white/[0.07]'
