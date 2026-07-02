@@ -9,7 +9,8 @@ import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
 import PublicUserStatus from './PublicUserStatus';
 import ProfileAnimationKit from './ProfileAnimationKit';
-import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, LogIn, Laptop, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
+import PublicNav from '@/components/PublicNav';
+import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, Laptop, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -190,41 +191,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   return (
     <div className="min-h-screen bg-[#111318] text-slate-100 flex flex-col font-sans transition-colors duration-300">
       
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: TOP NAVIGATION HEADER
-          Contains: Brand logo, viewer-aware Dashboard / Sign In action
-          ────────────────────────────────────────────────────────── */}
-      <nav className="fixed w-full top-0 z-50 glass-nav transition-all duration-300">
-        <div className="max-w-6xl mx-auto px-6">
-          <div className="flex items-center justify-between h-[75px]">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-3">
-              <img src="/Assets/Img/logo-word-horizontal-orange.svg" alt="zomzam" className="h-8 hidden" />
-              <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-8 block" />
-            </Link>
-
-            {/* Right Action Menu */}
-            <div className="flex items-center gap-4">
-              {viewer ? (
-                <Link
-                  href="/dashboard"
-                  className="text-xs font-bold uppercase tracking-wider text-white bg-primary-500 hover:bg-primary-600 px-5 py-2.5 rounded-xl transition-all shadow-md active:scale-[0.98]"
-                >
-                  Dashboard
-                </Link>
-              ) : (
-                <Link
-                  href="/sign"
-                  className="text-xs font-bold uppercase tracking-wider text-slate-200 hover:text-primary-500 border border-slate-800 hover:border-primary-500/30 px-5 py-2.5 rounded-xl transition-all flex items-center gap-1.5"
-                >
-                  <LogIn className="w-4 h-4" />
-                  Sign In
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </nav>
+      <PublicNav />
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PUBLIC PROFILE CARD

@@ -159,7 +159,7 @@ This table reflects what's installed in `package.json` right now — verify befo
 | Icons | Lucide React (`lucide-react`) |
 | 3D / Ambient | `three` + `@react-three/fiber` (`Silk.tsx` landing shader background, desktop-gated; the dashboard shell uses a static CSS gradient, no WebGL) — **no Spline or drei installed** |
 | Forms | Controlled component state + the Kit's `Input` / `NumberInput` / `Textarea` / `Dropdown` / `Checkbox` / `Radio` / `Switch` primitives — **no React Hook Form / Zod installed**; validate at the API route boundary |
-| Data Viz | None installed (no Recharts / D3 / Tremor) — dashboards compose `Progress`, `CountUp`, and bespoke SVG (see the heatmap in `dashboard/page.tsx`) from the Kit. Only add a charting lib when a feature genuinely can't be built from the Kit, and ask first |
+| Data Viz | None installed (no Recharts / D3 / Tremor) — dashboards compose `Progress`, `CountUp`, and bespoke SVG from the Kit. Only add a charting lib when a feature genuinely can't be built from the Kit, and ask first |
 | Maps | `@vis.gl/react-google-maps` (CRM Map Leads Scraper) |
 | Auth | `jose` (Edge + Node, centralized in `src/lib/session.ts`; route gate `withAuth`/`getSessionUser` in `src/lib/api-auth.ts`) + `bcryptjs` — **`jsonwebtoken` removed** |
 | Sanitization | `isomorphic-dompurify` — server-side allowlist for post HTML before storage (`api/posts`), rendered via `dangerouslySetInnerHTML`. Per-IP login/register throttle in `src/lib/rate-limit.ts` |

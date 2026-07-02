@@ -501,16 +501,6 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             )}
           </div>
 
-          {/* Dashboard * /}
-          <Button variant="unstyled"
-            onClick={() => router.push('/dashboard')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/dashboard')}`}
-          >
-            <LayoutDashboard className="w-5 h-5 flex-shrink-0" />
-            <span>{t('nav_dashboard')}</span>
-          </Button>
-              ────────────────────────────────────────────────────────── */}
-
           {/* Community suite (single-open accordion) */}
           {renderNavSection(NAV_GROUPS[2])}
 
@@ -647,7 +637,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
               <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7" />
             </Link>
             <h2 className="text-sm font-bold text-slate-400 hidden md:block">
-              {pathname === '/dashboard' ? 'Welcome Back' : 'Zomzam Workspace'}
+              Zomzam Workspace
             </h2>
           </div>
 

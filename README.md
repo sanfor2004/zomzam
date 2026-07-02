@@ -87,7 +87,6 @@ zomzam.com/
 │   │   ├── (dashboard)/       # Authenticated dashboard route group (shares layout.tsx wrapper)
 │   │   │   ├── community/     # /community, /community/discover, /friends (connections), /requests (invitations)
 │   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
-│   │   │   ├── dashboard/     # /dashboard — primary metrics dashboard
 │   │   │   ├── home/          # /home — social feed (composer + PostCard live in the Kit; shared.ts holds the feed types)
 │   │   │   ├── saved/         # /saved — the viewer's bookmarked posts
 │   │   │   ├── me/            # /me — profile settings
@@ -100,7 +99,6 @@ zomzam.com/
 │   │   │   │   ├── forgot-password/  # Issue + email a password-reset link (SMTP)
 │   │   │   │   └── reset-password/   # Consume a reset token, set new password
 │   │   │   ├── crm/            # Leads, scrape jobs, pipeline, contacts, projects, AI outreach, Notion sync settings
-│   │   │   ├── dashboard/      # Aggregated cross-suite metrics for /dashboard
 │   │   │   ├── heartbeat/      # AFK-mode live channel (5s poll, same sync payload as /api/stream)
 │   │   │   ├── money/          # Accounts, transactions, lending ledger
 │   │   │   ├── notifications/  # Notification list + mark-as-read
@@ -155,16 +153,15 @@ zomzam.com/
 │   │   ├── utils.ts              # cn() class merger, currency conversion rates
 │   │   ├── services/             # Per-suite business logic extracted from the route megaswitches
 │   │   │   ├── crm.ts           # CRM logic + qualify_lead cross-suite bridge (+ crm.test.ts)
-│   │   │   ├── posts/           # Social feed service, split by concern (+ posts.test.ts)
-│   │   │   │   ├── index.ts     #   public API barrel (re-exports the surface)
-│   │   │   │   ├── shared.ts    #   db-free helpers shared across modules
-│   │   │   │   ├── crud.ts      #   post create/edit/delete + sanitizer + image pipeline
-│   │   │   │   ├── feed.ts      #   home feed, /saved, seen, tag ranking, FEED_* SQL
-│   │   │   │   ├── comments.ts  #   comment thread + voting
-│   │   │   │   ├── reposts.ts   #   plain-repost toggle + root resolution
-│   │   │   │   ├── asks.ts      #   ask lifecycle (accept/resolve/reopen/notify)
-│   │   │   │   └── engagement.ts #  like / bookmark toggles
-│   │   │   └── dashboard.ts     # Cross-suite rollup + blended hourly-rate math (+ dashboard.test.ts)
+│   │   │   └── posts/           # Social feed service, split by concern (+ posts.test.ts)
+│   │   │       ├── index.ts     #   public API barrel (re-exports the surface)
+│   │   │       ├── shared.ts    #   db-free helpers shared across modules
+│   │   │       ├── crud.ts      #   post create/edit/delete + sanitizer + image pipeline
+│   │   │       ├── feed.ts      #   home feed, /saved, seen, tag ranking, FEED_* SQL
+│   │   │       ├── comments.ts  #   comment thread + voting
+│   │   │       ├── reposts.ts   #   plain-repost toggle + root resolution
+│   │   │       ├── asks.ts      #   ask lifecycle (accept/resolve/reopen/notify)
+│   │   │       └── engagement.ts #  like / bookmark toggles
 │   │   └── models/
 │   │       └── user.ts          # User table queries
 │   │
@@ -189,7 +186,6 @@ zomzam.com/
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
 | `/notifications` | Protected | Full-page notification list (the mobile bottom-bar's 🔔 target — a bottom bar can't drop the topbar dropdown upward). Reuses the same `describeNotification` renderers as the desktop bell dropdown; marks read on open. |
 | `/p/[postId]` | Public | Permalink view for a single post (deep-linkable from the feed). The `[postId]` segment is the post's opaque `public_id` (a 32-char MD5), **not** the sequential numeric id — so the permalink can't be walked to enumerate or count posts. The route only resolves a valid `public_id`; a numeric id 404s. |
-| `/dashboard` | Protected | Cross-suite metrics: hourly-rate HUD, activity heatmap, welcome banner. |
 | `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |
 | `/time/tasks` | Protected | Task checklist manager (priority, duration blocks, undoable deletes). |
 | `/time/planning` | Protected | Drag-and-drop Dream Planning Board (Week / Month / Year horizons). |
@@ -221,7 +217,6 @@ zomzam.com/
 | `/api/auth/forgot-password` / `/reset-password` | — | Token-based password recovery, outside the session. |
 | `/api/auth/oauth/google` / `/oauth/google/callback` | — | Google Sign-In: redirects to Google's consent screen, then verifies the returned `id_token` (`jose` remote JWKS) and mints a `ZOMZAM_SESSION` cookie. |
 | `/api/profile` / `/api/profile/change-password` | — | Profile field updates, avatar upload (`sharp` -> Vercel Blob), authenticated password change. |
-| `/api/dashboard` | — | Aggregates Time/Money metrics for the primary dashboard. |
 | `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
 | `/api/money` | `get_initial_data`, `add/delete_transaction`, `add/delete_account`, `add/settle/delete_lend` | Accounts, transactions, lending ledger. |
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
@@ -339,7 +334,7 @@ sequenceDiagram
     participant Route as App Route / Page
     participant DB as MySQL DB
 
-    User->>MW: Request to /dashboard/* with ZOMZAM_SESSION cookie
+    User->>MW: Request to /home (protected) with ZOMZAM_SESSION cookie
     Note over MW: Reads cookie value & verifies via jose JWT
     alt Token Invalid / Expired
         MW->>User: 302 Redirect to /sign
