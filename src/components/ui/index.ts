@@ -8,6 +8,7 @@ export * from './Button';
 export * from './Calendar';
 export * from './Card';
 export * from './Checkbox';
+export * from './ComposerBanner';
 export * from './ConfirmDialog';
 export * from './CountUp';
 export * from './DeleteButton';

@@ -12,6 +12,7 @@ import {
   Calendar,
   Card,
   Checkbox,
+  ComposerBanner,
   ConfirmDialog,
   CountUp,
   DeleteButton,
@@ -25,6 +26,7 @@ import {
   PostComposer,
   Progress,
   RadioGroup,
+  SegmentedSwitch,
   ShareButton,
   Skeleton,
   Slider,
@@ -115,6 +117,9 @@ export default function UiKitPage() {
 
   // AudienceSwitch
   const [audience, setAudience] = useState<PostVisibility>('public');
+
+  // SegmentedSwitch
+  const [billing, setBilling] = useState('monthly');
 
   // Dropdown
   const [country, setCountry] = useState('eg');
@@ -296,6 +301,21 @@ export default function UiKitPage() {
             <Switch checked={false} onChange={() => {}} disabled ariaLabel="Disabled switch" />
             <AudienceSwitch value={audience} onChange={setAudience} includeExclusive />
           </div>
+        </Section>
+
+        {/* SegmentedSwitch */}
+        <Section title="Segmented Switch" description="A tablist with one shared indicator that slides between options — as opposed to AudienceSwitch's per-button fill. Used on /sign for the Login / Register toggle.">
+          <SegmentedSwitch
+            ariaLabel="Billing period"
+            value={billing}
+            onChange={setBilling}
+            options={[
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'yearly', label: 'Yearly' },
+              { value: 'lifetime', label: 'Lifetime', disabled: true },
+            ]}
+            className="max-w-sm"
+          />
         </Section>
 
         {/* Slider */}
@@ -528,7 +548,7 @@ export default function UiKitPage() {
         </Section>
 
         {/* Post Composer */}
-        <Section title="Post Composer" description="The home-feed composer — now a resting banner that opens the full composer (rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience) in a modal: an xl card on desktop, a full-screen sheet on mobile, with a soft rise-in motion. Rendered here in demo mode (the Post button never hits the API). Resize to a phone width to see the full-screen sheet.">
+        <Section title="Post Composer" description="The ComposerBanner primitive (avatar + invitation pill) opens the full composer (rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience) in a modal: an xl card on desktop, a full-screen sheet on mobile, with a soft rise-in motion. Rendered here in demo mode (the Post button never hits the API). Resize to a phone width to see the full-screen sheet.">
           <ToastProvider>
             <ComposerShowcase />
           </ToastProvider>
@@ -554,47 +574,15 @@ export default function UiKitPage() {
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: COMPOSER SHOWCASE (banner → modal)
-// Mirrors the shipped home pattern: a resting banner opens the demo composer
-// (bare) in the xl / full-screen-mobile modal with the rise-in motion. Local
-// state so the big page component stays untouched.
+// Mirrors the shipped home pattern: the ComposerBanner primitive opens the
+// demo composer (bare) in the xl / full-screen-mobile modal with the rise-in
+// motion. Local state so the big page component stays untouched.
 // ──────────────────────────────────────────────────────────
 function ComposerShowcase() {
   const [open, setOpen] = useState(false);
-  const [type, setType] = useState<'status' | 'ask' | 'win'>('status');
-  const [photo, setPhoto] = useState(false);
-  const openWith = (t: 'status' | 'ask' | 'win' = 'status', p = false) => {
-    setType(t);
-    setPhoto(p);
-    setOpen(true);
-  };
   return (
     <>
-      <div className="relative bg-white/[0.04] backdrop-blur-xl border border-white/[0.07] rounded-2xl sm:rounded-3xl p-3 sm:p-4 shadow-apple-lg">
-        <div className="flex items-center gap-3">
-          {/* Plain <img> (not next/image) — this showcase keeps zero data deps. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/Assets/Img/default-avatar.png" alt="" className="w-11 h-11 rounded-full object-cover border border-slate-800 flex-shrink-0" />
-          <button
-            type="button"
-            onClick={() => openWith()}
-            className="flex-1 text-left px-4 py-2.5 rounded-full bg-[#111318] border border-slate-800/60 text-sm text-slate-500 hover:border-primary-500/40 hover:text-slate-400 transition-colors"
-          >
-            What&apos;s on your mind?
-          </button>
-        </div>
-        <div className="flex items-center gap-1 mt-3 pt-3 border-t border-slate-800/60">
-          {(['Photo', 'Ask', 'Win'] as const).map((label) => (
-            <button
-              key={label}
-              type="button"
-              onClick={() => openWith(label === 'Ask' ? 'ask' : label === 'Win' ? 'win' : 'status', label === 'Photo')}
-              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-white hover:bg-slate-800/50 transition-colors active:scale-[0.98]"
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <ComposerBanner onOpen={() => setOpen(true)} />
       <Modal isOpen={open} onClose={() => setOpen(false)} size="xl" fullScreenMobile entrance="rise" surface="glass" showClose={false}>
         <PostComposer
           demo
@@ -602,8 +590,6 @@ function ComposerShowcase() {
           currentUser={DEMO_CURRENT_USER}
           friends={DEMO_FRIENDS}
           onPosted={() => setOpen(false)}
-          initialType={type}
-          initialPhoto={photo}
           onClose={() => setOpen(false)}
         />
       </Modal>

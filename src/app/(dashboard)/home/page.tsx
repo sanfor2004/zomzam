@@ -4,11 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { Loader2, MessagesSquare, HelpCircle, Sparkles, ArrowUp } from 'lucide-react';
-import { Button, PostComposer, PostCard, Modal } from '@/components/ui';
-import { ComposerBanner } from './ComposerBanner';
+import { Button, ComposerBanner, PostComposer, PostCard, Modal } from '@/components/ui';
 import { useFeed } from './useFeed';
 import { fetchCurrentUser, fetchFriends } from './page.services';
-import { type CurrentUser, type MentionUser, type Post, type PostType } from './shared';
+import { type CurrentUser, type MentionUser, type Post } from './shared';
 
 export default function HomePage() {
   // Viewer identity — used by the composer (@mentions, edit modal) and cards.
@@ -16,11 +15,9 @@ export default function HomePage() {
   const [friends, setFriends] = useState<MentionUser[]>([]);
 
   // ── Composer modal ──────────────────────────────────────────
-  // The resting banner opens the full composer in a modal; chips pre-seed the
-  // post type / photo picker. `composerDirty` gates a discard confirm on close.
+  // The resting banner opens the full composer in a modal.
+  // `composerDirty` gates a discard confirm on close.
   const [composerOpen, setComposerOpen] = useState(false);
-  const [composerType, setComposerType] = useState<PostType>('status');
-  const [composerPhoto, setComposerPhoto] = useState(false);
   const [composerDirty, setComposerDirty] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
@@ -43,9 +40,7 @@ export default function HomePage() {
   }, []);
 
   // ── Composer open/close ─────────────────────────────────────
-  const openComposer = useCallback((type: PostType = 'status', photo = false) => {
-    setComposerType(type);
-    setComposerPhoto(photo);
+  const openComposer = useCallback(() => {
     setComposerDirty(false);
     setComposerOpen(true);
   }, []);
@@ -115,7 +110,7 @@ export default function HomePage() {
       <div>
         <div ref={feedRef} className="space-y-4">
 
-          <ComposerBanner currentUser={currentUser} onOpen={openComposer} />
+          <ComposerBanner avatarSrc={currentUser?.avatar} onOpen={openComposer} />
 
           {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: FEED FILTER (All · Help requests · Matching skills)
@@ -248,8 +243,6 @@ export default function HomePage() {
           currentUser={currentUser}
           friends={friends}
           onPosted={handleComposerPosted}
-          initialType={composerType}
-          initialPhoto={composerPhoto}
           onDirtyChange={setComposerDirty}
           onClose={requestCloseComposer}
         />
