@@ -318,9 +318,8 @@ export interface GetFeedOptions {
  *    reshuffles the id-ordered tail).
  *  • Relevance scoring (tag match + ask freshness) is applied ONLY to the very
  *    first unseen "all" page (the landing screen). Every deeper page, the seen
- *    tier, and the help filters are plain recency keyset — keeping them stable.
- *  • Help filters are expressed in SQL (skill_tag is stored slugified, exactly
- *    like the viewer's tags) so they compose with keyset pagination.
+ *    tier, and the help filter are plain recency keyset — keeping them stable.
+ *  • The help filter is expressed in SQL so it composes with keyset pagination.
  */
 export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
   const tier: FeedTier = opts.tier === 'seen' ? 'seen' : 'unseen';
@@ -346,17 +345,11 @@ export async function getFeed(userId: number, opts: GetFeedOptions = {}) {
     userId, userId, userId, userId, userId, userId, // visibility(5) + seen(1)
   ];
 
-  // Optional help views, in SQL so they stay keyset-stable.
+  // Optional help view, in SQL so it stays keyset-stable.
   let filterSql = '';
   const filterParams: any[] = [];
   if (filter === 'help') {
     filterSql = ` AND p.type = 'ask'`;
-  } else if (filter === 'help_matches') {
-    // Open asks whose skill_tag matches one of the viewer's tags. No tags ⇒ none.
-    if (viewerTags.length === 0) return { posts: [], next_cursor: null, has_more: false, tier };
-    const ph = viewerTags.map(() => '?').join(',');
-    filterSql = ` AND p.type = 'ask' AND p.resolved_at IS NULL AND p.skill_tag IN (${ph})`;
-    filterParams.push(...viewerTags);
   }
 
   // Plain reposts are FETCHED into the page (the pointer row's fresh id makes

@@ -256,7 +256,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             + visibility); patches the card in place on save via onEdited
             ────────────────────────────────────────────────────────── */}
         {isOwn && editOpen && (
-          <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit post" size="xl" fullScreenMobile entrance="rise" surface="glass">
+          <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit post" size="xl" fullWidthMobile entrance="rise" surface="glass">
             <PostComposer
               bare
               currentUser={currentUser}
@@ -274,7 +274,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
             a public quote and prepends it via onReposted
             ────────────────────────────────────────────────────────── */}
         {quoteOpen && quoteOriginal && (
-          <Modal isOpen={quoteOpen} onClose={() => setQuoteOpen(false)} title="Repost with comment" size="xl" fullScreenMobile entrance="rise" surface="glass">
+          <Modal isOpen={quoteOpen} onClose={() => setQuoteOpen(false)} title="Repost with comment" size="xl" fullWidthMobile entrance="rise" surface="glass">
             <PostComposer
               bare
               currentUser={currentUser}

@@ -548,7 +548,7 @@ export default function UiKitPage() {
         </Section>
 
         {/* Post Composer */}
-        <Section title="Post Composer" description="The ComposerBanner primitive (avatar + invitation pill) opens the full composer (rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience) in a modal: an xl card on desktop, a full-screen sheet on mobile, with a soft rise-in motion. Rendered here in demo mode (the Post button never hits the API). Resize to a phone width to see the full-screen sheet.">
+        <Section title="Post Composer" description="The ComposerBanner primitive (avatar + invitation pill) opens the full composer (rich editor, @mention/#tag autocomplete, emoji, image attach, post type + audience) in a modal with a soft rise-in motion — no X; click the backdrop or press Escape to dismiss. Rendered here in demo mode (the Post button never hits the API). Resize to a phone width to see the full-width, content-height card with the stacked action bar.">
           <ToastProvider>
             <ComposerShowcase />
           </ToastProvider>
@@ -583,14 +583,13 @@ function ComposerShowcase() {
   return (
     <>
       <ComposerBanner onOpen={() => setOpen(true)} />
-      <Modal isOpen={open} onClose={() => setOpen(false)} size="xl" fullScreenMobile entrance="rise" surface="glass" showClose={false}>
+      <Modal isOpen={open} onClose={() => setOpen(false)} size="xl" fullWidthMobile entrance="rise" surface="glass" showClose={false}>
         <PostComposer
           demo
           bare
           currentUser={DEMO_CURRENT_USER}
           friends={DEMO_FRIENDS}
           onPosted={() => setOpen(false)}
-          onClose={() => setOpen(false)}
         />
       </Modal>
     </>

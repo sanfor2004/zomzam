@@ -432,15 +432,6 @@ test('getFeed help filter constrains to asks in SQL (stays keyset-stable)', asyn
   assert.match(db.query.mock.calls[0].arguments[0] as string, /p\.type = 'ask'/);
 });
 
-test('getFeed help_matches with no viewer tags short-circuits to empty without querying', async () => {
-  seedQueryOne({ tags: null }); // viewer has no tags
-
-  const res = await posts.getFeed(USER_ID, { filter: 'help_matches' });
-
-  assert.deepEqual(res, { posts: [], next_cursor: null, has_more: false, tier: 'unseen' });
-  assert.equal(db.query.mock.calls.length, 0, 'no candidate query issued for an impossible match');
-});
-
 // ── markPostsSeen: sanitized, deduped, bounded batch upsert ───────────────────
 
 test('markPostsSeen dedupes, drops non-positive ids, and upserts one row per (post, viewer)', async () => {

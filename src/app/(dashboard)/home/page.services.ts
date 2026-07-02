@@ -8,7 +8,7 @@
 // ──────────────────────────────────────────────────────────
 import type { CurrentUser, MentionUser, Post } from './shared';
 
-export type FeedFilter = 'all' | 'help' | 'help_matches';
+export type FeedFilter = 'all' | 'help';
 export type FeedTier = 'unseen' | 'seen';
 
 export interface FeedPage {

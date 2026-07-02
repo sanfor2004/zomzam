@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import { Loader2, MessagesSquare, HelpCircle, Sparkles, ArrowUp } from 'lucide-react';
+import { Loader2, MessagesSquare, HelpCircle, ArrowUp } from 'lucide-react';
 import { Button, ComposerBanner, PostComposer, PostCard, Modal } from '@/components/ui';
 import { useFeed } from './useFeed';
 import { fetchCurrentUser, fetchFriends } from './page.services';
@@ -113,14 +113,13 @@ export default function HomePage() {
           <ComposerBanner avatarSrc={currentUser?.avatar} onOpen={openComposer} />
 
           {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: FEED FILTER (All · Help requests · Matching skills)
+              DEVELOPMENT NAVIGATOR: FEED FILTER (All · Help requests)
               Contains: segmented feed scope selector (drives ?filter=)
               ────────────────────────────────────────────────────────── */}
           <div role="tablist" aria-label="Feed filter" className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-1">
             {([
               { value: 'all', label: 'All', icon: MessagesSquare },
               { value: 'help', label: 'Help requests', icon: HelpCircle },
-              { value: 'help_matches', label: 'Matching my skills', icon: Sparkles },
             ] as const).map(({ value, label, icon: Icon }) => {
               const isActive = feedFilter === value;
               return (
@@ -135,7 +134,7 @@ export default function HomePage() {
                   }`}
                 >
                   <Icon className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">{label}</span>
+                  <span>{label}</span>
                 </Button>
               );
             })}
@@ -225,15 +224,16 @@ export default function HomePage() {
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: COMPOSER MODAL
-          Contains: the full PostComposer (bare) hosted in an xl modal — a
-          full-screen sheet on mobile — opened from the banner; soft rise-in
-          motion; closing a dirty draft routes through the discard confirm
+          Contains: the full PostComposer (bare) hosted in an xl modal —
+          full-width content-height card on mobile — opened from the banner;
+          soft rise-in motion; no X (backdrop click / Escape dismisses);
+          closing a dirty draft routes through the discard confirm
           ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={composerOpen}
         onClose={requestCloseComposer}
         size="xl"
-        fullScreenMobile
+        fullWidthMobile
         entrance="rise"
         surface="glass"
         showClose={false}
@@ -244,7 +244,6 @@ export default function HomePage() {
           friends={friends}
           onPosted={handleComposerPosted}
           onDirtyChange={setComposerDirty}
-          onClose={requestCloseComposer}
         />
       </Modal>
 

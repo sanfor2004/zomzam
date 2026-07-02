@@ -71,10 +71,6 @@ interface PostComposerProps {
   /** Reports whether the editor holds an unsaved draft (text or images) so a host
    *  modal can confirm before discarding it on close. */
   onDirtyChange?: (dirty: boolean) => void;
-  /** Bare create mode only: when provided, the composer renders its own close (X)
-   *  inline in the identity header so the host Modal can drop its empty header
-   *  (kills the dead space above the composer). Edit/quote keep the Modal title+X. */
-  onClose?: () => void;
 }
 
 // ──────────────────────────────────────────────────────────
@@ -85,7 +81,7 @@ interface PostComposerProps {
 // ──────────────────────────────────────────────────────────
 // `currentUser` is read again in `bare` (modal) create mode to render the author
 // identity header; the inline/non-bare layout still omits it.
-export function PostComposer({ currentUser, friends, onPosted, editing, quoting, demo, bare, initialType, initialPhoto, onDirtyChange, onClose }: PostComposerProps) {
+export function PostComposer({ currentUser, friends, onPosted, editing, quoting, demo, bare, initialType, initialPhoto, onDirtyChange }: PostComposerProps) {
   const { toast } = useToast();
 
   // Edit mode reuses this whole composer; the post it edits seeds the initial
@@ -662,12 +658,13 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AUTHOR IDENTITY HEADER (bare create mode)
-          Contains: author avatar + name + handle, the audience chip (under the
-          handle), and the self-rendered close (X) on the right
+          Contains: author avatar + name + handle on the left, the audience
+          switch on the right. No close (X) — the host Modal dismisses on
+          backdrop click / Escape instead.
           ────────────────────────────────────────────────────────── */}
       {showIdentityHeader && (
-        <div className="flex items-start justify-between gap-3 mb-5">
-          <div className="flex items-start gap-3 min-w-0">
+        <div className="flex items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3 min-w-0">
             <Image
               src={currentUser!.avatar || '/Assets/Img/default-avatar.png'}
               alt=""
@@ -678,21 +675,11 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
             <div className="min-w-0">
               <p className="text-sm font-bold text-white truncate leading-tight">{displayName(currentUser!)}</p>
               <p className="text-[11px] text-slate-500 truncate">@{currentUser!.username}</p>
-              <div className="mt-1.5">
-                <AudienceSwitch value={visibility} onChange={setVisibility} align="left" />
-              </div>
             </div>
           </div>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Close"
-              className="-mt-1 -mr-1 p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors focus:outline-none"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+          <div className="shrink-0">
+            <AudienceSwitch value={visibility} onChange={setVisibility} />
+          </div>
         </div>
       )}
 
@@ -845,15 +832,19 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
           controls (left) and the char counter + labeled Post (right); inline —
           just the counter + bare send glyph
           ────────────────────────────────────────────────────────── */}
-      <div className={cn('flex items-center gap-3 mt-4 pt-3 border-t border-slate-800/60', bare ? 'justify-between' : 'justify-end')}>
+      <div className={cn(
+        'flex gap-3 mt-4 pt-3 border-t border-slate-800/60',
+        // Phones stack: full-width settings row, then the submit row under it.
+        bare ? 'flex-col sm:flex-row sm:items-center sm:justify-between' : 'items-center justify-end',
+      )}>
         {/* Borderless toolbar — bare/modal only (inline keeps the on-focus top bar). */}
         {bare && (
-          <div className="flex flex-wrap items-center gap-0.5 sm:gap-1 min-w-0">
+          <div className="flex flex-wrap items-center justify-between sm:justify-start gap-0.5 sm:gap-1 min-w-0 w-full sm:w-auto">
             {toolbarControls}
           </div>
         )}
 
-        <div className="flex items-center gap-3 shrink-0">
+        <div className={cn('flex items-center gap-3 shrink-0', bare && 'w-full sm:w-auto')}>
           {/* Character counter — amber near limit, rose when over */}
           <span
             aria-live="polite"
@@ -881,6 +872,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
               disabled={!canSubmit}
               loading={postingLoading}
               rightIcon={!postingLoading && <Send className="w-4 h-4" fill="currentColor" strokeWidth={0} />}
+              className="flex-1 sm:flex-none"
             >
               {submitLabel}
             </Button>
