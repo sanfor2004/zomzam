@@ -636,7 +636,7 @@ function CommentCard({
         alt=""
         width={28}
         height={28}
-        className="w-7 h-7 rounded-lg object-cover border border-slate-800 flex-shrink-0 mt-0.5"
+        className="w-7 h-7 rounded-lg object-cover flex-shrink-0 mt-0.5"
       />
       <div className="flex-1 min-w-0 bg-[#111318] rounded-2xl border border-white/[0.05] px-3 py-2">
         <div className="flex items-center gap-2 flex-wrap">
@@ -676,7 +676,7 @@ function NestedOriginal({ original }: { original: Post }) {
           alt={name}
           width={28}
           height={28}
-          className="w-7 h-7 rounded-lg object-cover border border-slate-800"
+          className="w-7 h-7 rounded-lg object-cover"
         />
         <span className="text-xs font-bold text-white truncate">{name}</span>
         <span className="text-[11px] text-slate-500 truncate">@{original.username}</span>
