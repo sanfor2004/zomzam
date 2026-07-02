@@ -1,13 +1,13 @@
 'use client';
 import { Button, useToast } from '@/components/ui';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import { socialSuccessToast } from '@/lib/social-actions';
+import { socialSuccessToast, emitSocialUpdate } from '@/lib/social-actions';
 
 interface SocialUser {
   id: number;
@@ -39,8 +39,10 @@ export default function RequestsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  const fetchRequests = async () => {
-    setLoading(true);
+  // `silent` skips the spinner — used by live re-syncs so an SSE-driven refresh
+  // never blanks a page the user is already looking at.
+  const fetchRequests = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const inRes = await fetch('/api/social?action=requests_in');
       const outRes = await fetch('/api/social?action=requests_out');
@@ -51,13 +53,21 @@ export default function RequestsPage() {
     } catch (err) {
       console.error('Failed to load requests list:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchRequests();
-  }, []);
+  }, [fetchRequests]);
+
+  // Live: any social-graph change (new incoming request, a cancel, an accept
+  // from another tab/user) re-syncs both columns over the SSE channel.
+  useEffect(() => {
+    const onSocial = () => { fetchRequests(true); };
+    window.addEventListener('zz-social-update', onSocial);
+    return () => window.removeEventListener('zz-social-update', onSocial);
+  }, [fetchRequests]);
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
@@ -92,7 +102,10 @@ export default function RequestsPage() {
       if (data.success) {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
-        fetchRequests();
+        // Echo locally so the rest of the shell (Active-now rail, suggestion
+        // cards) updates without waiting for anything — see emitSocialUpdate.
+        emitSocialUpdate(action, targetId);
+        fetchRequests(true);
         if (searchQuery.trim().length >= 2) {
           const sRes = await fetch(`/api/social?action=search&q=${encodeURIComponent(searchQuery)}`);
           const sData = await sRes.json();

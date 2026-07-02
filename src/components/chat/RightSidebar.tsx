@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Users, X, MessagesSquare, UserPlus, Check, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { useMessages, type ChatContact, type ChatUser } from '@/context/MessagesContext';
+import { emitSocialUpdate } from '@/lib/social-actions';
 import { displayName } from '@/app/(dashboard)/home/shared';
 import { TypingBadge } from './TypingDots';
 
@@ -74,6 +75,19 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     })();
   }, []);
 
+  // Live: any social-graph change involving a suggested user retires their
+  // card — they connected with us (or we with them elsewhere), so they no
+  // longer belong under "Suggested connects".
+  useEffect(() => {
+    const onSocial = (e: Event) => {
+      const { from_user_id } = (e as CustomEvent).detail || {};
+      if (!from_user_id) return;
+      setSuggestions((prev) => prev.filter((u) => u.id !== from_user_id));
+    };
+    window.addEventListener('zz-social-update', onSocial);
+    return () => window.removeEventListener('zz-social-update', onSocial);
+  }, []);
+
   // All connections, ordered online → away → offline for the "Active now" list.
   const friends = useMemo(
     () => [...contacts].sort((a, b) => {
@@ -90,16 +104,32 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   // Connect (LinkedIn-style): one action sends the request and follows them
-  // until they connect back — see /api/social friend_request.
+  // until they connect back — see /api/social friend_request. The button flips
+  // to "Sent" as instant feedback, then the card retires from the list — a
+  // pending person is no longer a suggestion. On failure the card stays.
   const connect = async (userId: number) => {
     setSent((prev) => new Set(prev).add(userId));
     try {
-      await fetch('/api/social', {
+      const res = await fetch('/api/social', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'friend_request', user_id: userId }),
       });
-    } catch { /* non-blocking */ }
+      const data = await res.json();
+      if (!data.success) {
+        setSent((prev) => { const next = new Set(prev); next.delete(userId); return next; });
+        return;
+      }
+      // Let the "Sent" state register (feedback), then retire the card. The
+      // echo also reloads the contacts roster — if they had already requested
+      // us, the server auto-accepted and they belong in "Active now" NOW.
+      setTimeout(() => {
+        setSuggestions((prev) => prev.filter((u) => u.id !== userId));
+        emitSocialUpdate('friend_request', userId);
+      }, 1200);
+    } catch {
+      setSent((prev) => { const next = new Set(prev); next.delete(userId); return next; });
+    }
   };
 
   return (

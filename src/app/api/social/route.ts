@@ -88,12 +88,18 @@ export const POST = withAuth(async (request, user) => {
             }
             // They asked first — connecting back completes the pair (friends).
             await execute(`UPDATE user_connections SET status = 'accepted', updated_at = NOW() WHERE id = ?`, [existing.id]);
-            await createNotification(user.id, 'friend_accept', {
+            await createNotification(existing.requester_id, 'friend_accept', {
               from_user_id: user.id,
               from_username: user.username,
               from_avatar: me?.avatar || '/Assets/Img/default-avatar.png',
               message: 'accepted your connection request',
             });
+            // Live roster refresh for the original requester: their "Active now"
+            // list gains this new connection without a reload.
+            await pushStreamOrder(existing.requester_id, 'social_update', {
+              action: 'connection_accepted',
+              from_user_id: user.id,
+            }, false);
             return NextResponse.json({ success: true, message: 'You are now connected' });
           case 'blocked':
             return NextResponse.json({ success: false, message: 'Cannot send request' }, { status: 400 });
@@ -123,6 +129,12 @@ export const POST = withAuth(async (request, user) => {
         message: 'wants to connect with you',
       });
 
+      // Live: the recipient's requests page / suggestion rails react instantly.
+      await pushStreamOrder(targetId, 'social_update', {
+        action: 'request_received',
+        from_user_id: user.id,
+      }, false);
+
       return NextResponse.json({ success: true, message: 'Connection request sent' });
     }
 
@@ -145,6 +157,13 @@ export const POST = withAuth(async (request, user) => {
         from_avatar: acceptor?.avatar || '/Assets/Img/default-avatar.png',
         message: 'accepted your connection request',
       });
+
+      // Live roster refresh for the requester — the new connection appears in
+      // their "Active now" rail the moment this lands, no reload needed.
+      await pushStreamOrder(targetId, 'social_update', {
+        action: 'connection_accepted',
+        from_user_id: user.id,
+      }, false);
 
       return NextResponse.json({ success: true, message: 'Connection accepted' });
     }

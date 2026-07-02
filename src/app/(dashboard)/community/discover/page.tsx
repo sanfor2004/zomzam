@@ -1,13 +1,13 @@
 'use client';
 import { Button, useToast } from '@/components/ui';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, Sparkles } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import { socialSuccessToast } from '@/lib/social-actions';
+import { socialSuccessToast, emitSocialUpdate } from '@/lib/social-actions';
 
 interface SocialUser {
   id: number;
@@ -38,8 +38,9 @@ export default function DiscoverPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  const fetchDiscover = async () => {
-    setLoading(true);
+  // `silent` skips the spinner — live re-syncs must never blank the grid.
+  const fetchDiscover = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch('/api/social?action=discover');
       const data = await res.json();
@@ -47,13 +48,21 @@ export default function DiscoverPage() {
     } catch (err) {
       console.error('Failed to load discover list:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchDiscover();
-  }, []);
+  }, [fetchDiscover]);
+
+  // Live: a social-graph change (someone connected with me, a request landed)
+  // re-syncs the recommendations so already-related people drop out.
+  useEffect(() => {
+    const onSocial = () => { fetchDiscover(true); };
+    window.addEventListener('zz-social-update', onSocial);
+    return () => window.removeEventListener('zz-social-update', onSocial);
+  }, [fetchDiscover]);
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
@@ -88,7 +97,10 @@ export default function DiscoverPage() {
       if (data.success) {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
-        fetchDiscover();
+        // Echo locally — updates the Active-now rail and suggestion cards in
+        // the shell immediately (see emitSocialUpdate).
+        emitSocialUpdate(action, targetId);
+        fetchDiscover(true);
         if (searchQuery.trim().length >= 2) {
           const sRes = await fetch(`/api/social?action=search&q=${encodeURIComponent(searchQuery)}`);
           const sData = await sRes.json();

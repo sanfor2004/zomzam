@@ -22,3 +22,15 @@ export const SOCIAL_SUCCESS_TOASTS: Record<string, string> = {
 export function socialSuccessToast(action: string): string | null {
   return SOCIAL_SUCCESS_TOASTS[action] ?? null;
 }
+
+/* The OTHER side of a social action hears about it over the live channel
+   (`social_update` SSE order → `zz-social-update` CustomEvent). The actor's own
+   tab never gets that push — so every successful social POST calls this to echo
+   the same event locally. One event, one set of listeners (MessagesContext
+   roster reload, requests page, suggestion rails), both sides identical. */
+export function emitSocialUpdate(action: string, userId: number): void {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent('zz-social-update', {
+    detail: { action, from_user_id: userId, local: true },
+  }));
+}

@@ -1,13 +1,13 @@
 'use client';
 import { Button, useToast } from '@/components/ui';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useTranslation } from '@/context/TranslationContext';
 import { Users, Search, UserPlus, ShieldAlert } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import { socialSuccessToast } from '@/lib/social-actions';
+import { socialSuccessToast, emitSocialUpdate } from '@/lib/social-actions';
 
 interface SocialUser {
   id: number;
@@ -38,8 +38,9 @@ export default function FriendsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  const fetchFriends = async () => {
-    setLoading(true);
+  // `silent` skips the spinner — live re-syncs must never blank the grid.
+  const fetchFriends = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch('/api/social?action=friends');
       const data = await res.json();
@@ -47,13 +48,21 @@ export default function FriendsPage() {
     } catch (err) {
       console.error('Failed to load friends list:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFriends();
-  }, []);
+  }, [fetchFriends]);
+
+  // Live: a connection accepted / severed anywhere (SSE from the other side,
+  // or a local echo) re-syncs the grid without a reload.
+  useEffect(() => {
+    const onSocial = () => { fetchFriends(true); };
+    window.addEventListener('zz-social-update', onSocial);
+    return () => window.removeEventListener('zz-social-update', onSocial);
+  }, [fetchFriends]);
 
   const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const q = e.target.value;
@@ -88,7 +97,9 @@ export default function FriendsPage() {
       if (data.success) {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
-        fetchFriends();
+        // Echo locally — the Active-now rail drops/adds the person immediately.
+        emitSocialUpdate(action, targetId);
+        fetchFriends(true);
         if (searchQuery.trim().length >= 2) {
           const sRes = await fetch(`/api/social?action=search&q=${encodeURIComponent(searchQuery)}`);
           const sData = await sRes.json();

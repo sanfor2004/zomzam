@@ -1,10 +1,10 @@
 'use client';
 import { Button, useToast } from '@/components/ui';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { UserPlus, UserMinus, UserCheck, UserX, Clock, Loader2 } from 'lucide-react';
-import { socialSuccessToast } from '@/lib/social-actions';
+import { socialSuccessToast, emitSocialUpdate } from '@/lib/social-actions';
 
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: PROFILE CONNECT BUTTONS (LinkedIn-style)
@@ -31,6 +31,23 @@ export default function SocialButtons({
   const { toast } = useToast();
   const [status, setStatus] = useState<string>(initialStatus);
   const [loading, setLoading] = useState<boolean>(false);
+
+  // Live: the OTHER side acting on our relationship (accepting our pending
+  // request, cancelling theirs, disconnecting) arrives over the SSE channel —
+  // flip the button state in place, no refresh. Local echoes are skipped:
+  // handleAction already set the state optimistically.
+  useEffect(() => {
+    const onSocial = (e: Event) => {
+      const { action, from_user_id, local } = (e as CustomEvent).detail || {};
+      if (local || from_user_id !== targetUserId) return;
+      if (action === 'connection_accepted') setStatus('friends');
+      else if (action === 'request_received') setStatus('friend_pending_in');
+      else if (action === 'request_cancelled') setStatus((s) => (s === 'friend_pending_in' ? 'none' : s));
+      else if (action === 'unfriended') setStatus('none');
+    };
+    window.addEventListener('zz-social-update', onSocial);
+    return () => window.removeEventListener('zz-social-update', onSocial);
+  }, [targetUserId]);
 
   if (!viewerId) {
     return (
@@ -65,6 +82,9 @@ export default function SocialButtons({
         } else if (action === 'friend_accept') {
           setStatus('friends');
         }
+        // Echo locally so the shell (Active-now rail, suggestion cards,
+        // community pages) reflects the change without waiting on anything.
+        emitSocialUpdate(action, targetUserId);
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
       } else {

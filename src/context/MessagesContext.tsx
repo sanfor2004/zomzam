@@ -416,6 +416,17 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('zz-contacts-presence', onPresence);
   }, []);
 
+  // ── Live social graph changes ───────────────────────────────
+  // A `social_update` (connect accepted, disconnected, request cancelled — via
+  // SSE from the other side, or echoed locally by our own action) changes WHO
+  // is in the contacts roster, not just their presence. Reload it so a new
+  // connection appears in "Active now" (and a severed one disappears) live.
+  useEffect(() => {
+    const onSocial = () => { loadContacts(); };
+    window.addEventListener('zz-social-update', onSocial);
+    return () => window.removeEventListener('zz-social-update', onSocial);
+  }, [loadContacts]);
+
   // ── Bootstrap ───────────────────────────────────────────────
   // One initial load; message deltas arrive live and presence drift is merged
   // from the zz-contacts-presence snapshots above.
