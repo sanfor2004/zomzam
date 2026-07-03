@@ -1,5 +1,5 @@
 import { query, transaction } from './db';
-import { computeOnlineFields, getOnlineStatus } from './models/user';
+import { computeOnlineFields } from './models/user';
 
 // ──────────────────────────────────────────────────────────
 // Unified live-sync payload — the single source of truth for BOTH live
@@ -9,8 +9,8 @@ import { computeOnlineFields, getOnlineStatus } from './models/user';
 // single code path and switching modes is lossless.
 //
 // Trust-Zero: everything here derives from the verified session user and
-// server-side state. The only client-influenced value is `viewing_user_id`,
-// which must pass `parseViewingUserId` before it ever reaches SQL.
+// server-side state. Both channels require an authenticated session — there is
+// no client-supplied identifier in this payload at all.
 // ──────────────────────────────────────────────────────────
 
 /** One queued realtime event, tagged with the order name it was pushed under. */
@@ -36,8 +36,6 @@ export interface LiveSyncPayload {
   posts: any[];
   /** social_update — connect requests / accepts. */
   social: any[];
-  /** Live status of the profile the viewer is watching (public profile page). */
-  viewed_user_status: any | null;
   /** Throttled friends-presence snapshot (~every 20s), null when not sampled. */
   contacts_presence: ContactPresence[] | null;
 }
@@ -48,20 +46,6 @@ const MAX_DRAIN_ORDERS = 200;
 /** Queues untouched for this long only carry stale realtime state: transient
  *  `typing` pings from that far back are meaningless and get discarded. */
 const STALE_QUEUE_MS = 10 * 60 * 1000;
-
-/**
- * Strict, allowlist-style parse of a client-supplied "viewing user id".
- * Accepts only a plain positive decimal integer (as number or string) — every
- * other shape (NaN, floats, negatives, hex, arrays, objects) resolves to null
- * so garbage can never reach a SQL parameter.
- */
-export function parseViewingUserId(raw: unknown): number | null {
-  if (raw == null) return null;
-  const str = typeof raw === 'number' ? String(raw) : typeof raw === 'string' ? raw.trim() : '';
-  if (!/^\d{1,10}$/.test(str)) return null;
-  const n = Number(str);
-  return Number.isSafeInteger(n) && n > 0 ? n : null;
-}
 
 /** Human presence label matching the chat-contacts wire format. */
 function presenceLabel(diff: number, isOnline: boolean, isIdle: boolean): string {
@@ -123,13 +107,11 @@ async function getContactsPresence(userId: number): Promise<ContactPresence[]> {
 }
 
 /**
- * Build one sync frame: drain the queue into grouped sections, plus optional
- * viewed-user status and throttled contacts presence. `userId` null serves the
- * anonymous case (public profile viewers get presence only).
+ * Build one sync frame for an authenticated user: drain the queue into grouped
+ * sections, plus an optional throttled contacts-presence snapshot.
  */
 export async function drainLiveSync(
-  userId: number | null,
-  viewingUserId: number | null,
+  userId: number,
   opts: { includeContacts?: boolean } = {}
 ): Promise<LiveSyncPayload> {
   const payload: LiveSyncPayload = {
@@ -137,48 +119,41 @@ export async function drainLiveSync(
     notifications: [],
     posts: [],
     social: [],
-    viewed_user_status: null,
     contacts_presence: null,
   };
 
-  if (userId) {
-    const { orders, lastSeen } = await drainQueue(userId);
-    const queueIsStale = !lastSeen || Date.now() - new Date(lastSeen).getTime() > STALE_QUEUE_MS;
+  const { orders, lastSeen } = await drainQueue(userId);
+  const queueIsStale = !lastSeen || Date.now() - new Date(lastSeen).getTime() > STALE_QUEUE_MS;
 
-    for (const order of orders) {
-      const kind = order?.order_name;
-      const params = order?.params ?? {};
-      switch (kind) {
-        case 'new_message':
-        case 'message_read':
-          payload.messages.push({ kind, params });
-          break;
-        case 'typing':
-          // Transient — pointless to replay after a long-dead queue.
-          if (!queueIsStale) payload.messages.push({ kind, params });
-          break;
-        case 'new_notification':
-          payload.notifications.push(params);
-          break;
-        case 'new_post':
-          payload.posts.push(params);
-          break;
-        case 'social_update':
-          payload.social.push(params);
-          break;
-        default:
-          // Unknown order names are dropped — never forwarded blind to clients.
-          break;
-      }
-    }
-
-    if (opts.includeContacts) {
-      payload.contacts_presence = await getContactsPresence(userId);
+  for (const order of orders) {
+    const kind = order?.order_name;
+    const params = order?.params ?? {};
+    switch (kind) {
+      case 'new_message':
+      case 'message_read':
+        payload.messages.push({ kind, params });
+        break;
+      case 'typing':
+        // Transient — pointless to replay after a long-dead queue.
+        if (!queueIsStale) payload.messages.push({ kind, params });
+        break;
+      case 'new_notification':
+        payload.notifications.push(params);
+        break;
+      case 'new_post':
+        payload.posts.push(params);
+        break;
+      case 'social_update':
+        payload.social.push(params);
+        break;
+      default:
+        // Unknown order names are dropped — never forwarded blind to clients.
+        break;
     }
   }
 
-  if (viewingUserId) {
-    payload.viewed_user_status = await getOnlineStatus(viewingUserId);
+  if (opts.includeContacts) {
+    payload.contacts_presence = await getContactsPresence(userId);
   }
 
   return payload;
@@ -191,7 +166,6 @@ export function isEmptySync(payload: LiveSyncPayload): boolean {
     payload.notifications.length === 0 &&
     payload.posts.length === 0 &&
     payload.social.length === 0 &&
-    payload.viewed_user_status === null &&
     payload.contacts_presence === null
   );
 }

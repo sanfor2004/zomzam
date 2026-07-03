@@ -5,14 +5,6 @@ import React, { createContext, useContext, useState, useEffect, useRef, useCallb
 type UserStatus = 'online' | 'away' | 'offline' | 'disconnected';
 type LiveMode = 'active' | 'afk';
 
-interface ViewedUserStatus {
-  is_online: boolean;
-  is_idle: boolean;
-  last_seen: string | null;
-  label: string;
-  diff: number;
-}
-
 // ──────────────────────────────────────────────────────────
 // Unified live-sync client — exactly TWO channels, used mutually exclusively:
 //   • ACTIVE  → one SSE connection to /api/stream ("sync" events). No client
@@ -28,14 +20,12 @@ interface ViewedUserStatus {
 //
 // Split into two contexts by update cadence so a consumer only re-renders for
 // the slice it actually reads:
-//   • Presence      — high-frequency idle/online + viewed-user status
+//   • Presence      — the viewer's own high-frequency idle/online status
 //   • Notifications — live notification feed + unread count
 // ──────────────────────────────────────────────────────────
 
 interface PresenceContextType {
   currentUserStatus: UserStatus;
-  viewedUserStatus: ViewedUserStatus | null;
-  setViewingUserId: (id: number | null) => void;
   triggerStatusSync: () => Promise<void>;
 }
 
@@ -57,17 +47,9 @@ const AFK_BEAT_MS = 5000;
 
 export function StreamWaiterProvider({ children }: { children: React.ReactNode }) {
   const [currentUserStatus, setCurrentUserStatus] = useState<UserStatus>('disconnected');
-  const [viewedUserStatus, setViewedUserStatus] = useState<ViewedUserStatus | null>(null);
-  const [viewingUserId, setViewingUserId] = useState<number | null>(null);
   const [mode, setMode] = useState<LiveMode>('active');
   const [notificationsCount, setNotificationsCount] = useState(0);
   const [notifications, setNotifications] = useState<any[]>([]);
-
-  // Mirror the latest mutable values into refs so the exposed callbacks can stay
-  // referentially stable (empty deps) while always reading current state — this
-  // is what lets the memoized context values keep stable identity.
-  const viewingUserIdRef = useRef(viewingUserId);
-  useEffect(() => { viewingUserIdRef.current = viewingUserId; }, [viewingUserId]);
 
   // ── Unified payload applier ─────────────────────────────────
   // BOTH channels (SSE `sync` event and heartbeat response `data`) resolve to
@@ -130,10 +112,6 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
       }
     }
 
-    if (data.viewed_user_status) {
-      setViewedUserStatus(data.viewed_user_status);
-    }
-
     // Throttled friends-presence snapshot → chat dock dots (MessagesContext).
     if (Array.isArray(data.contacts_presence)) {
       window.dispatchEvent(new CustomEvent('zz-contacts-presence', { detail: data.contacts_presence }));
@@ -170,7 +148,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
       const res = await fetch('/api/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ viewing_user_id: viewingUserIdRef.current, init }),
+        body: JSON.stringify({ init }),
         signal: controller.signal,
       });
       const json = await res.json();
@@ -264,8 +242,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
 
     const connect = () => {
       if (!active) return;
-      const url = `/api/stream?viewing_user_id=${viewingUserId || ''}`;
-      eventSource = new EventSource(url);
+      eventSource = new EventSource('/api/stream');
 
       eventSource.onopen = () => {
         reconnectAttempts = 0;
@@ -298,7 +275,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
       clearTimeout(reconnectTimer);
       eventSource?.close();
     };
-  }, [mode, viewingUserId, applySync]);
+  }, [mode, applySync]);
 
   // ── Channel 2: heartbeat poll (AFK mode only) ───────────────
   // Same payload as the stream, every 5s. On leaving AFK this interval is torn
@@ -317,8 +294,8 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
   }, [mode, syncNow]);
 
   const presenceValue = useMemo<PresenceContextType>(
-    () => ({ currentUserStatus, viewedUserStatus, setViewingUserId, triggerStatusSync }),
-    [currentUserStatus, viewedUserStatus, triggerStatusSync],
+    () => ({ currentUserStatus, triggerStatusSync }),
+    [currentUserStatus, triggerStatusSync],
   );
 
   const notificationsValue = useMemo<NotificationsContextType>(
@@ -335,7 +312,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
   );
 }
 
-/** Subscribe to high-frequency presence state (current + viewed user status). */
+/** Subscribe to the viewer's own high-frequency presence state. */
 export function usePresence() {
   const context = useContext(PresenceContext);
   if (!context) {

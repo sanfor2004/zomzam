@@ -87,16 +87,15 @@ The social graph affects:
 - Community discovery.
 - Public profile actions.
 
-## Presence To Public Profile
+## Presence (First-Party Only)
 
 Primary files:
 
-- `src/app/u/[username]/PublicUserStatus.tsx`
 - `src/context/StreamWaiterContext.tsx`
 - `src/lib/live-sync.ts`
 - `src/lib/models/user.ts`
 
-Public profiles can show live status without exposing private data. Anonymous viewers get viewed-user status only.
+Presence never crosses to the public profile. The realtime channels serve only the signed-in user's own status and their accepted friends' `contacts_presence` (chat dock). Public profiles (`/u/[username]`) expose no presence at all — watching another account's online status is not possible.
 
 ## Money To Settings
 

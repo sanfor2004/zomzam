@@ -10,7 +10,7 @@ mock.module('@/lib/db', { namedExports: db });
 
 const userModel = {
   updateOnlineStatus: mock.fn(async (userId: number, isIdle: number) => true),
-  getNotifications: mock.fn(async (userId: number) => []),
+  getNotifications: mock.fn(async (userId: number): Promise<any[]> => []),
 };
 mock.module('@/lib/models/user', {
   namedExports: {
@@ -19,21 +19,20 @@ mock.module('@/lib/models/user', {
   }
 });
 
+// withAuth gates the route and injects the verified session user as the 2nd
+// arg — the mock skips the gate and hands the handler a fixed test user.
 const apiAuth = {
-  getSessionUser: mock.fn(async () => ({ id: 42, username: 'testuser' })),
-  withError: (fn: any) => fn,
+  withAuth: (fn: any) => (req: any) => fn(req, { id: 42, username: 'testuser' }),
 };
 mock.module('@/lib/api-auth', { namedExports: apiAuth });
 
 const liveSync = {
   drainLiveSync: mock.fn(async () => ({ messages: [], notifications: [], posts: [], social: [] })),
-  parseViewingUserId: (val: any) => (val ? parseInt(val) : null),
 };
 mock.module('@/lib/live-sync', { namedExports: liveSync });
 
 const rateLimit = {
   rateLimit: mock.fn(async () => true),
-  clientIp: () => '127.0.0.1',
 };
 mock.module('@/lib/rate-limit', { namedExports: rateLimit });
 
@@ -47,7 +46,6 @@ beforeEach(() => {
   userModel.getNotifications.mock.resetCalls();
   liveSync.drainLiveSync.mock.resetCalls();
   rateLimit.rateLimit.mock.resetCalls();
-  apiAuth.getSessionUser.mock.resetCalls();
 });
 
 test('heartbeat marks user IDLE when init is false', async () => {

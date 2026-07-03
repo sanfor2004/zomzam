@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { updateOnlineStatus, getNotifications } from '@/lib/models/user';
-import { withError, getSessionUser } from '@/lib/api-auth';
-import { drainLiveSync, parseViewingUserId } from '@/lib/live-sync';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { withAuth } from '@/lib/api-auth';
+import { drainLiveSync } from '@/lib/live-sync';
+import { rateLimit } from '@/lib/rate-limit';
 
 // ──────────────────────────────────────────────────────────
 // AFK-mode live channel — the SSE stream's polled twin. While the user is
@@ -16,8 +16,7 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 // body flag is gone — a client can no longer claim to be active; the only
 // thing it can "fake" is looking idle, which grants nothing.
 //
-// Soft auth: also serves anonymous viewers watching a public profile's
-// presence (viewed-user status only).
+// Auth-gated: only ever returns the authenticated session's own live data.
 // ──────────────────────────────────────────────────────────
 
 /** Per-caller throttle: the legit cadence is one beat / 5s (+ an occasional
@@ -25,38 +24,25 @@ import { rateLimit, clientIp } from '@/lib/rate-limit';
 const RATE_MAX = 6;
 const RATE_WINDOW_MS = 10000;
 
-export const POST = withError(async (request) => {
-  const user = await getSessionUser();
-
+export const POST = withAuth(async (request, user) => {
   const body = await request.json().catch(() => ({}));
-  // Trust-Zero: strict allowlist parse — anything not a positive int is null.
-  const viewingUserId = parseViewingUserId(body?.viewing_user_id);
   // Strict boolean — anything but literal true is false. Harmless to spoof:
   // it only returns the caller's OWN notification list.
   const wantsInit = body?.init === true;
 
-  const rateKey = user ? `heartbeat:u:${user.id}` : `heartbeat:ip:${clientIp(request)}`;
-  if (!(await rateLimit(rateKey, RATE_MAX, RATE_WINDOW_MS))) {
+  if (!(await rateLimit(`heartbeat:u:${user.id}`, RATE_MAX, RATE_WINDOW_MS))) {
     return NextResponse.json({ success: false, message: 'Too many requests' }, { status: 429 });
   }
 
-  if (user) {
-    // Heartbeat channel ⇒ server marks this user IDLE unless this is an initialization/active catch-up request.
-    if (wantsInit) {
-      await updateOnlineStatus(user.id, 0);
-    } else {
-      await updateOnlineStatus(user.id, 1);
-    }
-  }
+  // Heartbeat channel ⇒ server marks this user IDLE unless this is an initialization/active catch-up request.
+  await updateOnlineStatus(user.id, wantsInit ? 0 : 1);
 
-  const payload = await drainLiveSync(user?.id ?? null, viewingUserId, {
-    includeContacts: !!user,
-  });
+  const payload = await drainLiveSync(user.id, { includeContacts: true });
 
   // Bootstrap: the full recent notification list + unread count, requested once
   // on mount and on AFK→active resume (catch-up), not on every beat.
   let notificationsBootstrap: { count: number; items: any[] } | null = null;
-  if (user && wantsInit) {
+  if (wantsInit) {
     const items = await getNotifications(user.id, 10);
     notificationsBootstrap = {
       count: items.filter((n: any) => !n.is_read).length,

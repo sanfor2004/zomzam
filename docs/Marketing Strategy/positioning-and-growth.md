@@ -23,7 +23,7 @@ Avoid broad consumer productivity messaging at launch. It dilutes the product.
 
 ## Differentiators
 
-- Public profile + live presence.
+- Public profile with the user's posts and connect/block social graph.
 - Social feed built around asks, wins, and professional updates.
 - Direct messages and friend graph.
 - Time execution tied to delivery.

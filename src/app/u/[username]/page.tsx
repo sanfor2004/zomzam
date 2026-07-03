@@ -3,11 +3,10 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getUserByUsername, getOnlineStatus } from '@/lib/models/user';
+import { getUserByUsername } from '@/lib/models/user';
 import { getSessionUser } from '@/lib/api-auth';
 import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
-import PublicUserStatus from './PublicUserStatus';
 import ProfileAnimationKit from './ProfileAnimationKit';
 import PublicNav from '@/components/PublicNav';
 import { Calendar, Clock, Heart, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
@@ -73,12 +72,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
   const profileUserId = profileUser.id as number;
 
-  // Presence and viewer session are independent — resolve them in parallel
-  // (the DB is remote, so every avoided sequential roundtrip is real latency).
-  const [onlineStatus, viewer] = await Promise.all([
-    getOnlineStatus(profileUserId),
-    getSessionUser(), // anonymous viewers are allowed → null
-  ]);
+  // Authenticate the current viewer (anonymous viewers are allowed → null).
+  const viewer = await getSessionUser();
   const viewerId = viewer ? viewer.id : null;
 
   // Resolve the connect status if the viewer is authenticated (pending-out
@@ -232,7 +227,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PUBLIC PROFILE CARD
-          Contains: Avatar + name/role/meta header, online status, biography,
+          Contains: Avatar + name/role/meta header, biography,
           interest tags, social interaction buttons (friend/follow)
           ────────────────────────────────────────────────────────── */}
       <main className="flex-grow pt-32 pb-24 px-6 max-w-4xl mx-auto w-full">
@@ -287,11 +282,6 @@ export default async function PublicProfilePage({ params }: PageProps) {
                   </div>
                 </div>
               </div>
-            </div>
-
-            {/* Online Status Label */}
-            <div className="flex-shrink-0">
-              <PublicUserStatus userId={profileUserId} initialStatus={onlineStatus} />
             </div>
 
           </div>

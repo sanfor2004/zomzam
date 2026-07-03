@@ -2,8 +2,8 @@ import { test, mock, before, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 // drainLiveSync reaches the DB through @/lib/db (transaction for the atomic
-// queue drain, query for contacts presence, queryOne via getOnlineStatus) —
-// mock it so grouping and validation can be asserted without a connection.
+// queue drain, query for contacts presence) — mock it so grouping and
+// validation can be asserted without a connection.
 let queueRow: any = null;
 const conn = {
   execute: mock.fn(async (sql: string) =>
@@ -33,21 +33,7 @@ beforeEach(() => {
 // string round-trips through computeOnlineFields identically.
 const nowIso = () => new Date().toISOString();
 
-// ── parseViewingUserId: strict allowlist, never trust the client ─────────────
-
-test('parseViewingUserId accepts only plain positive decimal integers', () => {
-  assert.equal(live.parseViewingUserId('42'), 42);
-  assert.equal(live.parseViewingUserId(7), 7);
-  assert.equal(live.parseViewingUserId(' 15 '), 15); // trimmed
-});
-
-test('parseViewingUserId rejects every non-integer shape', () => {
-  for (const bad of ['abc', '-1', '1.5', '0x10', '', '0', '12345678901', '1e3', null, undefined, {}, [], true, NaN, 3.7, -5]) {
-    assert.equal(live.parseViewingUserId(bad as any), null, `expected null for ${JSON.stringify(bad)}`);
-  }
-});
-
-// ── drainLiveSync: grouping, hygiene, anonymous path ──────────────────────────
+// ── drainLiveSync: grouping and hygiene ───────────────────────────────────────
 
 test('drains the queue atomically and groups orders into typed sections', async () => {
   queueRow = {
@@ -63,7 +49,7 @@ test('drains the queue atomically and groups orders into typed sections', async 
     ]),
   };
 
-  const payload = await live.drainLiveSync(100, null);
+  const payload = await live.drainLiveSync(100);
 
   assert.deepEqual(payload.messages.map((m) => m.kind), ['new_message', 'typing', 'message_read']);
   assert.equal(payload.notifications.length, 1);
@@ -88,29 +74,20 @@ test('a stale queue drops transient typing pings but keeps real messages', async
       { order_name: 'new_message', params: { conversation_id: 1 } },
     ]),
   };
-  const payload = await live.drainLiveSync(100, null);
+  const payload = await live.drainLiveSync(100);
   assert.deepEqual(payload.messages.map((m) => m.kind), ['new_message']);
-});
-
-test('anonymous callers get viewed-user status only and never touch the queue', async () => {
-  db.queryOne.mock.mockImplementation(async () => ({ last_seen: nowIso(), is_idle: 0 }));
-  const payload = await live.drainLiveSync(null, 55);
-  assert.equal(db.transaction.mock.calls.length, 0); // no drain for anonymous
-  assert.ok(payload.viewed_user_status);
-  assert.equal(payload.viewed_user_status.is_online, true);
-  assert.equal(payload.messages.length, 0);
 });
 
 test('contacts presence is only sampled when explicitly requested', async () => {
   queueRow = null;
-  await live.drainLiveSync(100, null);
+  await live.drainLiveSync(100);
   assert.equal(db.query.mock.calls.length, 0);
 
   db.query.mock.mockImplementation(async () => [
     { user_id: 7, last_seen: nowIso(), is_idle: 0 },
     { user_id: 8, last_seen: null, is_idle: null },
   ]);
-  const payload = await live.drainLiveSync(100, null, { includeContacts: true });
+  const payload = await live.drainLiveSync(100, { includeContacts: true });
   assert.equal(payload.contacts_presence?.length, 2);
   assert.equal(payload.contacts_presence![0].is_online, true);
   assert.equal(payload.contacts_presence![0].online_label, 'Online');
@@ -119,17 +96,17 @@ test('contacts presence is only sampled when explicitly requested', async () => 
 });
 
 test('isEmptySync flags frames with nothing to emit', async () => {
-  const empty = await live.drainLiveSync(100, null);
+  const empty = await live.drainLiveSync(100);
   assert.equal(live.isEmptySync(empty), true);
 
   queueRow = { last_seen: nowIso(), stream_queue: JSON.stringify([{ order_name: 'new_post', params: { post_id: 1 } }]) };
-  const full = await live.drainLiveSync(100, null);
+  const full = await live.drainLiveSync(100);
   assert.equal(live.isEmptySync(full), false);
 });
 
 test('a corrupt queue is treated as empty and still cleared', async () => {
   queueRow = { last_seen: nowIso(), stream_queue: '{not json[' };
-  const payload = await live.drainLiveSync(100, null);
+  const payload = await live.drainLiveSync(100);
   assert.equal(live.isEmptySync(payload), true);
   const updates = conn.execute.mock.calls.filter((c) => /stream_queue = NULL/.test(c.arguments[0] as string));
   assert.equal(updates.length, 1);

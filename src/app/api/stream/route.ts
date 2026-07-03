@@ -1,20 +1,19 @@
-import { withError, getSessionUser } from '@/lib/api-auth';
+import { withAuth } from '@/lib/api-auth';
 import { updateOnlineStatus } from '@/lib/models/user';
-import { drainLiveSync, parseViewingUserId, isEmptySync } from '@/lib/live-sync';
+import { drainLiveSync, isEmptySync } from '@/lib/live-sync';
 
 // ──────────────────────────────────────────────────────────
 // ACTIVE-mode live channel. One SSE connection per engaged user, emitting a
 // single structured `sync` event (grouped messages/notifications/posts/social/
-// presence sections built by drainLiveSync — the same shape the AFK heartbeat
-// returns, so the client applies both through one code path).
+// contacts-presence sections built by drainLiveSync — the same shape the AFK
+// heartbeat returns, so the client applies both through one code path).
 //
 // Server-authoritative presence: an OPEN stream ⇒ this user is ACTIVE
 // (is_idle = 0). No client flag is read — when the client goes AFK it closes
 // this connection and falls back to /api/heartbeat, whose requests mark idle.
 //
-// Soft auth: the stream also serves anonymous viewers watching another user's
-// presence (public profile), so a missing session is allowed — the logged-in
-// branches just skip.
+// Auth-gated: the channel only ever serves the authenticated session's own
+// live data — there is no way to watch another user's presence through it.
 // ──────────────────────────────────────────────────────────
 
 /** DB poll cadence while a stream is open. */
@@ -24,12 +23,7 @@ const CONTACTS_EVERY_TICKS = 10;
 /** Keepalive comment cadence (proxies drop silent connections). */
 const PING_MS = 20000;
 
-export const GET = withError(async (request) => {
-  const { searchParams } = new URL(request.url);
-  // Trust-Zero: strict allowlist parse — anything not a positive int is null.
-  const viewingUserId = parseViewingUserId(searchParams.get('viewing_user_id'));
-
-  const user = await getSessionUser();
+export const GET = withAuth(async (request, user) => {
   const encoder = new TextEncoder();
 
   const customStream = new ReadableStream({
@@ -52,7 +46,6 @@ export const GET = withError(async (request) => {
       // for the first data tick.
       sendPing();
 
-      let lastViewedStatus: string | null = null;
       let lastPingTime = Date.now();
       let tick = 0;
       let active = true;
@@ -68,25 +61,11 @@ export const GET = withError(async (request) => {
         while (active) {
           try {
             // Open stream ⇒ server marks this user ACTIVE. Never client-asserted.
-            if (user) {
-              await updateOnlineStatus(user.id, 0);
-            }
+            await updateOnlineStatus(user.id, 0);
 
-            const payload = await drainLiveSync(user?.id ?? null, viewingUserId, {
-              includeContacts: !!user && tick % CONTACTS_EVERY_TICKS === 0,
+            const payload = await drainLiveSync(user.id, {
+              includeContacts: tick % CONTACTS_EVERY_TICKS === 0,
             });
-
-            // Only forward the viewed user's status when it MEANINGFULLY changed —
-            // `diff` is a seconds-since-seen counter that ticks on every loop, so
-            // it's excluded from the comparison (else every tick would emit).
-            if (payload.viewed_user_status) {
-              const serialized = JSON.stringify({ ...payload.viewed_user_status, diff: 0 });
-              if (serialized === lastViewedStatus) {
-                payload.viewed_user_status = null;
-              } else {
-                lastViewedStatus = serialized;
-              }
-            }
 
             if (!isEmptySync(payload)) {
               sendSync(payload);

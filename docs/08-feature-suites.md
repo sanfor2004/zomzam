@@ -178,11 +178,13 @@ Capabilities:
 - Profile editing and avatar upload.
 - Password change.
 - Timezone, language, notifications, and currency settings.
-- Public profile with social actions and live status.
+- Public profile with social actions (no presence shown).
 
 Public profile (`/u/[username]`) details:
 
-- Server queries are parallelized (presence + session, then posts + mutual friends) and the profile row is request-deduped between `generateMetadata` and the page body via React `cache()`.
+- Shows avatar, name/role, bio, interest tags, mutual friends, the user's public posts, and connect/block actions.
+- **No presence indicator.** A viewer's online/idle/last-seen status is never exposed to anonymous or third-party visitors (privacy). The former live badge and its `viewed_user_status` stream capability were removed; `/api/stream` and `/api/heartbeat` are now hard-gated by `withAuth`.
+- Server queries are parallelized (posts + mutual friends) and the profile row is request-deduped between `generateMetadata` and the page body via React `cache()`.
 - Emits Open Graph `profile`, Twitter card, and canonical metadata (absolute URLs via `metadataBase` in the root layout, driven by `APP_URL`).
 - Connect buttons cover the full relationship lifecycle including blocked states: `blocked_by_me` renders a Blocked button whose hover reveals Unblock (`unblock` API action); `blocked_by_them` hides the controls and the CTA copy switches to "Connections are unavailable".
 - Post previews are clamped to 4 lines; plain reposts render as the original post with a "reposted" attribution.

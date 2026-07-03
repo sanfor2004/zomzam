@@ -12,6 +12,10 @@ Files:
 - `src/context/MessagesContext.tsx`
 - `src/components/chat/*`
 
+## Auth
+
+Both channels are **auth-gated** (`withAuth` → 401 without a valid session). A connection only ever serves the signed-in user's own live data; there is no client-supplied identifier and no way to watch another account's presence. (Public profiles at `/u/[username]` deliberately show no presence indicator.)
+
 ## The Two Channels
 
 | Mode | Transport | When used | Server meaning |
@@ -25,11 +29,10 @@ The client never sends "I am active" or "I am idle" as trusted state. The server
 
 `src/lib/live-sync.ts` exports:
 
-- `parseViewingUserId(raw)`
-- `drainLiveSync(userId, viewingUserId, opts)`
+- `drainLiveSync(userId, opts)`
 - `isEmptySync(payload)`
 
-`drainLiveSync()` is the single source of truth for both transports. It atomically drains `user_online_status.stream_queue` inside a transaction with `SELECT ... FOR UPDATE`, groups known order names, drops unknown ones, and optionally includes contacts presence and viewed-user status.
+`drainLiveSync()` is the single source of truth for both transports. It atomically drains `user_online_status.stream_queue` inside a transaction with `SELECT ... FOR UPDATE`, groups known order names, drops unknown ones, and optionally includes the caller's contacts presence.
 
 ## Sync Payload Shape
 
@@ -39,7 +42,6 @@ interface LiveSyncPayload {
   notifications: any[];
   posts: any[];
   social: any[];
-  viewed_user_status: any | null;
   contacts_presence: ContactPresence[] | null;
 }
 ```
@@ -50,36 +52,33 @@ Sections:
 - `notifications`: live notification rows for bell/toasts.
 - `posts`: `new_post` feed refresh signals.
 - `social`: connection request/accept updates.
-- `viewed_user_status`: live public profile status.
 - `contacts_presence`: throttled friend presence snapshot for chat surfaces.
 
 ## Active SSE Flow
 
-`/api/stream`:
+`/api/stream` (gated by `withAuth`):
 
-1. Soft-reads the session with `getSessionUser()`. Anonymous viewers are allowed for public profile status.
-2. Parses `viewing_user_id` through `parseViewingUserId()`.
-3. Opens a `ReadableStream` with `text/event-stream`.
-4. Sends an initial ping comment so `EventSource` opens immediately.
-5. Every 2 seconds:
-   - If authenticated, calls `updateOnlineStatus(user.id, 0)`.
-   - Calls `drainLiveSync()`.
+1. Receives the verified session `user` from `withAuth` (401 otherwise).
+2. Opens a `ReadableStream` with `text/event-stream`.
+3. Sends an initial ping comment so `EventSource` opens immediately.
+4. Every 2 seconds:
+   - Calls `updateOnlineStatus(user.id, 0)`.
+   - Calls `drainLiveSync(user.id, ...)`.
    - Includes contacts presence every 10 ticks, about every 20 seconds.
    - Emits `event: sync` only when the payload is non-empty.
-6. Sends keepalive ping comments every 20 seconds.
+5. Sends keepalive ping comments every 20 seconds.
 
 ## AFK Heartbeat Flow
 
-`/api/heartbeat`:
+`/api/heartbeat` (gated by `withAuth`):
 
-1. Soft-reads the session.
+1. Receives the verified session `user` from `withAuth` (401 otherwise).
 2. Parses JSON body safely.
-3. Strictly parses `viewing_user_id`.
-4. Treats only literal `init: true` as bootstrap request.
-5. Rate-limits by user or IP.
-6. If authenticated, calls `updateOnlineStatus(user.id, wantsInit ? 0 : 1)`. Routine beats mark the user idle, while bootstrap (`init: true`) requests keep them active.
-7. Calls `drainLiveSync()`.
-8. When `init` is true, adds `notifications_bootstrap` with unread count and recent rows.
+3. Treats only literal `init: true` as bootstrap request.
+4. Rate-limits by user.
+5. Calls `updateOnlineStatus(user.id, wantsInit ? 0 : 1)`. Routine beats mark the user idle, while bootstrap (`init: true`) requests keep them active.
+6. Calls `drainLiveSync(user.id, ...)`.
+7. When `init` is true, adds `notifications_bootstrap` with unread count and recent rows.
 
 ## Client Mode Switching
 
@@ -100,7 +99,6 @@ Both channels call one `applySync()` function:
 - Notifications update local notification state using functional atomic updates (preventing unread badge drift) and dispatch `new-notification`.
 - New posts dispatch `zz-new-post` for the feed refresh pill.
 - Social updates dispatch `zz-social-update`.
-- Viewed profile status updates the public profile badge.
 - Contacts presence dispatches `zz-contacts-presence`.
 
 ## Event Queue
@@ -116,17 +114,14 @@ Queue safety:
 - Draining clears the queue before processing so SSE and heartbeat cannot double-deliver during mode switches.
 - Stale queues drop transient typing events.
 
-## Public Profile Presence
+## Public Profile Presence — Removed
 
-`src/app/u/[username]/PublicUserStatus.tsx` uses a lightweight `usePublicPresence` hook to watch a user's presence anonymously.
-Unlike the global `StreamWaiterProvider`, this hook only opens the SSE channel for `viewed_user_status` frames and deliberately omits idle detection, notification polls, and heartbeat loops. This ensures a viewer's own presence isn't accidentally mutated while visiting a profile.
+Public profiles (`/u/[username]`) intentionally show **no** presence indicator. Exposing a user's online/idle/last-seen status to anonymous or third-party visitors is a privacy leak, so the whole "watch another user's presence" capability was removed:
 
-Behavior details:
+- No `PublicUserStatus` component, no `viewed_user_status` payload field, no `viewing_user_id` request parameter, and no `parseViewingUserId` / `getOnlineStatus` helpers.
+- `/api/stream` and `/api/heartbeat` are now hard-gated by `withAuth` (previously soft-auth, which existed solely to serve this anonymous presence).
 
-- The offline "Seen Xm ago" label ticks client-side every 30 seconds. The hook anchors `last_seen` to the client clock using the server-sent `diff`, because the stream dedupes identical `viewed_user_status` frames and would otherwise let the label go stale.
-- The SSE connection closes while the tab is hidden and reconnects when it becomes visible again, so hidden anonymous profile tabs never hold a server connection. A fresh connection always receives an immediate status frame, which re-syncs the badge on return.
-- Reconnect backoff (max 15 attempts) resets on tab focus and on the browser `online` event, so a dropped connection is never permanently dead.
-- The badge is wrapped in `role="status"` with `aria-live="polite"`, and offline states expose the exact local last-seen datetime via a `title` tooltip.
+Presence that remains is strictly first-party: a user's own status (drives their idle/online state) and `contacts_presence` (accepted friends only, for the chat dock).
 
 ## Read Receipts Consistency
 

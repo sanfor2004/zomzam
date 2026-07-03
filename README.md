@@ -43,7 +43,7 @@ The platform is divided into three major suites:
 ### 4. 🌐 Preferences & Social Integration (Platform Core)
 * **Home Feed** (`/home`): A post composer (with `@mention` autocomplete popover) and a real-time feed of posts from the user's network, with like/comment/delete actions. Individual posts expand to a permalink view at `/p/[postId]`, where the id is an opaque MD5 (`public_id`), never the sequential numeric id.
 * **System Preferences** (`/settings`): Refactored to use unified UI selects for timezone adjustment (with live clock previews), multi-language configuration, and primary/secondary currency selections.
-* **Vanity Public Profiles** (`/u/[username]`): Public profile directories featuring real-time presence indicators (Online, Away, Offline) synchronized dynamically via Server-Sent Events (SSE) based on user mouse movements and idle timers.
+* **Vanity Public Profiles** (`/u/[username]`): Public profile pages showing avatar, name/role, bio, interest tags, mutual friends, the user's public posts, and connect/block social actions. Presence is intentionally **not** shown here — a viewer's online status is never exposed to anonymous or third-party visitors. Unknown usernames render a branded not-found card.
 * **Social Connections** (`/community`): A member directory showing user availability, network contacts, follows, friend requests, and discovery suggestions.
 * **Notifications**: A live-synced notification stream (likes, comments, friend requests) with read/unread state, surfaced in the dashboard topbar.
 * **Account Recovery** (`/forgot-password`): Token-based password reset flow, independent of the authenticated session.
@@ -113,7 +113,7 @@ zomzam.com/
 │   │   ├── forgot-password/    # /forgot-password — public password recovery page
 │   │   ├── p/[postId]/         # /p/[id] — single post permalink view
 │   │   ├── sign/                # /sign — unified Sign In / Sign Up split-screen layout
-│   │   ├── u/[username]/       # /u/[username] — public vanity profile + live presence badge
+│   │   ├── u/[username]/       # /u/[username] — public vanity profile (no presence shown)
 │   │   ├── ui-kit/              # /ui-kit — dev-only showcase of every src/components/ui primitive
 │   │   ├── globals.css         # Tailwind v4 @theme tokens, glassmorphism, shadow/motion utilities
 │   │   ├── layout.tsx           # Base HTML shell, provider wrappers, language/dir controller
@@ -204,7 +204,7 @@ zomzam.com/
 | `/community` | Protected | Member directory: `/discover`, `/friends` (connections), `/requests` (invitations). |
 | `/me` | Protected | Profile settings — avatar upload, bio, tags. |
 | `/settings` | Protected | Timezone, language, primary/secondary currency preferences. |
-| `/u/[username]` | Public | Vanity public profile with real-time presence badge. |
+| `/u/[username]` | Public | Vanity public profile (posts, bio, mutual friends, connect/block — no presence shown). |
 | `/ui-kit` | Dev-only, unlinked | Live showcase of every `src/components/ui` primitive. |
 
 > Route protection is enforced centrally in `src/proxy.ts` — see the **Authentication & Session Proxy** section below.
@@ -227,8 +227,8 @@ zomzam.com/
 | `/api/notifications` | `mark_read` | Notification list + read-state. |
 | `/api/messages` | `contacts`, `thread` (`&peek=1` loads without marking read), `send`, `mark_read`, `typing` (transient peer-is-typing ping, no DB write) | 1:1 direct messages between friends, delivered live via `/api/stream`. `contacts` = all friends ⨝ conversations + presence, ordered last-chatted-first (un-chatted last) — the single model behind the topbar messages dropdown, `/messages`, and the presence rail. |
 | `/api/report-error` | — | Client error intake: receives uncaught browser errors / unhandled rejections (from `ErrorReporter`) and emails them via the bug reporter. Public, per-IP throttled, size-capped. |
-| `/api/heartbeat` | — | AFK-mode live channel: polled every 5s while the user is away; returns the same grouped sync payload as `/api/stream` (a beat itself marks the user idle — server-derived, no client flag). `init: true` additionally returns the notifications bootstrap. Rate-limited per user/IP. |
-| `/api/stream` | — | ACTIVE-mode live channel: one SSE connection emitting structured `sync` events with grouped sections — `messages` (`new_message` delivery, transient `typing`, `message_read` "Seen" receipts), `notifications` (`answer_accepted` / `new_help_request` / `new_follower` / `reposted`, …), `posts` (the `new_post` feed-pill fan-out), `social` (connect updates), `viewed_user_status`, and a throttled `contacts_presence` snapshot. An open stream marks the user active. |
+| `/api/heartbeat` | — | AFK-mode live channel (auth-gated): polled every 5s while the user is away; returns the same grouped sync payload as `/api/stream` (a beat itself marks the user idle — server-derived, no client flag). `init: true` additionally returns the notifications bootstrap. Rate-limited per user. |
+| `/api/stream` | — | ACTIVE-mode live channel (auth-gated): one SSE connection emitting structured `sync` events with grouped sections — `messages` (`new_message` delivery, transient `typing`, `message_read` "Seen" receipts), `notifications` (`answer_accepted` / `new_help_request` / `new_follower` / `reposted`, …), `posts` (the `new_post` feed-pill fan-out), `social` (connect updates), and a throttled `contacts_presence` snapshot. An open stream marks the user active. |
 
 ---
 
@@ -355,7 +355,7 @@ sequenceDiagram
 
 ## 📡 Real-Time Presence & Sync Engine
 
-Zomzam runs exactly **two live channels**, used mutually exclusively — a single SSE stream while the user is engaged, and a 5-second heartbeat poll while they're AFK. Both emit the **identical grouped JSON payload** (built by the shared [live-sync.ts](file:///c:/www/zomzam.com/src/lib/live-sync.ts)), so switching modes changes transport only, never behavior.
+Zomzam runs exactly **two live channels**, used mutually exclusively — a single SSE stream while the user is engaged, and a 5-second heartbeat poll while they're AFK. Both emit the **identical grouped JSON payload** (built by the shared [live-sync.ts](file:///c:/www/zomzam.com/src/lib/live-sync.ts)), so switching modes changes transport only, never behavior. **Both channels require an authenticated session** — each connection only ever serves the signed-in user's own live data.
 
 ```mermaid
 graph TD
@@ -375,18 +375,17 @@ graph TD
 | `notifications` | live notification rows (`answer_accepted`, `new_help_request`, `new_follower`, `reposted`, …) |
 | `posts` | the `new_post` feed-pill fan-out from people the viewer is connected to |
 | `social` | connect-request / accept updates |
-| `viewed_user_status` | live status of a watched public profile (only when changed) |
 | `contacts_presence` | throttled (~20s) friends-presence snapshot for the chat dock |
 
 ### Connection Walkthrough:
 1. **Shared builder** ([live-sync.ts](file:///c:/www/zomzam.com/src/lib/live-sync.ts)):
-   `drainLiveSync()` atomically drains the user's `stream_queue` JSON column (transaction + `FOR UPDATE`, so the two channels can never double-deliver during a mode switch) and groups the orders into the typed sections above. `parseViewingUserId()` is the strict allowlist parse both routes run on the client-supplied profile id — nothing else from the client is trusted.
+   `drainLiveSync()` atomically drains the authenticated user's `stream_queue` JSON column (transaction + `FOR UPDATE`, so the two channels can never double-deliver during a mode switch) and groups the orders into the typed sections above. It takes no client-supplied identifier — the payload is derived entirely from the verified session.
 2. **ACTIVE mode — SSE** ([route.ts](file:///c:/www/zomzam.com/src/app/api/stream/route.ts)):
-   One `EventSource` per engaged user. The server loop ticks every 2s, marks the user active (`is_idle = 0` — **derived from the open stream, never a client flag**), and emits `event: sync` only when the payload is non-empty. Dropped connections reconnect with exponential backoff.
+   One `EventSource` per engaged user, **auth-gated (401 without a session)**. The server loop ticks every 2s, marks the user active (`is_idle = 0` — **derived from the open stream, never a client flag**), and emits `event: sync` only when the payload is non-empty. Dropped connections reconnect with exponential backoff.
 3. **AFK mode — heartbeat** ([route.ts](file:///c:/www/zomzam.com/src/app/api/heartbeat/route.ts)):
-   After 60s without input (or a hidden tab), [StreamWaiterContext.tsx](file:///c:/www/zomzam.com/src/context/StreamWaiterContext.tsx) closes the SSE stream and POSTs `/api/heartbeat` every 5s instead. A heartbeat request marks the user idle (`is_idle = 1`) — the channel *is* the signal; the old client-asserted `idle` flag is gone. The endpoint is per-user/IP rate-limited. Any activity flips straight back: one `init: true` catch-up beat (returns the notifications bootstrap plus anything queued in the gap), then the SSE stream reopens.
-4. **Public Profile Syncing** ([PublicUserStatus.tsx](file:///c:/www/zomzam.com/src/app/u/[username]/PublicUserStatus.tsx)):
-   When a viewer visits the public profile page `/u/[username]`, the lightweight `usePublicPresence` hook (deliberately *not* the full `StreamWaiterProvider` — no idle detection, no heartbeats, so the viewer's own presence is never mutated) opens `/api/stream?viewing_user_id=[profileUserId]` and consumes only the `viewed_user_status` frames, updating the badge (Online, Away, Seen Xm ago) in real-time — anonymous viewers get this section only. The offline label ticks client-side every 30s, the stream closes while the tab is hidden and re-syncs on return, and reconnect backoff resets on focus/network-restore.
+   After 60s without input (or a hidden tab), [StreamWaiterContext.tsx](file:///c:/www/zomzam.com/src/context/StreamWaiterContext.tsx) closes the SSE stream and POSTs `/api/heartbeat` every 5s instead (**also auth-gated**). A heartbeat request marks the user idle (`is_idle = 1`) — the channel *is* the signal; the old client-asserted `idle` flag is gone. The endpoint is per-user rate-limited. Any activity flips straight back: one `init: true` catch-up beat (returns the notifications bootstrap plus anything queued in the gap), then the SSE stream reopens.
+
+> **Presence is private.** Both channels serve only the signed-in user's own data — there is no way to watch another account's online status. Public profiles (`/u/[username]`) deliberately show **no** presence indicator.
 
 ---
 

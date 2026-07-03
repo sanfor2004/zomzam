@@ -80,7 +80,7 @@ Account linking uses canonical email identity after Google proves email ownershi
 - Expected client-facing errors should throw/return `HttpError` or shaped route responses.
 - Unexpected errors are reported server-side and returned as generic 500 responses.
 - Public IDs are used where sequential IDs should not leak, for example post permalinks.
-- Client-provided realtime parameters use strict parsing, especially `viewing_user_id` through `parseViewingUserId()`.
+- The realtime channels (`/api/stream`, `/api/heartbeat`) are hard-gated by `withAuth` and take no client-supplied identifier — a connection only ever serves the signed-in user's own data, and no account's presence is observable by anyone else.
 
 ## Upload Safety
 

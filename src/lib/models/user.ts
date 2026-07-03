@@ -337,39 +337,6 @@ export async function pushStreamOrder(
   }
 }
 
-export async function getOnlineStatus(userId: number) {
-  try {
-    const row = await queryOne<{ last_seen: string; is_idle: number }>(
-      `SELECT last_seen, is_idle FROM user_online_status WHERE user_id = ?`,
-      [userId]
-    );
-
-    if (!row) {
-      return { is_online: false, last_seen: null, is_idle: false, label: 'OFFLINE' };
-    }
-
-    const { diff, is_online, is_idle } = computeOnlineFields(row.last_seen, row.is_idle);
-
-    let label = 'ONLINE';
-    if (!is_online) {
-      if (diff < 60) label = `${diff}S AGO`;
-      else if (diff < 3600) label = `${Math.floor(diff / 60)}M AGO`;
-      else if (diff < 86400) label = `${Math.floor(diff / 3600)}H AGO`;
-      else label = `${Math.floor(diff / 86400)}D AGO`;
-    }
-
-    return {
-      is_online,
-      is_idle,
-      last_seen: row.last_seen,
-      label,
-      diff,
-    };
-  } catch (error) {
-    return { is_online: false, last_seen: null, label: 'UNKNOWN' };
-  }
-}
-
 /** Options controlling how a notification is persisted. */
 export interface NotificationOptions {
   /**
