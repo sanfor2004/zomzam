@@ -11,7 +11,7 @@ This file maps the visible site and the server endpoints that power it.
 | `/forgot-password` | Password recovery request | `src/app/forgot-password/page.tsx`, `src/app/api/auth/forgot-password/route.ts` |
 | `/pricing` | Upgrade surface | `src/app/pricing/page.tsx` |
 | `/ui-kit` | Dev-only component showcase | `src/app/ui-kit/page.tsx`, `src/components/ui/*` |
-| `/u/[username]` | Public vanity profile with live status | `src/app/u/[username]/page.tsx`, `PublicUserStatus.tsx`, `SocialButtons.tsx` |
+| `/u/[username]` | Public vanity profile with live status | `src/app/u/[username]/page.tsx`, `PublicUserStatus.tsx`, `SocialButtons.tsx`, `not-found.tsx` (branded 404 for unknown usernames) |
 | `/p/[postId]` | Public post permalink | `src/app/p/[postId]/page.tsx`, `PostDetail.tsx` |
 
 ## Authenticated Page Routes

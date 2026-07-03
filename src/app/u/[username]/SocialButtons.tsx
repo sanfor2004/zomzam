@@ -3,7 +3,7 @@ import { Button, useToast } from '@/components/ui';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, UserMinus, UserCheck, UserX, Clock, Loader2 } from 'lucide-react';
+import { UserPlus, UserMinus, UserCheck, UserX, Clock, Loader2, ShieldOff, Shield } from 'lucide-react';
 import { socialSuccessToast, emitSocialUpdate } from '@/lib/social-actions';
 
 // ──────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ export default function SocialButtons({
         if (action === 'friend_request') {
           // If they had already sent us a request, the server auto-accepts.
           setStatus(data.message === 'You are now connected' ? 'friends' : 'friend_pending_out');
-        } else if (action === 'friend_cancel' || action === 'friend_decline' || action === 'unfriend') {
+        } else if (action === 'friend_cancel' || action === 'friend_decline' || action === 'unfriend' || action === 'unblock') {
           setStatus('none');
         } else if (action === 'friend_accept') {
           setStatus('friends');
@@ -155,6 +155,29 @@ export default function SocialButtons({
             </Button>
           </div>
         )}
+
+        {/* Blocked by me — hover reveals Unblock (restores a clean 'none' slate) */}
+        {status === 'blocked_by_me' && (
+          <Button variant="unstyled"
+            onClick={() => handleAction('unblock')}
+            disabled={loading}
+            title="You blocked this user — click to unblock"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-red-500/10 hover:bg-slate-800 border border-red-500/20 hover:border-slate-700 text-red-500 hover:text-slate-200 font-bold rounded-xl px-6 py-3.5 transition-all text-xs uppercase tracking-wider cursor-pointer active:scale-[0.98] group"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <Shield className="w-4 h-4 group-hover:hidden" />
+                <ShieldOff className="w-4 h-4 hidden group-hover:block" />
+              </>
+            )}
+            <span className="group-hover:hidden">Blocked</span>
+            <span className="hidden group-hover:inline">Unblock</span>
+          </Button>
+        )}
+
+        {/* Blocked by them — nothing actionable; the page copy explains why */}
 
         {/* Connected — hover reveals Disconnect */}
         {status === 'friends' && (

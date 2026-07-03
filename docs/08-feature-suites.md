@@ -180,6 +180,14 @@ Capabilities:
 - Timezone, language, notifications, and currency settings.
 - Public profile with social actions and live status.
 
+Public profile (`/u/[username]`) details:
+
+- Server queries are parallelized (presence + session, then posts + mutual friends) and the profile row is request-deduped between `generateMetadata` and the page body via React `cache()`.
+- Emits Open Graph `profile`, Twitter card, and canonical metadata (absolute URLs via `metadataBase` in the root layout, driven by `APP_URL`).
+- Connect buttons cover the full relationship lifecycle including blocked states: `blocked_by_me` renders a Blocked button whose hover reveals Unblock (`unblock` API action); `blocked_by_them` hides the controls and the CTA copy switches to "Connections are unavailable".
+- Post previews are clamped to 4 lines; plain reposts render as the original post with a "reposted" attribution.
+- Unknown usernames render a branded `not-found.tsx` card instead of the framework default 404.
+
 ## Landing, Pricing, And Sign-In
 
 Routes:

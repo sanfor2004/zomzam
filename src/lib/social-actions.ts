@@ -7,7 +7,7 @@
     public-profile SocialButtons so the wording never drifts.
 
     Only "intent" actions toast on success (friend_request — the
-    Connect action, unfriend — Disconnect, block) — the rest
+    Connect action, unfriend — Disconnect, block, unblock) — the rest
     (accept/decline/cancel) are notification-scope events and stay
     silent here. Failures always toast (handled at the call site with
     the API's message). */
@@ -16,6 +16,7 @@ export const SOCIAL_SUCCESS_TOASTS: Record<string, string> = {
   friend_request: 'Connection request sent — you now follow them',
   unfriend: 'Disconnected',
   block: 'User blocked',
+  unblock: 'User unblocked',
 };
 
 /** Returns the success copy for an action, or null if it should stay silent. */

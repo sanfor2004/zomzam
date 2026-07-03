@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { cache } from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -10,16 +10,20 @@ import SocialButtons from './SocialButtons';
 import PublicUserStatus from './PublicUserStatus';
 import ProfileAnimationKit from './ProfileAnimationKit';
 import PublicNav from '@/components/PublicNav';
-import { Sparkles, MapPin, Calendar, Clock, Heart, Award, Shield, Check, Laptop, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
+import { Calendar, Clock, Heart, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ username: string }>;
 }
 
+// Request-scoped dedupe: generateMetadata and the page body both need the
+// profile row — cache() collapses them into ONE query per request.
+const getProfileUser = cache(getUserByUsername);
+
 // Generate Dynamic SEO Metadata for search engines
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { username } = await params;
-  const user = await getUserByUsername(username);
+  const user = await getProfileUser(username);
 
   if (!user) {
     return {
@@ -29,9 +33,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.username;
+  const title = `${fullName} (@${user.username}) | Zomzam Profile`;
+  const description = user.bio || `${fullName}'s public developer workspace on Zomzam.`;
+  const url = `/u/${user.username}`;
+
   return {
-    title: `${fullName} (@${user.username}) | Zomzam Profile`,
-    description: user.bio || `${fullName}'s public developer workspace on Zomzam.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: 'profile',
+      title,
+      description,
+      url,
+      images: [{ url: user.avatar || '/Assets/Img/default-avatar.png' }],
+    },
+    twitter: {
+      card: 'summary',
+      title,
+      description,
+    },
   };
 }
 
@@ -44,7 +65,7 @@ interface ConnectionRow {
 
 export default async function PublicProfilePage({ params }: PageProps) {
   const { username } = await params;
-  const profileUser = await getUserByUsername(username);
+  const profileUser = await getProfileUser(username);
 
   if (!profileUser) {
     return notFound();
@@ -52,11 +73,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
   const profileUserId = profileUser.id as number;
 
-  // Fetch online status metrics
-  const onlineStatus = await getOnlineStatus(profileUserId);
-
-  // Authenticate the current viewer (anonymous viewers are allowed → null)
-  const viewer = await getSessionUser();
+  // Presence and viewer session are independent — resolve them in parallel
+  // (the DB is remote, so every avoided sequential roundtrip is real latency).
+  const [onlineStatus, viewer] = await Promise.all([
+    getOnlineStatus(profileUserId),
+    getSessionUser(), // anonymous viewers are allowed → null
+  ]);
   const viewerId = viewer ? viewer.id : null;
 
   // Resolve the connect status if the viewer is authenticated (pending-out
@@ -107,57 +129,65 @@ export default async function PublicProfilePage({ params }: PageProps) {
     comment_count: number;
     reposted: boolean;     // show the "reposted" attribution line
   };
-  let posts: ProfilePost[] = [];
-  try {
-    const rows = await query<any>(
-      `SELECT p.id, p.public_id, p.content_html, p.image_path, p.visibility, p.created_at, p.repost_of,
-              (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
-              (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
-              orig.id AS orig_id, orig.public_id AS orig_public_id, orig.content_html AS orig_content_html, orig.visibility AS orig_visibility,
-              (SELECT COUNT(*) FROM post_likes    WHERE post_id = orig.id) AS orig_like_count,
-              (SELECT COUNT(*) FROM post_comments WHERE post_id = orig.id) AS orig_comment_count
-       FROM posts p
-       LEFT JOIN posts orig ON orig.id = p.repost_of
-       WHERE p.user_id = ? AND (p.visibility = 'public' OR ? = 1)
-       ORDER BY p.created_at DESC
-       LIMIT 20`,
-      [profileUserId, canSeePrivate ? 1 : 0]
-    );
-    posts = rows
-      .map((p): ProfilePost | null => {
-        const isPlainRepost = p.repost_of != null && !(p.content_html || '').trim() && !p.image_path;
-        if (isPlainRepost) {
-          // Original gone ⇒ drop the dangling pointer (no tombstone on a profile).
-          if (!p.orig_id) return null;
+  type PostRow = {
+    id: number; public_id: string; content_html: string | null; image_path: string | null;
+    visibility: string; created_at: string; repost_of: number | null;
+    like_count: number | string | null; comment_count: number | string | null;
+    orig_id: number | null; orig_public_id: string | null; orig_content_html: string | null;
+    orig_visibility: string | null; orig_like_count: number | string | null; orig_comment_count: number | string | null;
+  };
+  const loadPosts = async (): Promise<ProfilePost[]> => {
+    try {
+      const rows = await query<PostRow>(
+        `SELECT p.id, p.public_id, p.content_html, p.image_path, p.visibility, p.created_at, p.repost_of,
+                (SELECT COUNT(*) FROM post_likes    WHERE post_id = p.id) AS like_count,
+                (SELECT COUNT(*) FROM post_comments WHERE post_id = p.id) AS comment_count,
+                orig.id AS orig_id, orig.public_id AS orig_public_id, orig.content_html AS orig_content_html, orig.visibility AS orig_visibility,
+                (SELECT COUNT(*) FROM post_likes    WHERE post_id = orig.id) AS orig_like_count,
+                (SELECT COUNT(*) FROM post_comments WHERE post_id = orig.id) AS orig_comment_count
+         FROM posts p
+         LEFT JOIN posts orig ON orig.id = p.repost_of
+         WHERE p.user_id = ? AND (p.visibility = 'public' OR ? = 1)
+         ORDER BY p.created_at DESC
+         LIMIT 20`,
+        [profileUserId, canSeePrivate ? 1 : 0]
+      );
+      return rows
+        .map((p): ProfilePost | null => {
+          const isPlainRepost = p.repost_of != null && !(p.content_html || '').trim() && !p.image_path;
+          if (isPlainRepost) {
+            // Original gone ⇒ drop the dangling pointer (no tombstone on a profile).
+            if (!p.orig_id) return null;
+            return {
+              id: Number(p.orig_id),
+              public_id: p.orig_public_id || '',
+              content_html: p.orig_content_html || '',
+              visibility: p.orig_visibility || 'public', // reposts are public-only
+              created_at: p.created_at,
+              like_count: Number(p.orig_like_count || 0),
+              comment_count: Number(p.orig_comment_count || 0),
+              reposted: true,
+            };
+          }
           return {
-            id: Number(p.orig_id),
-            public_id: p.orig_public_id,
-            content_html: p.orig_content_html,
-            visibility: p.orig_visibility || 'public', // reposts are public-only
+            id: Number(p.id),
+            public_id: p.public_id,
+            content_html: p.content_html || '',
+            visibility: p.visibility,
             created_at: p.created_at,
-            like_count: parseInt(p.orig_like_count || 0),
-            comment_count: parseInt(p.orig_comment_count || 0),
-            reposted: true,
+            like_count: Number(p.like_count || 0),
+            comment_count: Number(p.comment_count || 0),
+            reposted: false,
           };
-        }
-        return {
-          id: Number(p.id),
-          public_id: p.public_id,
-          content_html: p.content_html,
-          visibility: p.visibility,
-          created_at: p.created_at,
-          like_count: parseInt(p.like_count || 0),
-          comment_count: parseInt(p.comment_count || 0),
-          reposted: false,
-        };
-      })
-      .filter((p): p is ProfilePost => p !== null);
-  } catch { /* posts table may not exist yet */ }
+        })
+        .filter((p): p is ProfilePost => p !== null);
+    } catch { /* posts table may not exist yet */ return []; }
+  };
 
   // ── Mutual friends (viewer ∩ profile) ───────────────────────
-  let mutualFriends: Array<{ id: number; username: string; first_name: string | null; last_name: string | null; avatar: string | null }> = [];
-  let mutualCount = 0;
-  if (viewerId && viewerId !== profileUserId) {
+  type MutualFriend = { id: number; username: string; first_name: string | null; last_name: string | null; avatar: string | null };
+  const loadMutuals = async (): Promise<{ count: number; friends: MutualFriend[] }> => {
+    if (!viewerId || viewerId === profileUserId) return { count: 0, friends: [] };
     // Inlined (viewerId/profileUserId are integers from the session/DB — no
     // injection surface) to keep the self-referencing subquery readable.
     const friendsOf = (id: number) =>
@@ -166,15 +196,22 @@ export default async function PublicProfilePage({ params }: PageProps) {
     const mutualWhere = `u.id IN (${friendsOf(viewerId)}) AND u.id IN (${friendsOf(profileUserId)})`;
     try {
       const countRow = await query<{ c: number }>(`SELECT COUNT(*) AS c FROM users u WHERE ${mutualWhere}`);
-      mutualCount = countRow[0] ? Number(countRow[0].c) : 0;
-      if (mutualCount > 0) {
-        mutualFriends = await query<any>(
-          `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar
-           FROM users u WHERE ${mutualWhere} ORDER BY u.username ASC LIMIT 8`
-        );
-      }
-    } catch { /* non-blocking */ }
-  }
+      const count = countRow[0] ? Number(countRow[0].c) : 0;
+      if (count === 0) return { count: 0, friends: [] };
+      const friends = await query<MutualFriend>(
+        `SELECT u.id, u.username, u.first_name, u.last_name, u.avatar
+         FROM users u WHERE ${mutualWhere} ORDER BY u.username ASC LIMIT 8`
+      );
+      return { count, friends };
+    } catch { /* non-blocking */ return { count: 0, friends: [] }; }
+  };
+
+  // Posts and mutuals only depend on the connection status above, not on each
+  // other — run both remote-DB reads concurrently.
+  const [posts, { count: mutualCount, friends: mutualFriends }] = await Promise.all([
+    loadPosts(),
+    loadMutuals(),
+  ]);
 
   // Parse tags JSON safely
   let tags: string[] = [];
@@ -216,9 +253,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
               <div className="relative w-28 h-28 rounded-3xl overflow-hidden border-2 border-slate-850 shadow-md bg-slate-900 flex-shrink-0">
                 <Image
                   src={profileUser.avatar || '/Assets/Img/default-avatar.png'}
-                  alt="Profile Avatar"
+                  alt={`${fullName || profileUser.username}'s avatar`}
                   fill
                   sizes="112px"
+                  priority
                   className="object-cover"
                 />
               </div>
@@ -349,7 +387,9 @@ export default async function PublicProfilePage({ params }: PageProps) {
             ) : (
               <>
                 <div className="text-xs text-slate-400 font-semibold text-center sm:text-left">
-                  {viewerId ? (
+                  {initialStatus.startsWith('blocked') ? (
+                    <span>Connections are unavailable for this profile.</span>
+                  ) : viewerId ? (
                     <span>Connect with @{profileUser.username} to collaborate.</span>
                   ) : (
                     <span>Sign in to connect with @{profileUser.username}.</span>
@@ -408,7 +448,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
                       </span>
                     </div>
                     <div
-                      className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere]"
+                      className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-4"
                       dangerouslySetInnerHTML={{ __html: p.content_html }}
                     />
                     <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
@@ -432,8 +472,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
       <footer className="border-t border-slate-800 bg-surface-dark/50 backdrop-blur-sm py-12 mt-auto">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
-            <img src="/Assets/Img/Icon-orange.svg" alt="Zomzam Icon" className="w-6 h-6 hidden" />
-            <img src="/Assets/Img/Icon-white.svg" alt="Zomzam Icon" className="w-6 h-6 block" />
+            <Image src="/Assets/Img/Icon-white.svg" alt="Zomzam Icon" width={24} height={24} className="w-6 h-6" />
             <span className="text-white font-semibold text-sm">zomzam.com</span>
           </div>
           <p className="text-slate-400 text-sm">

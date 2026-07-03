@@ -21,6 +21,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  // Absolute base for OG/Twitter/canonical URLs (public profiles emit them).
+  // APP_URL is the deployed origin; Vercel's URL covers previews; localhost is dev.
+  metadataBase: new URL(
+    process.env.APP_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')
+  ),
   title: 'zomzam.com',
   description: 'Professional life and money management platform.',
   icons: {
