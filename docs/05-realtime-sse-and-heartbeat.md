@@ -121,6 +121,13 @@ Queue safety:
 `src/app/u/[username]/PublicUserStatus.tsx` uses a lightweight `usePublicPresence` hook to watch a user's presence anonymously.
 Unlike the global `StreamWaiterProvider`, this hook only opens the SSE channel for `viewed_user_status` frames and deliberately omits idle detection, notification polls, and heartbeat loops. This ensures a viewer's own presence isn't accidentally mutated while visiting a profile.
 
+Behavior details:
+
+- The offline "Seen Xm ago" label ticks client-side every 30 seconds. The hook anchors `last_seen` to the client clock using the server-sent `diff`, because the stream dedupes identical `viewed_user_status` frames and would otherwise let the label go stale.
+- The SSE connection closes while the tab is hidden and reconnects when it becomes visible again, so hidden anonymous profile tabs never hold a server connection. A fresh connection always receives an immediate status frame, which re-syncs the badge on return.
+- Reconnect backoff (max 15 attempts) resets on tab focus and on the browser `online` event, so a dropped connection is never permanently dead.
+- The badge is wrapped in `role="status"` with `aria-live="polite"`, and offline states expose the exact local last-seen datetime via a `title` tooltip.
+
 ## Read Receipts Consistency
 
 When a thread is opened via `GET /api/messages?action=thread` (and it's not a background peek), messages are marked as read. The server actively pushes a `message_read` order to the sender, ensuring "Seen" labels appear instantly without a client-side follow-up request.
