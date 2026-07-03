@@ -477,6 +477,8 @@ Internationalization (i18n) is managed natively without heavy packages:
 
 To maintain Zenith-Tier code standards, please follow these guidelines:
 
+0. **Plan & Analyse Before Build (Mandatory Gate)**:
+   Nothing gets built before it is analysed and planned. Before starting any new feature, route, schema change, UI surface, or realtime change, run the protocol in [`docs/feature_plan_analyse.md`](docs/feature_plan_analyse.md): complete its Phase A reconnaissance, fill its Phase B plan template, and pass its Exit Gate — then write code.
 1. **Keep Code Structures Flat**:
    Use **Early Return Guard Clauses** to keep nesting to a minimum.
    ```typescript

@@ -20,6 +20,18 @@ Our objective: Technological Sovereignty. Cinematic Visuals. Infinite Scalabilit
 
 ---
 
+## SECTION 0: PLAN & ANALYSE BEFORE BUILD (MANDATORY PRE-BUILD GATE)
+
+**Nothing gets built before it is analysed and planned.** Before starting ANY new feature, page route, API route/action, DB schema change, UI surface, realtime/SSE change, or cross-suite bridge, run the protocol in `docs/feature_plan_analyse.md`:
+
+1. **Analyse first**: complete its Phase A reconnaissance table — read the relevant `docs/` section files, the closest existing feature in `src/`, the Zomzam Kit, `BrandGuideLine.md`, and the DB schema so nothing is duplicated or contradicted.
+2. **Plan second**: fill its Phase B plan template (goal, scope, routes/API, data, UI, security, realtime, performance, docs-to-update, tests, risks) — no section left "TBD".
+3. **Pass its Exit Gate**, then build. Only typo fixes, copy tweaks, and single-line style corrections with no behavior change are exempt.
+
+If the analysis shows the feature already exists or is achievable with existing code, report that instead of building.
+
+---
+
 ## SECTION 1: THE ZENITH EXECUTIVE WORKFLOW (10 PHASES)
 
 ### Phase 1: Global Reconnaissance (The Deep Scan)
@@ -170,6 +182,7 @@ This table reflects what's installed in `package.json` right now — verify befo
 
 ## SECTION 6: ZENITH VALIDATION CHECKLIST
 Before delivery, confirm:
+- [ ] Planning: Was `docs/feature_plan_analyse.md` run BEFORE the build started (Section 0)?
 - [ ] Aesthetics: Does it look like an Apple/Stripe/Linear product?
 - [ ] Cognition: Are signifiers clear? Is there 100% feedback on every interaction?
 - [ ] Performance: Is it buttery smooth at 60fps? No layout shifts?

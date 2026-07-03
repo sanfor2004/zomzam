@@ -2,6 +2,10 @@
 
 This folder is the project documentation source of truth. The old mixed archive/spec/strategy tree was replaced with section-level docs so each system can be read and updated independently.
 
+## Process Files
+
+- [feature_plan_analyse.md](feature_plan_analyse.md) - mandatory pre-build gate: analyse the existing system and fill the plan template before building anything.
+
 ## Root Section Files
 
 - [01-site-overview.md](01-site-overview.md) - product thesis, audience, suites, and core value loop.
@@ -25,5 +29,7 @@ This folder is the project documentation source of truth. The old mixed archive/
 - [Research/outreach-providers.md](Research/outreach-providers.md) - email/SMS outreach provider notes and decision framework.
 
 ## Update Rule
+
+Before building any feature, run the [feature_plan_analyse.md](feature_plan_analyse.md) protocol first — analyse, plan, then code.
 
 When code changes alter routes, API actions, core data flow, the UI Kit, or marketing/business direction, update the matching file in this folder during the same turn.

@@ -42,6 +42,10 @@ Build production:
 npm run build
 ```
 
+## Before Building Anything
+
+Run the mandatory pre-build gate in [feature_plan_analyse.md](feature_plan_analyse.md): analyse the existing system (docs, routes, Kit, schema, realtime, brand tokens), fill the plan template, and pass its exit gate before writing the first line of code. No feature, route, schema change, or UI surface starts without it.
+
 ## Before UI Work
 
 1. Read `BrandGuideLine.md`.
@@ -108,6 +112,7 @@ Ask before adding a dependency not already in `package.json`. The project intent
 
 ## Delivery Checklist
 
+- `feature_plan_analyse.md` was run before the build started.
 - Code matches local architecture.
 - UI uses existing tokens and primitives.
 - Auth/data boundaries are protected.
