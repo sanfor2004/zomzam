@@ -67,9 +67,7 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
   // referentially stable (empty deps) while always reading current state — this
   // is what lets the memoized context values keep stable identity.
   const viewingUserIdRef = useRef(viewingUserId);
-  const notificationsRef = useRef(notifications);
   useEffect(() => { viewingUserIdRef.current = viewingUserId; }, [viewingUserId]);
-  useEffect(() => { notificationsRef.current = notifications; }, [notifications]);
 
   // ── Unified payload applier ─────────────────────────────────
   // BOTH channels (SSE `sync` event and heartbeat response `data`) resolve to
@@ -94,18 +92,28 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
     // Notifications section — replace same-id rows in place (the server reuses a
     // notification's id when it coalesces actors into an existing roster), and
     // only bump the unread badge when the row wasn't already counted as unread.
-    if (Array.isArray(data.notifications)) {
-      for (const params of data.notifications) {
-        if (!params || params.id == null) continue;
-        window.dispatchEvent(new CustomEvent('new-notification', { detail: params }));
-        const prior = notificationsRef.current.find((x) => x.id === params.id);
-        const alreadyUnread = prior && !prior.is_read;
-        setNotifications((list) => [
-          { ...params, is_read: 0 },
-          ...list.filter((x) => x.id !== params.id),
-        ]);
-        if (!alreadyUnread) setNotificationsCount((c) => c + 1);
-      }
+    if (Array.isArray(data.notifications) && data.notifications.length > 0) {
+      setNotifications((list) => {
+        let newList = [...list];
+        let newUnreadCountBump = 0;
+        for (const params of data.notifications) {
+          if (!params || params.id == null) continue;
+          window.dispatchEvent(new CustomEvent('new-notification', { detail: params }));
+          const prior = newList.find((x) => x.id === params.id);
+          const alreadyUnread = prior && !prior.is_read;
+          if (!alreadyUnread) {
+            newUnreadCountBump++;
+          }
+          newList = [
+            { ...params, is_read: 0 },
+            ...newList.filter((x) => x.id !== params.id),
+          ];
+        }
+        if (newUnreadCountBump > 0) {
+          setNotificationsCount((c) => c + newUnreadCountBump);
+        }
+        return newList;
+      });
     }
 
     // New posts from people the viewer is connected to → soft feed refresh pill.
@@ -138,18 +146,44 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
     }
   }, []);
 
+  const activeAbortControllerRef = useRef<AbortController | null>(null);
+
+  // Unmount cleanup: abort any in-flight heartbeat fetch
+  useEffect(() => {
+    return () => {
+      if (activeAbortControllerRef.current) {
+        activeAbortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // One-shot heartbeat: used for the mount bootstrap, manual re-syncs, and the
   // AFK→active catch-up. `init` additionally returns the full notification list.
   const syncNow = useCallback(async (init: boolean) => {
+    if (activeAbortControllerRef.current) {
+      activeAbortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    activeAbortControllerRef.current = controller;
+
     try {
       const res = await fetch('/api/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ viewing_user_id: viewingUserIdRef.current, init }),
+        signal: controller.signal,
       });
       const json = await res.json();
-      if (json.success && json.data) applySync(json.data);
-    } catch (err) {
+      
+      if (activeAbortControllerRef.current === controller) {
+        activeAbortControllerRef.current = null;
+        if (json.success && json.data) applySync(json.data);
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+      if (activeAbortControllerRef.current === controller) {
+        activeAbortControllerRef.current = null;
+      }
       console.error('Live sync failed:', err);
     }
   }, [applySync]);

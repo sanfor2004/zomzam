@@ -41,8 +41,12 @@ export const POST = withError(async (request) => {
   }
 
   if (user) {
-    // Heartbeat channel ⇒ server marks this user IDLE. Never client-asserted.
-    await updateOnlineStatus(user.id, 1);
+    // Heartbeat channel ⇒ server marks this user IDLE unless this is an initialization/active catch-up request.
+    if (wantsInit) {
+      await updateOnlineStatus(user.id, 0);
+    } else {
+      await updateOnlineStatus(user.id, 1);
+    }
   }
 
   const payload = await drainLiveSync(user?.id ?? null, viewingUserId, {

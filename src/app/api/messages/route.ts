@@ -122,10 +122,16 @@ export const GET = withAuth(async (request, user) => {
       // topbar red dot persists until the user actually engages with the thread.
       const peek = searchParams.get('peek') === '1';
       if (!peek) {
-        await execute(
+        const res = await execute(
           `UPDATE messages SET read_at = NOW() WHERE conversation_id = ? AND sender_id != ? AND read_at IS NULL`,
           [conversation.id, user.id]
         );
+        if (res.affectedRows > 0) {
+          await pushStreamOrder(otherId, 'message_read', {
+            conversation_id: conversation.id,
+            reader_id: user.id,
+          }, false);
+        }
       }
 
       return NextResponse.json({

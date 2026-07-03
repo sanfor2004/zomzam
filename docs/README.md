@@ -1,29 +1,29 @@
-# Zomzam — Documentation Index 📚
+# Zomzam Documentation Index
 
-Strategy & planning docs for Zomzam, *the Life OS for freelancers who don't want to work alone.*
+This folder is the project documentation source of truth. The old mixed archive/spec/strategy tree was replaced with section-level docs so each system can be read and updated independently.
 
-## 🧭 `strategy/` — north-star & business
-- **[`strategy/master-plan.md`](./strategy/master-plan.md)** — the north-star: enhanced vision, business idea, marketing summary, and **the MVP features to build first.** Read this first.
-- **[`strategy/zomzam-marketing-plan.md`](./strategy/zomzam-marketing-plan.md)** — the single runnable marketing plan: strategy + channels + growth loops + 90-day calendar + outreach toolkit + metrics.
-- **[`strategy/business-model.md`](./strategy/business-model.md)** — monetization: free-first → effort-powered hybrid (credits + top-up + Pro + marketplace). Monetize the work, never the connection.
-- **[`strategy/credits-economy.md`](./strategy/credits-economy.md)** — the Zomzam Credits system: earn/spend loops, friend transfers, the top-up two-bucket model, anti-abuse, and the legal line (money in = ok, money out = never).
+## Root Section Files
 
-## 🛠️ `specs/archive/` — ✅ all shipped (completion records)
+- [01-site-overview.md](01-site-overview.md) - product thesis, audience, suites, and core value loop.
+- [02-architecture.md](02-architecture.md) - framework structure, runtime boundaries, providers, routes, and source map.
+- [03-routes-and-api.md](03-routes-and-api.md) - page routes and API route/action reference.
+- [04-auth-security.md](04-auth-security.md) - session model, default-deny page proxy, route gates, OAuth, uploads, and error safety.
+- [05-realtime-sse-and-heartbeat.md](05-realtime-sse-and-heartbeat.md) - live sync, SSE, heartbeat, presence, messages, and notifications.
+- [06-ui-components.md](06-ui-components.md) - Zomzam Kit primitive contract and component usage.
+- [07-data-and-database.md](07-data-and-database.md) - MySQL schema ownership, `db-sync`, and major tables.
+- [08-feature-suites.md](08-feature-suites.md) - Time, Money, CRM, Social, profile, settings, and public surfaces.
+- [09-cross-suite-bridges.md](09-cross-suite-bridges.md) - how CRM, Money, Time, posts, notifications, and realtime connect.
+- [10-performance-and-observability.md](10-performance-and-observability.md) - performance posture, WebGL policy, testing, logging, and error reports.
+- [11-development-workflow.md](11-development-workflow.md) - local setup, contribution rules, docs sync, and implementation standards.
 
-> Numbered by the **execution order** they were built (`1 → 5`): security cleared first, then the launch wedge, then feed polish, then the pre-launch analytics gap. The whole queue is now shipped — these are kept as completion records (each carries its own execution-status block), not active work. Co-Focus Rooms (spec #3 §7) is the lone fenced post-launch item.
+## Strategy And Research
 
-- **[`specs/archive/1-backend-audit.md`](./specs/archive/1-backend-audit.md)** — pre-launch backend audit (security + architecture findings). *The diagnosis behind #2.*
-- **[`specs/archive/2-backend-remediation-spec.md`](./specs/archive/2-backend-remediation-spec.md)** — ✅ **shipped 2026-06-22** — backend hardening: release-blocker fixes **+** the auth-gate / global-error-handler refactor + per-suite service layer (Phases 0–3).
-- **[`specs/archive/3-social-feed-favor-economy-spec.md`](./specs/archive/3-social-feed-favor-economy-spec.md)** — ✅ **launch scope shipped 2026-06-22** — feed favor economy: Ask/Help + Win posts. *The launch wedge.* Co-Focus Rooms (§7) deferred post-launch.
-- **[`specs/archive/4-social-feed-reopen-and-image-edit-spec.md`](./specs/archive/4-social-feed-reopen-and-image-edit-spec.md)** — ✅ **shipped 2026-06-23** — reopen a solved ask + post editing with image (replace/remove/add). *Feed polish.* See [`CHANGES-SUMMARY-2026-06-23.md`](./CHANGES-SUMMARY-2026-06-23.md).
-- **[`specs/archive/5-client-profitability-spec.md`](./specs/archive/5-client-profitability-spec.md)** — ✅ **shipped 2026-06-25** — per-client realized hourly rate on the dashboard. *Pre-launch analytics gap.*
+- [Marketing Strategy/README.md](Marketing%20Strategy/README.md) - go-to-market hub.
+- [Marketing Strategy/positioning-and-growth.md](Marketing%20Strategy/positioning-and-growth.md) - audience, positioning, loops, and 90-day plan.
+- [Marketing Strategy/monetization.md](Marketing%20Strategy/monetization.md) - free era, Pro gating, credits, and paid CRM logic.
+- [Research/README.md](Research/README.md) - research hub.
+- [Research/outreach-providers.md](Research/outreach-providers.md) - email/SMS outreach provider notes and decision framework.
 
-## 🔎 `research/`
-- **[`research/bulk-outreach-deep-search.md`](./research/bulk-outreach-deep-search.md)** — bulk SMS/email provider research (the basis for the outreach toolkit in the marketing plan).
+## Update Rule
 
-## 🗄️ `archive/` — completed-work records
-- **[`archive/performance-pass-summary.md`](./archive/performance-pass-summary.md)** — record of the 2026-06-20 site-wide performance pass (P1–P3).
-
----
-
-> **The plan in one line:** Build the wedge (Ask requests + Co-focus rooms + earned Credits) on the solid solo suites that already exist; stay free for the first 3–4 months and optimize for retained, connected users in one niche; monetize depth later — never connection.
+When code changes alter routes, API actions, core data flow, the UI Kit, or marketing/business direction, update the matching file in this folder during the same turn.

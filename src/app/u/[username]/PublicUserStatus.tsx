@@ -1,7 +1,6 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { StreamWaiterProvider, usePresence } from '@/context/StreamWaiterContext';
+import React, { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui';
 
 interface PublicUserStatusProps {
@@ -15,19 +14,67 @@ interface PublicUserStatusProps {
   };
 }
 
-function StatusIndicator({ userId, initialStatus }: PublicUserStatusProps) {
-  const { viewedUserStatus, setViewingUserId } = usePresence();
+interface ViewedUserStatus {
+  is_online: boolean;
+  is_idle: boolean;
+  last_seen: string | null;
+  label: string;
+  diff: number;
+}
+
+function usePublicPresence(viewedUserId: number, initialStatus: any) {
+  const [status, setStatus] = useState<ViewedUserStatus>(initialStatus);
 
   useEffect(() => {
-    // Set the user we are viewing in the context to fetch and stream updates
-    setViewingUserId(userId);
-    return () => {
-      setViewingUserId(null);
-    };
-  }, [userId, setViewingUserId]);
+    let eventSource: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout>;
+    let reconnectAttempts = 0;
+    let active = true;
 
-  // Use the real-time status from the context/SSE stream if available, otherwise fallback to the initial server-fetched status
-  const status = viewedUserStatus || initialStatus;
+    const connect = () => {
+      if (!active) return;
+      const url = `/api/stream?viewing_user_id=${viewedUserId}`;
+      eventSource = new EventSource(url);
+
+      eventSource.onopen = () => {
+        reconnectAttempts = 0;
+      };
+
+      eventSource.addEventListener('sync', (event) => {
+        try {
+          const data = JSON.parse((event as MessageEvent).data);
+          if (data && data.viewed_user_status) {
+            setStatus(data.viewed_user_status);
+          }
+        } catch {}
+      });
+
+      eventSource.onerror = () => {
+        if (!active) return;
+        eventSource?.close();
+
+        if (reconnectAttempts < 15) {
+          reconnectAttempts++;
+          const delay = Math.min(30000, 2000 * Math.pow(1.5, reconnectAttempts));
+          reconnectTimer = setTimeout(connect, delay);
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      active = false;
+      clearTimeout(reconnectTimer);
+      eventSource?.close();
+    };
+  }, [viewedUserId]);
+
+  return status;
+}
+
+export default function PublicUserStatus({ userId, initialStatus }: PublicUserStatusProps) {
+  const status = usePublicPresence(userId, initialStatus);
 
   const getVariant = () => {
     if (status.is_online) {
@@ -47,13 +94,5 @@ function StatusIndicator({ userId, initialStatus }: PublicUserStatusProps) {
         ? 'OFFLINE'
         : `Seen ${status.label}`}
     </Badge>
-  );
-}
-
-export default function PublicUserStatus(props: PublicUserStatusProps) {
-  return (
-    <StreamWaiterProvider>
-      <StatusIndicator {...props} />
-    </StreamWaiterProvider>
   );
 }
