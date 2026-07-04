@@ -336,7 +336,7 @@ export function RightSidebar() {
   return (
     <>
       {/* ── Desktop column ── */}
-      <aside className={`hidden lg:flex flex-col ${collapsed ? 'w-[76px]' : 'w-72'} h-[calc(100vh-20px)] flex-shrink-0 my-2.5 mr-2.5 ml-3 relative z-10 transition-all duration-300`}>
+      <aside className={`hidden lg:flex flex-col ${collapsed ? 'w-[76px]' : 'w-72'} h-[calc(100vh-95px)] flex-shrink-0 my-2.5 mr-2.5 ml-3 relative z-10 transition-all duration-300`}>
         <div className="flex-1 overflow-y-auto no-scrollbar">
           {collapsed ? <CollapsedRail /> : <SidebarBody />}
         </div>

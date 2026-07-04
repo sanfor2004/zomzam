@@ -345,7 +345,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const status = STATUS_CONFIG[currentUserStatus] ?? STATUS_CONFIG.offline;
 
   return (
-    <div className="h-screen flex flex-col md:flex-row overflow-hidden bg-[#111318] relative">
+    <div className="h-screen flex flex-col overflow-hidden bg-[#111318] relative">
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AMBIENT BACKGROUND
@@ -369,23 +369,216 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
       />
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
-          Contains: Logo, Main Nav, and User Mini Profile (Status indicator)
+          DEVELOPMENT NAVIGATOR: TOP NAVIGATION BAR (full-width)
+          Contains: Zomzam wordmark (top-left → home), Messages dropdown,
+          Notifications bell. Spans 100% viewport width and sits ABOVE both side
+          rails, which now stack beneath it. Shared by every dashboard route.
           ────────────────────────────────────────────────────────── */}
-      <aside className={`hidden md:flex flex-col ${leftCollapsed ? 'w-[76px]' : 'w-64'} h-[calc(100vh-20px)] m-2.5 flex-shrink-0 transition-all duration-300 relative z-10`}>
-        {/* Logo — wordmark when expanded, square mark when collapsed. Height +
-            negative top margin cancel the aside's m-2.5 so the logo's centerline
-            aligns with the h-[75px] top header bar on the right, not sitting low. */}
-        <div className={`h-[75px] -mt-2.5 flex items-center ${leftCollapsed ? 'justify-center' : 'px-6'}`}>
-          <a href="/home" className="flex items-center group">
-            {leftCollapsed ? (
-              <img src="/Assets/Img/Icon-white.svg" alt="zomzam" className="h-8 w-8" />
-            ) : (
-              <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-8 block" />
-            )}
-          </a>
-        </div>
+      <header className="relative h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-4 md:px-6 z-40">
+        {/* Brand — top-left wordmark, routes home on every breakpoint (the
+            sidebar no longer carries the logo; it lives here for the whole app). */}
+        <Link
+          href="/home"
+          aria-label={t('nav_home') || 'Home'}
+          className="flex items-center group flex-shrink-0"
+        >
+          <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7 md:h-8 block" />
+        </Link>
 
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: TOPBAR ACTIONS
+            Contains: Messages dropdown (red dot + contacts list), Notifications bell.
+            Hidden on phone (<md) — Messages + Notifications live on the bottom
+            nav bar there; shown on tablet/desktop which have no bottom bar.
+            ────────────────────────────────────────────────────────── */}
+        <div className="hidden md:flex items-center gap-3">
+          {/* Messages */}
+          <DropdownMenu
+            open={msgDropdownOpen}
+            onClose={() => setMsgDropdownOpen(false)}
+            align="right"
+            trigger={
+              <Button variant="unstyled"
+                onClick={() => setMsgDropdownOpen((p) => !p)}
+                className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
+                aria-expanded={msgDropdownOpen}
+                aria-label="Open messages"
+                type="button"
+              >
+                <MessageCircle className="w-5 h-5" />
+                {unreadTotal > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-md shadow-red-500/50"></span>
+                )}
+              </Button>
+            }
+          >
+            <div className="py-3 w-72">
+              <div className="px-4 pb-2 border-b border-slate-800 flex justify-between items-center">
+                <span className="text-xs font-bold">Messages</span>
+                <Button variant="unstyled"
+                  onClick={() => { setMsgDropdownOpen(false); router.push('/messages'); }}
+                  className="text-[10px] font-bold text-primary-500 hover:text-primary-400 transition-colors"
+                >
+                  Open Messenger
+                </Button>
+              </div>
+              <div className="max-h-72 overflow-y-auto py-1">
+                {contacts.length === 0 ? (
+                  <p className="text-center text-xs text-slate-400 py-6 italic">
+                    No friends yet — connect to start chatting.
+                  </p>
+                ) : (
+                  contacts.map((c) => (
+                    <button
+                      key={c.other_id}
+                      onClick={() => handleOpenContact(c)}
+                      className="w-full px-4 py-2.5 hover:bg-slate-800/30 flex gap-3 items-center border-b border-slate-800/40 last:border-b-0 cursor-pointer text-left"
+                    >
+                      <div className="relative flex-shrink-0">
+                        <Image
+                          src={c.avatar || '/Assets/Img/default-avatar.png'}
+                          alt=""
+                          width={36}
+                          height={36}
+                          className="w-9 h-9 rounded-xl object-cover border border-slate-800"
+                        />
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${c.is_online ? (c.is_idle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-300'}`}>
+                          {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.username}
+                        </p>
+                        <p className={`text-[11px] truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
+                          {c.last_message
+                            ? `${c.last_sender_id === currentUser?.id ? 'You: ' : ''}${c.last_message}`
+                            : 'Start a conversation'}
+                        </p>
+                      </div>
+                      {c.unread_count > 0 && (
+                        <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
+                          {c.unread_count}
+                        </span>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </DropdownMenu>
+
+          {/* Notifications */}
+          <DropdownMenu
+          open={notifDropdownOpen}
+          onClose={() => setNotifDropdownOpen(false)}
+          align="right"
+          trigger={
+            <Button variant="unstyled"
+              onClick={handleNotificationToggle}
+              className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
+              aria-expanded={notifDropdownOpen}
+              aria-label="Open notifications"
+              type="button"
+            >
+              <Bell className="w-5 h-5" />
+              {notificationsCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full animate-pulse shadow-md shadow-primary-500/50"></span>
+              )}
+            </Button>
+          }
+        >
+          <div className="py-3">
+            <div className="px-4 pb-2 border-b border-slate-800 flex justify-between items-center">
+              <span className="text-xs font-bold">Notifications</span>
+              {notificationsCount > 0 && (
+                <span className="px-2 py-0.5 bg-primary-500/10 text-primary-500 text-[9px] font-black rounded-full">
+                  {notificationsCount} New
+                </span>
+              )}
+            </div>
+            <div className="max-h-80 overflow-y-auto py-1">
+              {notifications.length === 0 ? (
+                <p className="text-center text-xs text-slate-400 py-6 italic">No notifications yet.</p>
+              ) : (
+                notifications.map((n) => {
+                  const view = describeNotification(n);
+                  const when = notifTimeAgo(n.created_at);
+                  // Each row deep-links to where it actually happened (the post,
+                  // the follower's profile, the inbox). Rows without a known
+                  // destination fall back to a static, non-navigating element so
+                  // a dead click never lands the user on a 404.
+                  const RowTag: any = view.href ? Link : 'div';
+                  const rowProps = view.href
+                    ? { href: view.href, onClick: () => setNotifDropdownOpen(false) }
+                    : {};
+                  return (
+                    <RowTag
+                      key={n.id}
+                      {...rowProps}
+                      className={cn(
+                        'group px-4 py-3 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 transition-colors',
+                        view.href ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default',
+                        !n.is_read && 'bg-primary-500/[0.04]',
+                      )}
+                    >
+                      <div className="relative flex-shrink-0 mt-0.5">
+                        <Image
+                          src={view.avatar}
+                          alt=""
+                          width={36}
+                          height={36}
+                          className="w-9 h-9 rounded-full object-cover"
+                        />
+                        <span
+                          aria-hidden
+                          className="absolute -bottom-1 -right-1 text-[11px] leading-none bg-surface-dark rounded-full px-0.5 ring-1 ring-slate-800"
+                        >
+                          {view.emoji}
+                        </span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={cn('text-xs leading-snug', !n.is_read ? 'text-white' : 'text-slate-300')}>
+                          {view.text}
+                        </p>
+                        {when && <p className="text-[10px] text-slate-500 mt-0.5">{when}</p>}
+                      </div>
+                      {!n.is_read && (
+                        <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
+                      )}
+                    </RowTag>
+                  );
+                })
+              )}
+            </div>
+            {/* Shares one render path with the /notifications page (the mobile
+                bottom-bar target). */}
+            <div className="px-4 pt-2 border-t border-slate-800">
+              <Link
+                href="/notifications"
+                onClick={() => setNotifDropdownOpen(false)}
+                className="block text-center text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors py-1"
+              >
+                See all
+              </Link>
+            </div>
+          </div>
+        </DropdownMenu>
+        </div>
+      </header>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: WORKSPACE ROW (rails + content)
+          Fills the height below the full-width top bar and lays out the left
+          sidebar, the scrollable main column, and the right sidebar side by
+          side (stacked to a single column on phone, where both rails hide).
+          ────────────────────────────────────────────────────────── */}
+      <div className="flex-grow flex flex-col md:flex-row min-h-0 relative">
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: DESKTOP SIDEBAR CONTAINER
+          Contains: Main Nav and User Mini Profile (Status indicator). The logo
+          now lives in the full-width top bar, so this rail starts at its nav card.
+          ────────────────────────────────────────────────────────── */}
+      <aside className={`hidden md:flex flex-col ${leftCollapsed ? 'w-[76px]' : 'w-64'} h-[calc(100vh-95px)] m-2.5 flex-shrink-0 transition-all duration-300 relative z-10`}>
         {/* Sidebar surface — rounded bordered card begins at the nav bar */}
         <div className="flex-1 flex flex-col min-h-0 bg-surface-dark/90 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden">
         {/* Navigation */}
@@ -620,206 +813,6 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
       {/* Main content wrapper */}
       <div className="flex-grow flex flex-col min-w-0 overflow-hidden">
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: MOBILE HEADER / TOP BAR
-            Contains: Mobile drawer toggle, notifications Bell with dropdown
-            ────────────────────────────────────────────────────────── */}
-        <header className="relative h-[75px] shrink-0 bg-transparent border-b border-dashed border-slate-800 flex items-center justify-between px-6 z-40">
-          <div className="flex items-center gap-4">
-            {/* Mobile-only logo on the LEFT → home. Desktop has the logo in the
-                sidebar, so this is gated md:hidden. The mobile menu toggle now
-                lives in a bottom-left FAB (mirrors the bottom-right presence FAB). */}
-            <Link
-              href="/home"
-              aria-label={t('nav_home') || 'Home'}
-              className="md:hidden"
-            >
-              <img src="/Assets/Img/logo-word-horizontal-white.svg" alt="zomzam" className="h-7" />
-            </Link>
-            <h2 className="text-sm font-bold text-slate-400 hidden md:block">
-              Zomzam Workspace
-            </h2>
-          </div>
-
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: TOPBAR ACTIONS
-              Contains: Messages dropdown (red dot + contacts list), Notifications bell.
-              Hidden on phone (<md) — Messages + Notifications live on the bottom
-              nav bar there; shown on tablet/desktop which have no bottom bar.
-              ────────────────────────────────────────────────────────── */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Messages */}
-            <DropdownMenu
-              open={msgDropdownOpen}
-              onClose={() => setMsgDropdownOpen(false)}
-              align="right"
-              trigger={
-                <Button variant="unstyled"
-                  onClick={() => setMsgDropdownOpen((p) => !p)}
-                  className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
-                  aria-expanded={msgDropdownOpen}
-                  aria-label="Open messages"
-                  type="button"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  {unreadTotal > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full animate-pulse shadow-md shadow-red-500/50"></span>
-                  )}
-                </Button>
-              }
-            >
-              <div className="py-3 w-72">
-                <div className="px-4 pb-2 border-b border-slate-800 flex justify-between items-center">
-                  <span className="text-xs font-bold">Messages</span>
-                  <Button variant="unstyled"
-                    onClick={() => { setMsgDropdownOpen(false); router.push('/messages'); }}
-                    className="text-[10px] font-bold text-primary-500 hover:text-primary-400 transition-colors"
-                  >
-                    Open Messenger
-                  </Button>
-                </div>
-                <div className="max-h-72 overflow-y-auto py-1">
-                  {contacts.length === 0 ? (
-                    <p className="text-center text-xs text-slate-400 py-6 italic">
-                      No friends yet — connect to start chatting.
-                    </p>
-                  ) : (
-                    contacts.map((c) => (
-                      <button
-                        key={c.other_id}
-                        onClick={() => handleOpenContact(c)}
-                        className="w-full px-4 py-2.5 hover:bg-slate-800/30 flex gap-3 items-center border-b border-slate-800/40 last:border-b-0 cursor-pointer text-left"
-                      >
-                        <div className="relative flex-shrink-0">
-                          <Image
-                            src={c.avatar || '/Assets/Img/default-avatar.png'}
-                            alt=""
-                            width={36}
-                            height={36}
-                            className="w-9 h-9 rounded-xl object-cover border border-slate-800"
-                          />
-                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#1A1D24] ${c.is_online ? (c.is_idle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600'}`} />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`text-xs truncate ${c.unread_count > 0 ? 'font-bold text-white' : 'font-semibold text-slate-300'}`}>
-                            {[c.first_name, c.last_name].filter(Boolean).join(' ') || c.username}
-                          </p>
-                          <p className={`text-[11px] truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
-                            {c.last_message
-                              ? `${c.last_sender_id === currentUser?.id ? 'You: ' : ''}${c.last_message}`
-                              : 'Start a conversation'}
-                          </p>
-                        </div>
-                        {c.unread_count > 0 && (
-                          <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 rounded-full bg-primary-500 text-white text-[10px] font-bold flex items-center justify-center">
-                            {c.unread_count}
-                          </span>
-                        )}
-                      </button>
-                    ))
-                  )}
-                </div>
-              </div>
-            </DropdownMenu>
-
-            {/* Notifications */}
-            <DropdownMenu
-            open={notifDropdownOpen}
-            onClose={() => setNotifDropdownOpen(false)}
-            align="right"
-            trigger={
-              <Button variant="unstyled"
-                onClick={handleNotificationToggle}
-                className="relative p-2.5 bg-slate-800/40 rounded-xl text-slate-500 hover:text-primary-500 transition-colors border border-slate-800/60"
-                aria-expanded={notifDropdownOpen}
-                aria-label="Open notifications"
-                type="button"
-              >
-                <Bell className="w-5 h-5" />
-                {notificationsCount > 0 && (
-                  <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary-500 rounded-full animate-pulse shadow-md shadow-primary-500/50"></span>
-                )}
-              </Button>
-            }
-          >
-            <div className="py-3">
-              <div className="px-4 pb-2 border-b border-slate-800 flex justify-between items-center">
-                <span className="text-xs font-bold">Notifications</span>
-                {notificationsCount > 0 && (
-                  <span className="px-2 py-0.5 bg-primary-500/10 text-primary-500 text-[9px] font-black rounded-full">
-                    {notificationsCount} New
-                  </span>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto py-1">
-                {notifications.length === 0 ? (
-                  <p className="text-center text-xs text-slate-400 py-6 italic">No notifications yet.</p>
-                ) : (
-                  notifications.map((n) => {
-                    const view = describeNotification(n);
-                    const when = notifTimeAgo(n.created_at);
-                    // Each row deep-links to where it actually happened (the post,
-                    // the follower's profile, the inbox). Rows without a known
-                    // destination fall back to a static, non-navigating element so
-                    // a dead click never lands the user on a 404.
-                    const RowTag: any = view.href ? Link : 'div';
-                    const rowProps = view.href
-                      ? { href: view.href, onClick: () => setNotifDropdownOpen(false) }
-                      : {};
-                    return (
-                      <RowTag
-                        key={n.id}
-                        {...rowProps}
-                        className={cn(
-                          'group px-4 py-3 flex gap-3 items-start border-b border-slate-800/40 last:border-b-0 transition-colors',
-                          view.href ? 'cursor-pointer hover:bg-slate-800/40' : 'cursor-default',
-                          !n.is_read && 'bg-primary-500/[0.04]',
-                        )}
-                      >
-                        <div className="relative flex-shrink-0 mt-0.5">
-                          <Image
-                            src={view.avatar}
-                            alt=""
-                            width={36}
-                            height={36}
-                            className="w-9 h-9 rounded-full object-cover"
-                          />
-                          <span
-                            aria-hidden
-                            className="absolute -bottom-1 -right-1 text-[11px] leading-none bg-surface-dark rounded-full px-0.5 ring-1 ring-slate-800"
-                          >
-                            {view.emoji}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={cn('text-xs leading-snug', !n.is_read ? 'text-white' : 'text-slate-300')}>
-                            {view.text}
-                          </p>
-                          {when && <p className="text-[10px] text-slate-500 mt-0.5">{when}</p>}
-                        </div>
-                        {!n.is_read && (
-                          <span className="w-1.5 h-1.5 bg-primary-500 rounded-full mt-2 flex-shrink-0" />
-                        )}
-                      </RowTag>
-                    );
-                  })
-                )}
-              </div>
-              {/* Shares one render path with the /notifications page (the mobile
-                  bottom-bar target). */}
-              <div className="px-4 pt-2 border-t border-slate-800">
-                <Link
-                  href="/notifications"
-                  onClick={() => setNotifDropdownOpen(false)}
-                  className="block text-center text-[10px] font-bold uppercase tracking-wider text-primary-500 hover:text-primary-400 transition-colors py-1"
-                >
-                  See all
-                </Link>
-              </div>
-            </div>
-          </DropdownMenu>
-          </div>
-        </header>
 
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: MAIN WORKSPACE CONTAINER
@@ -837,6 +830,8 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           drawer. Lifted out of /home so it's a persistent right navbar.
           ────────────────────────────────────────────────────────── */}
       <RightSidebar />
+
+      </div>{/* /workspace row */}
 
       {/* Global overlays: docked chat windows + live notification toasts. */}
       <ChatDock />
