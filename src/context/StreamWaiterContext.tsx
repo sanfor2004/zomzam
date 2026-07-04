@@ -67,6 +67,8 @@ export function StreamWaiterProvider({ children }: { children: React.ReactNode }
           window.dispatchEvent(new CustomEvent('zz-typing', { detail: m.params }));
         } else if (m.kind === 'message_read') {
           window.dispatchEvent(new CustomEvent('zz-message-read', { detail: m.params }));
+        } else if (m.kind === 'message_deleted') {
+          window.dispatchEvent(new CustomEvent('zz-message-deleted', { detail: m.params }));
         }
       }
     }

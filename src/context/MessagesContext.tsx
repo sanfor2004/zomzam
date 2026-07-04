@@ -82,6 +82,8 @@ interface MessagesContextType {
   toggleMinimize: (otherId: number) => void;
   setDraft: (otherId: number, text: string) => void;
   sendMessage: (otherId: number) => Promise<void>;
+  /** Unsend one of my own messages (optimistic; rolls back on failure). */
+  deleteMessage: (otherId: number, messageId: number) => Promise<void>;
   markConversationRead: (otherId: number) => void;
   /** Tell the peer we're typing — throttled, fire-and-forget. */
   notifyTyping: (otherId: number) => void;
@@ -268,6 +270,34 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadContacts, me.id]);
 
+  // Unsend my own message. Optimistically drop the bubble, then hard-delete it
+  // server-side; on failure re-hydrate the thread (peek, so it doesn't disturb
+  // read state) to restore the true history. A still-optimistic (negative-id)
+  // message has no server row yet, so it's just removed locally.
+  const deleteMessage = useCallback(async (otherId: number, messageId: number) => {
+    setWindows((prev) => prev.map((w) =>
+      w.otherUser.id === otherId
+        ? { ...w, messages: w.messages.filter((m) => m.id !== messageId) }
+        : w
+    ));
+    if (messageId < 0) return;
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'delete', message_id: messageId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!data.success) {
+        hydrateWindow(otherId, true);
+        return;
+      }
+      loadContacts();
+    } catch {
+      hydrateWindow(otherId, true);
+    }
+  }, [hydrateWindow, loadContacts]);
+
   // ── Live delivery ───────────────────────────────────────────
   // A single global handler for the SSE-driven `zz-new-message` event: append to
   // an open thread (and mark read if focused), or auto-pop a new window from the
@@ -395,6 +425,25 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener('zz-message-read', onRead);
   }, [me.id]);
 
+  // ── Incoming unsends ────────────────────────────────────────
+  // The peer deleted one of their messages: drop it from any open window on this
+  // conversation so both sides converge, and refresh the contacts preview (the
+  // deleted line may have been the "last message").
+  useEffect(() => {
+    const onDeleted = (e: Event) => {
+      const { conversation_id, message_id } = (e as CustomEvent).detail || {};
+      if (!message_id) return;
+      setWindows((prev) => prev.map((w) =>
+        w.conversationId === conversation_id
+          ? { ...w, messages: w.messages.filter((m) => m.id !== message_id) }
+          : w
+      ));
+      loadContacts();
+    };
+    window.addEventListener('zz-message-deleted', onDeleted);
+    return () => window.removeEventListener('zz-message-deleted', onDeleted);
+  }, [loadContacts]);
+
   // ── Live presence dots ──────────────────────────────────────
   // The unified live channel (SSE while active, heartbeat while AFK) pushes a
   // throttled friends-presence snapshot (~every 20s) as `zz-contacts-presence`.
@@ -441,8 +490,8 @@ export function MessagesProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<MessagesContextType>(() => ({
     contacts, unreadTotal, windows, typingContacts,
-    loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping,
-  }), [contacts, unreadTotal, windows, typingContacts, loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping]);
+    loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, deleteMessage, markConversationRead, notifyTyping,
+  }), [contacts, unreadTotal, windows, typingContacts, loadContacts, openChat, closeChat, toggleMinimize, setDraft, sendMessage, deleteMessage, markConversationRead, notifyTyping]);
 
   // Expose the current user id to consumers that render message bubbles.
   return (

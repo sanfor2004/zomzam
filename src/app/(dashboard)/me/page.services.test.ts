@@ -42,8 +42,9 @@ test('fetchProfile tolerates a malformed tags column', async () => {
   assert.deepEqual((await fetchProfile())?.tags, []);
 });
 
-test('saveProfileRequest posts the identity fields + tags JSON', async () => {
-  await saveProfileRequest({ firstName: 'F', lastName: 'L', bio: 'hi', tags: ['react'] });
+test('saveProfileRequest posts the username, identity fields + tags JSON', async () => {
+  await saveProfileRequest({ username: 'neo', firstName: 'F', lastName: 'L', bio: 'hi', tags: ['react'] });
+  assert.equal(lastBody.get('username'), 'neo');
   assert.equal(lastBody.get('first_name'), 'F');
   assert.equal(lastBody.get('bio'), 'hi');
   assert.deepEqual(JSON.parse(lastBody.get('tags') as string), ['react']);

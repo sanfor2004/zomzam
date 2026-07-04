@@ -33,7 +33,8 @@ npx tsx scripts/db-sync.ts
 | Presence/realtime | `user_online_status` |
 | Social graph | `user_connections` |
 | Notifications | `notifications` |
-| Messages | `conversations`, `messages` |
+| Messages | `conversations`, `messages`, `message_reactions` |
+| Safety/audit | `user_audit_log` (append-only moderation trail — username changes, avatar change/remove, post deletions; written by `src/lib/models/audit.ts`, best-effort, not surfaced in-app yet) |
 | Time | `time_tasks`, `time_horizons`, `time_ideas`, `time_links`, `time_task_links` |
 | Money | `money_accounts`, `money_categories`, `money_transactions`, `money_lend` |
 | CRM | `crm_leads`, `crm_scrape_jobs`, `crm_settings`, `crm_projects` |

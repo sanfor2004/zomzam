@@ -34,7 +34,7 @@ This file maps the visible site and the server endpoints that power it.
 | `/api/auth/oauth/google/callback` | Verifies state, exchanges code, links or creates user, signs session | `src/app/api/auth/oauth/google/callback/route.ts`, `src/lib/google-oauth.ts` |
 | `/api/auth/forgot-password` | Issues reset token and sends SMTP email when configured | `src/app/api/auth/forgot-password/route.ts`, `src/lib/email.ts` |
 | `/api/auth/reset-password` | Consumes reset token and writes new password | `src/app/api/auth/reset-password/route.ts` |
-| `/api/profile` | Profile field updates and avatar upload | `src/app/api/profile/route.ts`, `src/lib/uploads.ts` |
+| `/api/profile` | Profile field updates (incl. username change: validated + unique), avatar upload; username/avatar changes logged to `user_audit_log` | `src/app/api/profile/route.ts`, `src/lib/uploads.ts`, `src/lib/models/audit.ts` |
 | `/api/profile/change-password` | Authenticated password change | `src/app/api/profile/change-password/route.ts` |
 | `/api/time` | `load`, task CRUD, task status, planning horizon CRUD/move/complete, idea CRUD | `src/app/api/time/route.ts` |
 | `/api/money` | Initial data, currency settings, transaction CRUD, account CRUD, lending CRUD/settle | `src/app/api/money/route.ts` |
@@ -43,7 +43,7 @@ This file maps the visible site and the server endpoints that power it.
 | `/api/notion` | `sync`, `update_settings` | `src/app/api/notion/route.ts`, `src/lib/notion.ts` |
 | `/api/posts` | Feed/saved reads, create/edit/delete, comments, votes, ask resolve/reopen/accept answer, likes, bookmarks, reports, reposts, seen marks | `src/app/api/posts/route.ts`, `src/lib/services/posts/*` |
 | `/api/social` | Friend request lifecycle, unfriend, block/unblock, status, friends, requests, discovery, search | `src/app/api/social/route.ts`, `src/lib/social-actions.ts` |
-| `/api/messages` | Contacts, thread reads, send, typing, mark read | `src/app/api/messages/route.ts`, `src/context/MessagesContext.tsx` |
+| `/api/messages` | Contacts, thread reads, send, typing, mark read, delete (owner-only unsend → live `message_deleted`) | `src/app/api/messages/route.ts`, `src/context/MessagesContext.tsx` |
 | `/api/notifications` | Mark all notifications read | `src/app/api/notifications/route.ts` |
 | `/api/stream` | Active-mode Server-Sent Events live sync | `src/app/api/stream/route.ts`, `src/lib/live-sync.ts` |
 | `/api/heartbeat` | AFK-mode live sync poll and notification bootstrap | `src/app/api/heartbeat/route.ts`, `src/lib/live-sync.ts` |

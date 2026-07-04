@@ -28,7 +28,7 @@ export interface ContactPresence {
 }
 
 export interface LiveSyncPayload {
-  /** new_message | typing | message_read — chat-dock traffic. */
+  /** new_message | typing | message_read | message_deleted — chat-dock traffic. */
   messages: LiveEvent[];
   /** new_notification — bell feed + toast. */
   notifications: any[];
@@ -131,6 +131,7 @@ export async function drainLiveSync(
     switch (kind) {
       case 'new_message':
       case 'message_read':
+      case 'message_deleted':
         payload.messages.push({ kind, params });
         break;
       case 'typing':

@@ -15,8 +15,11 @@ export default function MyProfilePage() {
   const { t } = useTranslation();
   const router = useRouter();
 
-  // Profile data states
+  // Profile data states. `username` is the editable field; `savedUsername` is the
+  // last persisted handle — the left card + public-profile link read that so they
+  // never point at an unsaved value mid-edit.
   const [username, setUsername] = useState('');
+  const [savedUsername, setSavedUsername] = useState('');
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -49,6 +52,7 @@ export default function MyProfilePage() {
         const user = await fetchProfile();
         if (!user) { router.push('/sign'); return; }
         setUsername(user.username);
+        setSavedUsername(user.username);
         setEmail(user.email);
         setFirstName(user.first_name);
         setLastName(user.last_name);
@@ -192,8 +196,16 @@ export default function MyProfilePage() {
     setSuccessMsg(null);
     setErrorMsg(null);
 
+    // Cheap client-side handle pre-check (the API re-validates + owns uniqueness).
+    const cleanedUsername = username.trim().replace(/\s+/g, '_');
+    if (cleanedUsername !== savedUsername && !/^[a-zA-Z0-9_]{3,50}$/.test(cleanedUsername)) {
+      setErrorMsg('Username must be 3–50 characters: letters, numbers, or underscores only.');
+      setIsSaving(false);
+      return;
+    }
+
     try {
-      const data = await saveProfileRequest({ firstName, lastName, bio, tags });
+      const data = await saveProfileRequest({ username: cleanedUsername, firstName, lastName, bio, tags });
       if (data.success) {
         setSuccessMsg(t('profile_success'));
         // Force header re-render to load updated details
@@ -322,14 +334,14 @@ export default function MyProfilePage() {
             <div className="space-y-3">
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Username</span>
-                <span className="text-sm font-bold text-white">@{username}</span>
+                <span className="text-sm font-bold text-white">@{savedUsername}</span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Email Address</span>
                 <span className="text-sm font-bold text-white">{email}</span>
               </div>
               <a
-                href={`/u/${username}`}
+                href={`/u/${savedUsername}`}
                 target="_blank"
                 className="inline-flex items-center gap-1.5 text-xs text-primary-500 hover:text-primary-600 font-bold transition-all pt-2"
               >
@@ -359,7 +371,31 @@ export default function MyProfilePage() {
             {errorMsg && <Alert variant="error" className="mb-6">{errorMsg}</Alert>}
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              
+
+              {/* Username — editable public handle. Changing it is recorded in the
+                  user safety audit trail server-side (username_changed). */}
+              <div data-entrance="list-item">
+                <label htmlFor="username" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
+                  Username
+                </label>
+                <div className="relative">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500 pointer-events-none">@</span>
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    maxLength={50}
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="w-full h-11 pl-8 pr-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
+                  />
+                </div>
+                <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">
+                  3–50 characters: letters, numbers, and underscores only. Your public profile lives at /u/{savedUsername || 'username'}.
+                </p>
+              </div>
+
               {/* First Name & Last Name */}
               <div data-entrance="list-item" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>

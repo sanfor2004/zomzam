@@ -263,6 +263,48 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true });
     }
 
+    case 'delete': {
+      // Unsend one of MY OWN messages. Ownership is enforced by the sender_id
+      // predicate in the SELECT — a user can only ever target a row they sent, so
+      // there's no way to delete someone else's message. Hard delete (the row is
+      // gone), and any reactions on it go with it.
+      const messageId = parseInt(body.message_id || 0);
+      if (!messageId) {
+        return NextResponse.json({ success: false, message: 'message_id required' }, { status: 400 });
+      }
+
+      const message = await queryOne<{ id: number; conversation_id: number }>(
+        `SELECT id, conversation_id FROM messages WHERE id = ? AND sender_id = ? LIMIT 1`,
+        [messageId, user.id]
+      );
+      if (!message) {
+        // Not found OR not mine — same opaque response either way (never reveal
+        // that a message exists but belongs to someone else).
+        return NextResponse.json({ success: false, message: 'Message not found' }, { status: 404 });
+      }
+
+      await execute(`DELETE FROM message_reactions WHERE message_id = ?`, [messageId]);
+      await execute(`DELETE FROM messages WHERE id = ? AND sender_id = ?`, [messageId, user.id]);
+
+      // Tell the other participant live so their dock drops the bubble too.
+      // touchLastSeen=false: an unsend is delivered TO them, not activity BY them.
+      const conversation = await queryOne<{ user_one_id: number; user_two_id: number }>(
+        `SELECT user_one_id, user_two_id FROM conversations WHERE id = ? LIMIT 1`,
+        [message.conversation_id]
+      );
+      if (conversation) {
+        const otherId = conversation.user_one_id === user.id
+          ? conversation.user_two_id
+          : conversation.user_one_id;
+        await pushStreamOrder(otherId, 'message_deleted', {
+          conversation_id: message.conversation_id,
+          message_id: messageId,
+        }, false);
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     default:
       return NextResponse.json({ success: false, error: 'Unknown action' }, { status: 400 });
   }

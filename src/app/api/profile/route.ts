@@ -2,12 +2,19 @@ import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api-auth';
 import { comparePassword } from '@/lib/auth';
 import { getUserById } from '@/lib/models/user';
+import { logUserChange } from '@/lib/models/audit';
 import { execute, queryOne } from '@/lib/db';
 import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
+
+// Public-handle rules: 3–50 chars, letters/digits/underscore only. Every existing
+// username already conforms (register folds spaces→_, Google folds the email local
+// part the same way), so enforcing this on edit never locks anyone out of saving.
+const USERNAME_RE = /^[a-zA-Z0-9_]{3,50}$/;
 
 export const POST = withAuth(async (request, user) => {
   const contentType = request.headers.get('content-type') || '';
 
+  let username: string | null = null;
   let firstName: string | null = null;
   let lastName: string | null = null;
   let bio: string | null = null;
@@ -17,6 +24,7 @@ export const POST = withAuth(async (request, user) => {
 
   if (contentType.includes('multipart/form-data')) {
     const formData = await request.formData();
+    username = formData.get('username') as string | null;
     firstName = formData.get('first_name') as string | null;
     lastName = formData.get('last_name') as string | null;
     bio = formData.get('bio') as string | null;
@@ -25,6 +33,7 @@ export const POST = withAuth(async (request, user) => {
     avatarFile = formData.get('avatar') as File | null;
   } else {
     const body = await request.json().catch(() => ({}));
+    username = body.username ?? null;
     firstName = body.first_name ?? null;
     lastName = body.last_name ?? null;
     bio = body.bio ?? null;
@@ -53,10 +62,31 @@ export const POST = withAuth(async (request, user) => {
     }
   }
 
-  // Retrieve old avatar
+  // Snapshot the current row once — used for both the old-avatar cleanup and the
+  // username-change diff/audit below.
   const currentUser = await getUserById(user.id);
   const oldAvatar = currentUser?.avatar || null;
   let avatarPath: string | null = null;
+
+  // Resolve a username change up-front — BEFORE any avatar disk I/O — so an
+  // invalid or already-taken handle fails fast without orphaning an uploaded file.
+  // `nextUsername` is set only when it genuinely changes (a no-op resubmit of the
+  // same handle is silently ignored, not re-validated or re-logged).
+  let nextUsername: string | null = null;
+  const prevUsername = currentUser?.username ?? null;
+  if (username !== null) {
+    const cleaned = String(username).trim().replace(/\s+/g, '_');
+    if (cleaned !== prevUsername) {
+      if (!USERNAME_RE.test(cleaned)) {
+        return NextResponse.json({ success: false, message: 'Username must be 3–50 characters: letters, numbers, or underscores only.' }, { status: 400 });
+      }
+      const taken = await queryOne('SELECT id FROM users WHERE username = ? AND id != ? LIMIT 1', [cleaned, user.id]);
+      if (taken) {
+        return NextResponse.json({ success: false, message: 'That username is already taken.' }, { status: 409 });
+      }
+      nextUsername = cleaned;
+    }
+  }
 
   if (removeAvatar) {
     await deleteUploadFile(oldAvatar);
@@ -82,6 +112,10 @@ export const POST = withAuth(async (request, user) => {
   const updates: string[] = [];
   const params: any[] = [];
 
+  if (nextUsername !== null) {
+    updates.push('username = ?');
+    params.push(nextUsername);
+  }
   if (firstName !== null) {
     updates.push('first_name = ?');
     params.push(firstName);
@@ -107,6 +141,17 @@ export const POST = withAuth(async (request, user) => {
     updates.push('updated_at = NOW()');
     params.push(user.id);
     await execute(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
+  }
+
+  // Safety trail — record the sensitive changes just applied. Best-effort: a
+  // logging failure never blocks the save (see logUserChange).
+  if (nextUsername !== null) {
+    await logUserChange({ userId: user.id, action: 'username_changed', oldValue: prevUsername, newValue: nextUsername });
+  }
+  if (removeAvatar) {
+    await logUserChange({ userId: user.id, action: 'avatar_removed', oldValue: oldAvatar });
+  } else if (avatarPath) {
+    await logUserChange({ userId: user.id, action: 'avatar_changed', oldValue: oldAvatar, newValue: avatarPath });
   }
 
   const updatedUser = await getUserById(user.id);

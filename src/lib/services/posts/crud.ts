@@ -1,5 +1,6 @@
 import DOMPurify from 'isomorphic-dompurify';
 import { queryOne, execute } from '@/lib/db';
+import { logUserChange } from '@/lib/models/audit';
 import { HttpError } from '@/lib/http-error';
 import { processImageUpload, deleteUploadFile, ImageUploadError } from '@/lib/uploads';
 import {
@@ -229,11 +230,24 @@ export async function editPost(userId: number, postId: number, input: EditPostIn
 export async function deletePost(userId: number, postId: number): Promise<void> {
   if (!postId) throw new HttpError(400, 'post_id required');
 
-  const owned = await queryOne<{ image_path: string | null; image_paths: unknown }>(
-    `SELECT image_path, image_paths FROM posts WHERE id = ? AND user_id = ?`,
+  // Pull the body/visibility too — it's kept verbatim in the safety trail below
+  // (the row is about to be gone, so the log is the only remaining record of it).
+  const owned = await queryOne<{ content_html: string; visibility: string; image_path: string | null; image_paths: unknown }>(
+    `SELECT content_html, visibility, image_path, image_paths FROM posts WHERE id = ? AND user_id = ?`,
     [postId, userId]
   );
   if (!owned) throw new HttpError(403, 'Not found or not yours');
+
+  const blobs = decodeImagePaths(owned.image_paths);
+
+  // Moderation trail — record the removed post's content before it's gone.
+  // Best-effort (logUserChange swallows its own errors) so it never blocks the delete.
+  await logUserChange({
+    userId,
+    action: 'post_deleted',
+    content: owned.content_html,
+    metadata: { post_id: postId, visibility: owned.visibility, image_paths: blobs },
+  });
 
   await execute(`DELETE FROM comment_votes WHERE comment_id IN (SELECT id FROM post_comments WHERE post_id = ?)`, [postId]);
   await execute(`DELETE FROM post_likes    WHERE post_id = ?`, [postId]);
@@ -242,6 +256,5 @@ export async function deletePost(userId: number, postId: number): Promise<void> 
 
   // Remove every orphaned image blob (mirrors avatar cleanup). Multi-image rows
   // store the full list in image_paths; legacy rows fall back to image_path.
-  const blobs = decodeImagePaths(owned.image_paths);
   for (const file of (blobs.length ? blobs : [owned.image_path])) await deleteUploadFile(file);
 }

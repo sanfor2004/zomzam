@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Loader2, Send, X, Minus, ChevronUp, Smile } from 'lucide-react';
+import { Loader2, Send, X, Minus, ChevronUp, Smile, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useMessages, useMyId, type ChatWindow } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
 import { TypingDots, TypingBadge } from './TypingDots';
@@ -38,10 +38,12 @@ export function ChatDock() {
 }
 
 function ChatWindowCard({ win }: { win: ChatWindow }) {
-  const { contacts, typingContacts, closeChat, toggleMinimize, setDraft, sendMessage, markConversationRead, notifyTyping } = useMessages();
+  const { contacts, typingContacts, closeChat, toggleMinimize, setDraft, sendMessage, deleteMessage, markConversationRead, notifyTyping } = useMessages();
   const myId = useMyId();
   const endRef = useRef<HTMLDivElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  // Id of the message whose options menu (the hover 3-dots) is open, if any.
+  const [menuFor, setMenuFor] = useState<number | null>(null);
   const otherId = win.otherUser.id;
   const name = displayName(win.otherUser);
 
@@ -145,8 +147,54 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
             ) : (
               win.messages.map((m) => {
                 const isMine = m.sender_id === myId;
+                // Only my own, already-persisted messages can be unsent (a still-
+                // optimistic negative id has no server row yet).
+                const canDelete = isMine && m.id > 0;
+                const menuOpen = menuFor === m.id;
                 return (
-                  <div key={m.id} className={`flex ${isMine ? 'justify-end' : 'justify-start'}`}>
+                  <div key={m.id} className={`group flex items-center gap-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+                    {/* ──────────────────────────────────────────────────────────
+                        DEVELOPMENT NAVIGATOR: MESSAGE OPTIONS (my messages only)
+                        Contains: hover-revealed 3-dots trigger → Delete (unsend) menu
+                        ────────────────────────────────────────────────────────── */}
+                    {canDelete && (
+                      <div className="relative flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setMenuFor(menuOpen ? null : m.id)}
+                          aria-label="Message options"
+                          aria-expanded={menuOpen}
+                          title="Message options"
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-slate-500 hover:text-slate-200 hover:bg-white/[0.06] transition-all ${
+                            menuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 focus-visible:opacity-100'
+                          }`}
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                        {menuOpen && (
+                          <>
+                            {/* Click-away scrim — closes the menu on any outside tap. */}
+                            <button
+                              type="button"
+                              aria-label="Close menu"
+                              className="fixed inset-0 z-[1] cursor-default"
+                              onClick={() => setMenuFor(null)}
+                            />
+                            <div className="absolute right-0 bottom-full mb-1 z-[2] w-32 bg-[#1A1D24] border border-slate-800/70 rounded-xl shadow-2xl p-1">
+                              <button
+                                type="button"
+                                onClick={() => { setMenuFor(null); deleteMessage(otherId, m.id); }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                                Delete
+                              </button>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    )}
+
                     <div
                       className={`max-w-[78%] rounded-2xl px-3 py-1.5 text-sm ${
                         isMine

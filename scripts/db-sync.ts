@@ -319,6 +319,21 @@ const schema: Record<string, Record<string, string>> = {
     emoji: 'VARCHAR(16) NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
+  // Append-only user safety/moderation trail. One row per sensitive self-service
+  // change (username edit, avatar change/remove, post deletion) so abuse can be
+  // traced after the fact — the actor, what changed (old→new), and, for deleted
+  // content, the removed body itself (content_html). Nothing reads it in-app yet
+  // (mirrors post_reports — a moderation inbox), it is a durable record only.
+  user_audit_log: {
+    id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',                 // the actor whose account performed the change
+    action: 'VARCHAR(50) NOT NULL',                   // 'username_changed' | 'avatar_changed' | 'avatar_removed' | 'post_deleted'
+    old_value: 'TEXT NULL',                           // prior scalar (old username / old avatar path)
+    new_value: 'TEXT NULL',                           // next scalar (new username / new avatar path)
+    content: 'MEDIUMTEXT NULL',                       // removed body kept verbatim (post_deleted → content_html)
+    metadata: 'JSON NULL',                            // structured extras (post_id, visibility, image_paths, ip)
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+  },
   // Shared-backend rate limiter (src/lib/rate-limit.ts). One append-only row per
   // attempt, keyed by an opaque `bucket` (e.g. "login:1.2.3.4"). Lives in the DB,
   // not process memory, because Vercel's serverless functions are ephemeral +
@@ -380,6 +395,10 @@ const indexes: Record<string, Record<string, string>> = {
   message_reactions: {
     uq_message_user: 'UNIQUE INDEX uq_message_user (message_id, user_id)',  // one reaction per user per message (upsert target)
     idx_message_id: 'INDEX idx_message_id (message_id)',                    // load all reactions for a thread's messages
+  },
+  user_audit_log: {
+    idx_user_id: 'INDEX idx_user_id (user_id, id)',        // "this user's history", newest-first keyset
+    idx_action: 'INDEX idx_action (action, created_at)',   // "all username changes since X" moderation sweep
   },
 };
 

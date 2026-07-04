@@ -17,6 +17,7 @@ export interface ProfileUser {
 }
 
 export interface ProfileInput {
+  username: string;
   firstName: string;
   lastName: string;
   bio: string;
@@ -83,6 +84,7 @@ export async function removeAvatarRequest(): Promise<{ success: boolean; message
 
 export async function saveProfileRequest(input: ProfileInput): Promise<{ success: boolean; message?: string }> {
   const fd = new FormData();
+  fd.append('username', input.username);
   fd.append('first_name', input.firstName);
   fd.append('last_name', input.lastName);
   fd.append('bio', input.bio);
