@@ -39,7 +39,7 @@ export default function RequestsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  // `silent` skips the spinner — used by live re-syncs so an SSE-driven refresh
+  // `silent` skips the spinner â€” used by live re-syncs so an SSE-driven refresh
   // never blanks a page the user is already looking at.
   const fetchRequests = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -103,7 +103,7 @@ export default function RequestsPage() {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
         // Echo locally so the rest of the shell (Active-now rail, suggestion
-        // cards) updates without waiting for anything — see emitSocialUpdate.
+        // cards) updates without waiting for anything â€” see emitSocialUpdate.
         emitSocialUpdate(action, targetId);
         fetchRequests(true);
         if (searchQuery.trim().length >= 2) {
@@ -123,10 +123,10 @@ export default function RequestsPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, global user-search autocomplete
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -134,7 +134,7 @@ export default function RequestsPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Invitations — respond to people who want to connect.</p>
+            <p className="text-xs text-slate-400">Invitations â€” respond to people who want to connect.</p>
           </div>
         </div>
 
@@ -148,12 +148,12 @@ export default function RequestsPage() {
             placeholder="Search users by username..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full h-11 pl-10 pr-4 bg-[#1A1D24] border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
+            className="w-full h-11 pl-10 pr-4 surface-card border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
           />
 
           {/* Search Dropdown Panel */}
           {isSearching && searchQuery.trim().length >= 2 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D24] border border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 surface-card border border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
               {searchResults.length === 0 ? (
                 <p className="text-center text-xs text-slate-450 py-6 italic">No users found.</p>
               ) : (
@@ -200,10 +200,10 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: CONTENT — FRIEND REQUESTS
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          DEVELOPMENT NAVIGATOR: CONTENT â€” FRIEND REQUESTS
           Contains: Incoming requests (accept/decline) and outgoing requests (cancel)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
@@ -213,7 +213,7 @@ export default function RequestsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             
             {/* Incoming Requests */}
-            <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px] card-lift">
+            <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px] card-lift">
               <div>
                 <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                   Incoming Requests ({incomingRequests.length})
@@ -262,7 +262,7 @@ export default function RequestsPage() {
             </div>
 
             {/* Outgoing Requests */}
-            <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px] card-lift">
+            <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[300px] card-lift">
               <div>
                 <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-6 pb-3 border-b border-slate-850">
                   Outgoing Requests ({outgoingRequests.length})

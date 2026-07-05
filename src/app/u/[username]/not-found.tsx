@@ -3,7 +3,7 @@ import PublicNav from '@/components/PublicNav';
 import { UserX } from 'lucide-react';
 
 /**
- * Branded 404 for /u/[username] — rendered when notFound() fires for an
+ * Branded 404 for /u/[username] Ã¢â‚¬â€ rendered when notFound() fires for an
  * unknown username, instead of the framework's bare default page.
  */
 export default function ProfileNotFound() {
@@ -11,14 +11,12 @@ export default function ProfileNotFound() {
     <div className="min-h-screen bg-[#111318] text-slate-100 flex flex-col font-sans">
       <PublicNav />
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
           DEVELOPMENT NAVIGATOR: PROFILE NOT FOUND
           Contains: UserX glyph, headline, guidance copy, home CTA
-          ────────────────────────────────────────────────────────── */}
+          Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
       <main className="flex-grow flex items-center justify-center px-6 pt-32 pb-24">
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-10 shadow-apple relative overflow-hidden max-w-md w-full text-center space-y-5">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-primary-500/5 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none"></div>
-
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-10 shadow-apple relative overflow-hidden max-w-md w-full text-center space-y-5">
           <div className="mx-auto w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center">
             <UserX className="w-8 h-8 text-slate-500" aria-hidden="true" />
           </div>
@@ -26,7 +24,7 @@ export default function ProfileNotFound() {
           <div className="space-y-2">
             <h1 className="text-xl font-black tracking-tight text-white">Profile not found</h1>
             <p className="text-sm text-slate-400 leading-relaxed">
-              This username doesn&apos;t exist — it may have been changed or the link is misspelled.
+              This username doesn&apos;t exist Ã¢â‚¬â€ it may have been changed or the link is misspelled.
             </p>
           </div>
 

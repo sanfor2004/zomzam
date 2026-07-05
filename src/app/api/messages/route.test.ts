@@ -49,7 +49,7 @@ test('GET thread marks messages read and pushes message_read to sender when not 
   };
   
   db.queryOne.mock.mockImplementationOnce(async () => ({ id: 1 })); // conversation
-  db.execute.mock.mockImplementationOnce(async () => ({ affectedRows: 2 })); // 2 messages marked read
+  db.execute.mock.mockImplementationOnce(async () => ({ insertId: 0, affectedRows: 2 })); // 2 messages marked read
   
   await messagesRoute.GET(req as any);
   

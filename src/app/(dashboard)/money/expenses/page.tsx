@@ -86,10 +86,10 @@ export default function ExpensesPage() {
   return (
     <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Back button, title + subtitle, "Add Expense" button
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="unstyled"
@@ -119,12 +119,12 @@ export default function ExpensesPage() {
         </Button>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: EXPENSES LIST
           Contains: Empty state, per-transaction rows (category icon, description,
           account/date, amount, delete action)
-          ────────────────────────────────────────────────────────── */}
-      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         {expenses.length === 0 ? (
           <p className="text-center py-20 text-slate-400 italic text-sm">No expenses found.</p>
         ) : (
@@ -144,7 +144,7 @@ export default function ExpensesPage() {
                       {t.description || t.category_name || 'Expense'}
                     </p>
                     <span className="block text-[10px] text-slate-455 font-bold uppercase tracking-tight mt-0.5">
-                      {t.account_name} • {new Date(t.transaction_date).toLocaleDateString()}
+                      {t.account_name} â€¢ {new Date(t.transaction_date).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -167,10 +167,10 @@ export default function ExpensesPage() {
         )}
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: ADD EXPENSE MODAL
           Contains: New-expense form (amount, account, category, date, description)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}

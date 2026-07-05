@@ -2,6 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   loadTasks, addTaskRequest, updateTaskRequest, completeTaskRequest, deleteTaskRequest,
+  parseQuickTask,
 } from './page.services';
 
 let bodies: any[] = [];
@@ -60,4 +61,24 @@ test('completeTaskRequest / deleteTaskRequest report server success as a boolean
   assert.equal(await completeTaskRequest(1), true);
   payload = { success: false };
   assert.equal(await deleteTaskRequest(1), false);
+});
+
+test('parseQuickTask pulls a priority word + duration token out of the title', () => {
+  assert.deepEqual(parseQuickTask('email client urgent 45m'), { title: 'email client', priority: 'urgent', duration: 45 });
+});
+
+test('parseQuickTask defaults to medium/25 when no tokens are present', () => {
+  assert.deepEqual(parseQuickTask('call mom'), { title: 'call mom', priority: 'medium', duration: 25 });
+});
+
+test('parseQuickTask reads hours and clamps to the 5–120 range', () => {
+  assert.deepEqual(parseQuickTask('free 2h deep work'), { title: 'deep work', priority: 'free', duration: 120 });
+});
+
+test('parseQuickTask keeps the raw string as title when tokens strip it empty', () => {
+  assert.deepEqual(parseQuickTask('45m'), { title: '45m', priority: 'medium', duration: 45 });
+});
+
+test('parseQuickTask lets the last priority word by position win', () => {
+  assert.equal(parseQuickTask('urgent then free later').priority, 'free');
 });

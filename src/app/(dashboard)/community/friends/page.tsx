@@ -38,7 +38,7 @@ export default function FriendsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  // `silent` skips the spinner — live re-syncs must never blank the grid.
+  // `silent` skips the spinner â€” live re-syncs must never blank the grid.
   const fetchFriends = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -97,7 +97,7 @@ export default function FriendsPage() {
       if (data.success) {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
-        // Echo locally — the Active-now rail drops/adds the person immediately.
+        // Echo locally â€” the Active-now rail drops/adds the person immediately.
         emitSocialUpdate(action, targetId);
         fetchFriends(true);
         if (searchQuery.trim().length >= 2) {
@@ -117,10 +117,10 @@ export default function FriendsPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, global user-search autocomplete
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -128,7 +128,7 @@ export default function FriendsPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Your connections — the people you've linked up with.</p>
+            <p className="text-xs text-slate-400">Your connections â€” the people you've linked up with.</p>
           </div>
         </div>
 
@@ -142,12 +142,12 @@ export default function FriendsPage() {
             placeholder="Search users by username..."
             value={searchQuery}
             onChange={handleSearchChange}
-            className="w-full h-11 pl-10 pr-4 bg-[#1A1D24] border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
+            className="w-full h-11 pl-10 pr-4 surface-card border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
           />
 
           {/* Search Dropdown Panel */}
           {isSearching && searchQuery.trim().length >= 2 && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-[#1A1D24] border border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
+            <div className="absolute top-full left-0 right-0 mt-2 surface-card border border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
               {searchResults.length === 0 ? (
                 <p className="text-center text-xs text-slate-450 py-6 italic">No users found.</p>
               ) : (
@@ -194,10 +194,10 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: CONTENT — FRIENDS GRID
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          DEVELOPMENT NAVIGATOR: CONTENT â€” FRIENDS GRID
           Contains: Accepted-friends grid with status and management actions
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
@@ -206,7 +206,7 @@ export default function FriendsPage() {
         <div className="animate-in duration-300">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {friends.length === 0 ? (
-              <div className="col-span-full bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-16 text-center shadow-apple text-slate-400">
+              <div className="col-span-full surface-card border border-slate-800/60 rounded-3xl p-16 text-center shadow-apple text-slate-400">
                 <Users className="w-12 h-12 mx-auto mb-3 opacity-25" />
                 <p className="text-sm font-semibold">You have no connections yet.</p>
                 <Button variant="unstyled"
@@ -221,7 +221,7 @@ export default function FriendsPage() {
                 <div
                   key={f.id}
                   data-entrance="card"
-                  className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden card-lift"
+                  className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden card-lift"
                 >
                   <div className="flex items-start gap-4">
                     <div className="relative flex-shrink-0">

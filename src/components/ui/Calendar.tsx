@@ -4,10 +4,10 @@ import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* ──────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     DEVELOPMENT NAVIGATOR: CALENDAR
     Contains: month header + prev/next nav, weekday row, day grid
-    ──────────────────────────────────────────────────────────
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     A single-month date-picker grid. Controlled via `value`/
     `onChange`; navigates its own visible month internally. */
 
@@ -35,12 +35,12 @@ function startOfDay(d: Date) {
 function buildGrid(visibleMonth: Date) {
   const year = visibleMonth.getFullYear();
   const month = visibleMonth.getMonth();
-  const startOffset = new Date(year, month, 1).getDay(); // 0 (Sun) – 6 (Sat)
+  const startOffset = new Date(year, month, 1).getDay(); // 0 (Sun) â€“ 6 (Sat)
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   const cells: { date: Date; inMonth: boolean }[] = [];
 
-  // Leading days from the previous month — the Date constructor normalizes
+  // Leading days from the previous month â€” the Date constructor normalizes
   // negative day values, so no separate prev-month math is needed.
   for (let i = startOffset; i > 0; i--) {
     cells.push({ date: new Date(year, month, 1 - i), inMonth: false });
@@ -71,11 +71,11 @@ export function Calendar({ value, onChange, minDate, maxDate, defaultMonth, clas
     (minDate != null && date < startOfDay(minDate)) || (maxDate != null && date > startOfDay(maxDate));
 
   return (
-    <div className={cn('w-full max-w-xs p-4 rounded-2xl border border-slate-800/60 bg-[#1A1D24]', className)}>
-      {/* ──────────────────────────────────────────────────────────
+    <div className={cn('w-full max-w-xs p-4 rounded-2xl border border-slate-800/60 surface-card', className)}>
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: MONTH HEADER
           Contains: month/year label, previous/next nav buttons
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-sm font-bold text-white">{MONTH_LABEL.format(visibleMonth)}</span>
         <div className="flex items-center gap-1">
@@ -98,10 +98,10 @@ export function Calendar({ value, onChange, minDate, maxDate, defaultMonth, clas
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: WEEKDAY ROW
-          Contains: Su–Sa column labels
-          ────────────────────────────────────────────────────────── */}
+          Contains: Suâ€“Sa column labels
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-7 mb-1">
         {WEEKDAYS.map((day) => (
           <span key={day} className="h-7 flex items-center justify-center text-[10px] font-bold text-slate-500 uppercase">
@@ -110,10 +110,10 @@ export function Calendar({ value, onChange, minDate, maxDate, defaultMonth, clas
         ))}
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: DAY GRID
           Contains: 6-week date grid, today marker, selected fill
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-7 gap-y-0.5">
         {cells.map(({ date, inMonth }) => {
           const selected = value != null && isSameDay(date, value);

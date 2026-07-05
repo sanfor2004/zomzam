@@ -4,11 +4,11 @@ import React, { createContext, useCallback, useContext, useRef, useState } from 
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* ──────────────────────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     DEVELOPMENT NAVIGATOR: TOAST NOTIFICATION SYSTEM
     Contains: ToastProvider (context + viewport), useToast hook
-    ──────────────────────────────────────────────────────────
-    Self-contained — mount <ToastProvider> around any subtree
+    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    Self-contained â€” mount <ToastProvider> around any subtree
     that needs to call toast(). Not wired into the app's global
     providers.tsx; opt in where it's actually needed. */
 
@@ -81,7 +81,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               key={t.id}
               role="status"
               className={cn(
-                'pointer-events-auto flex gap-3 items-start p-4 rounded-2xl border bg-[#1A1D24] shadow-2xl animate-in slide-in-from-top duration-300',
+                'pointer-events-auto flex gap-3 items-start p-4 rounded-2xl border surface-card shadow-2xl animate-in slide-in-from-top duration-300',
                 VARIANT_STYLES[t.variant ?? 'info'],
               )}
             >

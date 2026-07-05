@@ -10,11 +10,11 @@ import { fetchCurrentUser, fetchFriends } from './page.services';
 import { type CurrentUser, type MentionUser, type Post } from './shared';
 
 export default function HomePage() {
-  // Viewer identity — used by the composer (@mentions, edit modal) and cards.
+  // Viewer identity â€” used by the composer (@mentions, edit modal) and cards.
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [friends, setFriends] = useState<MentionUser[]>([]);
 
-  // ── Composer modal ──────────────────────────────────────────
+  // â”€â”€ Composer modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // The resting banner opens the full composer in a modal.
   // `composerDirty` gates a discard confirm on close.
   const [composerOpen, setComposerOpen] = useState(false);
@@ -33,13 +33,13 @@ export default function HomePage() {
   // pageRef reuses containerRef (same node, usePageEntrance scope).
   usePageEntrance(containerRef, [posts.length]);
 
-  // ── Data bootstrap ──────────────────────────────────────────
+  // â”€â”€ Data bootstrap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     fetchCurrentUser().then(setCurrentUser);
     fetchFriends().then(setFriends);
   }, []);
 
-  // ── Composer open/close ─────────────────────────────────────
+  // â”€â”€ Composer open/close â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const openComposer = useCallback(() => {
     setComposerDirty(false);
     setComposerOpen(true);
@@ -59,12 +59,12 @@ export default function HomePage() {
     setComposerOpen(false);
   }, [handlePostCreated]);
 
-  // ── Bottom-nav "Create" entry points ────────────────────────
-  // The mobile bottom bar's center ➕ lives in the shell, which can't reach this
+  // â”€â”€ Bottom-nav "Create" entry points â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // The mobile bottom bar's center âž• lives in the shell, which can't reach this
   // page's composer state directly. Two signals bridge it: a `?compose=1` param
   // (arriving from another route) read once on mount, and a `zz:open-composer`
   // window event (fired when Create is tapped while already on /home).
-  // ponytail: a window CustomEvent is the minimal cross-component signal — no
+  // ponytail: a window CustomEvent is the minimal cross-component signal â€” no
   // composer state lifted into a context just to open a modal.
   useEffect(() => {
     const open = () => openComposer();
@@ -96,26 +96,26 @@ export default function HomePage() {
   }, { scope: feedRef, dependencies: [initialLoading] });
 
   return (
-    /* ──────────────────────────────────────────────────────────
+    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         DEVELOPMENT NAVIGATOR: HOME / COMMUNITY FEED
         Contains: Post composer, infinite-scroll feed, right sidebar
-        ────────────────────────────────────────────────────────── */
+        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     <div ref={containerRef} className="max-w-2xl mx-auto relative animate-in">
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: MAIN FEED (single column)
           Contains: Composer banner, post feed with infinite scroll. The social
           right sidebar (Messages / Active Now / Suggested) now lives globally
           in the dashboard shell (RightSidebar), not per-page here.
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div>
         <div ref={feedRef} className="space-y-4">
 
           <ComposerBanner avatarSrc={currentUser?.avatar} onOpen={openComposer} />
 
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: FEED FILTER (All · Help requests)
+          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+              DEVELOPMENT NAVIGATOR: FEED FILTER (All Â· Help requests)
               Contains: segmented feed scope selector (drives ?filter=)
-              ────────────────────────────────────────────────────────── */}
+              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           <div role="tablist" aria-label="Feed filter" className="flex items-center gap-1 bg-white/[0.03] border border-white/[0.06] rounded-2xl p-1">
             {([
               { value: 'all', label: 'All', icon: MessagesSquare },
@@ -140,11 +140,11 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* ──────────────────────────────────────────────────────────
+          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               DEVELOPMENT NAVIGATOR: NEW POSTS PILL
-              Soft, dismissible refresh prompt — appears live when someone in the
+              Soft, dismissible refresh prompt â€” appears live when someone in the
               network posts (SSE). Sticky so it stays reachable while scrolling.
-              ────────────────────────────────────────────────────────── */}
+              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {newPostsCount > 0 && (
             <div className="sticky top-2 z-20 flex justify-center pointer-events-none">
               <Button
@@ -158,16 +158,16 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* ──────────────────────────────────────────────────────────
+          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
               DEVELOPMENT NAVIGATOR: FEED
               Contains: Post cards, infinite scroll sentinel, empty state
-              ────────────────────────────────────────────────────────── */}
+              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
           {initialLoading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="w-6 h-6 text-slate-500 animate-spin" />
             </div>
           ) : posts.length === 0 ? (
-            <div className="bg-[#1A1D24] border border-dashed border-slate-800/60 rounded-3xl p-10 text-center">
+            <div className="surface-card border border-dashed border-slate-800/60 rounded-3xl p-10 text-center">
               <p className="text-sm font-semibold text-slate-400">No posts yet</p>
               <p className="text-xs text-slate-500 mt-1">Be the first to share something with the community.</p>
             </div>
@@ -196,11 +196,11 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* ──────────────────────────────────────────────────────────
-                  DEVELOPMENT NAVIGATOR: END OF UNSEEN → SEEN BACKFILL
+              {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                  DEVELOPMENT NAVIGATOR: END OF UNSEEN â†’ SEEN BACKFILL
                   Once unseen posts run out we enter the seen tier. Desktop pulls
                   older posts via this explicit button; mobile auto-loads them.
-                  ────────────────────────────────────────────────────────── */}
+                  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
               {tier === 'seen' && hasMore && isDesktop && !loadingFeed && (
                 <div className="flex justify-center py-4">
                   <Button
@@ -222,13 +222,13 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: COMPOSER MODAL
-          Contains: the full PostComposer (bare) hosted in an xl modal —
-          full-width content-height card on mobile — opened from the banner;
+          Contains: the full PostComposer (bare) hosted in an xl modal â€”
+          full-width content-height card on mobile â€” opened from the banner;
           soft rise-in motion; no X (backdrop click / Escape dismisses);
           closing a dirty draft routes through the discard confirm
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Modal
         isOpen={composerOpen}
         onClose={requestCloseComposer}
@@ -247,7 +247,7 @@ export default function HomePage() {
         />
       </Modal>
 
-      {/* Discard-draft confirmation — only reached when closing a dirty composer. */}
+      {/* Discard-draft confirmation â€” only reached when closing a dirty composer. */}
       <Modal
         isOpen={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}

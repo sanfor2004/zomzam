@@ -24,7 +24,10 @@ export function useTasks() {
   const [undoTask, setUndoTask] = useState<Task | null>(null);
   const [showUndoToast, setShowUndoToast] = useState(false);
 
-  // Notion sync status.
+  // Notion sync status. DORMANT: the Task Board gates Notion behind ProLock →
+  // /pricing (spec-11 §7), so this has no live caller until billing lands and a
+  // real isPro check re-enables it. Kept, not deleted, as the documented upgrade
+  // path — the sync logic is correct and reusable the moment Pro exists.
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStats, setSyncStats] = useState<NotionSyncResult['stats'] | null>(null);
   const [syncError, setSyncError] = useState<string | null>(null);

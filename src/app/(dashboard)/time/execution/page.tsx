@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
 import { Clock, RotateCcw, Play, Pause, SkipForward, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { Button, Select, Modal } from '@/components/ui';
+import { Button, Input, ProLock } from '@/components/ui';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { cn } from '@/lib/utils';
+import { priorityEdge, horizonEdge } from '../types';
+import { addIdeaRequest } from '../ideas/page.services';
 
 interface Task {
   id: number;
@@ -31,6 +34,34 @@ export default function PomodoroPage() {
   // Tasks & Server Sync
   const [tasks, setTasks] = useState<Task[]>([]);
   const [sessionsToday, setSessionsToday] = useState(0);
+  const [ideasCount, setIdeasCount] = useState(0);
+  // Active dream goals â€” carry `type` too so the dream-progress bar can colour
+  // itself by horizon (horizonEdge = data, per the colour=meaning rule).
+  const [horizons, setHorizons] = useState<{ id: number; content: string; type: string }[]>([]);
+
+  // Break-time idea capture (F2): draft, in-flight guard, and a 1.5s "saved" flash.
+  const [ideaDraft, setIdeaDraft] = useState('');
+  const [savingIdea, setSavingIdea] = useState(false);
+  const [ideaSaved, setIdeaSaved] = useState(false);
+
+  // Capture a mid-focus thought straight into Idea Capture without leaving the break.
+  const handleBreakCapture = async () => {
+    const content = ideaDraft.trim();
+    if (!content || savingIdea) return;
+    setSavingIdea(true);
+    try {
+      const idea = await addIdeaRequest({ content, linkedTaskId: null, linkedHorizonId: null });
+      if (idea) {
+        setIdeaDraft('');
+        setIdeaSaved(true);
+        setTimeout(() => setIdeaSaved(false), 1500);
+      }
+    } catch (err) {
+      console.error('Error capturing break idea:', err);
+    } finally {
+      setSavingIdea(false);
+    }
+  };
 
   // Timer State
   const [duration, setDuration] = useState(15 * 60); // default 15 min focus
@@ -45,7 +76,7 @@ export default function PomodoroPage() {
   const startTimeRef = useRef<number | null>(null);
   const remainingAtStartRef = useRef<number>(15 * 60);
 
-  // ── Mirror refs ── kept in sync so that setInterval callbacks always
+  // â”€â”€ Mirror refs â”€â”€ kept in sync so that setInterval callbacks always
   // read the *current* value without stale-closure issues after navigation.
   const isBreakRef        = useRef(false);
   const sessionsRef       = useRef(0);
@@ -69,12 +100,16 @@ export default function PomodoroPage() {
       });
       const data = await res.json();
       if (data.success) {
-        // Normalize in_progress → treat as pending for display purposes
+        // Normalize in_progress â†’ treat as pending for display purposes
         const normalized = (data.tasks || []).map((t: Task) => ({
           ...t,
           status: t.status === 'in_progress' ? 'pending' : t.status,
         }));
         setTasks(normalized);
+
+        const h = data.horizons || {};
+        setHorizons([...(h.week || []), ...(h.month || []), ...(h.year || [])]);
+        setIdeasCount((data.ideas || []).length);
       }
     } catch (err) {
       console.error('Failed to load tasks:', err);
@@ -95,7 +130,7 @@ export default function PomodoroPage() {
         const savedSessions      = data.sessions      || 0;
         const savedStartTime     = data.currentTaskStartTime || null;
 
-        // ── Sync mirror refs immediately (before React commits the state
+        // â”€â”€ Sync mirror refs immediately (before React commits the state
         //    updates below) so that any interval we start right here reads
         //    the correct values, not the stale initial-state defaults.
         isBreakRef.current       = savedIsBreak;
@@ -125,7 +160,7 @@ export default function PomodoroPage() {
             // Set up refs that tick() needs before starting the interval.
             remainingAtStartRef.current = rem;
             startTimeRef.current       = Date.now();
-            // Start the interval directly here — setIsRunning(true) alone
+            // Start the interval directly here â€” setIsRunning(true) alone
             // would NOT restart it because the useEffect([isRunning]) only
             // fires after the render, by which time the interval is missing.
             if (!timerIntervalRef.current) {
@@ -149,7 +184,7 @@ export default function PomodoroPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save Pomodoro state to localStorage — reads from refs so it is safe
+  // Save Pomodoro state to localStorage â€” reads from refs so it is safe
   // to call from inside a setInterval callback (no stale-closure issue).
   const saveState = (updatedRemaining: number, updatedIsRunning: boolean, updatedIsBreak: boolean, updatedSessions: number, updatedStartTime: number | null) => {
     const pending = tasks.filter(t => t.status === 'pending');
@@ -233,6 +268,47 @@ export default function PomodoroPage() {
   // Auto-load task duration block if top task changes and timer not running
   const pendingTasks = tasks.filter(t => t.status === 'pending');
   const topTask = pendingTasks[0] || null;
+  // The dream the current focus task is pushing toward, if any.
+  const topDream = topTask?.horizon_id ? horizons.find(h => h.id === topTask.horizon_id) : null;
+
+  // Live dream progress â€” completed Ã· total tasks sharing the horizon, derived
+  // purely from the already-loaded task set. Ticks up when a linked task
+  // completes (handleDoneTask flips its status). Hidden when nothing is linked
+  // (no divide-by-zero). See spec-11 Â§3.3.
+  const dreamProgress = useMemo(() => {
+    if (!topTask?.horizon_id) return null;
+    const linked = tasks.filter(t => t.horizon_id === topTask.horizon_id);
+    if (linked.length === 0) return null;
+    const done = linked.filter(t => t.status === 'completed').length;
+    return { done, total: linked.length, pct: Math.round((done / linked.length) * 100) };
+  }, [tasks, topTask?.horizon_id]);
+
+  // This week's focused time â€” sum of actual_duration for tasks completed in the
+  // last 7 days (rolling, local time). A real, blurred-adjacent number for the
+  // Pro money strip; not billing-grade. See spec-11 Â§3.4.
+  const weekFocusMins = useMemo(() => {
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    return tasks
+      .filter(t => t.status === 'completed' && t.completed_at && new Date(t.completed_at).getTime() >= weekAgo)
+      .reduce((sum, t) => sum + (t.actual_duration || 0), 0);
+  }, [tasks]);
+
+  const fmtFocus = (mins: number) => {
+    if (mins <= 0) return 'no focused time yet';
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h && m) return `${h}h ${m}m focused`;
+    if (h) return `${h}h focused`;
+    return `${m}m focused`;
+  };
+
+  // Calm one-liner for the header, computed from state (voice guide Â§4).
+  const dayLine = pendingTasks.length === 0
+    ? "Nothing queued. Add something when you're ready."
+    : `${pendingTasks.length} ${pendingTasks.length === 1 ? 'task' : 'tasks'}. First one's ${pendingTasks[0].duration_block} minutes.`;
+
+  // "Later" queue = everything past now + next.
+  const laterCount = Math.max(0, pendingTasks.length - 2);
 
   useEffect(() => {
     if (topTask && !isRunning && !isBreak) {
@@ -250,7 +326,7 @@ export default function PomodoroPage() {
     }
   };
 
-  // Tick Action — reads all volatile values from refs, NOT from the closure,
+  // Tick Action â€” reads all volatile values from refs, NOT from the closure,
   // so it remains correct even when captured by an old setInterval call.
   const tick = () => {
     if (startTimeRef.current === null) return;
@@ -265,7 +341,7 @@ export default function PomodoroPage() {
     }
   };
 
-  // ── Safety-net: auto-start the interval on mount when localStorage says
+  // â”€â”€ Safety-net: auto-start the interval on mount when localStorage says
   // the timer was already running. This handles the page-navigation case where
   // the component unmounts (killing the interval) then remounts.
   useEffect(() => {
@@ -340,7 +416,7 @@ export default function PomodoroPage() {
     saveState(duration, false, false, sessionsToday, null);
   };
 
-  // Triggered on timer expiration — reads from refs to avoid stale closures.
+  // Triggered on timer expiration â€” reads from refs to avoid stale closures.
   const handleTimerEnd = () => {
     if (timerIntervalRef.current) {
       clearInterval(timerIntervalRef.current);
@@ -483,39 +559,38 @@ export default function PomodoroPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, sessions-completed-today pill
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
+          <div className="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Pomodoro Focus</h1>
-            <p className="text-xs text-slate-400">Stay in the zone. One task at a time.</p>
+            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Today</h1>
+            <p className="text-xs text-slate-400">{dayLine}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-4 py-2.5 shadow-apple-sm self-start">
-          <span className="w-1.5 h-1.5 rounded-full bg-primary-500 animate-pulse" />
+        <div className="flex items-center gap-2 surface-card border border-slate-800/60 rounded-2xl px-4 py-2.5 shadow-apple-sm self-start">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
           <span className="text-xs font-semibold text-slate-300">
-            Sessions Completed Today: <span className="text-primary-500 font-bold ml-1">{sessionsToday}</span>
+            <span className="text-primary-500 font-bold">{sessionsToday}</span> focused today
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        {/* ──────────────────────────────────────────────────────────
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             DEVELOPMENT NAVIGATOR: TIMER COLUMN (left)
             Contains: SVG countdown ring, play/pause/reset controls,
             focus/break duration adjusters
-            ────────────────────────────────────────────────────────── */}
-        <div data-entrance="card" className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-8 shadow-apple flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="absolute top-0 left-0 -mt-24 -ml-24 w-48 h-48 bg-primary-500/5 rounded-full blur-3xl pointer-events-none"></div>
-          
+            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div data-entrance="card" className="lg:col-span-2 surface-raised border border-slate-800/60 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
+
           {/* Visual SVG Ring */}
           <div className="relative w-64 h-64 mb-8">
             <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
@@ -542,8 +617,8 @@ export default function PomodoroPage() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[10px] font-black uppercase tracking-widest text-primary-500">
-                {isBreak ? 'Break Time' : 'Focus Session'}
+              <span className="text-[11px] font-bold tracking-wide text-primary-500">
+                {isBreak ? 'On a break' : 'Focusing'}
               </span>
               <span className="text-5xl font-black tabular-nums text-white mt-1.5 tracking-tight">
                 {formatTime(remaining)}
@@ -556,7 +631,7 @@ export default function PomodoroPage() {
             <div className="flex items-center gap-4">
               <Button variant="unstyled"
                 onClick={resetTimer}
-                title="Reset Session"
+                title="Reset"
                 className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95"
               >
                 <RotateCcw className="w-5 h-5" />
@@ -564,13 +639,14 @@ export default function PomodoroPage() {
 
               <Button variant="unstyled"
                 onClick={isRunning ? pauseTimer : startTimer}
-                title={isRunning ? 'Pause Session' : 'Start Session'}
-                aria-label={isRunning ? 'Pause Session' : 'Start Session'}
-                className={`w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 ${
+                title={isRunning ? 'Pause' : 'Start focus'}
+                aria-label={isRunning ? 'Pause' : 'Start focus'}
+                className={cn(
+                  'w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4',
                   isRunning
                     ? 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 ring-2 ring-primary-400/40 focus-visible:ring-primary-500/40'
-                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 focus-visible:ring-emerald-500/40'
-                }`}
+                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 focus-visible:ring-emerald-500/40',
+                )}
               >
                 {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8" fill="currentColor" />}
               </Button>
@@ -578,7 +654,7 @@ export default function PomodoroPage() {
               <Button variant="unstyled"
                 onClick={skipTask}
                 disabled={pendingTasks.length < 2}
-                title="Skip Task"
+                title="Skip to next task"
                 className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <SkipForward className="w-5 h-5" />
@@ -586,12 +662,47 @@ export default function PomodoroPage() {
             </div>
 
             {isBreak && (
-              <Button variant="unstyled"
-                onClick={skipBreak}
-                className="px-5 py-2 text-xs font-black uppercase tracking-widest bg-primary-950/20 text-primary-500 hover:bg-primary-900/30 rounded-full border border-primary-900/30 transition-colors"
-              >
-                Skip Break
-              </Button>
+              <>
+                <Button variant="unstyled"
+                  onClick={skipBreak}
+                  className="px-5 py-2 text-xs font-semibold bg-primary-950/20 text-primary-500 hover:bg-primary-900/30 rounded-full border border-primary-900/30 transition-colors"
+                >
+                  Skip break
+                </Button>
+
+                {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    DEVELOPMENT NAVIGATOR: BREAK-TIME IDEA CAPTURE (F2)
+                    Contains: one-line thought capture â†’ Idea Capture, saved flash
+                    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                <div className="w-full mt-1 rounded-2xl p-4 bg-emerald-500/[0.06] border border-emerald-500/15">
+                  <div className="flex items-center gap-1.5 mb-2 text-[11px] font-semibold text-emerald-500">
+                    <Lightbulb className="w-3.5 h-3.5" /> Caught a thought?
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      size="sm"
+                      value={ideaDraft}
+                      onChange={(e) => setIdeaDraft(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleBreakCapture(); }}
+                      placeholder="Capture it before it's goneâ€¦"
+                      containerClassName="flex-1"
+                    />
+                    <Button
+                      onClick={handleBreakCapture}
+                      loading={savingIdea}
+                      disabled={!ideaDraft.trim()}
+                      size="sm"
+                      title="Capture idea"
+                      className="flex-shrink-0 bg-emerald-500 hover:bg-emerald-600 focus:ring-emerald-500/50"
+                    >
+                      {ideaSaved ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                  {ideaSaved && (
+                    <p className="mt-1.5 text-[11px] font-semibold text-emerald-500">Saved â€” it&apos;s in your ideas.</p>
+                  )}
+                </div>
+              </>
             )}
 
             {/* Adjuster Inputs */}
@@ -645,55 +756,61 @@ export default function PomodoroPage() {
           </div>
         </div>
 
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: TASK STACK COLUMN (right)
-            Contains: Previous task card, current focus task card, next-up card,
-            quick action shortcuts
-            ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-3 flex flex-col gap-6">
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            DEVELOPMENT NAVIGATOR: THE DAY â€” NOW / NEXT / LATER (right)
+            Contains: Now card (focus task, priority, live dream bar, Done/Switch),
+            Next row, Later collapsed count â†’ task board
+            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+        <div className="lg:col-span-3 flex flex-col gap-4">
 
-          {/* Previous Card */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm opacity-50">
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Previously completed</span>
-            <p className="text-sm font-semibold text-slate-400 mt-0.5 truncate">
-              {tasks.filter(t => t.status === 'completed')[0]?.title || 'No completed tasks recently'}
-            </p>
-          </div>
-
-          {/* Current Focus Task Card */}
-          <div data-entrance="card" className="flex-1 bg-gradient-to-br from-primary-500/10 via-[#13161C] to-amber-500/5 border border-slate-800/60 rounded-3xl p-8 shadow-apple hover:shadow-apple-lg transition-all duration-300 flex flex-col justify-between min-h-[300px]">
+          {/* NOW â€” the current focus task; the left-column ring is its Start/Pause.
+              surface-featured = the special hero card (faint orange corner glow). */}
+          <div data-entrance="card" className="flex-1 surface-featured border border-slate-800/60 rounded-3xl p-8 shadow-apple-lg flex flex-col justify-between min-h-[300px]">
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-white bg-primary-500 rounded-full">
-                  Focus Target
-                </span>
+              <div className="flex items-center justify-between mb-5">
+                <span className="text-[11px] font-bold tracking-wide text-slate-500">Now</span>
                 {topTask && (
-                  <span className="text-xs font-semibold text-slate-400">
-                    Planned duration: {topTask.duration_block}m
-                  </span>
+                  <span className="text-xs font-semibold text-slate-400">{topTask.duration_block}m planned</span>
                 )}
               </div>
 
               {topTask ? (
                 <div className="space-y-3">
-                  <h2 className="text-2xl font-black text-white tracking-tight leading-tight">
-                    {topTask.title}
-                  </h2>
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full${
-                      topTask.priority === 'urgent' ? 'bg-red-500' :
-                      topTask.priority === 'medium' ? 'bg-amber-400' :
-                      topTask.priority === 'maybe' ? 'bg-blue-400' : 'bg-slate-350'
-                    }`} />
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                      {topTask.priority} priority
-                    </span>
+                  <div className="flex items-start gap-2.5">
+                    <span className={cn('mt-2 w-2 h-2 rounded-full shrink-0', priorityEdge(topTask.priority))} />
+                    <h2 className="text-2xl font-black text-white tracking-tight leading-tight">
+                      {topTask.title}
+                    </h2>
                   </div>
+                  <span className="block pl-[18px] text-xs font-medium text-slate-400">
+                    {topTask.priority} priority
+                  </span>
+
+                  {/* Live dream progress â€” quiet counterpart to the session confetti */}
+                  {topDream && dreamProgress && (
+                    <div className="pl-[18px] pt-2">
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <span className="text-xs text-slate-400 truncate">toward â€” {topDream.content}</span>
+                        <span className="text-xs font-semibold text-slate-400 tabular-nums shrink-0">
+                          {dreamProgress.done}/{dreamProgress.total}
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-slate-850 overflow-hidden">
+                        <div
+                          className={cn(
+                            'h-full rounded-full transition-[width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none',
+                            horizonEdge(topDream.type),
+                          )}
+                          style={{ width: `${dreamProgress.pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-base text-slate-400 italic font-medium">
-                    No active tasks in your queue.
+                  <p className="text-base text-slate-400 font-medium">
+                    Nothing queued. Add something when you&apos;re ready.
                   </p>
                   <Button
                     onClick={() => router.push('/time/tasks')}
@@ -701,7 +818,7 @@ export default function PomodoroPage() {
                     size="sm"
                     className="mt-4"
                   >
-                    Add Task
+                    Add a task
                   </Button>
                 </div>
               )}
@@ -715,14 +832,14 @@ export default function PomodoroPage() {
                   className="w-full h-12 text-sm"
                 >
                   <Check className="w-4 h-4 stroke-[3] mr-2" />
-                  Done It
+                  Done
                 </Button>
 
                 <Button
                   onClick={swapTask}
                   disabled={pendingTasks.length < 2}
                   variant="outline"
-                  className="w-full h-11 text-[10px] font-black"
+                  className="w-full h-11 text-sm"
                 >
                   <Shuffle className="w-4 h-4 mr-2" />
                   Switch task
@@ -731,46 +848,45 @@ export default function PomodoroPage() {
             )}
           </div>
 
-          {/* Next Up Card */}
-          <div className="bg-[#1A1D24] border border-slate-800/60 rounded-2xl px-6 py-4 shadow-apple-sm">
-            <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Next up in queue</span>
-            <p className="text-sm font-semibold text-slate-300 mt-0.5 truncate">
-              {pendingTasks[1]?.title || '—'}
+          {/* NEXT â€” the task after this one */}
+          <div className="surface-base border border-slate-800/60 rounded-2xl px-6 py-4 flex items-center gap-3">
+            <span className="text-[11px] font-bold tracking-wide text-slate-500 w-11 shrink-0">Next</span>
+            {pendingTasks[1] ? (
+              <>
+                <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', priorityEdge(pendingTasks[1].priority))} />
+                <p className="text-sm font-semibold text-slate-300 truncate flex-1">{pendingTasks[1].title}</p>
+                <span className="text-xs text-slate-500 shrink-0 tabular-nums">{pendingTasks[1].duration_block}m</span>
+              </>
+            ) : (
+              <p className="text-sm text-slate-500">Nothing after this.</p>
+            )}
+          </div>
+
+          {/* LATER â€” the rest of the queue, collapsed; the full board is a tap away */}
+          <Button
+            variant="unstyled"
+            onClick={() => router.push('/time/tasks')}
+            className="card-lift surface-base border border-slate-800/60 rounded-2xl px-6 py-4 flex items-center gap-3 text-left hover:border-primary-500/30 group"
+          >
+            <span className="text-[11px] font-bold tracking-wide text-slate-500 w-11 shrink-0">Later</span>
+            <p className="text-sm font-semibold text-slate-400 flex-1 truncate">
+              {laterCount > 0 ? `${laterCount} more ${laterCount === 1 ? 'task' : 'tasks'}` : 'Queue is clear'}
+              {ideasCount > 0 && <span className="text-slate-500"> · {ideasCount} {ideasCount === 1 ? 'idea' : 'ideas'}</span>}
             </p>
-          </div>
-
-          {/* Quick Actions Shortcuts */}
-          <div className="grid grid-cols-2 gap-4">
-            <Button variant="unstyled"
-              onClick={() => router.push('/time/tasks')}
-              className="flex items-center gap-3 bg-[#1A1D24] border border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-amber-400/40 hover:shadow-apple transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Plus className="w-5 h-5" />
-              </div>
-              <div className="text-left min-w-0">
-                <span className="block text-xs font-bold text-slate-300">Manage Tasks</span>
-                <span className="block text-[10px] text-slate-400 truncate">Go to task board</span>
-              </div>
-            </Button>
-
-            <Button variant="unstyled"
-              onClick={() => router.push('/time/ideas')}
-              className="flex items-center gap-3 bg-[#1A1D24] border border-slate-800/60 rounded-2xl p-4 shadow-apple-sm hover:border-emerald-400/40 hover:shadow-apple transition-all group"
-            >
-              <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center group-hover:scale-105 transition-transform">
-                <Lightbulb className="w-5 h-5" />
-              </div>
-              <div className="text-left min-w-0">
-                <span className="block text-xs font-bold text-slate-300">Capture Idea</span>
-                <span className="block text-[10px] text-slate-400 truncate">Go to idea capture</span>
-              </div>
-            </Button>
-          </div>
+            <span className="text-xs text-slate-500 group-hover:text-primary-400 transition-colors shrink-0">Open board</span>
+          </Button>
 
         </div>
 
       </div>
+
+   
+      <ProLock
+        variant="strip"
+        label="See what your time earns"
+        sublabel={`This week €” ${fmtFocus(weekFocusMins)}`}
+        blurred={<span>$â€¢â€¢â€¢</span>}
+      />
 
     </div>
   );

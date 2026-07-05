@@ -210,7 +210,7 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, column.id)}
               className={cn(
-                "flex flex-col rounded-3xl bg-[#1A1D24]/80 border border-slate-800/80 pb-6 overflow-hidden transition-all duration-300 min-h-[500px]",
+                "flex flex-col rounded-3xl surface-card/80 border border-slate-800/80 pb-6 overflow-hidden transition-all duration-300 min-h-[500px]",
                 column.glowColor,
                 isOver && "bg-white/[0.03] border-[#EE5712]/30 shadow-apple-lg"
               )}

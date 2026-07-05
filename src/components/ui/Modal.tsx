@@ -20,7 +20,7 @@ export interface ModalProps {
    *  'xl' suits richer content like the post composer. */
   size?: 'md' | 'xl';
   /** On phones, let the card span the full width and size to its content
-   *  (height capped with internal scroll) over a visible backdrop — so tapping
+   *  (height capped with internal scroll) over a visible backdrop â€” so tapping
    *  anywhere around the card dismisses it; reverts to a centered card at sm+. */
   fullWidthMobile?: boolean;
   /** Entrance motion. 'rise' fades the backdrop's blur in and lifts + scales the
@@ -48,7 +48,7 @@ export function Modal({
   surface = 'solid',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  // Portals need the DOM — gate on mount so SSR/first render stays clean.
+  // Portals need the DOM â€” gate on mount so SSR/first render stays clean.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -92,7 +92,7 @@ export function Modal({
   const showHeader = title || description || showClose;
 
   // Mobile-first width/padding/radius so cn() never has to win a Tailwind
-  // conflict (this cn is clsx-style — it doesn't dedupe). Full-width-on-mobile
+  // conflict (this cn is clsx-style â€” it doesn't dedupe). Full-width-on-mobile
   // spans the padded overlay, then becomes a centered card at sm+.
   const widthClass = fullWidthMobile
     ? (size === 'xl' ? 'max-w-none sm:max-w-xl' : 'max-w-none sm:max-w-md')
@@ -108,7 +108,7 @@ export function Modal({
     : 'rounded-3xl p-8';
   const surfaceClass = surface === 'glass'
     ? 'bg-white/[0.04] backdrop-blur-xl border border-white/[0.07]'
-    : cn('bg-[#1A1D24] border', borderClasses);
+    : cn('surface-card border', borderClasses);
 
   const overlay = (
     <div

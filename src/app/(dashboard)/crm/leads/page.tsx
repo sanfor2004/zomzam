@@ -166,10 +166,10 @@ export default function LeadsPage() {
   return (
     <div ref={pageRef} className="space-y-6">
       
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Title + subtitle, "Create New Lead" button
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -188,11 +188,11 @@ export default function LeadsPage() {
         </Button>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: FILTER & VIEW CONTROL BAR
           Contains: Search input, industry filter, status filter, grid/table view toggles
-          ────────────────────────────────────────────────────────── */}
-      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <div data-entrance="card" className="surface-card border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
         
         {/* Search Input */}
         <div className="relative w-full md:max-w-sm">
@@ -265,11 +265,11 @@ export default function LeadsPage() {
 
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: SELECTION & BATCH ACTION STRIP
           Contains: Vault/filtered/selected counters, Select-All toggle, batch Delete
-          ────────────────────────────────────────────────────────── */}
-      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      <div data-entrance="card" className="surface-card border border-slate-800/60 px-6 py-3.5 rounded-3xl flex flex-col sm:flex-row gap-3 items-center justify-between shadow-apple">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold">
           <span className="text-slate-400">
             Vault Directory: <strong className="text-white">{leads.length}</strong> leads
@@ -317,17 +317,17 @@ export default function LeadsPage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: DIRECTORY WORKSPACE
           Contains: Loading state, empty state, grid of <LeadCard>, and table view
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {loading ? (
         <div className="h-[40vh] flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
           <span className="text-xs text-slate-400 font-semibold">Retrieving secure records...</span>
         </div>
       ) : filteredLeads.length === 0 ? (
-        <div className="bg-[#1A1D24] border border-slate-800/60 p-16 rounded-3xl text-center text-slate-600 italic font-semibold text-xs">
+        <div className="surface-card border border-slate-800/60 p-16 rounded-3xl text-center text-slate-600 italic font-semibold text-xs">
           No records matched your search query. Add new parameters or scrape Google maps listings.
         </div>
       ) : viewMode === "grid" ? (
@@ -344,7 +344,7 @@ export default function LeadsPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl overflow-hidden overflow-x-auto shadow-apple">
+        <div className="surface-card border border-slate-800/60 rounded-3xl overflow-hidden overflow-x-auto shadow-apple">
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-slate-800/60 bg-slate-900/40 text-slate-550 font-extrabold uppercase text-[10px] tracking-wider select-none">
@@ -429,10 +429,10 @@ export default function LeadsPage() {
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: LEAD DETAILS MODAL
           Contains: <LeadDetailsModal> drawer (rendered when a lead is selected)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {selectedLead && (
         <LeadDetailsModal
           key={selectedLead.id}
@@ -442,11 +442,11 @@ export default function LeadsPage() {
         />
       )}
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: ADD LEAD MODAL
           Contains: Manual lead-injection form (name, company, niche, email,
           phone, website, address, notes) inside <Modal>
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {showAddForm && (
         <Modal
           isOpen={true}

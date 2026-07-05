@@ -160,10 +160,10 @@ export default function MoneyDashboardPage() {
   return (
     <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Title + display-currency selector, Settings / Income / Expense buttons
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
@@ -226,16 +226,16 @@ export default function MoneyDashboardPage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: ACCOUNT BALANCES GRID
           Contains: Per-account balance cards (icon, currency, name, last-4)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {accounts.map((acc) => (
           <div
             key={acc.id}
             data-entrance="card"
-            className="bg-[#1A1D24] rounded-3xl p-6 border border-slate-800/60 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden"
+            className="surface-card rounded-3xl p-6 border border-slate-800/60 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors pointer-events-none"></div>
             <div className="relative z-10 flex flex-col justify-between h-full">
@@ -254,7 +254,7 @@ export default function MoneyDashboardPage() {
 
               <div className="flex items-center justify-between mt-4">
                 {acc.last_four ? (
-                  <p className="text-[9px] text-slate-400 font-mono tracking-wider">•••• {acc.last_four}</p>
+                  <p className="text-[9px] text-slate-400 font-mono tracking-wider">â€¢â€¢â€¢â€¢ {acc.last_four}</p>
                 ) : (
                   <span />
                 )}
@@ -267,13 +267,13 @@ export default function MoneyDashboardPage() {
       {/* Main Budget Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: LEFT COLUMN — BUDGET, TIP, LENDING
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            DEVELOPMENT NAVIGATOR: LEFT COLUMN â€” BUDGET, TIP, LENDING
             Contains: 60/20/20 budget allocation donut + legend, financial-mastery
             tip card, lending summary card
-            ────────────────────────────────────────────────────────── */}
+            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-1 space-y-6">
-          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
+          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
             <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Budget Allocation</h2>
 
             {/* SVG Donut Chart */}
@@ -375,7 +375,7 @@ export default function MoneyDashboardPage() {
           </div>
 
           {/* Debts Summary */}
-          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple">
             <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Lending Summary</h3>
             <div className="space-y-3.5">
               <div className="flex items-center justify-between">
@@ -397,13 +397,13 @@ export default function MoneyDashboardPage() {
           </div>
         </div>
 
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: RIGHT COLUMN — RECENT TRANSACTIONS
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            DEVELOPMENT NAVIGATOR: RIGHT COLUMN â€” RECENT TRANSACTIONS
             Contains: Transaction list (empty state, per-entry rows with delete),
             Expenses / Income footer nav buttons
-            ────────────────────────────────────────────────────────── */}
+            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-2">
-          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
+          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">
                 <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
@@ -436,7 +436,7 @@ export default function MoneyDashboardPage() {
                             {t.description || t.category_name || 'Transaction'}
                           </p>
                           <span className="block text-[9px] text-slate-400 font-semibold uppercase tracking-tight">
-                            {t.account_name} • {new Date(t.transaction_date).toLocaleDateString()}
+                            {t.account_name} â€¢ {new Date(t.transaction_date).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
@@ -476,10 +476,10 @@ export default function MoneyDashboardPage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: SETTINGS MODAL
           Contains: Primary / secondary currency selectors
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Modal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -525,10 +525,10 @@ export default function MoneyDashboardPage() {
         </div>
       </Modal>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: QUICK INCOME MODAL
           Contains: Quick-add income form (amount, account, category, description)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Modal
         isOpen={isIncomeOpen}
         onClose={() => setIsIncomeOpen(false)}
@@ -595,10 +595,10 @@ export default function MoneyDashboardPage() {
         </div>
       </Modal>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: QUICK EXPENSE MODAL
           Contains: Quick-add expense form (amount, account, category, description)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <Modal
         isOpen={isExpenseOpen}
         onClose={() => setIsExpenseOpen(false)}

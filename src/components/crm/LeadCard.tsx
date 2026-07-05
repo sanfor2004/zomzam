@@ -85,7 +85,7 @@ export function LeadCard({ lead, onOpenDetails, isSelected, onSelectChange }: Le
   });
 
   return (
-    <Card className="hover:border-[#EE5712]/35 hover:shadow-apple-lg hover:scale-[1.01] transition-all duration-300 relative group overflow-hidden flex flex-col justify-between p-6 bg-[#1A1D24] border border-slate-800/60 rounded-3xl">
+    <Card className="hover:border-[#EE5712]/35 hover:shadow-apple-lg hover:scale-[1.01] transition-all duration-300 relative group overflow-hidden flex flex-col justify-between p-6 surface-card border border-slate-800/60 rounded-3xl">
       {/* Dynamic Glow Line */}
       <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-transparent via-[#EE5712]/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       

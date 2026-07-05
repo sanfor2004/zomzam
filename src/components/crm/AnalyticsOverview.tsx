@@ -46,7 +46,7 @@ export function AnalyticsOverview({ stats }: AnalyticsOverviewProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
         {/* Total Leads */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
             <Users className="h-16 w-16 text-[#EE5712]" />
           </div>
@@ -66,7 +66,7 @@ export function AnalyticsOverview({ stats }: AnalyticsOverviewProps) {
         </div>
 
         {/* Pipeline Conversion */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
             <Percent className="h-16 w-16 text-emerald-500/5" />
           </div>
@@ -85,7 +85,7 @@ export function AnalyticsOverview({ stats }: AnalyticsOverviewProps) {
         </div>
 
         {/* Website Density */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
             <Globe className="h-16 w-16 text-cyan-500" />
           </div>
@@ -104,7 +104,7 @@ export function AnalyticsOverview({ stats }: AnalyticsOverviewProps) {
         </div>
 
         {/* Phone Coverage */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg hover:border-[#EE5712]/30 transition-all duration-300 relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
             <Phone className="h-16 w-16 text-amber-500" />
           </div>
@@ -128,7 +128,7 @@ export function AnalyticsOverview({ stats }: AnalyticsOverviewProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Custom Glowing Funnel Deck */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between space-y-6">
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5 text-[#EE5712]" />
@@ -214,7 +214,7 @@ export function AnalyticsOverview({ stats }: AnalyticsOverviewProps) {
         </div>
 
         {/* Industry Distribution Spread */}
-        <div className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
+        <div className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
           <div className="flex items-center gap-2">
             <Cpu className="h-5 w-5 text-[#EE5712]" />
             <h3 className="text-xs font-black text-slate-350 uppercase tracking-widest">Target Niches & Industries</h3>

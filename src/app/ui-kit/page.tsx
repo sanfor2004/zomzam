@@ -24,8 +24,10 @@ import {
   Pagination,
   PostCard,
   PostComposer,
+  ProLock,
   Progress,
   RadioGroup,
+  SectionHeader,
   SegmentedSwitch,
   ShareButton,
   Skeleton,
@@ -54,6 +56,8 @@ import {
   Settings,
   User,
   Copy,
+  LayoutDashboard,
+  Lightbulb,
 } from 'lucide-react';
 
 /* ──────────────────────────────────────────────────────────
@@ -391,6 +395,38 @@ export default function UiKitPage() {
             <Avatar src="/Assets/Img/default-avatar.png" alt="Layla Fathy" size="md" status="online" />
             <Avatar name="Karim Adel" size="lg" status="offline" shape="rounded" />
             <Avatar size="xl" />
+          </div>
+        </Section>
+
+        {/* SectionHeader */}
+        <Section title="Section Header" description="The accent-tile + title + CountUp count pill + right-actions header on every Time-suite card. Accent is chrome-only — primary or neutral (colour = meaning, spec-11 §5); the count pill counts up once on mount.">
+          <div className="space-y-4">
+            <SectionHeader
+              icon={<LayoutDashboard />}
+              accent="primary"
+              title="Active tasks"
+              count={12}
+              countLabel="open"
+              actions={<Badge variant="warning">Legend slot</Badge>}
+            />
+            <Divider />
+            <SectionHeader icon={<Lightbulb />} accent="primary" title="Idea vault" count={34} countLabel="ideas" />
+            <SectionHeader icon={<Bell />} accent="neutral" title="Archived goals" count={7} />
+          </div>
+        </Section>
+
+        {/* ProLock */}
+        <Section title="ProLock" description="Pro upsell / locked-surface primitive. 'strip' gates a value behind a static blur → /pricing; 'inline' overlays a 🔒 · Pro affordance on a wrapped control. Visual-only — no server enforcement until billing.">
+          <div className="space-y-4 max-w-lg">
+            <ProLock
+              variant="strip"
+              label="See what your time earns"
+              sublabel="This week — 12h focused"
+              blurred={<span>$1,240</span>}
+            />
+            <ProLock variant="inline" label="Sync Notion">
+              <Download className="w-4 h-4" />
+            </ProLock>
           </div>
         </Section>
 

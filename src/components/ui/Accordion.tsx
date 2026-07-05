@@ -31,7 +31,7 @@ export function Accordion({ items, type = 'single', defaultValue = [], className
   };
 
   return (
-    <div className={cn('divide-y divide-slate-800/60 border border-slate-800/60 rounded-2xl overflow-hidden bg-[#1A1D24]', className)}>
+    <div className={cn('divide-y divide-slate-800/60 border border-slate-800/60 rounded-2xl overflow-hidden surface-card', className)}>
       {items.map((item) => {
         const isOpen = open.includes(item.value);
         return (

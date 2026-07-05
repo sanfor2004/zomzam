@@ -16,7 +16,7 @@ export default function MyProfilePage() {
   const router = useRouter();
 
   // Profile data states. `username` is the editable field; `savedUsername` is the
-  // last persisted handle — the left card + public-profile link read that so they
+  // last persisted handle â€” the left card + public-profile link read that so they
   // never point at an unsaved value mid-edit.
   const [username, setUsername] = useState('');
   const [savedUsername, setSavedUsername] = useState('');
@@ -27,7 +27,7 @@ export default function MyProfilePage() {
   const [tags, setTags] = useState<string[]>([]);
   const [currentAvatarUrl, setCurrentAvatarUrl] = useState<string | null>(null);
 
-  // File upload states — avatar changes upload immediately on selection (see
+  // File upload states â€” avatar changes upload immediately on selection (see
   // uploadAvatar/handleRemoveAvatar), independent of the Save button below.
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -76,7 +76,7 @@ export default function MyProfilePage() {
     };
   }, [avatarPreview]);
 
-  // Upload the avatar immediately — no separate "Save" step for photo changes.
+  // Upload the avatar immediately â€” no separate "Save" step for photo changes.
   const uploadAvatar = async (file: File) => {
     setAvatarUploading(true);
     setErrorMsg(null);
@@ -120,7 +120,7 @@ export default function MyProfilePage() {
     fileInputRef.current?.click();
   };
 
-  // Handle avatar removal — fires immediately, same as upload.
+  // Handle avatar removal â€” fires immediately, same as upload.
   const handleRemoveAvatar = async () => {
     setAvatarUploading(true);
     setErrorMsg(null);
@@ -199,7 +199,7 @@ export default function MyProfilePage() {
     // Cheap client-side handle pre-check (the API re-validates + owns uniqueness).
     const cleanedUsername = username.trim().replace(/\s+/g, '_');
     if (cleanedUsername !== savedUsername && !/^[a-zA-Z0-9_]{3,50}$/.test(cleanedUsername)) {
-      setErrorMsg('Username must be 3–50 characters: letters, numbers, or underscores only.');
+      setErrorMsg('Username must be 3â€“50 characters: letters, numbers, or underscores only.');
       setIsSaving(false);
       return;
     }
@@ -239,10 +239,10 @@ export default function MyProfilePage() {
 
   return (
     <div ref={containerRef} className="max-w-4xl mx-auto space-y-8 pb-16">
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Profile icon badge, title + description copy
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
           <User className="w-5 h-5" />
@@ -259,15 +259,15 @@ export default function MyProfilePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: LEFT COLUMN — AVATAR + ACCOUNT INFO
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            DEVELOPMENT NAVIGATOR: LEFT COLUMN â€” AVATAR + ACCOUNT INFO
             Contains: Avatar frame with upload/remove, hidden file input,
             photo action buttons, account info card, public-profile link
-            ────────────────────────────────────────────────────────── */}
+            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-1 space-y-6">
-          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
+          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col items-center text-center">
             
-            {/* Avatar Photo Frame — click/tap anywhere on the photo to change it
+            {/* Avatar Photo Frame â€” click/tap anywhere on the photo to change it
                 (auto-uploads on selection, no separate Save step) */}
             <div className="relative group w-32 h-32 rounded-3xl overflow-hidden shadow-lg mb-5 bg-[#111318] isolate [transform:translateZ(0)] outline outline-2 outline-offset-2 outline-transparent hover:outline-primary-500/50 transition-colors duration-300">
               <img
@@ -304,7 +304,7 @@ export default function MyProfilePage() {
               className="hidden"
             />
 
-            {/* Photo Action Buttons — delete only; changing the photo is done by
+            {/* Photo Action Buttons â€” delete only; changing the photo is done by
                 clicking the frame above */}
             {(currentAvatarUrl || avatarPreview) && (
               <div className="flex gap-2 w-full justify-center">
@@ -327,7 +327,7 @@ export default function MyProfilePage() {
           </div>
 
           {/* Social Stats Info */}
-          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
+          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-4">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               Account Information
             </h3>
@@ -352,14 +352,14 @@ export default function MyProfilePage() {
           </div>
         </div>
 
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: RIGHT COLUMN — IDENTITY & BIO FORM
+        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            DEVELOPMENT NAVIGATOR: RIGHT COLUMN â€” IDENTITY & BIO FORM
             Contains: Success/error banners, first/last name, bio textarea,
             interests tag selector, save button
-            ────────────────────────────────────────────────────────── */}
+            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-2 space-y-8">
           
-          <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
+          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple">
 
             <div className="mb-6 pb-4 border-b border-slate-850">
               <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
@@ -372,7 +372,7 @@ export default function MyProfilePage() {
 
             <form onSubmit={handleSubmit} className="space-y-6">
 
-              {/* Username — editable public handle. Changing it is recorded in the
+              {/* Username â€” editable public handle. Changing it is recorded in the
                   user safety audit trail server-side (username_changed). */}
               <div data-entrance="list-item">
                 <label htmlFor="username" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
@@ -392,7 +392,7 @@ export default function MyProfilePage() {
                   />
                 </div>
                 <p className="text-[9px] text-slate-400 mt-2 leading-relaxed">
-                  3–50 characters: letters, numbers, and underscores only. Your public profile lives at /u/{savedUsername || 'username'}.
+                  3â€“50 characters: letters, numbers, and underscores only. Your public profile lives at /u/{savedUsername || 'username'}.
                 </p>
               </div>
 

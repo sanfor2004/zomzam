@@ -345,14 +345,15 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const status = STATUS_CONFIG[currentUserStatus] ?? STATUS_CONFIG.offline;
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#111318] relative">
+    <div className="h-screen flex flex-col overflow-hidden bg-[var(--shell-mid)] relative">
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AMBIENT BACKGROUND
           One cohesive, full-bleed linear gradient shared by EVERY dashboard
           route (the shell wraps them all), so the whole app reads as a single
-          surface instead of a flat slab. Top is a hair lighter + a faint warm
-          Zomzam-orange spotlight; it deepens toward the bottom for depth. Fixed
+          surface instead of a flat slab. Dark charcoal gradient (var --shell-*)
+          in the same family as the cards — a touch deeper so cards float — with a
+          soft Zomzam-orange glow bleeding down from the top (the old-design accent). Fixed
           + zero-cost (no JS/WebGL — the old LiquidEther fluid sim was removed in
           the P3 perf pass). pointer-events-none keeps the UI interactive.
           Translucent sidebars (surface-dark/90) sit over it and pick up the
@@ -363,8 +364,8 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
         className="fixed inset-0 z-0 pointer-events-none"
         style={{
           background:
-            'radial-gradient(110% 55% at 50% 0%, rgba(238,87,18,0.05) 0%, transparent 55%), ' +
-            'linear-gradient(180deg, #15171d 0%, #111318 52%, #0b0d11 100%)',
+            'radial-gradient(100% 55% at 50% -6%, rgba(238, 87, 18, 0.10) 0%, transparent 60%), ' +
+            'linear-gradient(180deg, var(--shell-top) 0%, var(--shell-mid) 52%, var(--shell-bottom) 100%)',
         }}
       />
 

@@ -84,16 +84,16 @@
    (shadow-apple -> shadow-apple-lg) so the card lift is perceptible.
    ---------------------------------------------------------------- */
 .dark {
+  /* Pure dark drop — no inset top-edge highlight. That white line competed with
+     the brand hairline and read as a forced double edge; depth now comes from
+     the drop shadow + tone-step alone, keeping cards calm. */
   --shadow-apple-sm:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.04),
     0 1px 2px rgba(0, 0, 0, 0.40),
     0 3px 10px -2px rgba(0, 0, 0, 0.45);
   --shadow-apple:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05),
     0 1px 2px rgba(0, 0, 0, 0.40),
     0 5px 14px -3px rgba(0, 0, 0, 0.48);
   --shadow-apple-lg:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
     0 4px 12px rgba(0, 0, 0, 0.50),
     0 16px 38px -8px rgba(0, 0, 0, 0.60);
 }
@@ -387,7 +387,7 @@ html[dir="rtl"] .nav-link-active::before {
 }
 
 .dark .zz-confirm-modal {
-  background: #1a1d24;
+  background: var(--card-mid);
   border: 1px solid rgba(51, 65, 85, 0.6);
 }
 
@@ -563,6 +563,11 @@ html[dir="rtl"] .nav-link-active::before {
     0 4px 12px -3px rgba(0, 0, 0, 0.16),
     0 1px 4px -1px rgba(0, 0, 0, 0.10);
 }
+/* Honour reduced-motion: keep the deeper shadow (a static depth cue) but drop
+   the translate so nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  .card-lift:hover { transform: none; }
+}
 
 /* Breathing: loopy subtle scale for primary CTAs — draws the eye without distraction. */
 @keyframes breathing {
@@ -609,4 +614,105 @@ html[dir="rtl"] .nav-link-active::before {
   .ring-orbit-ccw {
     animation-play-state: paused;
   }
+}
+
+/* ============================================================================
+   SURFACE & BRAND PALETTE — single source of truth (all colours are variables)
+   Tune or revert the entire app's card/shell look from THIS block only. The dark
+   grey-navy family descends from the original #1A1D24 card value; brand = Zomzam
+   orange, injected deliberately (a shell aurora + a crisp card top-hairline),
+   never as the faint accidental glow it used to be. Ladder: shell < sunken <
+   card < raised (darkest → brightest) so cards pop off the backdrop.
+   ============================================================================ */
+:root {
+  /* Dashboard shell (backdrop) — same dark charcoal family as the cards, a touch
+     deeper so cards float. No warm amber, no navy. */
+  --shell-top: #101216;
+  --shell-mid: #0c0d10;
+  --shell-bottom: #08090b;
+
+  /* Recessed rows inside a card. */
+  --surface-sunken: #0b0c0f;
+
+  /* Default card gradient — dark charcoal top → near-black bottom. The whole
+     card is dark; the gradient just deepens dark → very dark for premium depth. */
+  --card-top: #16181e;
+  --card-mid: #101216;
+  --card-bottom: #0a0b0e;
+
+  /* Elevated card gradient — a step brighter so it pops off the base tier. */
+  --raised-top: #191c22;
+  --raised-mid: #131519;
+  --raised-bottom: #0c0d11;
+
+}
+
+/* ============================================================================
+   SURFACE ELEVATION SYSTEM — three depth tiers (Time suite) + the global card.
+   Each tier: a variable base tone + a diagonal grey-navy gradient for life (NOT
+   a white sheen — that read as washed bright-grey) + the brand top-hairline.
+   ============================================================================ */
+.surface-sunken {
+  /* Recessed: darker than the cards that hold it, inset so rows read pressed in. */
+  background-color: var(--surface-sunken);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+}
+.surface-base {
+  background-color: var(--card-mid);
+  background-image:
+    linear-gradient(155deg, var(--card-top) 0%, var(--card-mid) 52%, var(--card-bottom) 100%);
+  box-shadow: var(--shadow-apple);
+}
+.surface-raised {
+  /* Elevated tier: brighter grey-navy; optional per-page whisper layered
+     (planning columns only — a semantic, non-orange data tint). */
+  background-color: var(--raised-mid);
+  background-image:
+    linear-gradient(to bottom, var(--whisper, transparent), transparent 55%),
+    linear-gradient(155deg, var(--raised-top) 0%, var(--raised-mid) 52%, var(--raised-bottom) 100%);
+  box-shadow: var(--shadow-apple-lg);
+}
+
+/* Per-page accent whisper — a faint SEMANTIC data tint on planning columns
+   (week/month/year). Orange is intentionally absent here; brand lives in the
+   hairline, not a wash. Pair with .surface-raised. */
+.whisper-amber   { --whisper: rgba(245, 158, 11, 0.07); }
+.whisper-emerald { --whisper: rgba(16, 185, 129, 0.07); }
+.whisper-purple  { --whisper: rgba(168, 85, 247, 0.07); }
+.whisper-blue    { --whisper: rgba(59, 130, 246, 0.07); }
+
+/* .surface-card — the GLOBAL default card fill (replaces the flat bg-[#1A1D24]
+   repeated across the app): grey-navy gradient. Pairs with each card's own
+   border + shadow-apple. */
+.surface-card {
+  background-color: var(--card-mid);
+  background-image:
+    linear-gradient(155deg, var(--card-top) 0%, var(--card-mid) 52%, var(--card-bottom) 100%);
+}
+
+/* .surface-featured — the SPECIAL card (one hero card per route, not every card).
+   The base is the EXACT same card gradient as every other surface (so it matches
+   perfectly), with one difference: a very faint Zomzam-orange glow in the top-right
+   corner — a whisper of warmth on the charcoal, not a new colour. */
+.surface-featured {
+  background-color: var(--card-mid);
+  background-image:
+    radial-gradient(85% 65% at 100% 0%, rgba(238, 87, 18, 0.07) 0%, transparent 50%),
+    linear-gradient(155deg, var(--card-top) 0%, var(--card-mid) 52%, var(--card-bottom) 100%);
+  box-shadow: var(--shadow-apple);
+}
+
+/* Left-edge accent bar for compact rows. Absolute inset bar (not border-l) so it
+   never fights the row's rounded corners. Grows via scaleX on row hover — GPU
+   transform, never `width` (which would reflow every hover). Colour is supplied
+   by a bg-* utility on the same element; static under reduced motion. */
+.edge-accent {
+  transform-origin: left center;
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.group:hover .edge-accent {
+  transform: scaleX(1.75);
+}
+@media (prefers-reduced-motion: reduce) {
+  .group:hover .edge-accent { transform: none; }
 }

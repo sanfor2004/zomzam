@@ -76,10 +76,10 @@ export default function ProjectsPage() {
   return (
     <div ref={pageRef} className="space-y-6">
       
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Title + subtitle, active-deliveries counter
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -94,13 +94,13 @@ export default function ProjectsPage() {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────
+      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
           DEVELOPMENT NAVIGATOR: PROJECT CARD GRID
           Contains: Empty state, per-project cards (status badge, contract value
           + start date, milestone progress bar, status <Select>, footer actions)
-          ────────────────────────────────────────────────────────── */}
+          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {projects.length === 0 ? (
-        <div className="bg-[#1A1D24] border border-slate-800/60 p-16 rounded-3xl text-center text-slate-500 italic font-semibold text-xs shadow-apple">
+        <div className="surface-card border border-slate-800/60 p-16 rounded-3xl text-center text-slate-500 italic font-semibold text-xs shadow-apple">
           No projects started yet. Complete a contract from the Funnel/Pipeline column to seed a new delivery lifecycle.
         </div>
       ) : (
@@ -114,7 +114,7 @@ export default function ProjectsPage() {
             });
 
             return (
-              <Card key={project.id} data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between hover:border-[#EE5712]/30 transition-all duration-300 shadow-apple">
+              <Card key={project.id} data-entrance="card" className="surface-card border border-slate-800/60 p-6 rounded-3xl relative overflow-hidden flex flex-col justify-between hover:border-[#EE5712]/30 transition-all duration-300 shadow-apple">
                 <div className="space-y-4">
                   {/* Top Header */}
                   <div className="flex justify-between items-start gap-4">

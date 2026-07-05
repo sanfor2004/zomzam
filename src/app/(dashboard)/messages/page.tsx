@@ -10,13 +10,13 @@ import { useMyId } from '@/context/MessagesContext';
 import { displayName, relativeTime } from '../home/shared';
 import { TypingBadge } from '@/components/chat/TypingDots';
 
-// ──────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // DEVELOPMENT NAVIGATOR: MESSAGES (MESSENGER HUB)
 // Full-page conversations directory. Reuses the global MessagesContext: the
 // contact list is the same model that powers the topbar dropdown and presence
 // rail. Selecting a person opens a docked chat window (ChatDock) so live
 // messaging behaves identically everywhere.
-// ──────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toChatUser(c: ChatContact): ChatUser {
   return {
     id: c.other_id,
@@ -51,7 +51,7 @@ export default function MessagesPage() {
 
   return (
     <div ref={pageRef} className="max-w-3xl mx-auto">
-      {/* ── Header ── */}
+      {/* â”€â”€ Header â”€â”€ */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center">
@@ -66,7 +66,7 @@ export default function MessagesPage() {
         </div>
       </div>
 
-      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-5 shadow-apple">
+      <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-5 shadow-apple">
         <Input
           size="md"
           value={search}
@@ -146,7 +146,7 @@ function Section({
                 )}
               </div>
               {isTyping ? (
-                <p className="text-xs truncate text-primary-400 font-semibold">typing…</p>
+                <p className="text-xs truncate text-primary-400 font-semibold">typingâ€¦</p>
               ) : (
                 <p className={`text-xs truncate ${c.unread_count > 0 ? 'text-slate-300 font-medium' : 'text-slate-600'}`}>
                   {c.last_message

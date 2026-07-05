@@ -5,14 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Check, Sparkles, Building2, Users, ArrowLeft } from 'lucide-react';
 import { Button, useToast } from '@/components/ui';
 
-// ──────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // DEVELOPMENT NAVIGATOR: PRICING / PLANS
 // Public page (proxy allowlists /pricing). Presents the Free social core and the
 // paid tiers that unlock the CRM + Leads-generation suite. Billing toggle
 // (monthly/annual). The "Subscribe" CTA routes logged-out visitors to sign-up
-// and, for logged-in users, records intent (real checkout is the Stripe step —
-// see docs/SITE-LOGIC-AND-FLOW-PLAN.md §Monetization).
-// ──────────────────────────────────────────────────────────
+// and, for logged-in users, records intent (real checkout is the Stripe step â€”
+// see docs/SITE-LOGIC-AND-FLOW-PLAN.md Â§Monetization).
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Billing = 'monthly' | 'annual';
 
@@ -38,12 +38,12 @@ const PLANS: Plan[] = [
     annualMonthly: 0,
     cta: 'Get started',
     features: [
-      'Full social layer — feed, posts, @mentions',
+      'Full social layer â€” feed, posts, @mentions',
       'Live messaging, presence & notifications',
       'Public profile + friends & followers',
-      'Time Suite — focus timer, tasks, planning',
-      'Money Suite — accounts, income/expenses, lending',
-      'Favor economy — ask for help & share wins',
+      'Time Suite â€” focus timer, tasks, planning',
+      'Money Suite â€” accounts, income/expenses, lending',
+      'Favor economy â€” ask for help & share wins',
     ],
   },
   {
@@ -57,11 +57,11 @@ const PLANS: Plan[] = [
     cta: 'Upgrade to Pro',
     features: [
       'Everything in Free',
-      'CRM Suite — contacts, Kanban pipeline, projects',
-      'Map Leads Scraper — 300 fresh leads / month',
-      'AI Outreach — 100 cold emails / month',
-      'Lead Vault — search, filter, batch actions',
-      'Cross-suite bridge: won deal → income + tasks',
+      'CRM Suite â€” contacts, Kanban pipeline, projects',
+      'Map Leads Scraper â€” 300 fresh leads / month',
+      'AI Outreach â€” 100 cold emails / month',
+      'Lead Vault â€” search, filter, batch actions',
+      'Cross-suite bridge: won deal â†’ income + tasks',
     ],
   },
   {
@@ -74,8 +74,8 @@ const PLANS: Plan[] = [
     cta: 'Go Agency',
     features: [
       'Everything in Pro',
-      'Map Leads Scraper — 1,500 leads / month',
-      'AI Outreach — 500 cold emails / month',
+      'Map Leads Scraper â€” 1,500 leads / month',
+      'AI Outreach â€” 500 cold emails / month',
       'Priority lead enrichment & support',
       'Higher API rate limits',
       'Early access to team seats (coming soon)',
@@ -122,7 +122,7 @@ export default function PricingPage() {
     // acknowledge intent so the page is honest rather than a dead button.
     toast({
       title: `${plan.name} is almost ready`,
-      description: 'Checkout is launching soon — we’ve noted your interest and will email you the moment it opens.',
+      description: 'Checkout is launching soon â€” weâ€™ve noted your interest and will email you the moment it opens.',
       variant: 'info',
     });
   };
@@ -142,7 +142,7 @@ export default function PricingPage() {
       />
 
       <div className="relative max-w-6xl mx-auto px-6 py-10 md:py-16">
-        {/* ── Header ── */}
+        {/* â”€â”€ Header â”€â”€ */}
         <button
           onClick={() => router.push(authed ? '/home' : '/')}
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors mb-8"
@@ -153,12 +153,12 @@ export default function PricingPage() {
         <div className="text-center max-w-2xl mx-auto mb-10">
           <h1 className="text-3xl md:text-4xl font-black tracking-tight">Plans that grow with your network</h1>
           <p className="mt-3 text-sm md:text-base text-slate-400">
-            The whole social platform is free, forever. Upgrade when you’re ready to turn
+            The whole social platform is free, forever. Upgrade when youâ€™re ready to turn
             connections into clients with the CRM &amp; Leads suite.
           </p>
         </div>
 
-        {/* ── Billing toggle ── */}
+        {/* â”€â”€ Billing toggle â”€â”€ */}
         <div className="flex flex-col items-center gap-2 mb-12">
           <div className="inline-flex items-center gap-1 bg-white/[0.04] border border-white/[0.08] rounded-full p-1">
             {(['monthly', 'annual'] as const).map((b) => (
@@ -170,14 +170,14 @@ export default function PricingPage() {
                 }`}
               >
                 {b === 'monthly' ? 'Monthly' : 'Annual'}
-                {b === 'annual' && <span className="ml-1.5 text-[10px] text-emerald-300">−20%</span>}
+                {b === 'annual' && <span className="ml-1.5 text-[10px] text-emerald-300">âˆ’20%</span>}
               </button>
             ))}
           </div>
           <p className="text-[11px] text-slate-500">{annualNote}</p>
         </div>
 
-        {/* ── Plan cards ── */}
+        {/* â”€â”€ Plan cards â”€â”€ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {PLANS.map((plan) => {
             const price = priceFor(plan, billing);
@@ -187,7 +187,7 @@ export default function PricingPage() {
                 key={plan.id}
                 className={`relative rounded-3xl border p-6 flex flex-col ${
                   plan.highlighted
-                    ? 'border-primary-500/50 bg-[#1A1D24] shadow-[0_0_0_1px_rgba(238,87,18,0.25),0_20px_60px_-20px_rgba(238,87,18,0.45)]'
+                    ? 'border-primary-500/50 surface-card shadow-[0_0_0_1px_rgba(238,87,18,0.25),0_20px_60px_-20px_rgba(238,87,18,0.45)]'
                     : 'border-slate-800/70 bg-[#15171d]'
                 }`}
               >
@@ -214,7 +214,7 @@ export default function PricingPage() {
                   {plan.monthly === 0
                     ? 'No card required'
                     : billing === 'annual'
-                      ? `Billed $${plan.annualMonthly * 12}/yr · save ${saving}%`
+                      ? `Billed $${plan.annualMonthly * 12}/yr Â· save ${saving}%`
                       : 'Billed monthly'}
                 </p>
 
@@ -243,9 +243,9 @@ export default function PricingPage() {
           })}
         </div>
 
-        {/* ── Footnote ── */}
+        {/* â”€â”€ Footnote â”€â”€ */}
         <p className="text-center text-[11px] text-slate-600 mt-10 max-w-xl mx-auto">
-          Prices in USD. Lead and email allowances reset monthly. Cancel anytime — your social
+          Prices in USD. Lead and email allowances reset monthly. Cancel anytime â€” your social
           home, Time and Money suites stay free regardless of plan.
         </p>
       </div>

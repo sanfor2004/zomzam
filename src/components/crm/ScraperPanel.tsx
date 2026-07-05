@@ -325,7 +325,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
     return (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Map Search Control Placeholder */}
-        <div className="lg:col-span-1 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px]">
+        <div className="lg:col-span-1 surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px]">
           <div className="space-y-6">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-[#EE5712]/10 border border-[#EE5712]/20 text-[#EE5712]">
@@ -413,7 +413,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Map Search Control & Sidebar results list */}
-        <div className="lg:col-span-1 bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px] gap-4">
+        <div className="lg:col-span-1 surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between h-[500px] gap-4">
           <div className="space-y-4 flex flex-col h-full overflow-hidden">
             
             {/* Minimalist Search Header */}
@@ -499,7 +499,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                           <span className="text-[9px] text-slate-400 block truncate font-medium">{shop.formattedAddress}</span>
                           {shop.rating && (
                             <div className="flex items-center gap-0.5 text-[9px] font-bold text-amber-400 pt-0.5">
-                              <span>★</span>
+                              <span>â˜…</span>
                               <span className="text-slate-200">{shop.rating}</span>
                               <span className="text-slate-500 font-normal">({shop.userRatingCount})</span>
                             </div>
@@ -583,7 +583,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
         </div>
 
         {/* Interactive Google Map Panel */}
-        <div className="lg:col-span-2 bg-[#1A1D24] border border-slate-800/60 rounded-3xl flex flex-col overflow-hidden h-[500px] relative shadow-apple">
+        <div className="lg:col-span-2 surface-card border border-slate-800/60 rounded-3xl flex flex-col overflow-hidden h-[500px] relative shadow-apple">
           <div className="absolute bottom-5 left-5 z-10 bg-slate-900/95 backdrop-blur-md border border-white/10 px-4 py-2 rounded-xl flex items-center gap-2 shadow-apple pointer-events-none">
             <MapIcon className="h-4 w-4 text-[#EE5712]" />
             <span className="text-[10px] font-extrabold text-white tracking-widest uppercase">Live Map Scanner</span>
@@ -657,7 +657,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                           ? 'bg-[#EE5712] text-white border-[#EE5712]' 
                           : 'bg-slate-800 text-slate-200 border-white/10 shadow-sm'
                       }`}>
-                        {shop.rating} ★
+                        {shop.rating} â˜…
                       </div>
                     )}
                   </div>
@@ -681,7 +681,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                   onClick={() => setInfoCardShop(null)}
                   className="p-1 rounded-lg text-slate-500 hover:text-white transition-all text-xs font-bold leading-none -mt-1 cursor-pointer"
                 >
-                  ✕
+                  âœ•
                 </Button>
               </div>
 
@@ -689,7 +689,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                 <div className="space-y-0.5">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Rating</span>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-white">
-                    <span className="text-amber-400 text-xs">★</span>
+                    <span className="text-amber-400 text-xs">â˜…</span>
                     {infoCardShop.rating || 'N/A'} 
                     <span className="text-[9px] text-slate-500 font-normal">({infoCardShop.userRatingCount || 0})</span>
                   </div>

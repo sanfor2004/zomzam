@@ -1,5 +1,5 @@
 'use client';
-import { Button } from '@/components/ui';
+import { Button, Progress, Input, SectionHeader } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -7,6 +7,9 @@ import { useTranslation } from '@/context/TranslationContext';
 import { Target, Calendar, Award, Plus, Trash2, Archive, Check, MoveRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { cn } from '@/lib/utils';
+import { horizonEdge } from '../types';
+import { addTaskRequest } from '../tasks/page.services';
 
 interface Horizon {
   id: number;
@@ -15,6 +18,16 @@ interface Horizon {
   content: string;
   status: 'active' | 'completed';
   created_at: string;
+}
+
+// Only the task fields the dream-momentum readout needs. `load` already returns
+// these on every task; the page previously discarded them.
+interface Task {
+  id: number;
+  horizon_id: number | null;
+  status: 'pending' | 'in_progress' | 'completed' | 'deleted';
+  duration_block: number;
+  actual_duration: number | null;
 }
 
 export default function DreamPlanningPage() {
@@ -28,6 +41,8 @@ export default function DreamPlanningPage() {
     year: Horizon[];
   }>({ week: [], month: [], year: [] });
   const [archived, setArchived] = useState<Horizon[]>([]);
+  // Linked tasks — read from the same `load` call, powers each goal's momentum bar.
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const pageRef = useRef<HTMLDivElement>(null);
@@ -35,6 +50,37 @@ export default function DreamPlanningPage() {
 
   // Drag over states
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+
+  // Inline "add a task to this goal" — which goal's field is open + its draft.
+  const [addingTaskFor, setAddingTaskFor] = useState<number | null>(null);
+  const [taskDraft, setTaskDraft] = useState('');
+
+  // Momentum snapshot for one goal, derived from its linked (non-deleted) tasks.
+  const momentumFor = (horizonId: number) => {
+    const linked = tasks.filter((task) => task.horizon_id === horizonId);
+    const done = linked.filter((task) => task.status === 'completed');
+    const focusedMins = done.reduce((sum, task) => sum + (task.actual_duration ?? task.duration_block), 0);
+    return { total: linked.length, done: done.length, focusedMins };
+  };
+
+  // Quick-create a task pre-linked to a goal — the mirror of the @-mention
+  // create in Idea Capture. Reuses the shared addTaskRequest service (same call
+  // Task Board uses) instead of a hand-rolled fetch. Same defaults (medium
+  // priority, 25-min block).
+  const handleAddTaskToGoal = async (horizonId: number) => {
+    const title = taskDraft.trim();
+    if (!title) return;
+    try {
+      const newTask = await addTaskRequest({ title, priority: 'medium', duration: 25, horizonId: String(horizonId) });
+      if (newTask) {
+        setTasks((prev) => [...prev, newTask]); // momentum ticks immediately
+        setTaskDraft('');
+        setAddingTaskFor(null);
+      }
+    } catch (err) {
+      console.error('Error adding task to goal:', err);
+    }
+  };
 
   // Inputs
   const [inputs, setInputs] = useState({
@@ -69,6 +115,7 @@ export default function DreamPlanningPage() {
           year: activeYear,
         });
         setArchived([...archivedWeek, ...archivedMonth, ...archivedYear]);
+        setTasks(data.tasks || []);
       }
     } catch (err) {
       console.error('Failed to load horizons:', err);
@@ -231,12 +278,12 @@ export default function DreamPlanningPage() {
           Contains: Icon badge, title + subtitle
           ────────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md shadow-purple-500/20">
+        <div className="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
           <Target className="w-5 h-5" />
         </div>
         <div>
-          <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Dream Planning</h1>
-          <p className="text-xs text-slate-400">Build your vision across Week · Month · Year</p>
+          <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Dream planning</h1>
+          <p className="text-xs text-slate-400">Your vision across the week, the month, the year.</p>
         </div>
       </div>
 
@@ -248,8 +295,9 @@ export default function DreamPlanningPage() {
 
         {/* Column Generator */}
         {(['week', 'month', 'year'] as const).map((type) => {
-          const colLabel = type === 'week' ? 'This Week' : type === 'month' ? 'This Month' : 'This Year';
-          const colColor = type === 'week' ? 'bg-blue-500' : type === 'month' ? 'bg-purple-500' : 'bg-amber-500';
+          const colLabel = type === 'week' ? 'This week' : type === 'month' ? 'This month' : 'This year';
+          const colColor = horizonEdge(type); // bg-blue-500 / bg-purple-500 / bg-amber-500
+          const whisperColor = type === 'week' ? 'whisper-blue' : type === 'month' ? 'whisper-purple' : 'whisper-amber';
           const ringColor = type === 'week' ? 'ring-blue-500/40' : type === 'month' ? 'ring-purple-500/40' : 'ring-amber-500/40';
           const isOver = dragOverColumn === type;
           const items = horizons[type] || [];
@@ -261,13 +309,15 @@ export default function DreamPlanningPage() {
               onDragOver={(e) => handleDragOver(e, type)}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, type)}
-              className={`bg-white dark:bg-[#1A1D24] rounded-3xl p-6 shadow-apple border border-slate-100 dark:border-slate-800/60 flex flex-col min-h-[460px] transition-all duration-300 ${
-                isOver ? `ring-4 ${ringColor} scale-[1.01] bg-slate-50/50 dark:bg-slate-900/30` : ''
-              }`}
+              className={cn(
+                'surface-raised rounded-3xl p-6 border border-slate-800/60 flex flex-col min-h-[460px] transition-all duration-300',
+                whisperColor,
+                isOver && `ring-4 ${ringColor} scale-[1.01]`,
+              )}
             >
               {/* Column Header */}
               <div className="flex items-center justify-between mb-5">
-                <span className={`${colColor}text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full flex items-center gap-1`}>
+                <span className={cn('text-white text-[11px] font-semibold px-3 py-1.5 rounded-full flex items-center gap-1', colColor)}>
                   <Calendar className="w-3.5 h-3.5" />
                   {colLabel}
                 </span>
@@ -279,38 +329,95 @@ export default function DreamPlanningPage() {
               {/* Goals List */}
               <div className="flex-1 space-y-2.5 overflow-y-auto mb-6 pr-1 max-h-80">
                 {items.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-16 italic">
-                    No active goals. Set one below!
+                  <p className="text-xs text-slate-400 text-center py-16">
+                    No goals here yet. Add one below.
                   </p>
                 ) : (
-                  items.map((h) => (
+                  items.map((h) => {
+                    const m = momentumFor(h.id);
+                    const isAdding = addingTaskFor === h.id;
+                    return (
                     <div
                       key={h.id}
-                      draggable
-                      onDragStart={(e) => handleDragStart(e, h.id)}
-                      className="group flex items-start gap-2.5 p-3 rounded-2xl bg-slate-900/30 border border-slate-850/50 transition-all hover:border-slate-700 cursor-grab active:cursor-grabbing hover:shadow-apple-sm"
+                      className="group relative pl-4 pr-3.5 py-2.5 rounded-xl surface-sunken border border-slate-800/60 transition-all hover:border-slate-700"
                     >
-                      <Button variant="unstyled"
-                        onClick={() => handleCompleteGoal(h.id, type)}
-                        title="Complete Goal"
-                        className="mt-0.5 w-4 h-4 rounded border border-slate-700 hover:border-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors flex-shrink-0"
+                      {/* Left-edge accent = horizon type (week/month/year) */}
+                      <span className={cn('absolute left-0 inset-y-2 w-1 rounded-full edge-accent', horizonEdge(type))} />
+                      {/* Drag handle row — draggable lives here (not the card) so the
+                          inline task input below stays focusable/selectable. */}
+                      <div
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, h.id)}
+                        className="flex items-start gap-2.5 cursor-grab active:cursor-grabbing"
                       >
-                        <Check className="w-2.5 h-2.5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </Button>
+                        <Button variant="unstyled"
+                          onClick={() => handleCompleteGoal(h.id, type)}
+                          title="Complete Goal"
+                          className="mt-0.5 w-4 h-4 rounded border border-slate-700 hover:border-emerald-500 hover:bg-emerald-500/10 flex items-center justify-center transition-colors flex-shrink-0"
+                        >
+                          <Check className="w-2.5 h-2.5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Button>
 
-                      <p className="flex-1 text-sm text-slate-200 leading-tight">
-                        {h.content}
-                      </p>
+                        <p className="flex-1 text-sm text-slate-200 leading-tight">
+                          {h.content}
+                        </p>
 
-                      <Button variant="unstyled"
-                        onClick={() => handleDeleteHorizon(h.id, type)}
-                        title="Delete Goal"
-                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity flex-shrink-0 p-0.5 rounded"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                        <Button variant="unstyled"
+                          onClick={() => handleDeleteHorizon(h.id, type)}
+                          title="Delete Goal"
+                          className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity flex-shrink-0 p-0.5 rounded"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+
+                      {/* Momentum readout + inline add-task, aligned under the goal text */}
+                      <div className="pl-[26px] mt-2 space-y-2">
+                        {m.total > 0 ? (
+                          <div className="space-y-1">
+                            <Progress value={m.done} max={m.total} variant="purple" size="sm" />
+                            <p className="text-[10px] font-semibold text-slate-400">
+                              {m.done}/{m.total} tasks · <span className="text-purple-400 font-bold">{m.focusedMins}m</span> focused
+                            </p>
+                          </div>
+                        ) : (
+                          <p className="text-[10px] font-medium text-slate-600 italic">No tasks linked yet</p>
+                        )}
+
+                        {isAdding ? (
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              size="sm"
+                              autoFocus
+                              value={taskDraft}
+                              onChange={(e) => setTaskDraft(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleAddTaskToGoal(h.id);
+                                if (e.key === 'Escape') { setAddingTaskFor(null); setTaskDraft(''); }
+                              }}
+                              placeholder="Task title…"
+                              containerClassName="flex-1"
+                            />
+                            <Button variant="unstyled"
+                              onClick={() => handleAddTaskToGoal(h.id)}
+                              title="Add task"
+                              className="w-9 h-9 flex-shrink-0 rounded-lg bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 flex items-center justify-center transition-colors"
+                            >
+                              <Plus className="w-4 h-4 stroke-[3]" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button variant="unstyled"
+                            onClick={() => { setAddingTaskFor(h.id); setTaskDraft(''); }}
+                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-300 transition-colors"
+                          >
+                            <Plus className="w-3 h-3" /> Add task
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
 
@@ -326,10 +433,10 @@ export default function DreamPlanningPage() {
                 />
                 <Button variant="unstyled"
                   onClick={() => handleAddGoal(type)}
-                  className={`w-full${colColor}text-white text-xs font-black uppercase tracking-wider h-10 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1`}
+                  className={cn('w-full text-white text-xs font-semibold h-10 rounded-xl hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-1', colColor)}
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Add Goal
+                  Add goal
                 </Button>
               </div>
 
@@ -343,23 +450,18 @@ export default function DreamPlanningPage() {
           DEVELOPMENT NAVIGATOR: ARCHIVED GOALS
           Contains: Completed / archived goals list
           ────────────────────────────────────────────────────────── */}
-      <div data-entrance="card" className="bg-[#1A1D24] border border-slate-800/60 rounded-3xl p-6 shadow-apple">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-850">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-slate-900/40 text-slate-500 flex items-center justify-center border border-slate-850">
-              <Archive className="w-4 h-4" />
-            </div>
-            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
-              Archived Goals
-            </h2>
-          </div>
-          <span className="text-xs bg-slate-900/60 text-slate-500 font-bold px-2.5 py-1 rounded-full">
-            {archived.length}
-          </span>
+      <div data-entrance="card" className="surface-base border border-slate-800/60 rounded-3xl p-6">
+        <div className="mb-6 pb-4 border-b border-slate-850">
+          <SectionHeader
+            icon={<Archive />}
+            accent="neutral"
+            title="Archived goals"
+            count={archived.length}
+          />
         </div>
 
         {archived.length === 0 ? (
-          <p className="text-center text-xs text-slate-400 py-10 italic">No completed goals yet. Keep going!</p>
+          <p className="text-center text-xs text-slate-400 py-10">No completed goals yet.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {archived.map((h) => (
@@ -374,7 +476,7 @@ export default function DreamPlanningPage() {
                   <p className="text-sm line-through text-slate-500 truncate leading-tight">
                     {h.content}
                   </p>
-                  <span className="inline-block text-[9px] font-black uppercase text-slate-400 tracking-wider mt-1.5">
+                  <span className="inline-block text-[10px] font-semibold capitalize text-slate-400 mt-1.5">
                     {h.type} goal
                   </span>
                 </div>
