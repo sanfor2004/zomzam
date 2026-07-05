@@ -3,13 +3,17 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Clock, RotateCcw, Play, Pause, SkipForward, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
+import { Clock, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button, Input, ProLock } from '@/components/ui';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { usePomodoroTimer } from '@/hooks/usePomodoroTimer';
 import { cn } from '@/lib/utils';
 import { priorityEdge, horizonEdge } from '../types';
 import { addIdeaRequest } from '../ideas/page.services';
+import { TimerRing } from './_components/TimerRing';
+import { TimerControls } from './_components/TimerControls';
+import { DurationTuners } from './_components/DurationTuners';
 
 interface Task {
   id: number;
@@ -33,7 +37,6 @@ export default function PomodoroPage() {
 
   // Tasks & Server Sync
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [sessionsToday, setSessionsToday] = useState(0);
   const [ideasCount, setIdeasCount] = useState(0);
   // Active dream goals â€” carry `type` too so the dream-progress bar can colour
   // itself by horizon (horizonEdge = data, per the colour=meaning rule).
@@ -63,32 +66,20 @@ export default function PomodoroPage() {
     }
   };
 
-  // Timer State
-  const [duration, setDuration] = useState(15 * 60); // default 15 min focus
-  const [breakDuration, setBreakDuration] = useState(5 * 60); // default 5 min break
-  const [remaining, setRemaining] = useState(15 * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isBreak, setIsBreak] = useState(false);
-  const [currentTaskStartTime, setCurrentTaskStartTime] = useState<number | null>(null);
+  // Timer engine â€” countdown, drift correction, localStorage persistence,
+  // focus/break segments, and the daily session count all live in the hook.
+  const timer = usePomodoroTimer();
+  const {
+    duration, breakDuration, remaining, isRunning, isBreak,
+    sessionsToday, currentTaskStartTime,
+  } = timer;
 
-  // Refs for background-drift correction
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-  const remainingAtStartRef = useRef<number>(15 * 60);
-
-  // â”€â”€ Mirror refs â”€â”€ kept in sync so that setInterval callbacks always
-  // read the *current* value without stale-closure issues after navigation.
-  const isBreakRef        = useRef(false);
-  const sessionsRef       = useRef(0);
-  const taskStartRef      = useRef<number | null>(null);
-  const durationRef       = useRef(15 * 60);
-  const breakDurationRef  = useRef(5 * 60);
-
-  useEffect(() => { isBreakRef.current = isBreak; },               [isBreak]);
-  useEffect(() => { sessionsRef.current = sessionsToday; },         [sessionsToday]);
-  useEffect(() => { taskStartRef.current = currentTaskStartTime; }, [currentTaskStartTime]);
-  useEffect(() => { durationRef.current = duration; },              [duration]);
-  useEffect(() => { breakDurationRef.current = breakDuration; },    [breakDuration]);
+  // The task id we last auto-loaded the ring for. Guards the auto-load effect
+  // so pausing (isRunning â†’ false) never re-runs setupFocusTime and wipes the
+  // remaining time â€” it's a Pause button, not a Reset button.
+  const lastSetupTaskId = useRef<number | null>(null);
+  // Debounces the focus-duration â†’ task-board DB write while the user types.
+  const focusSyncTimer  = useRef<NodeJS.Timeout | null>(null);
 
   // Load state from server
   const loadData = async () => {
@@ -118,151 +109,52 @@ export default function PomodoroPage() {
 
   useEffect(() => {
     loadData();
-
-    // Load pomodoro state from localStorage
-    const saved = localStorage.getItem('zomzam_pomodoro');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        const savedDuration      = data.duration      || 15 * 60;
-        const savedBreakDuration = data.breakDuration || 5 * 60;
-        const savedIsBreak       = !!data.isBreak;
-        const savedSessions      = data.sessions      || 0;
-        const savedStartTime     = data.currentTaskStartTime || null;
-
-        // â”€â”€ Sync mirror refs immediately (before React commits the state
-        //    updates below) so that any interval we start right here reads
-        //    the correct values, not the stale initial-state defaults.
-        isBreakRef.current       = savedIsBreak;
-        sessionsRef.current      = savedSessions;
-        taskStartRef.current     = savedStartTime;
-        durationRef.current      = savedDuration;
-        breakDurationRef.current = savedBreakDuration;
-
-        setDuration(savedDuration);
-        setBreakDuration(savedBreakDuration);
-        setIsBreak(savedIsBreak);
-        setSessionsToday(savedSessions);
-        setCurrentTaskStartTime(savedStartTime);
-
-        let rem = data.remaining;
-        if (data.isRunning && data.lastUpdate) {
-          const elapsed = Math.floor((Date.now() - data.lastUpdate) / 1000);
-          rem = Math.max(0, rem - elapsed);
-        }
-
-        if (rem <= 0) {
-          setRemaining(savedIsBreak ? savedBreakDuration : savedDuration);
-          setIsRunning(false);
-        } else {
-          setRemaining(rem);
-          if (data.isRunning) {
-            // Set up refs that tick() needs before starting the interval.
-            remainingAtStartRef.current = rem;
-            startTimeRef.current       = Date.now();
-            // Start the interval directly here â€” setIsRunning(true) alone
-            // would NOT restart it because the useEffect([isRunning]) only
-            // fires after the render, by which time the interval is missing.
-            if (!timerIntervalRef.current) {
-              timerIntervalRef.current = setInterval(tick, 1000);
-            }
-            setIsRunning(true);
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing saved Pomodoro state:', e);
-      }
-    }
-
-    // Cleanup interval on unmount (navigation away)
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save Pomodoro state to localStorage â€” reads from refs so it is safe
-  // to call from inside a setInterval callback (no stale-closure issue).
-  const saveState = (updatedRemaining: number, updatedIsRunning: boolean, updatedIsBreak: boolean, updatedSessions: number, updatedStartTime: number | null) => {
-    const pending = tasks.filter(t => t.status === 'pending');
-    const taskName = pending.length > 0 ? pending[0].title : (updatedIsBreak ? 'Break' : 'Focusing');
-
-    const data = {
-      remaining: updatedRemaining,
-      isRunning: updatedIsRunning,
-      isBreak: updatedIsBreak,
-      duration: durationRef.current,
-      breakDuration: breakDurationRef.current,
-      lastUpdate: Date.now(),
-      sessions: updatedSessions,
-      taskName,
-      currentTaskStartTime: updatedStartTime,
-    };
-    localStorage.setItem('zomzam_pomodoro', JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent('pomodoroUpdate'));
+  // Push the freely-typed focus minutes back to the top task's board block so
+  // the Pomodoro ring and the task board never drift. Optimistic locally,
+  // debounced to the server so typing "45" isn't three separate writes.
+  const syncTopTaskDuration = (mins: number) => {
+    if (!topTask) return;
+    setTasks(prev => prev.map(t => (t.id === topTask.id ? { ...t, duration_block: mins } : t)));
+    if (focusSyncTimer.current) clearTimeout(focusSyncTimer.current);
+    focusSyncTimer.current = setTimeout(() => {
+      fetch('/api/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_task',
+          id: topTask.id,
+          title: topTask.title,
+          priority: topTask.priority,
+          duration_block: mins,
+          horizon_id: topTask.horizon_id,
+        }),
+      }).catch(() => {});
+    }, 600);
   };
 
-  // Setup segment when adjusting inputs or loading new top task
-  const setupFocusTime = (totalMins: number) => {
+  // Focus minutes â€” freely typed (5â€“120), no 5-minute snap. Retunes the ring
+  // and syncs the board. The lastSetupTaskId guard keeps the auto-load effect
+  // from clobbering the value we just set for the same task.
+  const handleFocusChange = (raw: string) => {
     if (isRunning) return;
-    const secs = totalMins * 60;
-    setDuration(secs);
-    setRemaining(secs);
-    setIsBreak(false);
-    
-    // Save state
-    const data = {
-      remaining: secs,
-      isRunning: false,
-      isBreak: false,
-      duration: secs,
-      breakDuration,
-      lastUpdate: Date.now(),
-      sessions: sessionsToday,
-      taskName: tasks.filter(t => t.status === 'pending')[0]?.title || 'Focusing',
-      currentTaskStartTime: null,
-    };
-    localStorage.setItem('zomzam_pomodoro', JSON.stringify(data));
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) return;
+    const mins = Math.max(5, Math.min(120, parsed));
+    if (topTask) lastSetupTaskId.current = topTask.id;
+    timer.setupFocusTime(mins);
+    syncTopTaskDuration(mins);
   };
 
-  // Adjust Focus minutes
-  const adjustFocus = (amount: number) => {
+  // Break minutes â€” freely typed (1â€“60). No board counterpart, so it just
+  // retunes the break segment (the hook persists it).
+  const handleBreakChange = (raw: string) => {
     if (isRunning) return;
-    const currentMins = Math.floor(duration / 60);
-    let newMins = currentMins;
-    if (amount > 0) {
-      newMins = Math.floor(currentMins / 5) * 5 + 5;
-    } else {
-      newMins = Math.ceil(currentMins / 5) * 5 - 5;
-    }
-    newMins = Math.max(5, Math.min(120, newMins));
-    setupFocusTime(newMins);
-  };
-
-  // Adjust Break minutes
-  const adjustBreak = (amount: number) => {
-    if (isRunning) return;
-    const currentMins = Math.floor(breakDuration / 60);
-    let newMins = currentMins;
-    if (amount > 0) {
-      newMins = Math.floor(currentMins / 5) * 5 + 5;
-    } else {
-      newMins = Math.ceil(currentMins / 5) * 5 - 5;
-    }
-    newMins = Math.max(1, Math.min(60, newMins));
-    setBreakDuration(newMins * 60);
-    // Save to localStorage
-    const saved = localStorage.getItem('zomzam_pomodoro');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        data.breakDuration = newMins * 60;
-        localStorage.setItem('zomzam_pomodoro', JSON.stringify(data));
-      } catch {}
-    }
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) return;
+    timer.setBreakMinutes(Math.max(1, Math.min(60, parsed)));
   };
 
   // Auto-load task duration block if top task changes and timer not running
@@ -311,153 +203,38 @@ export default function PomodoroPage() {
   const laterCount = Math.max(0, pendingTasks.length - 2);
 
   useEffect(() => {
-    if (topTask && !isRunning && !isBreak) {
-      setupFocusTime(topTask.duration_block);
+    // Only (re)load the ring when the *top task itself* changes, not on every
+    // isRunning/isBreak flip. Two things must NOT be clobbered:
+    //   â€¢ a paused/running FOCUS on this task â€” currentTaskStartTime is set, so
+    //     the persisted remaining survives navigate-away-and-return.
+    //   â€¢ a break in progress â€” guarded by !isBreak.
+    if (
+      topTask && !isRunning && !isBreak &&
+      currentTaskStartTime === null &&
+      lastSetupTaskId.current !== topTask.id
+    ) {
+      lastSetupTaskId.current = topTask.id;
+      timer.setupFocusTime(topTask.duration_block);
     }
-  }, [topTask, isRunning, isBreak]);
+  }, [topTask, isRunning, isBreak, currentTaskStartTime]);
 
-  // Audio feedback ring
-  const playRingSound = () => {
-    try {
-      const audio = new Audio('/Assets/Audio/timer-ring.mp3');
-      audio.play().catch(() => {});
-    } catch (e) {
-      console.warn('Could not play ring sound:', e);
-    }
-  };
-
-  // Tick Action â€” reads all volatile values from refs, NOT from the closure,
-  // so it remains correct even when captured by an old setInterval call.
-  const tick = () => {
-    if (startTimeRef.current === null) return;
-    const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-    const nextRemaining = Math.max(0, remainingAtStartRef.current - elapsed);
-
-    setRemaining(nextRemaining);
-    saveState(nextRemaining, true, isBreakRef.current, sessionsRef.current, taskStartRef.current);
-
-    if (nextRemaining <= 0) {
-      handleTimerEnd();
-    }
-  };
-
-  // â”€â”€ Safety-net: auto-start the interval on mount when localStorage says
-  // the timer was already running. This handles the page-navigation case where
-  // the component unmounts (killing the interval) then remounts.
-  useEffect(() => {
-    if (isRunning && !timerIntervalRef.current) {
-      startTimeRef.current = Date.now();
-      remainingAtStartRef.current = remaining;
-      timerIntervalRef.current = setInterval(tick, 1000);
-    }
-    if (!isRunning && timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning]);
-
-  // Start Timer
-  const startTimer = async () => {
-    if (isRunning) return;
-
-    let startTime = currentTaskStartTime;
-    if (!startTime && !isBreak) {
-      startTime = Date.now();
-      setCurrentTaskStartTime(startTime);
-    }
-
-    setIsRunning(true);
-    startTimeRef.current = Date.now();
-    remainingAtStartRef.current = remaining;
-
-    timerIntervalRef.current = setInterval(tick, 1000);
-    saveState(remaining, true, isBreak, sessionsToday, startTime);
-
-    // Mark the top pending task as in_progress in the DB
+  // Start the countdown, then flip the top task to in_progress on the board.
+  // The timer engine owns the clock; this wrapper adds the task side effect.
+  const handleStart = () => {
+    timer.start();
     if (!isBreak && topTask) {
-      try {
-        await fetch('/api/time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update_task_status', id: topTask.id, status: 'in_progress' }),
-        });
-      } catch {}
-    }
-  };
-
-  // Pause Timer
-  const pauseTimer = () => {
-    if (!isRunning) return;
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    setIsRunning(false);
-    startTimeRef.current = null;
-    saveState(remaining, false, isBreak, sessionsToday, currentTaskStartTime);
-  };
-
-  // Reset Timer
-  const resetTimer = () => {
-    pauseTimer();
-    const defaultVal = isBreak ? breakDuration : duration;
-    setRemaining(defaultVal);
-    saveState(defaultVal, false, isBreak, sessionsToday, currentTaskStartTime);
-  };
-
-  // Skip Break
-  const skipBreak = () => {
-    if (!isBreak) return;
-    setIsBreak(false);
-    setRemaining(duration);
-    setIsRunning(false);
-    setCurrentTaskStartTime(null);
-    saveState(duration, false, false, sessionsToday, null);
-  };
-
-  // Triggered on timer expiration â€” reads from refs to avoid stale closures.
-  const handleTimerEnd = () => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    setIsRunning(false);
-    startTimeRef.current = null;
-    playRingSound();
-
-    if (!isBreakRef.current) {
-      // Completed work segment
-      const newSessions = sessionsRef.current + 1;
-      sessionsRef.current = newSessions; // update ref immediately
-      setSessionsToday(newSessions);
-      isBreakRef.current = true;         // update ref immediately
-      setIsBreak(true);
-      setRemaining(breakDurationRef.current);
-      setCurrentTaskStartTime(null);
-
-      // Trigger premium feedback
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#EE5712', '#ff9874', '#ffffff'],
-      });
-
-      saveState(breakDurationRef.current, false, true, newSessions, null);
-    } else {
-      // Completed break segment
-      isBreakRef.current = false;        // update ref immediately
-      setIsBreak(false);
-      setRemaining(durationRef.current);
-      saveState(durationRef.current, false, false, sessionsRef.current, null);
+      fetch('/api/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_task_status', id: topTask.id, status: 'in_progress' }),
+      }).catch(() => {});
     }
   };
 
   // Skip Task: Rotate the first pending task to the end of the queue
   const skipTask = async () => {
     if (pendingTasks.length < 2) return;
-    pauseTimer();
+    timer.pause();
 
     const first = pendingTasks[0];
     const rest = pendingTasks.slice(1);
@@ -467,8 +244,8 @@ export default function PomodoroPage() {
     const otherTasks = tasks.filter(t => t.status !== 'pending');
     setTasks([...updated, ...otherTasks]);
 
-    setCurrentTaskStartTime(null);
-    setupFocusTime(updated[0].duration_block);
+    timer.resetSegmentStart();
+    timer.setupFocusTime(updated[0].duration_block);
 
     // Reset the skipped task back to pending in the DB
     try {
@@ -483,7 +260,7 @@ export default function PomodoroPage() {
   // Done Task: Calls backend API and clears local state
   const handleDoneTask = async () => {
     if (!topTask) return;
-    pauseTimer();
+    timer.pause();
 
     const startTime = currentTaskStartTime || Date.now();
     const actualSecs = Math.floor((Date.now() - startTime) / 1000);
@@ -503,7 +280,7 @@ export default function PomodoroPage() {
       if (data.success) {
         // Update local state
         setTasks(prev => prev.map(t => t.id === topTask.id ? { ...t, status: 'completed' as const, actual_duration: actualMins } : t));
-        setCurrentTaskStartTime(null);
+        timer.resetSegmentStart();
         
         // Show session complete confetti
         confetti({
@@ -520,7 +297,7 @@ export default function PomodoroPage() {
   // Swap top two pending tasks
   const swapTask = () => {
     if (pendingTasks.length < 2) return;
-    pauseTimer();
+    timer.pause();
 
     const first = pendingTasks[0];
     const second = pendingTasks[1];
@@ -530,31 +307,16 @@ export default function PomodoroPage() {
     const otherTasks = tasks.filter(t => t.status !== 'pending');
     setTasks([...updated, ...otherTasks]);
 
-    setCurrentTaskStartTime(null);
-    setupFocusTime(second.duration_block);
+    timer.resetSegmentStart();
+    timer.setupFocusTime(second.duration_block);
   };
 
-  // Clean interval on unmount
+  // Clean the focus-sync debounce on unmount (the timer interval is the hook's).
   useEffect(() => {
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (focusSyncTimer.current) clearTimeout(focusSyncTimer.current);
     };
   }, []);
-
-  // Format remaining seconds into MM:SS
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remain = secs % 60;
-    return `${mins.toString().padStart(2, '0')}:${remain.toString().padStart(2, '0')}`;
-  };
-
-  // Calculate SVG Ring Dash Offset
-  const totalDuration = isBreak ? breakDuration : duration;
-  const radius = 88;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = totalDuration > 0 
-    ? circumference - (remaining / totalDuration) * circumference 
-    : circumference;
 
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
@@ -591,80 +353,22 @@ export default function PomodoroPage() {
             â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div data-entrance="card" className="lg:col-span-2 surface-raised border border-slate-800/60 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
 
-          {/* Visual SVG Ring */}
-          <div className="relative w-64 h-64 mb-8">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-              <circle
-                cx="100"
-                cy="100"
-                r={radius}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                className="text-slate-800/40"
-              />
-              <circle
-                cx="100"
-                cy="100"
-                r={radius}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                className="text-primary-500 transition-all duration-300"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[11px] font-bold tracking-wide text-primary-500">
-                {isBreak ? 'On a break' : 'Focusing'}
-              </span>
-              <span className="text-5xl font-black tabular-nums text-white mt-1.5 tracking-tight">
-                {formatTime(remaining)}
-              </span>
-            </div>
-          </div>
+          <TimerRing remaining={remaining} total={isBreak ? breakDuration : duration} isBreak={isBreak} />
 
           {/* Controls Box */}
           <div className="flex flex-col items-center gap-6 w-full">
-            <div className="flex items-center gap-4">
-              <Button variant="unstyled"
-                onClick={resetTimer}
-                title="Reset"
-                className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95"
-              >
-                <RotateCcw className="w-5 h-5" />
-              </Button>
-
-              <Button variant="unstyled"
-                onClick={isRunning ? pauseTimer : startTimer}
-                title={isRunning ? 'Pause' : 'Start focus'}
-                aria-label={isRunning ? 'Pause' : 'Start focus'}
-                className={cn(
-                  'w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4',
-                  isRunning
-                    ? 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 ring-2 ring-primary-400/40 focus-visible:ring-primary-500/40'
-                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 focus-visible:ring-emerald-500/40',
-                )}
-              >
-                {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8" fill="currentColor" />}
-              </Button>
-
-              <Button variant="unstyled"
-                onClick={skipTask}
-                disabled={pendingTasks.length < 2}
-                title="Skip to next task"
-                className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <SkipForward className="w-5 h-5" />
-              </Button>
-            </div>
+            <TimerControls
+              isRunning={isRunning}
+              canSkip={pendingTasks.length >= 2}
+              onReset={timer.reset}
+              onToggle={isRunning ? timer.pause : handleStart}
+              onSkip={skipTask}
+            />
 
             {isBreak && (
               <>
                 <Button variant="unstyled"
-                  onClick={skipBreak}
+                  onClick={timer.skipBreak}
                   className="px-5 py-2 text-xs font-semibold bg-primary-950/20 text-primary-500 hover:bg-primary-900/30 rounded-full border border-primary-900/30 transition-colors"
                 >
                   Skip break
@@ -705,54 +409,13 @@ export default function PomodoroPage() {
               </>
             )}
 
-            {/* Adjuster Inputs */}
-            <div className="flex items-center gap-4 pt-4 border-t border-slate-800/50 w-full text-xs">
-              
-              {/* Focus adjuster */}
-              <div className="flex-1 flex flex-col gap-1.5">
-                <span className="text-slate-400 font-medium">Focus duration</span>
-                <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
-                  <Button variant="unstyled"
-                    onClick={() => adjustFocus(-5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
-                  >
-                    -
-                  </Button>
-                  <span className="flex-1 text-center font-bold text-slate-200">
-                    {Math.floor(duration / 60)}m
-                  </span>
-                  <Button variant="unstyled"
-                    onClick={() => adjustFocus(5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-              {/* Break adjuster */}
-              <div className="flex-1 flex flex-col gap-1.5">
-                <span className="text-slate-400 font-medium">Break duration</span>
-                <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
-                  <Button variant="unstyled"
-                    onClick={() => adjustBreak(-5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
-                  >
-                    -
-                  </Button>
-                  <span className="flex-1 text-center font-bold text-slate-200">
-                    {Math.floor(breakDuration / 60)}m
-                  </span>
-                  <Button variant="unstyled"
-                    onClick={() => adjustBreak(5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-            </div>
+            <DurationTuners
+              focusMins={Math.floor(duration / 60)}
+              breakMins={Math.floor(breakDuration / 60)}
+              disabled={isRunning}
+              onFocusChange={handleFocusChange}
+              onBreakChange={handleBreakChange}
+            />
           </div>
         </div>
 
