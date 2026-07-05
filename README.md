@@ -59,7 +59,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | :--- | :--- | :--- |
 | **Framework** | **Next.js 16.2 (App Router)** | SSR & Server Components for SEO and fast loading; Edge Route Handlers for high concurrency. |
 | **UI Library** | **React 19** | Leverage Server Components, improved concurrent rendering, and native element hooks. |
-| **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 33 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
+| **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 35 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
 | **Styling** | **Tailwind CSS v4** (`@theme` CSS-first tokens) | Modern CSS variables, Tailwind engine for atomic utility styling, custom HSL/Zomzam-Orange palettes defined directly in `globals.css`. |
 | **Database** | **MySQL (via `mysql2/promise`)** | High performance, transaction safety, and sub-millisecond query execution on structured schemas. |
 | **Security** | **Jose JWT, BcryptJS & DOMPurify** | A single `jose`-based session module (`src/lib/session.ts`) signs/verifies the `ZOMZAM_SESSION` JWT for both the Edge proxy and Node API routes (`jsonwebtoken` removed). The same `jose` dependency also verifies Google's `id_token` via remote JWKS for "Sign in with Google" (`src/lib/google-oauth.ts`) — no separate OAuth library installed. API routes are gated by a `withAuth()` wrapper (`src/lib/api-auth.ts`), not the proxy; high-rounds bcrypt salt for password protection; post HTML is sanitized server-side with `isomorphic-dompurify` (tag allowlist) before storage; login/register are IP rate-limited (`src/lib/rate-limit.ts`). |
@@ -122,7 +122,7 @@ zomzam.com/
 │   │   └── providers.tsx        # Global context aggregation wrapper (mounts ErrorReporter)
 │   │
 │   ├── components/
-│   │   ├── ui/                  # The Zomzam Kit — 33 primitives (Button, Card, Modal, Toast, ComposerBanner, …) + data-coupled feed members PostComposer & PostCard (both /api/posts-aware, demo-mode for /ui-kit) + index.ts barrel
+│   │   ├── ui/                  # The Zomzam Kit — 35 primitives (Button, Card, Modal, Toast, ComposerBanner, …) + data-coupled feed members PostComposer & PostCard (both /api/posts-aware, demo-mode for /ui-kit) + index.ts barrel
 │   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), RightSidebar (persistent right nav: Messages + Active Now presence + Suggested), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
 │   │   ├── ErrorReporter.tsx    # Global client error listener (uncaught errors + unhandled rejections → /api/report-error)
@@ -186,7 +186,7 @@ zomzam.com/
 | `/messages` | Protected | Messenger hub: friends ordered by last-chatted (un-chatted last); selecting one opens a docked live chat window. |
 | `/notifications` | Protected | Full-page notification list (the mobile bottom-bar's 🔔 target — a bottom bar can't drop the topbar dropdown upward). Reuses the same `describeNotification` renderers as the desktop bell dropdown; marks read on open. |
 | `/p/[postId]` | Public | Permalink view for a single post (deep-linkable from the feed). The `[postId]` segment is the post's opaque `public_id` (a 32-char MD5), **not** the sequential numeric id — so the permalink can't be walked to enumerate or count posts. The route only resolves a valid `public_id`; a numeric id 404s. |
-| `/time/execution` | Protected | Drift-corrected Pomodoro focus timer with confetti rewards. |
+| `/time/execution` | Protected | **Today** — the day's now/next/later spine around a drift-corrected focus timer, live dream progress, and a Pro earnings tease. |
 | `/time/tasks` | Protected | Task checklist manager (priority, duration blocks, undoable deletes). |
 | `/time/planning` | Protected | Drag-and-drop Dream Planning Board (Week / Month / Year horizons). |
 | `/time/ideas` | Protected | Idea Vault quick-capture scratchpad. |
@@ -452,7 +452,7 @@ When the final development task (containing the phrase `Production Delivery & La
 
 Zomzam ships its own component library at `src/components/ui` instead of depending on shadcn/ui, Radix UI, or Framer Motion — every interaction primitive is owned, styled with the project's Tailwind v4 tokens, and free of third-party UI churn.
 
-* **33 primitives**, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, ComposerBanner, ConfirmDialog, CountUp, DeleteButton, Divider, Dropdown, Input, Modal, NumberInput, Pagination, PostImageGrid, Progress, Radio, SegmentedSwitch, ShareButton, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
+* **35 primitives**, all importable from `@/components/ui`: Accordion, Alert, AudienceSwitch, Avatar, Badge, Breadcrumb, Button, Calendar, Card, Checkbox, ComposerBanner, ConfirmDialog, CountUp, DeleteButton, Divider, Dropdown, Input, Modal, NumberInput, Pagination, PostImageGrid, ProLock, Progress, Radio, SectionHeader, SegmentedSwitch, ShareButton, Skeleton, Slider, Spinner, Switch, Tabs, Textarea, Toast, Tooltip.
 * **Live showcase** at [`/ui-kit`](file:///c:/www/zomzam.com/src/app/ui-kit/page.tsx) — a dev-only route (unlinked from navigation, no auth gate) rendering every primitive with its real variants, sizes, and states. Nothing on that page reads or writes live data.
 * **Shared motion**: `src/hooks/usePageEntrance.ts` drives the standard page-load reveal (title mask, staggered card/list entrances) via GSAP, respecting `prefers-reduced-motion` automatically. GSAP itself is centralized in `src/lib/gsap.ts` so plugins register exactly once.
 * **Extension rule**: if the Kit doesn't have what a feature needs, build it once inline — then promote it into `src/components/ui` the moment a second page needs the same pattern, following the existing `variant`/`size`/`shape` prop conventions (see `Button.tsx`).

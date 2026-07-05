@@ -43,8 +43,10 @@ The barrel file `src/components/ui/index.ts` exports:
 - PostCard
 - PostComposer
 - PostImageGrid
+- ProLock
 - Progress
 - Radio
+- SectionHeader
 - SegmentedSwitch
 - ShareButton
 - Skeleton
