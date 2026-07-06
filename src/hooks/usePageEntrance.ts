@@ -55,6 +55,12 @@ export function usePageEntrance(
               ease: 'back.out(1.3)',
               stagger: { amount: 0.35, from: 'center' },
               overwrite: true,
+              // Transform lingers inline after the tween completes, and any
+              // non-"none" transform creates a new stacking context — that
+              // traps z-indexed overlays (dropdowns, popovers) nested inside
+              // the card, making them render under later siblings. Clear it
+              // once settled so cards return to normal stacking.
+              clearProps: 'transform',
             }),
         });
       }
@@ -75,6 +81,9 @@ export function usePageEntrance(
               ease: 'power2.out',
               stagger: { amount: 0.3, from: 'start' },
               overwrite: true,
+              // See the card batch above — clears the lingering stacking
+              // context so nested dropdowns/popovers aren't trapped under it.
+              clearProps: 'transform',
             }),
         });
       }
