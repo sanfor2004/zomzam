@@ -25,13 +25,30 @@ const formatTime = (secs: number) => {
   return `${mins.toString().padStart(2, '0')}:${remain.toString().padStart(2, '0')}`;
 };
 
+const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+
+// One clock digit as a vertical 0–9 strip that slides to its value — a real
+// odometer roll. The strip only translates, so a paused timer sits still and
+// reduced-motion users get an instant snap (see .odometer-strip in globals.css).
+function OdometerDigit({ value }: { value: number }) {
+  return (
+    <span className="odometer-digit">
+      <span className="odometer-strip" style={{ transform: `translateY(-${value * 10}%)` }}>
+        {DIGITS.map((n) => (
+          <span key={n} className="odometer-cell">{n}</span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 export function TimerRing({ remaining, total, isBreak }: TimerRingProps) {
   const dashoffset = total > 0
     ? CIRCUMFERENCE - (remaining / total) * CIRCUMFERENCE
     : CIRCUMFERENCE;
 
   return (
-    <div className="relative w-64 h-64 mb-8">
+    <div className="relative w-full max-w-64 aspect-square mb-8">
       <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
         <circle
           cx="100"
@@ -59,9 +76,14 @@ export function TimerRing({ remaining, total, isBreak }: TimerRingProps) {
         <span className="text-[11px] font-bold tracking-wide text-primary-500">
           {isBreak ? 'On a break' : 'Focusing'}
         </span>
-        <span className="text-5xl font-black tabular-nums text-white mt-1.5 tracking-tight">
-          {formatTime(remaining)}
-        </span>
+        {/* Odometer clock — each digit rolls to its value; the colon is static. */}
+        <div className="odometer text-5xl font-black tabular-nums text-white mt-1.5 tracking-tight leading-none">
+          {formatTime(remaining).split('').map((ch, i) =>
+            ch === ':'
+              ? <span key={`sep-${i}`} className="px-0.5">:</span>
+              : <OdometerDigit key={`d-${i}`} value={Number(ch)} />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -50,6 +50,8 @@ export default function DreamPlanningPage() {
 
   // Drag over states
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  // The dream currently being dragged — powers the live "will land here" preview.
+  const [draggingId, setDraggingId] = useState<number | null>(null);
 
   // Inline "add a task to this goal" — which goal's field is open + its draft.
   const [addingTaskFor, setAddingTaskFor] = useState<number | null>(null);
@@ -214,14 +216,37 @@ export default function DreamPlanningPage() {
   // Drag & Drop Handlers
   const handleDragStart = (e: React.DragEvent, id: number) => {
     e.dataTransfer.setData('text/plain', id.toString());
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggingId(id);
   };
 
-  const handleDragOver = (e: React.DragEvent, colType: string) => {
+  // Set the active column once, on ENTER — not on every dragover move. This is
+  // what makes the ghost appear when you cross into a column and then hold still
+  // while you move around inside it (no per-move re-render / re-animation).
+  const handleDragEnter = (e: React.DragEvent, colType: string) => {
     e.preventDefault();
-    setDragOverColumn(colType);
+    setDragOverColumn((current) => (current === colType ? current : colType));
   };
 
-  const handleDragLeave = () => {
+  // dragover must preventDefault so the column stays a valid drop target, but it
+  // must NOT touch state — doing so on every mouse-move is the flicker source.
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  // Only clear when the pointer truly leaves the column. dragleave also fires
+  // when crossing into a *child* element (relatedTarget still inside the column),
+  // so ignore those — otherwise the ghost unmounts/remounts on every move.
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      setDragOverColumn(null);
+    }
+  };
+
+  // Fires whether or not a drop happened — clears the drag/preview state so a
+  // cancelled drag (dropped outside any column) doesn't leave a ghost behind.
+  const handleDragEnd = () => {
+    setDraggingId(null);
     setDragOverColumn(null);
   };
 
@@ -270,6 +295,14 @@ export default function DreamPlanningPage() {
     }
   };
 
+  // Live-drag preview: which column currently holds the dragged dream + its
+  // content, so a *different* column can render an animated "will land here"
+  // ghost while hovering — no drop required to see the result.
+  const draggingDream = draggingId == null
+    ? null
+    : (['week', 'month', 'year'] as const).flatMap((tp) => horizons[tp]).find((h) => h.id === draggingId) ?? null;
+  const draggingType = draggingDream?.type ?? null;
+
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
@@ -291,14 +324,14 @@ export default function DreamPlanningPage() {
           DEVELOPMENT NAVIGATOR: HORIZON COLUMNS (WEEK / MONTH / YEAR)
           Contains: Per-horizon goal columns (header, goals list, add input)
           ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 @3xl:grid-cols-3 gap-6">
 
         {/* Column Generator */}
         {(['week', 'month', 'year'] as const).map((type) => {
           const colLabel = type === 'week' ? 'This week' : type === 'month' ? 'This month' : 'This year';
-          const colColor = horizonEdge(type); // bg-blue-500 / bg-purple-500 / bg-amber-500
-          const whisperColor = type === 'week' ? 'whisper-blue' : type === 'month' ? 'whisper-purple' : 'whisper-amber';
-          const ringColor = type === 'week' ? 'ring-blue-500/40' : type === 'month' ? 'ring-purple-500/40' : 'ring-amber-500/40';
+          const colColor = horizonEdge(type); // primary-700 / primary-800 / primary-900 (deep brand ramp)
+          const whisperColor = type === 'week' ? 'whisper-week' : type === 'month' ? 'whisper-month' : 'whisper-year';
+          const ringColor = type === 'week' ? 'ring-primary-700/50' : type === 'month' ? 'ring-primary-800/50' : 'ring-primary-900/50';
           const isOver = dragOverColumn === type;
           const items = horizons[type] || [];
 
@@ -306,7 +339,8 @@ export default function DreamPlanningPage() {
             <div
               key={type}
               data-entrance="card"
-              onDragOver={(e) => handleDragOver(e, type)}
+              onDragEnter={(e) => handleDragEnter(e, type)}
+              onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, type)}
               className={cn(
@@ -317,8 +351,12 @@ export default function DreamPlanningPage() {
             >
               {/* Column Header */}
               <div className="flex items-center justify-between mb-5">
-                <span className={cn('text-white text-[11px] font-semibold px-3 py-1.5 rounded-full flex items-center gap-1', colColor)}>
-                  <Calendar className="w-3.5 h-3.5" />
+                {/* Badge is a translucent chip of the column's own surface — it
+                    passively picks up each column's warm whisper instead of a
+                    cool slate fill that floats. Column identity stays in the edge
+                    accent + whisper, not a loud coloured pill. */}
+                <span className="text-slate-200 text-[11px] font-semibold px-3 py-1.5 rounded-full flex items-center gap-1 bg-white/[0.06] border border-white/[0.08]">
+                  <Calendar className="w-3.5 h-3.5 text-slate-400" />
                   {colLabel}
                 </span>
                 <span className="text-xs text-slate-400 font-bold">
@@ -339,7 +377,10 @@ export default function DreamPlanningPage() {
                     return (
                     <div
                       key={h.id}
-                      className="group relative pl-4 pr-3.5 py-2.5 rounded-xl surface-sunken border border-slate-800/60 transition-all hover:border-slate-700"
+                      className={cn(
+                        'group relative pl-4 pr-3.5 py-2.5 rounded-xl surface-sunken border border-slate-800/60 transition-all duration-200 hover:border-slate-700',
+                        draggingId === h.id && 'opacity-40 scale-[0.98]'
+                      )}
                     >
                       {/* Left-edge accent = horizon type (week/month/year) */}
                       <span className={cn('absolute left-0 inset-y-2 w-1 rounded-full edge-accent', horizonEdge(type))} />
@@ -348,6 +389,7 @@ export default function DreamPlanningPage() {
                       <div
                         draggable
                         onDragStart={(e) => handleDragStart(e, h.id)}
+                        onDragEnd={handleDragEnd}
                         className="flex items-start gap-2.5 cursor-grab active:cursor-grabbing"
                       >
                         <Button variant="unstyled"
@@ -375,9 +417,9 @@ export default function DreamPlanningPage() {
                       <div className="pl-[26px] mt-2 space-y-2">
                         {m.total > 0 ? (
                           <div className="space-y-1">
-                            <Progress value={m.done} max={m.total} variant="purple" size="sm" />
+                            <Progress value={m.done} max={m.total} variant="primary" size="sm" />
                             <p className="text-[10px] font-semibold text-slate-400">
-                              {m.done}/{m.total} tasks · <span className="text-purple-400 font-bold">{m.focusedMins}m</span> focused
+                              {m.done}/{m.total} tasks · <span className="text-primary-500 font-bold">{m.focusedMins}m</span> focused
                             </p>
                           </div>
                         ) : (
@@ -387,11 +429,12 @@ export default function DreamPlanningPage() {
                         {m.total - m.done > 0 && (
                           <Button
                             onClick={() => router.push(`/time/execution?horizon=${h.id}`)}
-                            variant="outline"
+                            variant="soft"
                             size="sm"
-                            className="mt-1"
+                            fullWidth
+                            leftIcon={<Target className="w-3.5 h-3.5" />}
+                            className="mt-1 whitespace-nowrap"
                           >
-                            <Target className="w-3.5 h-3.5 mr-1.5" />
                             Focus this dream
                           </Button>
                         )}
@@ -413,7 +456,7 @@ export default function DreamPlanningPage() {
                             <Button variant="unstyled"
                               onClick={() => handleAddTaskToGoal(h.id)}
                               title="Add task"
-                              className="w-9 h-9 flex-shrink-0 rounded-lg bg-purple-500/15 text-purple-400 hover:bg-purple-500/25 flex items-center justify-center transition-colors"
+                              className="w-9 h-9 flex-shrink-0 rounded-lg bg-primary-500/15 text-primary-400 hover:bg-primary-500/25 flex items-center justify-center transition-colors"
                             >
                               <Plus className="w-4 h-4 stroke-[3]" />
                             </Button>
@@ -430,6 +473,17 @@ export default function DreamPlanningPage() {
                     </div>
                     );
                   })
+                )}
+
+                {/* Live insertion ghost — appears the moment a dream is dragged
+                    over a *different* column, previewing where it will land with
+                    a smooth expand. It's replaced by the real card on drop. */}
+                {dragOverColumn === type && draggingType && draggingType !== type && draggingDream && (
+                  <div className="relative pl-4 pr-3.5 py-2.5 rounded-xl border border-dashed border-primary-500/50 bg-primary-500/[0.06] animate-in fade-in slide-in-from-top-1 zoom-in-95 duration-200">
+                    <span className={cn('absolute left-0 inset-y-2 w-1 rounded-full', horizonEdge(type))} />
+                    <p className="text-sm text-slate-200 leading-tight line-clamp-2">{draggingDream.content}</p>
+                    <p className="text-[10px] font-semibold text-primary-400 mt-1.5">Release to move here</p>
+                  </div>
                 )}
               </div>
 
@@ -475,7 +529,7 @@ export default function DreamPlanningPage() {
         {archived.length === 0 ? (
           <p className="text-center text-xs text-slate-400 py-10">No completed goals yet.</p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3 gap-4">
             {archived.map((h) => (
               <div
                 key={h.id}

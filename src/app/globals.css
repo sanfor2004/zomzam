@@ -569,6 +569,36 @@ html[dir="rtl"] .nav-link-active::before {
   .card-lift:hover { transform: none; }
 }
 
+/* Odometer clock (TimerRing): each digit is a vertical 0–9 strip clipped to a
+   1em window; setting translateY(-Nem) rolls digit N into view. Only transform
+   animates, so a paused timer's digits sit perfectly still and reduced-motion
+   users get an instant snap. Purposeful motion, HIG-clean. */
+.odometer { display: inline-flex; align-items: center; }
+/* Cells run 1.35em (not 1em) so the bold glyph clears its clip window with
+   slack top and bottom — a tight 1em box shaves ascenders/descenders. The
+   strip translates by a % of its own height (10 cells), so the roll stays
+   exact regardless of the cell's em height or the font's metrics. */
+.odometer-digit {
+  display: inline-block;
+  width: 1ch;
+  height: 1.35em;
+  overflow: hidden;
+  text-align: center;
+}
+.odometer-strip {
+  display: block;
+  will-change: transform;
+  transition: transform 450ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.odometer-cell {
+  display: block;
+  height: 1.35em;
+  line-height: 1.35em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .odometer-strip { transition: none; }
+}
+
 /* Breathing: loopy subtle scale for primary CTAs — draws the eye without distraction. */
 @keyframes breathing {
   0%, 100% { transform: scale(1); }
@@ -673,13 +703,14 @@ html[dir="rtl"] .nav-link-active::before {
   box-shadow: var(--shadow-apple-lg);
 }
 
-/* Per-page accent whisper — a faint SEMANTIC data tint on planning columns
-   (week/month/year). Orange is intentionally absent here; brand lives in the
-   hairline, not a wash. Pair with .surface-raised. */
-.whisper-amber   { --whisper: rgba(245, 158, 11, 0.07); }
+/* Per-column brand whisper — a faint deep Zomzam-orange tint that differentiates
+   the planning horizons along the burnt end of the primary ramp (week→month→year).
+   Low-alpha + dark so it reads as an OLED-friendly accent wash, not a bright fill.
+   Pair with .surface-raised. */
 .whisper-emerald { --whisper: rgba(16, 185, 129, 0.07); }
-.whisper-purple  { --whisper: rgba(168, 85, 247, 0.07); }
-.whisper-blue    { --whisper: rgba(59, 130, 246, 0.07); }
+.whisper-week    { --whisper: rgba(185, 43, 11, 0.10); } /* primary-700 */
+.whisper-month   { --whisper: rgba(148, 36, 14, 0.10); } /* primary-800 */
+.whisper-year    { --whisper: rgba(119, 32, 14, 0.12); } /* primary-900 */
 
 /* .surface-card — the GLOBAL default card fill (replaces the flat bg-[#1A1D24]
    repeated across the app): grey-navy gradient. Pairs with each card's own

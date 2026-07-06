@@ -22,7 +22,7 @@ export function NotificationToaster() {
       const n = (e as CustomEvent).detail;
       if (!n) return;
       const view = describeNotification(n);
-      toast({ title: `${view.emoji} New activity`, description: view.text, variant: 'info' });
+      toast({ title: 'New activity', description: view.text, variant: 'info' });
     };
     window.addEventListener('new-notification', onNotification);
     return () => window.removeEventListener('new-notification', onNotification);

@@ -39,7 +39,7 @@ function PomodoroPageInner() {
   // Tasks & Server Sync
   const [tasks, setTasks] = useState<Task[]>([]);
   const [ideasCount, setIdeasCount] = useState(0);
-  // Active dream goals â€” carry `type` too so the dream-progress bar can colour
+  // Active dream goals — carry `type` too so the dream-progress bar can colour
   // itself by horizon (horizonEdge = data, per the colour=meaning rule).
   const [horizons, setHorizons] = useState<{ id: number; content: string; type: string; status: string }[]>([]);
 
@@ -71,19 +71,19 @@ function PomodoroPageInner() {
     }
   };
 
-  // Timer engine â€” countdown, drift correction, localStorage persistence,
+  // Timer engine — countdown, drift correction, localStorage persistence,
   // focus/break segments, and the daily session count all live in the hook.
   const timer = usePomodoroTimer();
   const {
     duration, breakDuration, remaining, isRunning, isBreak,
-    sessionsToday, currentTaskStartTime,
+    sessionsToday, currentTaskStartTime, restored,
   } = timer;
 
   // The task id we last auto-loaded the ring for. Guards the auto-load effect
-  // so pausing (isRunning â†’ false) never re-runs setupFocusTime and wipes the
-  // remaining time â€” it's a Pause button, not a Reset button.
+  // so pausing (isRunning → false) never re-runs setupFocusTime and wipes the
+  // remaining time — it's a Pause button, not a Reset button.
   const lastSetupTaskId = useRef<number | null>(null);
-  // Debounces the focus-duration â†’ task-board DB write while the user types.
+  // Debounces the focus-duration → task-board DB write while the user types.
   const focusSyncTimer  = useRef<NodeJS.Timeout | null>(null);
 
   // Load state from server
@@ -96,7 +96,7 @@ function PomodoroPageInner() {
       });
       const data = await res.json();
       if (data.success) {
-        // Normalize in_progress â†’ treat as pending for display purposes
+        // Normalize in_progress → treat as pending for display purposes
         const normalized = (data.tasks || []).map((t: Task) => ({
           ...t,
           status: t.status === 'in_progress' ? 'pending' : t.status,
@@ -140,7 +140,7 @@ function PomodoroPageInner() {
     }, 600);
   };
 
-  // Focus minutes â€” freely typed (5â€“120), no 5-minute snap. Retunes the ring
+  // Focus minutes — freely typed (5–120), no 5-minute snap. Retunes the ring
   // and syncs the board. The lastSetupTaskId guard keeps the auto-load effect
   // from clobbering the value we just set for the same task.
   const handleFocusChange = (raw: string) => {
@@ -153,7 +153,7 @@ function PomodoroPageInner() {
     syncTopTaskDuration(mins);
   };
 
-  // Break minutes â€” freely typed (1â€“60). No board counterpart, so it just
+  // Break minutes — freely typed (1–60). No board counterpart, so it just
   // retunes the break segment (the hook persists it).
   const handleBreakChange = (raw: string) => {
     if (isRunning) return;
@@ -188,10 +188,10 @@ function PomodoroPageInner() {
   // The dream the current focus task is pushing toward, if any.
   const topDream = topTask?.horizon_id ? horizons.find(h => h.id === topTask.horizon_id) : null;
 
-  // Live dream progress â€” completed Ã· total tasks sharing the horizon, derived
+  // Live dream progress — completed ÷ total tasks sharing the horizon, derived
   // purely from the already-loaded task set. Ticks up when a linked task
   // completes (handleDoneTask flips its status). Hidden when nothing is linked
-  // (no divide-by-zero). See spec-11 Â§3.3.
+  // (no divide-by-zero). See spec-11 §3.3.
   const dreamProgress = useMemo(() => {
     if (!topTask?.horizon_id) return null;
     const linked = tasks.filter(t => t.horizon_id === topTask.horizon_id);
@@ -200,9 +200,9 @@ function PomodoroPageInner() {
     return { done, total: linked.length, pct: Math.round((done / linked.length) * 100) };
   }, [tasks, topTask?.horizon_id]);
 
-  // This week's focused time â€” sum of actual_duration for tasks completed in the
+  // This week's focused time — sum of actual_duration for tasks completed in the
   // last 7 days (rolling, local time). A real, blurred-adjacent number for the
-  // Pro money strip; not billing-grade. See spec-11 Â§3.4.
+  // Pro money strip; not billing-grade. See spec-11 §3.4.
   const weekFocusMins = useMemo(() => {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     return tasks
@@ -219,7 +219,7 @@ function PomodoroPageInner() {
     return `${m}m focused`;
   };
 
-  // Calm one-liner for the header, computed from state (voice guide Â§4).
+  // Calm one-liner for the header, computed from state (voice guide §4).
   const dayLine = pendingTasks.length === 0
     ? "Nothing queued. Add something when you're ready."
     : `${pendingTasks.length} ${pendingTasks.length === 1 ? 'task' : 'tasks'}. First one's ${pendingTasks[0].duration_block} minutes.`;
@@ -230,18 +230,18 @@ function PomodoroPageInner() {
   useEffect(() => {
     // Only (re)load the ring when the *top task itself* changes, not on every
     // isRunning/isBreak flip. Two things must NOT be clobbered:
-    //   â€¢ a paused/running FOCUS on this task â€” currentTaskStartTime is set, so
+    //   • a paused/running FOCUS on this task — currentTaskStartTime is set, so
     //     the persisted remaining survives navigate-away-and-return.
-    //   â€¢ a break in progress â€” guarded by !isBreak.
+    //   • a break in progress — guarded by !isBreak.
     if (
-      topTask && !isRunning && !isBreak &&
+      restored && topTask && !isRunning && !isBreak &&
       currentTaskStartTime === null &&
       lastSetupTaskId.current !== topTask.id
     ) {
       lastSetupTaskId.current = topTask.id;
       timer.setupFocusTime(topTask.duration_block);
     }
-  }, [topTask, isRunning, isBreak, currentTaskStartTime]);
+  }, [topTask, isRunning, isBreak, currentTaskStartTime, restored]);
 
   // Start the countdown, then flip the top task to in_progress on the board.
   // The timer engine owns the clock; this wrapper adds the task side effect.
@@ -378,10 +378,10 @@ function PomodoroPageInner() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, sessions-completed-today pill
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
@@ -422,14 +422,14 @@ function PomodoroPageInner() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      <div className="grid grid-cols-1 @3xl:grid-cols-5 gap-8">
+
+        {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: TIMER COLUMN (left)
             Contains: SVG countdown ring, play/pause/reset controls,
             focus/break duration adjusters
-            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div data-entrance="card" className="lg:col-span-2 surface-raised border border-slate-800/60 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
+            ────────────────────────────────────────────────────────── */}
+        <div data-entrance="card" className="@3xl:col-span-2 surface-raised border border-slate-800/60 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
 
           <TimerRing remaining={remaining} total={isBreak ? breakDuration : duration} isBreak={isBreak} />
 
@@ -452,10 +452,10 @@ function PomodoroPageInner() {
                   Skip break
                 </Button>
 
-                {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                {/* ──────────────────────────────────────────────────────────
                     DEVELOPMENT NAVIGATOR: BREAK-TIME IDEA CAPTURE (F2)
-                    Contains: one-line thought capture â†’ Idea Capture, saved flash
-                    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                    Contains: one-line thought capture → Idea Capture, saved flash
+                    ────────────────────────────────────────────────────────── */}
                 <div className="w-full mt-1 rounded-2xl p-4 bg-emerald-500/[0.06] border border-emerald-500/15">
                   <div className="flex items-center gap-1.5 mb-2 text-[11px] font-semibold text-emerald-500">
                     <Lightbulb className="w-3.5 h-3.5" /> Caught a thought?
@@ -466,7 +466,7 @@ function PomodoroPageInner() {
                       value={ideaDraft}
                       onChange={(e) => setIdeaDraft(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') handleBreakCapture(); }}
-                      placeholder="Capture it before it's goneâ€¦"
+                      placeholder="Capture it before it's gone…"
                       containerClassName="flex-1"
                     />
                     <Button
@@ -481,7 +481,7 @@ function PomodoroPageInner() {
                     </Button>
                   </div>
                   {ideaSaved && (
-                    <p className="mt-1.5 text-[11px] font-semibold text-emerald-500">Saved â€” it&apos;s in your ideas.</p>
+                    <p className="mt-1.5 text-[11px] font-semibold text-emerald-500">Saved — it&apos;s in your ideas.</p>
                   )}
                 </div>
               </>
@@ -497,14 +497,14 @@ function PomodoroPageInner() {
           </div>
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-            DEVELOPMENT NAVIGATOR: THE DAY â€” NOW / NEXT / LATER (right)
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: THE DAY — NOW / NEXT / LATER (right)
             Contains: Now card (focus task, priority, live dream bar, Done/Switch),
-            Next row, Later collapsed count â†’ task board
-            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+            Next row, Later collapsed count → task board
+            ────────────────────────────────────────────────────────── */}
+        <div className="@3xl:col-span-3 flex flex-col gap-4">
 
-          {/* NOW â€” the current focus task; the left-column ring is its Start/Pause.
+          {/* NOW — the current focus task; the left-column ring is its Start/Pause.
               surface-featured = the special hero card (faint orange corner glow). */}
           <div data-entrance="card" className="flex-1 surface-featured border border-slate-800/60 rounded-3xl p-8 shadow-apple-lg flex flex-col justify-between min-h-[300px]">
             <div>
@@ -543,11 +543,11 @@ function PomodoroPageInner() {
                     {topTask.priority} priority
                   </span>
 
-                  {/* Live dream progress â€” quiet counterpart to the session confetti */}
+                  {/* Live dream progress — quiet counterpart to the session confetti */}
                   {topDream && dreamProgress && (
                     <div className="pl-[18px] pt-2">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-xs text-slate-400 truncate">toward â€” {topDream.content}</span>
+                        <span className="text-xs text-slate-400 truncate">toward — {topDream.content}</span>
                         <span className="text-xs font-semibold text-slate-400 tabular-nums shrink-0">
                           {dreamProgress.done}/{dreamProgress.total}
                         </span>
@@ -605,7 +605,7 @@ function PomodoroPageInner() {
                   onClick={swapTask}
                   disabled={pendingTasks.length < 2}
                   variant="outline"
-                  className="w-full h-11 text-sm"
+                  className="w-full h-11 text-xs"
                 >
                   <Shuffle className="w-4 h-4 mr-2" />
                   Switch task
@@ -614,7 +614,7 @@ function PomodoroPageInner() {
             )}
           </div>
 
-          {/* NEXT â€” the task after this one */}
+          {/* NEXT — the task after this one */}
           <div className="surface-base border border-slate-800/60 rounded-2xl px-6 py-4 flex items-center gap-3">
             <span className="text-[11px] font-bold tracking-wide text-slate-500 w-11 shrink-0">Next</span>
             {pendingTasks[1] ? (
@@ -628,7 +628,7 @@ function PomodoroPageInner() {
             )}
           </div>
 
-          {/* LATER â€” the rest of the queue, collapsed; the full board is a tap away */}
+          {/* LATER — the rest of the queue, collapsed; the full board is a tap away */}
           <Button
             variant="unstyled"
             onClick={() => router.push('/time/tasks')}
@@ -650,8 +650,8 @@ function PomodoroPageInner() {
       <ProLock
         variant="strip"
         label="See what your time earns"
-        sublabel={`This week €” ${fmtFocus(weekFocusMins)}`}
-        blurred={<span>$â€¢â€¢â€¢</span>}
+        sublabel={`This week — ${fmtFocus(weekFocusMins)}`}
+        blurred={<span>$•••</span>}
       />
 
     </div>

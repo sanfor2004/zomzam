@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
     Colour = meaning: orange appears ONLY on the CTA — it names "this is
     a Zomzam upgrade", nothing else on the surface competes for it.
 
-    ⚠ CEILING — presentation only, NOT a gate. There is no `isPro` on the
+    WARNING: CEILING — presentation only, NOT a gate. There is no `isPro` on the
     session and no billing yet (`/pricing` records intent; Stripe is a later
     step). ProLock hides a number behind a blur and routes to the upgrade
     funnel — a determined user is NOT blocked at the API. That is acceptable
@@ -48,7 +48,7 @@ export function ProLock({
   children,
   className = '',
 }: ProLockProps) {
-  // ── inline: a self-sized "🔒 label · Pro" pill that routes to `href`. The
+  // ── inline: a self-sized "[Lock] label · Pro" pill that routes to `href`. The
   //    `label · Pro` text sits in normal flow so it sizes the pill; any `children`
   //    (e.g. the gated control's icon) render as a faint clipped ghost behind it —
   //    a hint of what's locked, never a legible duplicate of the label.

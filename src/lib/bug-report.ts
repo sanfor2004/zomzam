@@ -80,7 +80,7 @@ function buildHtml(input: BugReportInput): string {
 
   return `<div style="background:#0b0d12;padding:24px;font-family:system-ui,sans-serif">
     <div style="max-width:680px;margin:0 auto;background:#1A1D24;border:1px solid #1e293b;border-radius:16px;overflow:hidden">
-      <div style="background:#EE5712;padding:14px 20px;color:#fff;font-weight:800;font-size:14px">🐛 Zomzam — ${esc(input.source)} error</div>
+      <div style="background:#EE5712;padding:14px 20px;color:#fff;font-weight:800;font-size:14px">[Bug] Zomzam — ${esc(input.source)} error</div>
       <div style="padding:20px">
         <p style="margin:0 0 14px;color:#f8fafc;font-size:15px;font-weight:700">${esc(input.message)}</p>
         <table style="border-collapse:collapse;width:100%;margin-bottom:16px">
@@ -114,7 +114,7 @@ export async function reportBug(input: BugReportInput): Promise<void> {
     if (!(await rateLimit(`bug:${fingerprint(input)}`, THROTTLE_MAX, THROTTLE_WINDOW_MS))) return;
 
     const from = process.env.BUG_REPORT_FROM || DEFAULT_FROM;
-    const subject = `🐛 [Zomzam] ${input.source} error: ${input.message.slice(0, 100)}`;
+    const subject = `[Bug] [Zomzam] ${input.source} error: ${input.message.slice(0, 100)}`;
 
     const res = await fetch(RESEND_ENDPOINT, {
       method: 'POST',

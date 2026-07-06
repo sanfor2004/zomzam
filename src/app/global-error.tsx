@@ -39,7 +39,9 @@ export default function GlobalError({
       <body style={{ margin: 0, background: '#0b0d12', color: '#e2e8f0', fontFamily: 'system-ui, sans-serif' }}>
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
           <div style={{ maxWidth: 420, textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>🛠️</div>
+            <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
             <h1 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>Something broke on our end</h1>
             <p style={{ fontSize: 14, color: '#94a3b8', margin: '0 0 20px' }}>
               The team has been notified automatically. You can try again.

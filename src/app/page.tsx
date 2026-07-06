@@ -4,7 +4,7 @@ import { Button } from '@/components/ui';
 import React, { useState, useEffect, useRef } from 'react';
 import { gsap, useGSAP, ScrollTrigger, SplitText } from '@/lib/gsap';
 import { useTranslation } from '@/context/TranslationContext';
-import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, Activity, DollarSign, Clock } from 'lucide-react';
+import { Globe, ArrowRight, Shield, Heart, HelpCircle, Users, Activity, DollarSign, Clock, Star, Sparkles } from 'lucide-react';
 import { DropdownMenu, DropdownItem } from '@/components/ui/Dropdown';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -432,7 +432,7 @@ export default function LandingPage() {
             
             <div className="relative z-20 space-y-4">
               <div className="w-10 h-10 bg-primary-500/10 text-primary-500 rounded-2xl flex items-center justify-center font-bold">
-                ★
+                <Star className="w-5 h-5" />
               </div>
               <h3 className="text-lg font-black text-white uppercase tracking-wider">Our Goal</h3>
               <p className="text-sm text-slate-350 leading-relaxed">
@@ -572,7 +572,7 @@ export default function LandingPage() {
           <div data-animate="bento-card" className="lg:col-span-4 bg-[#161920] border border-slate-800/80 rounded-[2rem] p-8 flex flex-col justify-between shadow-apple min-h-[220px]">
             <div className="space-y-4">
               <div className="w-8 h-8 rounded-xl bg-primary-500/10 text-primary-500 flex items-center justify-center font-bold">
-                ✦
+                <Sparkles className="w-4 h-4" />
               </div>
               <h3 className="text-base font-black text-white uppercase tracking-wider">Real-Time Sync</h3>
               <p className="text-xs text-slate-400 leading-relaxed">

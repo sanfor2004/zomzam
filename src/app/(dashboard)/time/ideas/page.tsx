@@ -4,11 +4,11 @@ import { Button, Modal, Input, Select, NumberInput, SectionHeader, Skeleton } fr
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Lightbulb, Plus, Trash2, Edit2, X, Check, Save, Sparkles, Timer, Archive } from 'lucide-react';
+import { Lightbulb, Plus, Trash2, Edit2, X, Check, Save, Sparkles, Timer, Archive, RotateCcw } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { cn } from '@/lib/utils';
 import {
-  loadIdeasData, addIdeaRequest, updateIdeaRequest, deleteIdeaRequest,
+  loadIdeasData, addIdeaRequest, updateIdeaRequest, deleteIdeaRequest, setIdeaDoneRequest,
   quickAddTaskRequest, updateTaskInfoRequest,
   type Task, type Horizon, type Idea,
 } from './page.services';
@@ -52,7 +52,7 @@ export default function IdeaCapturePage() {
   const [mentionList, setMentionList] = useState<MentionItem[]>([]);
   const [mentionIndex, setSelectedIndex] = useState(0);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
-  // Snapshot of the caret at the moment `@â€¦` is typed, so a pill can still be
+  // Snapshot of the caret at the moment `@…` is typed, so a pill can still be
   // inserted after an async create round-trip has blurred the live selection.
   const mentionRangeRef = useRef<Range | null>(null);
 
@@ -183,7 +183,7 @@ export default function IdeaCapturePage() {
       const queryStr = rawQuery.toLowerCase();
       setMentionActive(true);
       setSelectedIndex(0);
-      // Freeze the caret position now â€” a click on a create row will blur the
+      // Freeze the caret position now — a click on a create row will blur the
       // editor before the async task insert completes.
       mentionRangeRef.current = range.cloneRange();
 
@@ -238,7 +238,7 @@ export default function IdeaCapturePage() {
     return `<span contenteditable="false" data-type="${type}" data-id="${id}" class="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-xs font-bold border select-none${editable} ${styles}">@${label}</span>`;
   };
 
-  // Insert a resolved task/plan pill at the frozen `@\u2026` caret snapshot, replacing
+  // Insert a resolved task/plan pill at the frozen `@…` caret snapshot, replacing
   // the `@query` text. Uses mentionRangeRef so it survives an async create.
   const performInsert = (type: 'task' | 'plan', id: number, label: string) => {
     const range = mentionRangeRef.current;
@@ -284,7 +284,7 @@ export default function IdeaCapturePage() {
     updateCharCount();
   };
 
-  // Dropdown selection \u2014 resolves a live task/plan, or quick-creates a task
+  // Dropdown selection — resolves a live task/plan, or quick-creates a task
   // from an unmatched query, then drops the pill in.
   const handleSelectMention = async (item: MentionItem) => {
     if (item._tagType === 'create') {
@@ -301,7 +301,7 @@ export default function IdeaCapturePage() {
     }
   };
 
-  // Click a task pill inside the editor \u2192 open the inline task editor.
+  // Click a task pill inside the editor → open the inline task editor.
   const handleEditorClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const pill = (e.target as HTMLElement).closest('[data-type="task"]');
     if (!pill) return;
@@ -426,6 +426,17 @@ export default function IdeaCapturePage() {
     }
   };
 
+  // Toggle an idea done/open. Optimistic — flip locally for instant feedback,
+  // roll back if the write fails. Vault-only status; no linked task is touched.
+  const handleToggleIdeaDone = async (idea: Idea) => {
+    const nextDone = idea.status !== 'done';
+    setIdeas(prev => prev.map(i => (i.id === idea.id ? { ...i, status: nextDone ? 'done' : 'open' } : i)));
+    const ok = await setIdeaDoneRequest(idea.id, nextDone);
+    if (!ok) {
+      setIdeas(prev => prev.map(i => (i.id === idea.id ? { ...i, status: idea.status } : i)));
+    }
+  };
+
   // Expand / Truncate Toggle
   const toggleExpand = (id: number) => {
     setExpandedIdeaIds((prev) => ({
@@ -435,9 +446,9 @@ export default function IdeaCapturePage() {
   };
 
   // Render processed text for Vault cards
-  const renderFormattedBody = (text: string) => {
+  const renderFormattedBody = (text: string, isDone = false) => {
     if (!text) return '';
-    
+
     // Replace markdown and mentions with styled HTML strings in safe client-side render
     let parsed = text;
     parsed = parsed.replace(/@task:(\d+)/g, (match, id) => {
@@ -450,8 +461,11 @@ export default function IdeaCapturePage() {
     });
 
     return (
-      <p 
-        className="text-sm text-slate-300 leading-relaxed pr-6 whitespace-pre-wrap"
+      <p
+        className={cn(
+          'text-sm leading-relaxed whitespace-pre-wrap',
+          isDone ? 'text-slate-500 line-through decoration-slate-600' : 'text-slate-300'
+        )}
         dangerouslySetInnerHTML={{ __html: parsed }}
       />
     );
@@ -459,12 +473,14 @@ export default function IdeaCapturePage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-8" aria-busy="true">
-        <Skeleton className="lg:col-span-3 h-80 w-full" />
-        <Skeleton className="lg:col-span-2 h-80 w-full" />
+      <div className="max-w-6xl mx-auto grid grid-cols-1 @3xl:grid-cols-5 gap-8" aria-busy="true">
+        <Skeleton className="@3xl:col-span-3 h-80 w-full" />
+        <Skeleton className="@3xl:col-span-2 h-80 w-full" />
       </div>
     );
   }
+
+  const resolvedCount = ideas.filter((i) => i.status === 'done').length;
 
   return (
     <div
@@ -475,10 +491,10 @@ export default function IdeaCapturePage() {
       className="max-w-6xl mx-auto space-y-8 relative"
     >
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: FLOATING MENTIONS DROPDOWN MENU
           Rendered absolute using page-relative coordinates for '@' queries
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {mentionActive && mentionList.length > 0 && (
         <div 
           className="absolute z-50 w-64 max-h-64 overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-glass p-2 scale-100 opacity-100 transition-all"
@@ -489,7 +505,7 @@ export default function IdeaCapturePage() {
           }}
         >
           <div className="px-3 pb-2 mb-2 border-b border-slate-800 text-[11px] font-semibold text-slate-400">
-            Link toâ€¦
+            Link to...
           </div>
           <div className="space-y-0.5">
             {mentionList.map((item, idx) => {
@@ -504,12 +520,12 @@ export default function IdeaCapturePage() {
                     onClick={() => handleSelectMention(item)}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-left text-xs font-semibold transition-colors ${
-                      isSelected ? 'bg-emerald-500/15 text-emerald-400' : 'text-slate-400 hover:bg-slate-850/50'
+                      isSelected ? 'bg-primary-500/15 text-primary-400' : 'text-slate-400 hover:bg-slate-850/50'
                     }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
+                    <Sparkles className="w-3.5 h-3.5 shrink-0 text-primary-500" />
                     <span className="truncate">
-                      Create task <span className="text-emerald-400">â€œ{item.label}â€</span>
+                      Create task <span className="text-primary-400">"{item.label}"</span>
                     </span>
                   </Button>
                 );
@@ -544,11 +560,11 @@ export default function IdeaCapturePage() {
         </div>
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: INLINE TASK EDITOR MODAL
-          Opened by clicking a task pill â€” sets title, priority, and the
+          Opened by clicking a task pill — sets title, priority, and the
           focus timer (duration_block) that drives the Pomodoro page
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={!!taskEditor}
         onClose={() => setTaskEditor(null)}
@@ -566,7 +582,7 @@ export default function IdeaCapturePage() {
               className="flex-1"
             >
               <Save className="w-4 h-4 mr-2" />
-              {savingTask ? 'Savingâ€¦' : 'Save task'}
+              {savingTask ? 'Saving…' : 'Save task'}
             </Button>
           </>
         }
@@ -608,9 +624,9 @@ export default function IdeaCapturePage() {
         </div>
       </Modal>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER SECTION
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
@@ -623,17 +639,17 @@ export default function IdeaCapturePage() {
         </div>
 
         <div className="text-xs text-slate-400 surface-card border border-slate-800/60 px-4 py-2.5 rounded-2xl shadow-apple-sm self-start">
-          Link items: <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1.5 py-0.5 rounded ml-1">@task</code> or <code className="text-purple-500 font-bold bg-purple-500/5 px-1.5 py-0.5 rounded">@plan</code>
+          Link items: <code className="text-primary-500 font-bold bg-primary-500/5 px-1.5 py-0.5 rounded ml-1">@task</code> or <code className="text-purple-500 font-bold bg-purple-500/5 px-1.5 py-0.5 rounded">@plan</code>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      <div className="grid grid-cols-1 @3xl:grid-cols-5 gap-8">
+
+        {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: CONTENTEDITABLE EDITOR WRAPPER
             Supports rich pills, key listeners for Arrow/Enter/Esc dropdown control
-            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div className="lg:col-span-3 space-y-6">
+            ────────────────────────────────────────────────────────── */}
+        <div className="@3xl:col-span-3 space-y-6">
           <div data-entrance="card" className="surface-raised border border-slate-800/60 rounded-3xl p-6">
 
             {/* Editor Textarea */}
@@ -678,11 +694,12 @@ export default function IdeaCapturePage() {
                     Cancel
                   </Button>
                 )}
-                <Button variant="unstyled"
+                <Button
+                  variant="primary"
                   onClick={handleSubmitIdea}
-                  className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-all shadow-md shadow-emerald-500/10 active:scale-[0.98] flex items-center gap-2"
+                  className="shrink-0 whitespace-nowrap"
+                  leftIcon={editingIdeaId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4 stroke-[3]" />}
                 >
-                  {editingIdeaId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4 stroke-[3]" />}
                   {editingIdeaId ? 'Update idea' : 'Capture idea'}
                 </Button>
               </div>
@@ -696,16 +713,16 @@ export default function IdeaCapturePage() {
               How linking works
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. Link an existing task or dream horizon â€” or, if none matches, hit <span className="text-emerald-400 font-semibold">Create task</span> to spin up a new one on the spot. Click any <span className="text-primary-400 font-semibold">task pill</span> to set its priority and focus timer.
+              When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. Link an existing task or dream horizon — or, if none matches, hit <span className="text-primary-400 font-semibold">Create task</span> to spin up a new one on the spot. Click any <span className="text-primary-400 font-semibold">task pill</span> to set its priority and focus timer.
             </p>
           </div>
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: IDEA VAULT CARDS GRID
             Renders filtered ideas list with edit/delete control and formatting
-            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
-        <div data-entrance="card" className="lg:col-span-2 surface-base border border-slate-800/60 rounded-3xl p-6 flex flex-col min-h-[460px]">
+            ────────────────────────────────────────────────────────── */}
+        <div data-entrance="card" className="@3xl:col-span-2 surface-base border border-slate-800/60 rounded-3xl p-6 flex flex-col min-h-[460px]">
           <div className="mb-5 pb-3 border-b border-slate-850">
             <SectionHeader
               icon={<Archive />}
@@ -713,6 +730,14 @@ export default function IdeaCapturePage() {
               title="Idea vault"
               count={ideas.length}
               countLabel={ideas.length === 1 ? 'idea' : 'ideas'}
+              actions={
+                resolvedCount > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 bg-slate-800/70 border border-slate-700/60 px-2 py-1 rounded-lg">
+                    <Check className="w-3 h-3" />
+                    {resolvedCount} resolved
+                  </span>
+                ) : undefined
+              }
             />
           </div>
 
@@ -736,35 +761,31 @@ export default function IdeaCapturePage() {
                   ? contentText.substring(0, displayLimit) + '...'
                   : contentText;
 
-                const isLinked = !!(idea.linked_task_id || idea.linked_horizon_id);
+                const isDone = idea.status === 'done';
+                // Left-edge accent mirrors what the idea links to while it's open —
+                // @task → primary (orange), @plan → purple — matching the coloured
+                // chip in the body. A done idea drops to a dead muted grey (paired
+                // with the dim + strikethrough) so it reads as finished, not active.
+                const accentColor = isDone
+                  ? 'bg-slate-700'
+                  : idea.linked_task_id
+                    ? 'bg-primary-500'
+                    : idea.linked_horizon_id
+                      ? 'bg-purple-500'
+                      : 'bg-slate-500';
                 return (
                   <div
                     key={idea.id}
-                    className="group relative pl-5 pr-4 py-3.5 surface-sunken border border-slate-850/50 rounded-xl transition-all hover:border-slate-800"
+                    className={cn(
+                      'group relative pl-5 pr-4 py-3.5 surface-sunken border border-slate-850/50 rounded-xl transition-all hover:border-slate-800',
+                      isDone && 'opacity-70'
+                    )}
                   >
-                    {/* Left-edge accent = linked (emerald) vs unlinked (slate); the
-                        link is also named by the @task/@plan chip inside the body. */}
-                    <span className={cn('absolute left-0 inset-y-2 w-1 rounded-full edge-accent', isLinked ? 'bg-emerald-500' : 'bg-slate-600')} />
-                    {/* Action Buttons */}
-                    <div className="absolute top-3 right-3 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="unstyled"
-                        onClick={() => handleEditIdea(idea)}
-                        title="Edit Idea"
-                        className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Button>
-                      <Button variant="unstyled"
-                        onClick={() => handleDeleteIdea(idea.id)}
-                        title="Delete Idea"
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
+                    {/* Left-edge accent = link colour when open, dead grey when done. */}
+                    <span className={cn('absolute left-0 inset-y-2 w-1 rounded-full edge-accent', accentColor)} />
 
                     {/* Body */}
-                    {renderFormattedBody(visibleText)}
+                    {renderFormattedBody(visibleText, isDone)}
 
                     {isTruncated && (
                       <Button variant="unstyled"
@@ -775,8 +796,10 @@ export default function IdeaCapturePage() {
                       </Button>
                     )}
 
-                    {/* Metadata Footer */}
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-850/30">
+                    {/* Metadata Footer — date on the left, actions on the right.
+                        Actions live in this row (not an absolute overlay) so they
+                        never cover the body text; hover/focus reveals them. */}
+                    <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-850/30">
                       <span className="text-[10px] font-semibold text-slate-400">
                         {new Date(idea.created_at).toLocaleDateString(undefined, {
                           month: 'short',
@@ -785,6 +808,44 @@ export default function IdeaCapturePage() {
                           minute: '2-digit'
                         })}
                       </span>
+
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <Button variant="unstyled"
+                          onClick={() => handleToggleIdeaDone(idea)}
+                          title={isDone ? 'Reopen idea' : 'Mark idea done'}
+                          className={cn(
+                            'p-1.5 rounded-lg shadow-sm border border-transparent hover:bg-slate-800 hover:border-slate-750 transition-all',
+                            isDone ? 'text-slate-400 hover:text-amber-500' : 'text-slate-400 hover:text-emerald-500'
+                          )}
+                        >
+                          {/* Check (mark done) ⇄ RotateCcw (undo) crossfade — the icon
+                              itself flips so the button reads as reversible once done. */}
+                          <span className="relative block w-3.5 h-3.5">
+                            <Check className={cn(
+                              'absolute inset-0 w-3.5 h-3.5 stroke-[3] transition-all duration-200 motion-reduce:transition-none',
+                              isDone ? 'opacity-0 scale-50 -rotate-90' : 'opacity-100 scale-100 rotate-0'
+                            )} />
+                            <RotateCcw className={cn(
+                              'absolute inset-0 w-3.5 h-3.5 stroke-[3] transition-all duration-200 motion-reduce:transition-none',
+                              isDone ? 'opacity-100 scale-100 rotate-0' : 'opacity-0 scale-50 rotate-90'
+                            )} />
+                          </span>
+                        </Button>
+                        <Button variant="unstyled"
+                          onClick={() => handleEditIdea(idea)}
+                          title="Edit idea"
+                          className="p-1.5 text-slate-400 hover:text-primary-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button variant="unstyled"
+                          onClick={() => handleDeleteIdea(idea.id)}
+                          title="Delete idea"
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-800 rounded-lg shadow-sm border border-transparent hover:border-slate-750 transition-all"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                   </div>

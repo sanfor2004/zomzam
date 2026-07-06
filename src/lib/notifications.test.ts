@@ -8,7 +8,7 @@ test('reposted notification deep-links to the opaque public_id, not the numeric 
   const v = describeNotification({ id: 1, type: 'reposted', data: { from_username: 'alice', post_id: 9, public_id: 'abc123def456abc123def456abc12345' } });
   assert.equal(v.text, 'alice reposted your post');
   assert.equal(v.href, '/p/abc123def456abc123def456abc12345');
-  assert.equal(v.emoji, '🔁');
+  assert.equal(v.icon, 'Repeat2');
 });
 
 test('a post notification with no public_id (legacy row) does not deep-link to a numeric id', () => {

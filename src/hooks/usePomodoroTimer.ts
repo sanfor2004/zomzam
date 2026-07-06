@@ -42,6 +42,8 @@ export interface PomodoroTimer {
   setBreakMinutes: (mins: number) => void;
   /** Clear the active focus-segment start marker (used on task skip/swap/done). */
   resetSegmentStart: () => void;
+  /** True once localStorage restore is complete — gate auto-load effects on this. */
+  restored: boolean;
 }
 
 export function usePomodoroTimer(): PomodoroTimer {
@@ -52,6 +54,7 @@ export function usePomodoroTimer(): PomodoroTimer {
   const [isBreak, setIsBreak] = useState(false);
   const [currentTaskStartTime, setCurrentTaskStartTime] = useState<number | null>(null);
   const [sessionsToday, setSessionsToday] = useState(0);
+  const [restored, setRestored] = useState(false);
 
   // Refs for background-drift correction
   const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -231,6 +234,9 @@ export function usePomodoroTimer(): PomodoroTimer {
         console.error('Error parsing saved Pomodoro state:', e);
       }
     }
+    // Even if there was nothing saved, mark restore as complete so that the
+    // page's auto-load effects know it's safe to run setupFocusTime.
+    setRestored(true);
 
     return () => {
       if (timerIntervalRef.current) {
@@ -315,5 +321,6 @@ export function usePomodoroTimer(): PomodoroTimer {
     setupFocusTime,
     setBreakMinutes,
     resetSegmentStart,
+    restored,
   };
 }

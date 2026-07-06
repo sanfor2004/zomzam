@@ -3,14 +3,19 @@
 import { useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bell } from 'lucide-react';
+import { Bell, Repeat2, UserPlus, CircleAlert, PartyPopper, HandMetal, Handshake, type LucideIcon } from 'lucide-react';
 import { useNotifications } from '@/context/StreamWaiterContext';
 import { describeNotification, notifTimeAgo } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 
+/** Lucide icon lookup for notification type badges. */
+const NOTIF_ICONS: Record<string, LucideIcon> = {
+  Repeat2, UserPlus, CircleAlert, PartyPopper, HandMetal, Handshake, Bell,
+};
+
 // ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: NOTIFICATIONS PAGE
-// Contains: full-page notification list — the mobile bottom-bar's 🔔 target
+// Contains: full-page notification list — the mobile bottom-bar's bell target
 // (the header dropdown can't open upward from a bottom bar). Reuses the exact
 // same renderers as the desktop dropdown (describeNotification / notifTimeAgo)
 // and the shared useNotifications stream, so there is one source of truth for
@@ -66,7 +71,7 @@ export default function NotificationsPage() {
                     aria-hidden
                     className="absolute -bottom-1 -right-1 text-xs leading-none bg-surface-dark rounded-full px-0.5 ring-1 ring-slate-800"
                   >
-                    {view.emoji}
+                    {(() => { const I = NOTIF_ICONS[view.icon]; return I ? <I className="w-3.5 h-3.5" /> : null; })()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
