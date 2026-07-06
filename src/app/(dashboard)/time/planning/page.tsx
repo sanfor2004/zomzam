@@ -384,6 +384,18 @@ export default function DreamPlanningPage() {
                           <p className="text-[10px] font-medium text-slate-600 italic">No tasks linked yet</p>
                         )}
 
+                        {m.total - m.done > 0 && (
+                          <Button
+                            onClick={() => router.push(`/time/execution?horizon=${h.id}`)}
+                            variant="outline"
+                            size="sm"
+                            className="mt-1"
+                          >
+                            <Target className="w-3.5 h-3.5 mr-1.5" />
+                            Focus this dream
+                          </Button>
+                        )}
+
                         {isAdding ? (
                           <div className="flex items-center gap-1.5">
                             <Input

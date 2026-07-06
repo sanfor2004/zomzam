@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Clock, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
+import { Clock, Check, Shuffle, Plus, Lightbulb, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button, Input, ProLock } from '@/components/ui';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { usePomodoroTimer } from '@/hooks/usePomodoroTimer';
+import { filterQueueByHorizon, isDreamComplete } from './page.services';
 import { cn } from '@/lib/utils';
 import { priorityEdge, horizonEdge } from '../types';
 import { addIdeaRequest } from '../ideas/page.services';
@@ -28,7 +29,7 @@ interface Task {
   completed_at: string | null;
 }
 
-export default function PomodoroPage() {
+function PomodoroPageInner() {
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -40,12 +41,16 @@ export default function PomodoroPage() {
   const [ideasCount, setIdeasCount] = useState(0);
   // Active dream goals â€” carry `type` too so the dream-progress bar can colour
   // itself by horizon (horizonEdge = data, per the colour=meaning rule).
-  const [horizons, setHorizons] = useState<{ id: number; content: string; type: string }[]>([]);
+  const [horizons, setHorizons] = useState<{ id: number; content: string; type: string; status: string }[]>([]);
 
   // Break-time idea capture (F2): draft, in-flight guard, and a 1.5s "saved" flash.
   const [ideaDraft, setIdeaDraft] = useState('');
   const [savingIdea, setSavingIdea] = useState(false);
   const [ideaSaved, setIdeaSaved] = useState(false);
+
+  // When a task-done finishes the last step of its dream, this holds the
+  // horizon to celebrate + offer closing. Cleared on "Mark done"/"Not yet".
+  const [dreamToClose, setDreamToClose] = useState<{ id: number; content: string } | null>(null);
 
   // Capture a mid-focus thought straight into Idea Capture without leaving the break.
   const handleBreakCapture = async () => {
@@ -157,8 +162,28 @@ export default function PomodoroPage() {
     timer.setBreakMinutes(Math.max(1, Math.min(60, parsed)));
   };
 
+  // The dream the ?horizon param points at — only when it's an ACTIVE horizon
+  // that actually has linked tasks. Counter derives straight from tasks (not
+  // dreamProgress, which is null once the filtered queue empties).
+  const searchParams = useSearchParams();
+  const activeDream = useMemo(() => {
+    const raw = searchParams.get('horizon');
+    const id = raw ? Number(raw) : NaN;
+    if (Number.isNaN(id)) return null;
+    const h = horizons.find((hz) => hz.id === id && hz.status === 'active');
+    if (!h) return null;
+    const linked = tasks.filter((t) => t.horizon_id === id);
+    if (linked.length === 0) return null;
+    const done = linked.filter((t) => t.status === 'completed').length;
+    return { id, content: h.content, done, total: linked.length };
+  }, [searchParams, horizons, tasks]);
+  const activeHorizonId = activeDream?.id ?? null;
+
   // Auto-load task duration block if top task changes and timer not running
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const pendingTasks = filterQueueByHorizon(
+    tasks.filter((t) => t.status === 'pending'),
+    activeHorizonId,
+  );
   const topTask = pendingTasks[0] || null;
   // The dream the current focus task is pushing toward, if any.
   const topDream = topTask?.horizon_id ? horizons.find(h => h.id === topTask.horizon_id) : null;
@@ -278,10 +303,19 @@ export default function PomodoroPage() {
       });
       const data = await res.json();
       if (data.success) {
-        // Update local state
-        setTasks(prev => prev.map(t => t.id === topTask.id ? { ...t, status: 'completed' as const, actual_duration: actualMins } : t));
+        // Update local state (topTask is non-null — guarded at the top).
+        const updatedTasks = tasks.map((t) =>
+          t.id === topTask.id ? { ...t, status: 'completed' as const, actual_duration: actualMins } : t,
+        );
+        setTasks(updatedTasks);
         timer.resetSegmentStart();
-        
+
+        // Close-the-loop: was this the dream's last step?
+        if (topTask.horizon_id && isDreamComplete(updatedTasks, topTask.horizon_id)) {
+          const h = horizons.find((hz) => hz.id === topTask.horizon_id && hz.status === 'active');
+          if (h) setDreamToClose({ id: h.id, content: h.content });
+        }
+
         // Show session complete confetti
         confetti({
           particleCount: 80,
@@ -291,6 +325,29 @@ export default function PomodoroPage() {
       }
     } catch (e) {
       console.error('Failed to complete task:', e);
+    }
+  };
+
+  // Close the dream loop: mark the horizon complete, drop it locally, and if
+  // the queue was filtered to it, return to the full Today view. On failure
+  // the celebration stays so the user can retry.
+  const handleMarkDreamDone = async () => {
+    if (!dreamToClose) return;
+    const id = dreamToClose.id;
+    try {
+      const res = await fetch('/api/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete_horizon', id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHorizons((prev) => prev.filter((h) => h.id !== id));
+        setDreamToClose(null);
+        if (activeHorizonId === id) router.replace('/time/execution');
+      }
+    } catch (e) {
+      console.error('Failed to complete dream:', e);
     }
   };
 
@@ -343,6 +400,27 @@ export default function PomodoroPage() {
           </span>
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: DREAM FILTER CHIP
+          Contains: focusing-on-dream label + progress count + clear (✕)
+          ────────────────────────────────────────────────────────── */}
+      {activeDream && (
+        <div className="flex items-center gap-2 surface-card border border-primary-500/30 rounded-2xl px-4 py-2.5 shadow-apple-sm self-start w-fit">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+          <span className="text-xs font-semibold text-slate-300">
+            Focusing: <span className="text-white font-bold">{activeDream.content}</span>
+            <span className="text-slate-400 tabular-nums"> · {activeDream.done}/{activeDream.total}</span>
+          </span>
+          <Button variant="unstyled"
+            onClick={() => router.replace('/time/execution')}
+            aria-label="Clear dream filter"
+            className="ml-1 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
@@ -437,6 +515,22 @@ export default function PomodoroPage() {
                 )}
               </div>
 
+              {dreamToClose && (
+                <div className="mb-5 rounded-2xl p-4 bg-primary-500/[0.08] border border-primary-500/25">
+                  <p className="text-sm font-semibold text-white">
+                    That was the last step of <span className="text-primary-400">{dreamToClose.content}</span> 🎉
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button onClick={handleMarkDreamDone} variant="primary" size="sm">
+                      Mark dream done
+                    </Button>
+                    <Button onClick={() => setDreamToClose(null)} variant="outline" size="sm">
+                      Not yet
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {topTask ? (
                 <div className="space-y-3">
                   <div className="flex items-start gap-2.5">
@@ -469,6 +563,15 @@ export default function PomodoroPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              ) : activeDream ? (
+                <div className="text-center py-12">
+                  <p className="text-base text-slate-400 font-medium">
+                    All tasks for <span className="text-slate-200 font-semibold">{activeDream.content}</span> are done.
+                  </p>
+                  <Button onClick={() => router.replace('/time/execution')} variant="outline" size="sm" className="mt-4">
+                    Clear filter
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -552,5 +655,15 @@ export default function PomodoroPage() {
       />
 
     </div>
+  );
+}
+
+// useSearchParams (dream filter) requires a Suspense boundary or `next build`
+// errors on this route — mirror the repo pattern (see sign/, forgot-password/).
+export default function PomodoroPage() {
+  return (
+    <Suspense fallback={null}>
+      <PomodoroPageInner />
+    </Suspense>
   );
 }
