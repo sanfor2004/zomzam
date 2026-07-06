@@ -10,7 +10,7 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { usePomodoroTimer } from '@/hooks/usePomodoroTimer';
 import { filterQueueByHorizon, isDreamComplete } from './page.services';
 import { cn } from '@/lib/utils';
-import { priorityEdge, horizonEdge } from '../types';
+import { priorityEdge, priorityText, horizonEdge } from '../types';
 import { addIdeaRequest } from '../ideas/page.services';
 import { TimerRing } from './_components/TimerRing';
 import { TimerControls } from './_components/TimerControls';
@@ -535,12 +535,12 @@ function PomodoroPageInner() {
                 <div className="space-y-3">
                   <div className="flex items-start gap-2.5">
                     <span className={cn('mt-2 w-2 h-2 rounded-full shrink-0', priorityEdge(topTask.priority))} />
-                    <h2 className="text-2xl font-black text-white tracking-tight leading-tight">
+                    <h2 className="text-2xl font-black text-white tracking-tight leading-tight uppercase">
                       {topTask.title}
                     </h2>
                   </div>
-                  <span className="block pl-[18px] text-xs font-medium text-slate-400">
-                    {topTask.priority} priority
+                  <span className="block pl-[18px] text-xs font-medium text-slate-400 uppercase">
+                    <span className={priorityText(topTask.priority)}>{topTask.priority}</span> priority
                   </span>
 
                   {/* Live dream progress — quiet counterpart to the session confetti */}

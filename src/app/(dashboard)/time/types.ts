@@ -33,6 +33,17 @@ export function horizonEdge(type: string): string {
   }
 }
 
+// Priority → text colour only (no bg/border), for inline "<priority> priority"
+// labels. Same hue map as priorityEdge/priorityPill and the Task Board legend.
+export function priorityText(priority: string): string {
+  switch (priority) {
+    case 'urgent': return 'text-red-400';
+    case 'medium': return 'text-amber-400';
+    case 'maybe':  return 'text-blue-400';
+    default:       return 'text-slate-400';
+  }
+}
+
 // Priority → tinted pill (bg + text + border), for the Daily Tracker activity
 // chip that shows the word, not just an edge bar.
 export function priorityPill(priority: string): string {
