@@ -100,6 +100,7 @@ Capabilities:
 - Drag/move planning items.
 - Idea capture and editing.
 - Tracker page for daily review.
+- Dream round-trip: launch a dream (horizon) into a filtered focus session from Dream Planning; completing its last task closes the loop back with a "mark dream done" prompt.
 
 ## Money Suite
 

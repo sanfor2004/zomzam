@@ -20,14 +20,27 @@ export function priorityEdge(priority: string): string {
   }
 }
 
-// Horizon type → left-edge accent for Dream goal rows.
-// week=blue · month=purple · year=amber (spec 10 §3).
+// Horizon type → left-edge accent for Dream goal rows. A deep, dark Zomzam-orange
+// gradient along the burnt end of the primary ramp (near→far): week=primary-700 ·
+// month=primary-800 · year=primary-900. Stays on-brand and OLED-dark — no bright
+// or off-palette blue/purple/amber.
 export function horizonEdge(type: string): string {
   switch (type) {
-    case 'week':  return 'bg-blue-500';
-    case 'month': return 'bg-purple-500';
-    case 'year':  return 'bg-amber-500';
+    case 'week':  return 'bg-primary-700';
+    case 'month': return 'bg-primary-800';
+    case 'year':  return 'bg-primary-900';
     default:      return 'bg-slate-500';
+  }
+}
+
+// Priority → text colour only (no bg/border), for inline "<priority> priority"
+// labels. Same hue map as priorityEdge/priorityPill and the Task Board legend.
+export function priorityText(priority: string): string {
+  switch (priority) {
+    case 'urgent': return 'text-red-400';
+    case 'medium': return 'text-amber-400';
+    case 'maybe':  return 'text-blue-400';
+    default:       return 'text-slate-400';
   }
 }
 

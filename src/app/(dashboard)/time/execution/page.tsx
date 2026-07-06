@@ -1,15 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@/context/TranslationContext';
-import { Clock, RotateCcw, Play, Pause, SkipForward, Check, Shuffle, Plus, Lightbulb } from 'lucide-react';
+import { Clock, Check, Shuffle, Plus, Lightbulb, X } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { Button, Input, ProLock } from '@/components/ui';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { usePomodoroTimer } from '@/hooks/usePomodoroTimer';
+import { filterQueueByHorizon, isDreamComplete } from './page.services';
 import { cn } from '@/lib/utils';
-import { priorityEdge, horizonEdge } from '../types';
+import { priorityEdge, priorityText, horizonEdge } from '../types';
 import { addIdeaRequest } from '../ideas/page.services';
+import { TimerRing } from './_components/TimerRing';
+import { TimerControls } from './_components/TimerControls';
+import { DurationTuners } from './_components/DurationTuners';
 
 interface Task {
   id: number;
@@ -24,7 +29,7 @@ interface Task {
   completed_at: string | null;
 }
 
-export default function PomodoroPage() {
+function PomodoroPageInner() {
   const { t } = useTranslation();
   const router = useRouter();
 
@@ -33,16 +38,19 @@ export default function PomodoroPage() {
 
   // Tasks & Server Sync
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [sessionsToday, setSessionsToday] = useState(0);
   const [ideasCount, setIdeasCount] = useState(0);
   // Active dream goals — carry `type` too so the dream-progress bar can colour
   // itself by horizon (horizonEdge = data, per the colour=meaning rule).
-  const [horizons, setHorizons] = useState<{ id: number; content: string; type: string }[]>([]);
+  const [horizons, setHorizons] = useState<{ id: number; content: string; type: string; status: string }[]>([]);
 
   // Break-time idea capture (F2): draft, in-flight guard, and a 1.5s "saved" flash.
   const [ideaDraft, setIdeaDraft] = useState('');
   const [savingIdea, setSavingIdea] = useState(false);
   const [ideaSaved, setIdeaSaved] = useState(false);
+
+  // When a task-done finishes the last step of its dream, this holds the
+  // horizon to celebrate + offer closing. Cleared on "Mark done"/"Not yet".
+  const [dreamToClose, setDreamToClose] = useState<{ id: number; content: string } | null>(null);
 
   // Capture a mid-focus thought straight into Idea Capture without leaving the break.
   const handleBreakCapture = async () => {
@@ -63,32 +71,20 @@ export default function PomodoroPage() {
     }
   };
 
-  // Timer State
-  const [duration, setDuration] = useState(15 * 60); // default 15 min focus
-  const [breakDuration, setBreakDuration] = useState(5 * 60); // default 5 min break
-  const [remaining, setRemaining] = useState(15 * 60);
-  const [isRunning, setIsRunning] = useState(false);
-  const [isBreak, setIsBreak] = useState(false);
-  const [currentTaskStartTime, setCurrentTaskStartTime] = useState<number | null>(null);
+  // Timer engine — countdown, drift correction, localStorage persistence,
+  // focus/break segments, and the daily session count all live in the hook.
+  const timer = usePomodoroTimer();
+  const {
+    duration, breakDuration, remaining, isRunning, isBreak,
+    sessionsToday, currentTaskStartTime, restored,
+  } = timer;
 
-  // Refs for background-drift correction
-  const timerIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-  const remainingAtStartRef = useRef<number>(15 * 60);
-
-  // ── Mirror refs ── kept in sync so that setInterval callbacks always
-  // read the *current* value without stale-closure issues after navigation.
-  const isBreakRef        = useRef(false);
-  const sessionsRef       = useRef(0);
-  const taskStartRef      = useRef<number | null>(null);
-  const durationRef       = useRef(15 * 60);
-  const breakDurationRef  = useRef(5 * 60);
-
-  useEffect(() => { isBreakRef.current = isBreak; },               [isBreak]);
-  useEffect(() => { sessionsRef.current = sessionsToday; },         [sessionsToday]);
-  useEffect(() => { taskStartRef.current = currentTaskStartTime; }, [currentTaskStartTime]);
-  useEffect(() => { durationRef.current = duration; },              [duration]);
-  useEffect(() => { breakDurationRef.current = breakDuration; },    [breakDuration]);
+  // The task id we last auto-loaded the ring for. Guards the auto-load effect
+  // so pausing (isRunning → false) never re-runs setupFocusTime and wipes the
+  // remaining time — it's a Pause button, not a Reset button.
+  const lastSetupTaskId = useRef<number | null>(null);
+  // Debounces the focus-duration → task-board DB write while the user types.
+  const focusSyncTimer  = useRef<NodeJS.Timeout | null>(null);
 
   // Load state from server
   const loadData = async () => {
@@ -118,155 +114,76 @@ export default function PomodoroPage() {
 
   useEffect(() => {
     loadData();
-
-    // Load pomodoro state from localStorage
-    const saved = localStorage.getItem('zomzam_pomodoro');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        const savedDuration      = data.duration      || 15 * 60;
-        const savedBreakDuration = data.breakDuration || 5 * 60;
-        const savedIsBreak       = !!data.isBreak;
-        const savedSessions      = data.sessions      || 0;
-        const savedStartTime     = data.currentTaskStartTime || null;
-
-        // ── Sync mirror refs immediately (before React commits the state
-        //    updates below) so that any interval we start right here reads
-        //    the correct values, not the stale initial-state defaults.
-        isBreakRef.current       = savedIsBreak;
-        sessionsRef.current      = savedSessions;
-        taskStartRef.current     = savedStartTime;
-        durationRef.current      = savedDuration;
-        breakDurationRef.current = savedBreakDuration;
-
-        setDuration(savedDuration);
-        setBreakDuration(savedBreakDuration);
-        setIsBreak(savedIsBreak);
-        setSessionsToday(savedSessions);
-        setCurrentTaskStartTime(savedStartTime);
-
-        let rem = data.remaining;
-        if (data.isRunning && data.lastUpdate) {
-          const elapsed = Math.floor((Date.now() - data.lastUpdate) / 1000);
-          rem = Math.max(0, rem - elapsed);
-        }
-
-        if (rem <= 0) {
-          setRemaining(savedIsBreak ? savedBreakDuration : savedDuration);
-          setIsRunning(false);
-        } else {
-          setRemaining(rem);
-          if (data.isRunning) {
-            // Set up refs that tick() needs before starting the interval.
-            remainingAtStartRef.current = rem;
-            startTimeRef.current       = Date.now();
-            // Start the interval directly here — setIsRunning(true) alone
-            // would NOT restart it because the useEffect([isRunning]) only
-            // fires after the render, by which time the interval is missing.
-            if (!timerIntervalRef.current) {
-              timerIntervalRef.current = setInterval(tick, 1000);
-            }
-            setIsRunning(true);
-          }
-        }
-      } catch (e) {
-        console.error('Error parsing saved Pomodoro state:', e);
-      }
-    }
-
-    // Cleanup interval on unmount (navigation away)
-    return () => {
-      if (timerIntervalRef.current) {
-        clearInterval(timerIntervalRef.current);
-        timerIntervalRef.current = null;
-      }
-    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Save Pomodoro state to localStorage — reads from refs so it is safe
-  // to call from inside a setInterval callback (no stale-closure issue).
-  const saveState = (updatedRemaining: number, updatedIsRunning: boolean, updatedIsBreak: boolean, updatedSessions: number, updatedStartTime: number | null) => {
-    const pending = tasks.filter(t => t.status === 'pending');
-    const taskName = pending.length > 0 ? pending[0].title : (updatedIsBreak ? 'Break' : 'Focusing');
-
-    const data = {
-      remaining: updatedRemaining,
-      isRunning: updatedIsRunning,
-      isBreak: updatedIsBreak,
-      duration: durationRef.current,
-      breakDuration: breakDurationRef.current,
-      lastUpdate: Date.now(),
-      sessions: updatedSessions,
-      taskName,
-      currentTaskStartTime: updatedStartTime,
-    };
-    localStorage.setItem('zomzam_pomodoro', JSON.stringify(data));
-    window.dispatchEvent(new CustomEvent('pomodoroUpdate'));
+  // Push the freely-typed focus minutes back to the top task's board block so
+  // the Pomodoro ring and the task board never drift. Optimistic locally,
+  // debounced to the server so typing "45" isn't three separate writes.
+  const syncTopTaskDuration = (mins: number) => {
+    if (!topTask) return;
+    setTasks(prev => prev.map(t => (t.id === topTask.id ? { ...t, duration_block: mins } : t)));
+    if (focusSyncTimer.current) clearTimeout(focusSyncTimer.current);
+    focusSyncTimer.current = setTimeout(() => {
+      fetch('/api/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_task',
+          id: topTask.id,
+          title: topTask.title,
+          priority: topTask.priority,
+          duration_block: mins,
+          horizon_id: topTask.horizon_id,
+        }),
+      }).catch(() => {});
+    }, 600);
   };
 
-  // Setup segment when adjusting inputs or loading new top task
-  const setupFocusTime = (totalMins: number) => {
+  // Focus minutes — freely typed (5–120), no 5-minute snap. Retunes the ring
+  // and syncs the board. The lastSetupTaskId guard keeps the auto-load effect
+  // from clobbering the value we just set for the same task.
+  const handleFocusChange = (raw: string) => {
     if (isRunning) return;
-    const secs = totalMins * 60;
-    setDuration(secs);
-    setRemaining(secs);
-    setIsBreak(false);
-    
-    // Save state
-    const data = {
-      remaining: secs,
-      isRunning: false,
-      isBreak: false,
-      duration: secs,
-      breakDuration,
-      lastUpdate: Date.now(),
-      sessions: sessionsToday,
-      taskName: tasks.filter(t => t.status === 'pending')[0]?.title || 'Focusing',
-      currentTaskStartTime: null,
-    };
-    localStorage.setItem('zomzam_pomodoro', JSON.stringify(data));
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) return;
+    const mins = Math.max(5, Math.min(120, parsed));
+    if (topTask) lastSetupTaskId.current = topTask.id;
+    timer.setupFocusTime(mins);
+    syncTopTaskDuration(mins);
   };
 
-  // Adjust Focus minutes
-  const adjustFocus = (amount: number) => {
+  // Break minutes — freely typed (1–60). No board counterpart, so it just
+  // retunes the break segment (the hook persists it).
+  const handleBreakChange = (raw: string) => {
     if (isRunning) return;
-    const currentMins = Math.floor(duration / 60);
-    let newMins = currentMins;
-    if (amount > 0) {
-      newMins = Math.floor(currentMins / 5) * 5 + 5;
-    } else {
-      newMins = Math.ceil(currentMins / 5) * 5 - 5;
-    }
-    newMins = Math.max(5, Math.min(120, newMins));
-    setupFocusTime(newMins);
+    const parsed = parseInt(raw, 10);
+    if (Number.isNaN(parsed)) return;
+    timer.setBreakMinutes(Math.max(1, Math.min(60, parsed)));
   };
 
-  // Adjust Break minutes
-  const adjustBreak = (amount: number) => {
-    if (isRunning) return;
-    const currentMins = Math.floor(breakDuration / 60);
-    let newMins = currentMins;
-    if (amount > 0) {
-      newMins = Math.floor(currentMins / 5) * 5 + 5;
-    } else {
-      newMins = Math.ceil(currentMins / 5) * 5 - 5;
-    }
-    newMins = Math.max(1, Math.min(60, newMins));
-    setBreakDuration(newMins * 60);
-    // Save to localStorage
-    const saved = localStorage.getItem('zomzam_pomodoro');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        data.breakDuration = newMins * 60;
-        localStorage.setItem('zomzam_pomodoro', JSON.stringify(data));
-      } catch {}
-    }
-  };
+  // The dream the ?horizon param points at — only when it's an ACTIVE horizon
+  // that actually has linked tasks. Counter derives straight from tasks (not
+  // dreamProgress, which is null once the filtered queue empties).
+  const searchParams = useSearchParams();
+  const activeDream = useMemo(() => {
+    const raw = searchParams.get('horizon');
+    const id = raw ? Number(raw) : NaN;
+    if (Number.isNaN(id)) return null;
+    const h = horizons.find((hz) => hz.id === id && hz.status === 'active');
+    if (!h) return null;
+    const linked = tasks.filter((t) => t.horizon_id === id);
+    if (linked.length === 0) return null;
+    const done = linked.filter((t) => t.status === 'completed').length;
+    return { id, content: h.content, done, total: linked.length };
+  }, [searchParams, horizons, tasks]);
+  const activeHorizonId = activeDream?.id ?? null;
 
   // Auto-load task duration block if top task changes and timer not running
-  const pendingTasks = tasks.filter(t => t.status === 'pending');
+  const pendingTasks = filterQueueByHorizon(
+    tasks.filter((t) => t.status === 'pending'),
+    activeHorizonId,
+  );
   const topTask = pendingTasks[0] || null;
   // The dream the current focus task is pushing toward, if any.
   const topDream = topTask?.horizon_id ? horizons.find(h => h.id === topTask.horizon_id) : null;
@@ -311,153 +228,38 @@ export default function PomodoroPage() {
   const laterCount = Math.max(0, pendingTasks.length - 2);
 
   useEffect(() => {
-    if (topTask && !isRunning && !isBreak) {
-      setupFocusTime(topTask.duration_block);
+    // Only (re)load the ring when the *top task itself* changes, not on every
+    // isRunning/isBreak flip. Two things must NOT be clobbered:
+    //   • a paused/running FOCUS on this task — currentTaskStartTime is set, so
+    //     the persisted remaining survives navigate-away-and-return.
+    //   • a break in progress — guarded by !isBreak.
+    if (
+      restored && topTask && !isRunning && !isBreak &&
+      currentTaskStartTime === null &&
+      lastSetupTaskId.current !== topTask.id
+    ) {
+      lastSetupTaskId.current = topTask.id;
+      timer.setupFocusTime(topTask.duration_block);
     }
-  }, [topTask, isRunning, isBreak]);
+  }, [topTask, isRunning, isBreak, currentTaskStartTime, restored]);
 
-  // Audio feedback ring
-  const playRingSound = () => {
-    try {
-      const audio = new Audio('/Assets/Audio/timer-ring.mp3');
-      audio.play().catch(() => {});
-    } catch (e) {
-      console.warn('Could not play ring sound:', e);
-    }
-  };
-
-  // Tick Action — reads all volatile values from refs, NOT from the closure,
-  // so it remains correct even when captured by an old setInterval call.
-  const tick = () => {
-    if (startTimeRef.current === null) return;
-    const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
-    const nextRemaining = Math.max(0, remainingAtStartRef.current - elapsed);
-
-    setRemaining(nextRemaining);
-    saveState(nextRemaining, true, isBreakRef.current, sessionsRef.current, taskStartRef.current);
-
-    if (nextRemaining <= 0) {
-      handleTimerEnd();
-    }
-  };
-
-  // ── Safety-net: auto-start the interval on mount when localStorage says
-  // the timer was already running. This handles the page-navigation case where
-  // the component unmounts (killing the interval) then remounts.
-  useEffect(() => {
-    if (isRunning && !timerIntervalRef.current) {
-      startTimeRef.current = Date.now();
-      remainingAtStartRef.current = remaining;
-      timerIntervalRef.current = setInterval(tick, 1000);
-    }
-    if (!isRunning && timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning]);
-
-  // Start Timer
-  const startTimer = async () => {
-    if (isRunning) return;
-
-    let startTime = currentTaskStartTime;
-    if (!startTime && !isBreak) {
-      startTime = Date.now();
-      setCurrentTaskStartTime(startTime);
-    }
-
-    setIsRunning(true);
-    startTimeRef.current = Date.now();
-    remainingAtStartRef.current = remaining;
-
-    timerIntervalRef.current = setInterval(tick, 1000);
-    saveState(remaining, true, isBreak, sessionsToday, startTime);
-
-    // Mark the top pending task as in_progress in the DB
+  // Start the countdown, then flip the top task to in_progress on the board.
+  // The timer engine owns the clock; this wrapper adds the task side effect.
+  const handleStart = () => {
+    timer.start();
     if (!isBreak && topTask) {
-      try {
-        await fetch('/api/time', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'update_task_status', id: topTask.id, status: 'in_progress' }),
-        });
-      } catch {}
-    }
-  };
-
-  // Pause Timer
-  const pauseTimer = () => {
-    if (!isRunning) return;
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    setIsRunning(false);
-    startTimeRef.current = null;
-    saveState(remaining, false, isBreak, sessionsToday, currentTaskStartTime);
-  };
-
-  // Reset Timer
-  const resetTimer = () => {
-    pauseTimer();
-    const defaultVal = isBreak ? breakDuration : duration;
-    setRemaining(defaultVal);
-    saveState(defaultVal, false, isBreak, sessionsToday, currentTaskStartTime);
-  };
-
-  // Skip Break
-  const skipBreak = () => {
-    if (!isBreak) return;
-    setIsBreak(false);
-    setRemaining(duration);
-    setIsRunning(false);
-    setCurrentTaskStartTime(null);
-    saveState(duration, false, false, sessionsToday, null);
-  };
-
-  // Triggered on timer expiration — reads from refs to avoid stale closures.
-  const handleTimerEnd = () => {
-    if (timerIntervalRef.current) {
-      clearInterval(timerIntervalRef.current);
-      timerIntervalRef.current = null;
-    }
-    setIsRunning(false);
-    startTimeRef.current = null;
-    playRingSound();
-
-    if (!isBreakRef.current) {
-      // Completed work segment
-      const newSessions = sessionsRef.current + 1;
-      sessionsRef.current = newSessions; // update ref immediately
-      setSessionsToday(newSessions);
-      isBreakRef.current = true;         // update ref immediately
-      setIsBreak(true);
-      setRemaining(breakDurationRef.current);
-      setCurrentTaskStartTime(null);
-
-      // Trigger premium feedback
-      confetti({
-        particleCount: 150,
-        spread: 70,
-        origin: { y: 0.6 },
-        colors: ['#EE5712', '#ff9874', '#ffffff'],
-      });
-
-      saveState(breakDurationRef.current, false, true, newSessions, null);
-    } else {
-      // Completed break segment
-      isBreakRef.current = false;        // update ref immediately
-      setIsBreak(false);
-      setRemaining(durationRef.current);
-      saveState(durationRef.current, false, false, sessionsRef.current, null);
+      fetch('/api/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_task_status', id: topTask.id, status: 'in_progress' }),
+      }).catch(() => {});
     }
   };
 
   // Skip Task: Rotate the first pending task to the end of the queue
   const skipTask = async () => {
     if (pendingTasks.length < 2) return;
-    pauseTimer();
+    timer.pause();
 
     const first = pendingTasks[0];
     const rest = pendingTasks.slice(1);
@@ -467,8 +269,8 @@ export default function PomodoroPage() {
     const otherTasks = tasks.filter(t => t.status !== 'pending');
     setTasks([...updated, ...otherTasks]);
 
-    setCurrentTaskStartTime(null);
-    setupFocusTime(updated[0].duration_block);
+    timer.resetSegmentStart();
+    timer.setupFocusTime(updated[0].duration_block);
 
     // Reset the skipped task back to pending in the DB
     try {
@@ -483,7 +285,7 @@ export default function PomodoroPage() {
   // Done Task: Calls backend API and clears local state
   const handleDoneTask = async () => {
     if (!topTask) return;
-    pauseTimer();
+    timer.pause();
 
     const startTime = currentTaskStartTime || Date.now();
     const actualSecs = Math.floor((Date.now() - startTime) / 1000);
@@ -501,10 +303,19 @@ export default function PomodoroPage() {
       });
       const data = await res.json();
       if (data.success) {
-        // Update local state
-        setTasks(prev => prev.map(t => t.id === topTask.id ? { ...t, status: 'completed' as const, actual_duration: actualMins } : t));
-        setCurrentTaskStartTime(null);
-        
+        // Update local state (topTask is non-null — guarded at the top).
+        const updatedTasks = tasks.map((t) =>
+          t.id === topTask.id ? { ...t, status: 'completed' as const, actual_duration: actualMins } : t,
+        );
+        setTasks(updatedTasks);
+        timer.resetSegmentStart();
+
+        // Close-the-loop: was this the dream's last step?
+        if (topTask.horizon_id && isDreamComplete(updatedTasks, topTask.horizon_id)) {
+          const h = horizons.find((hz) => hz.id === topTask.horizon_id && hz.status === 'active');
+          if (h) setDreamToClose({ id: h.id, content: h.content });
+        }
+
         // Show session complete confetti
         confetti({
           particleCount: 80,
@@ -517,10 +328,33 @@ export default function PomodoroPage() {
     }
   };
 
+  // Close the dream loop: mark the horizon complete, drop it locally, and if
+  // the queue was filtered to it, return to the full Today view. On failure
+  // the celebration stays so the user can retry.
+  const handleMarkDreamDone = async () => {
+    if (!dreamToClose) return;
+    const id = dreamToClose.id;
+    try {
+      const res = await fetch('/api/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete_horizon', id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHorizons((prev) => prev.filter((h) => h.id !== id));
+        setDreamToClose(null);
+        if (activeHorizonId === id) router.replace('/time/execution');
+      }
+    } catch (e) {
+      console.error('Failed to complete dream:', e);
+    }
+  };
+
   // Swap top two pending tasks
   const swapTask = () => {
     if (pendingTasks.length < 2) return;
-    pauseTimer();
+    timer.pause();
 
     const first = pendingTasks[0];
     const second = pendingTasks[1];
@@ -530,31 +364,16 @@ export default function PomodoroPage() {
     const otherTasks = tasks.filter(t => t.status !== 'pending');
     setTasks([...updated, ...otherTasks]);
 
-    setCurrentTaskStartTime(null);
-    setupFocusTime(second.duration_block);
+    timer.resetSegmentStart();
+    timer.setupFocusTime(second.duration_block);
   };
 
-  // Clean interval on unmount
+  // Clean the focus-sync debounce on unmount (the timer interval is the hook's).
   useEffect(() => {
     return () => {
-      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (focusSyncTimer.current) clearTimeout(focusSyncTimer.current);
     };
   }, []);
-
-  // Format remaining seconds into MM:SS
-  const formatTime = (secs: number) => {
-    const mins = Math.floor(secs / 60);
-    const remain = secs % 60;
-    return `${mins.toString().padStart(2, '0')}:${remain.toString().padStart(2, '0')}`;
-  };
-
-  // Calculate SVG Ring Dash Offset
-  const totalDuration = isBreak ? breakDuration : duration;
-  const radius = 88;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = totalDuration > 0 
-    ? circumference - (remaining / totalDuration) * circumference 
-    : circumference;
 
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
@@ -582,89 +401,52 @@ export default function PomodoroPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-        
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: DREAM FILTER CHIP
+          Contains: focusing-on-dream label + progress count + clear (✕)
+          ────────────────────────────────────────────────────────── */}
+      {activeDream && (
+        <div className="flex items-center gap-2 surface-card border border-primary-500/30 rounded-2xl px-4 py-2.5 shadow-apple-sm self-start w-fit">
+          <span className="w-1.5 h-1.5 rounded-full bg-primary-500" />
+          <span className="text-xs font-semibold text-slate-300">
+            Focusing: <span className="text-white font-bold">{activeDream.content}</span>
+            <span className="text-slate-400 tabular-nums"> · {activeDream.done}/{activeDream.total}</span>
+          </span>
+          <Button variant="unstyled"
+            onClick={() => router.replace('/time/execution')}
+            aria-label="Clear dream filter"
+            className="ml-1 w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+          >
+            <X className="w-3.5 h-3.5" />
+          </Button>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 @3xl:grid-cols-5 gap-8">
+
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: TIMER COLUMN (left)
             Contains: SVG countdown ring, play/pause/reset controls,
             focus/break duration adjusters
             ────────────────────────────────────────────────────────── */}
-        <div data-entrance="card" className="lg:col-span-2 surface-raised border border-slate-800/60 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
+        <div data-entrance="card" className="@3xl:col-span-2 surface-raised border border-slate-800/60 rounded-3xl p-8 flex flex-col items-center justify-center relative overflow-hidden">
 
-          {/* Visual SVG Ring */}
-          <div className="relative w-64 h-64 mb-8">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 200 200">
-              <circle
-                cx="100"
-                cy="100"
-                r={radius}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                className="text-slate-800/40"
-              />
-              <circle
-                cx="100"
-                cy="100"
-                r={radius}
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="6"
-                strokeLinecap="round"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                className="text-primary-500 transition-all duration-300"
-              />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[11px] font-bold tracking-wide text-primary-500">
-                {isBreak ? 'On a break' : 'Focusing'}
-              </span>
-              <span className="text-5xl font-black tabular-nums text-white mt-1.5 tracking-tight">
-                {formatTime(remaining)}
-              </span>
-            </div>
-          </div>
+          <TimerRing remaining={remaining} total={isBreak ? breakDuration : duration} isBreak={isBreak} />
 
           {/* Controls Box */}
           <div className="flex flex-col items-center gap-6 w-full">
-            <div className="flex items-center gap-4">
-              <Button variant="unstyled"
-                onClick={resetTimer}
-                title="Reset"
-                className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95"
-              >
-                <RotateCcw className="w-5 h-5" />
-              </Button>
-
-              <Button variant="unstyled"
-                onClick={isRunning ? pauseTimer : startTimer}
-                title={isRunning ? 'Pause' : 'Start focus'}
-                aria-label={isRunning ? 'Pause' : 'Start focus'}
-                className={cn(
-                  'w-20 h-20 rounded-full flex items-center justify-center text-white shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4',
-                  isRunning
-                    ? 'bg-primary-500 hover:bg-primary-600 shadow-primary-500/30 ring-2 ring-primary-400/40 focus-visible:ring-primary-500/40'
-                    : 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30 focus-visible:ring-emerald-500/40',
-                )}
-              >
-                {isRunning ? <Pause className="w-8 h-8" fill="currentColor" /> : <Play className="w-8 h-8" fill="currentColor" />}
-              </Button>
-
-              <Button variant="unstyled"
-                onClick={skipTask}
-                disabled={pendingTasks.length < 2}
-                title="Skip to next task"
-                className="w-12 h-12 rounded-full border border-slate-800/80 bg-slate-900/40 text-slate-400 hover:text-white hover:bg-slate-800/50 flex items-center justify-center transition-all shadow-sm active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                <SkipForward className="w-5 h-5" />
-              </Button>
-            </div>
+            <TimerControls
+              isRunning={isRunning}
+              canSkip={pendingTasks.length >= 2}
+              onReset={timer.reset}
+              onToggle={isRunning ? timer.pause : handleStart}
+              onSkip={skipTask}
+            />
 
             {isBreak && (
               <>
                 <Button variant="unstyled"
-                  onClick={skipBreak}
+                  onClick={timer.skipBreak}
                   className="px-5 py-2 text-xs font-semibold bg-primary-950/20 text-primary-500 hover:bg-primary-900/30 rounded-full border border-primary-900/30 transition-colors"
                 >
                   Skip break
@@ -705,54 +487,13 @@ export default function PomodoroPage() {
               </>
             )}
 
-            {/* Adjuster Inputs */}
-            <div className="flex items-center gap-4 pt-4 border-t border-slate-800/50 w-full text-xs">
-              
-              {/* Focus adjuster */}
-              <div className="flex-1 flex flex-col gap-1.5">
-                <span className="text-slate-400 font-medium">Focus duration</span>
-                <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
-                  <Button variant="unstyled"
-                    onClick={() => adjustFocus(-5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
-                  >
-                    -
-                  </Button>
-                  <span className="flex-1 text-center font-bold text-slate-200">
-                    {Math.floor(duration / 60)}m
-                  </span>
-                  <Button variant="unstyled"
-                    onClick={() => adjustFocus(5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-              {/* Break adjuster */}
-              <div className="flex-1 flex flex-col gap-1.5">
-                <span className="text-slate-400 font-medium">Break duration</span>
-                <div className="flex items-center border border-slate-850 rounded-xl bg-slate-900/30 overflow-hidden h-10">
-                  <Button variant="unstyled"
-                    onClick={() => adjustBreak(-5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-r border-slate-850"
-                  >
-                    -
-                  </Button>
-                  <span className="flex-1 text-center font-bold text-slate-200">
-                    {Math.floor(breakDuration / 60)}m
-                  </span>
-                  <Button variant="unstyled"
-                    onClick={() => adjustBreak(5)}
-                    className="flex-shrink-0 w-8 h-full flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border-l border-slate-850"
-                  >
-                    +
-                  </Button>
-                </div>
-              </div>
-
-            </div>
+            <DurationTuners
+              focusMins={Math.floor(duration / 60)}
+              breakMins={Math.floor(breakDuration / 60)}
+              disabled={isRunning}
+              onFocusChange={handleFocusChange}
+              onBreakChange={handleBreakChange}
+            />
           </div>
         </div>
 
@@ -761,7 +502,7 @@ export default function PomodoroPage() {
             Contains: Now card (focus task, priority, live dream bar, Done/Switch),
             Next row, Later collapsed count → task board
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="@3xl:col-span-3 flex flex-col gap-4">
 
           {/* NOW — the current focus task; the left-column ring is its Start/Pause.
               surface-featured = the special hero card (faint orange corner glow). */}
@@ -774,16 +515,32 @@ export default function PomodoroPage() {
                 )}
               </div>
 
+              {dreamToClose && (
+                <div className="mb-5 rounded-2xl p-4 bg-primary-500/[0.08] border border-primary-500/25">
+                  <p className="text-sm font-semibold text-white">
+                    That was the last step of <span className="text-primary-400">{dreamToClose.content}</span> 🎉
+                  </p>
+                  <div className="mt-3 flex items-center gap-2">
+                    <Button onClick={handleMarkDreamDone} variant="primary" size="sm">
+                      Mark dream done
+                    </Button>
+                    <Button onClick={() => setDreamToClose(null)} variant="outline" size="sm">
+                      Not yet
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               {topTask ? (
                 <div className="space-y-3">
                   <div className="flex items-start gap-2.5">
                     <span className={cn('mt-2 w-2 h-2 rounded-full shrink-0', priorityEdge(topTask.priority))} />
-                    <h2 className="text-2xl font-black text-white tracking-tight leading-tight">
+                    <h2 className="text-2xl font-black text-white tracking-tight leading-tight uppercase">
                       {topTask.title}
                     </h2>
                   </div>
-                  <span className="block pl-[18px] text-xs font-medium text-slate-400">
-                    {topTask.priority} priority
+                  <span className="block pl-[18px] text-xs font-medium text-slate-400 uppercase">
+                    <span className={priorityText(topTask.priority)}>{topTask.priority}</span> priority
                   </span>
 
                   {/* Live dream progress — quiet counterpart to the session confetti */}
@@ -806,6 +563,15 @@ export default function PomodoroPage() {
                       </div>
                     </div>
                   )}
+                </div>
+              ) : activeDream ? (
+                <div className="text-center py-12">
+                  <p className="text-base text-slate-400 font-medium">
+                    All tasks for <span className="text-slate-200 font-semibold">{activeDream.content}</span> are done.
+                  </p>
+                  <Button onClick={() => router.replace('/time/execution')} variant="outline" size="sm" className="mt-4">
+                    Clear filter
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-12">
@@ -839,7 +605,7 @@ export default function PomodoroPage() {
                   onClick={swapTask}
                   disabled={pendingTasks.length < 2}
                   variant="outline"
-                  className="w-full h-11 text-sm"
+                  className="w-full h-11 text-xs"
                 >
                   <Shuffle className="w-4 h-4 mr-2" />
                   Switch task
@@ -884,10 +650,20 @@ export default function PomodoroPage() {
       <ProLock
         variant="strip"
         label="See what your time earns"
-        sublabel={`This week €” ${fmtFocus(weekFocusMins)}`}
+        sublabel={`This week — ${fmtFocus(weekFocusMins)}`}
         blurred={<span>$•••</span>}
       />
 
     </div>
+  );
+}
+
+// useSearchParams (dream filter) requires a Suspense boundary or `next build`
+// errors on this route — mirror the repo pattern (see sign/, forgot-password/).
+export default function PomodoroPage() {
+  return (
+    <Suspense fallback={null}>
+      <PomodoroPageInner />
+    </Suspense>
   );
 }

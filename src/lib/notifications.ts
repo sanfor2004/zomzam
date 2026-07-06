@@ -3,7 +3,7 @@
 // One source of truth for how a stored notification row is rendered everywhere
 // it surfaces — the navbar dropdown AND the live toast. Maps a row to its
 // avatar, human sentence (with actor batching), deep-link destination, leading
-// emoji, and a relative timestamp. No DB / server imports so it can be pulled
+// icon name, and a relative timestamp. No DB / server imports so it can be pulled
 // into client components freely.
 // ──────────────────────────────────────────────────────────
 
@@ -31,8 +31,8 @@ export interface NotificationView {
   text: string;
   /** Where a click should land, or null when the type has no destination. */
   href: string | null;
-  /** Leading glyph that signals the notification kind at a glance. */
-  emoji: string;
+  /** Lucide icon name that signals the notification kind at a glance. */
+  icon: string;
 }
 
 /** The lead actor's username + how many distinct actors are batched into the row. */
@@ -69,22 +69,22 @@ export function describeNotification(n: NotificationRow): NotificationView {
 
   switch (n.type) {
     case 'reposted':
-      return { avatar, text: `${subject} reposted your post`, href: postHref, emoji: '🔁' };
+      return { avatar, text: `${subject} reposted your post`, href: postHref, icon: 'Repeat2' };
     case 'new_follower':
-      return { avatar, text: `${subject} started following you`, href: profileHref, emoji: '➕' };
+      return { avatar, text: `${subject} started following you`, href: profileHref, icon: 'UserPlus' };
     case 'new_help_request':
       return {
         avatar,
         text: d.skill_tag ? `${subject} needs help with #${d.skill_tag}` : `${subject} posted a help request`,
         href: postHref,
-        emoji: '🆘',
+        icon: 'CircleAlert',
       };
     case 'answer_accepted':
-      return { avatar, text: `${subject} accepted your answer`, href: postHref, emoji: '🎉' };
+      return { avatar, text: `${subject} accepted your answer`, href: postHref, icon: 'PartyPopper' };
     case 'friend_request':
-      return { avatar, text: `${subject} wants to connect with you`, href: profileHref, emoji: '👋' };
+      return { avatar, text: `${subject} wants to connect with you`, href: profileHref, icon: 'HandMetal' };
     case 'friend_accept':
-      return { avatar, text: `${subject} accepted your connection request`, href: profileHref, emoji: '🤝' };
+      return { avatar, text: `${subject} accepted your connection request`, href: profileHref, icon: 'Handshake' };
     default:
       // Unknown/legacy types fall back to the stored message; a "message" lands
       // in the inbox, anything else on the actor's profile.
@@ -92,7 +92,7 @@ export function describeNotification(n: NotificationRow): NotificationView {
         avatar,
         text: `${subject} ${d.message || 'sent you a notification'}`,
         href: /message/i.test(d.message || '') ? '/messages' : profileHref,
-        emoji: '🔔',
+        icon: 'Bell',
       };
   }
 }

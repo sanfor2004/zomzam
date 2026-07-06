@@ -87,6 +87,7 @@ const schema: Record<string, Record<string, string>> = {
     linked_task_id: 'INT UNSIGNED NULL',
     linked_horizon_id: 'INT UNSIGNED NULL',
     content: 'TEXT NOT NULL',
+    status: "VARCHAR(20) NOT NULL DEFAULT 'open'",
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   time_links: {

@@ -14,10 +14,16 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { RightSidebar, SidebarBody } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Home, MessageCircle, Sparkles, Bookmark, ChevronLeft, ChevronRight, ChevronDown, Zap, Plus, type LucideIcon } from 'lucide-react';
+import { Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Home, MessageCircle, Sparkles, Bookmark, ChevronLeft, ChevronRight, ChevronDown, Zap, Plus, Repeat2, UserPlus, CircleAlert, PartyPopper, HandMetal, Handshake, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 import { describeNotification, notifTimeAgo } from '@/lib/notifications';
+
+
+/** Lucide icon lookup for notification type badges. */
+const NOTIF_ICONS: Record<string, LucideIcon> = {
+  Repeat2, UserPlus, CircleAlert, PartyPopper, HandMetal, Handshake, Bell,
+};
 
 type NavGroupKey = 'time' | 'money' | 'community';
 
@@ -169,7 +175,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   // Reveal the bar (and reset the tracker) on every route change.
   useEffect(() => { setBarHidden(false); lastScrollY.current = 0; }, [pathname]);
 
-  // Bottom-bar center ➕. The composer state lives in /home's page; reach it via
+  // Bottom-bar center +. The composer state lives in /home's page; reach it via
   // a same-route window event, or route there with a flag the page reads once.
   const handleCreate = () => {
     if (pathname === '/home') window.dispatchEvent(new CustomEvent('zz:open-composer'));
@@ -353,9 +359,9 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           route (the shell wraps them all), so the whole app reads as a single
           surface instead of a flat slab. Dark charcoal gradient (var --shell-*)
           in the same family as the cards — a touch deeper so cards float — with a
-          soft Zomzam-orange glow bleeding down from the top (the old-design accent). Fixed
-          + zero-cost (no JS/WebGL — the old LiquidEther fluid sim was removed in
-          the P3 perf pass). pointer-events-none keeps the UI interactive.
+          soft Zomzam-orange glow bleeding down from the top. Fixed
+          + zero-cost — the old LiquidEther fluid sim was removed in
+          the P3 perf pass. pointer-events-none keeps the UI interactive.
           Translucent sidebars (surface-dark/90) sit over it and pick up the
           gradient, tying the chrome to the page.
           ────────────────────────────────────────────────────────── */}
@@ -533,7 +539,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
                           aria-hidden
                           className="absolute -bottom-1 -right-1 text-[11px] leading-none bg-surface-dark rounded-full px-0.5 ring-1 ring-slate-800"
                         >
-                          {view.emoji}
+                          {(() => { const I = NOTIF_ICONS[view.icon]; return I ? <I className="w-3 h-3" /> : null; })()}
                         </span>
                       </div>
                       <div className="flex-1 min-w-0">
@@ -639,61 +645,8 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           {/* ──────────────────────────────────────────────────────────
               TEMPORARILY DISABLED: CRM SUITE + DASHBOARD
               Both features are parked for later work. Re-enable by
-              uncommenting the block below (and the matching mobile-menu
-              + auto-expand sections).
-              ──────────────────────────────────────────────────────────
-          {/* CRM Management Group * /}
-          <div className="space-y-1">
-            <Button variant="unstyled"
-              onClick={() => setCrmGroupOpen(!crmGroupOpen)}
-              className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-semibold text-slate-200 rounded-lg hover:bg-slate-800/50 transition-colors"
-            >
-              <span>{t('nav_crm')}</span>
-              <Briefcase className="w-4 h-4 text-slate-400" />
-            </Button>
-            {crmGroupOpen && (
-              <div id="crmGroup" className="block pr-3 py-1">
-                <div className="ml-5 pl-4 border-l border-slate-700 space-y-1">
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/crm')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm')}`}
-                  >
-                    CRM Dashboard
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/crm/leads')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/leads')}`}
-                  >
-                    Lead Vault
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/crm/pipeline')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/pipeline')}`}
-                  >
-                    Kanban Pipeline
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/crm/contacts')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/contacts')}`}
-                  >
-                    Client Profiles
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/crm/outreach')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/outreach')}`}
-                  >
-                    Outreach AI
-                  </Button>
-                  <Button variant="unstyled"
-                    onClick={() => router.push('/crm/projects')}
-                    className={`w-full text-left block px-3 py-2 text-xs font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/crm/projects')}`}
-                  >
-                    Projects Hub
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
+              uncommenting the block below.
+              ────────────────────────────────────────────────────────── */}
 
           {/* Community suite (single-open accordion) */}
           {renderNavSection(NAV_GROUPS[2])}
@@ -820,7 +773,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             Viewport-locked, scrollable area where dashboard pages render
             ────────────────────────────────────────────────────────── */}
         {/* pb on phone clears the fixed bottom nav bar (+ safe area). */}
-        <main onScroll={handleMainScroll} className="flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
+        <main onScroll={handleMainScroll} className="@container flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
           {children}
         </main>
       </div>
@@ -840,7 +793,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: MOBILE BOTTOM NAV BAR (phone-only)
-          Contains: Home, Messages (unread badge), raised ➕ Create, Notifications
+          Contains: Home, Messages (unread badge), raised + Create, Notifications
           (count badge), Menu (opens the sheet). Twitter/IG-style. Phone-only
           (md:hidden) — tablet/desktop use the left sidebar. Safe-area padded.
           ────────────────────────────────────────────────────────── */}

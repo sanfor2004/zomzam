@@ -416,7 +416,7 @@ export default function UiKitPage() {
         </Section>
 
         {/* ProLock */}
-        <Section title="ProLock" description="Pro upsell / locked-surface primitive. 'strip' gates a value behind a static blur → /pricing; 'inline' overlays a 🔒 · Pro affordance on a wrapped control. Visual-only — no server enforcement until billing.">
+        <Section title="ProLock" description="Pro upsell / locked-surface primitive. 'strip' gates a value behind a static blur -> /pricing; 'inline' overlays a Lock / Pro affordance on a wrapped control. Visual-only — no server enforcement until billing.">
           <div className="space-y-4 max-w-lg">
             <ProLock
               variant="strip"
@@ -661,7 +661,7 @@ const DEMO_POST_IMAGE = {
   first_name: 'Lina',
   last_name: 'Sayed',
   avatar: '/Assets/Img/default-avatar.png',
-  content_html: 'soft hues, slow days, and a heart full of stillness 🌸',
+  content_html: 'soft hues, slow days, and a heart full of stillness',
   image_path: '/Assets/Uploads/posts/post_ccc5585fa48281fdb846f1bc1c5fd1c3.png',
   visibility: 'public' as const,
   type: 'status' as const,
@@ -685,7 +685,7 @@ const DEMO_POST_WIN = {
   first_name: 'Marwa',
   last_name: 'Hassan',
   avatar: '/Assets/Img/default-avatar.png',
-  content_html: 'Just shipped the new pipeline board — drag-and-drop deals across stages with a live money bridge. 🎉',
+  content_html: 'Just shipped the new pipeline board — drag-and-drop deals across stages with a live money bridge.',
   visibility: 'public' as const,
   type: 'win' as const,
   created_at: new Date(Date.now() - 36e5).toISOString(),
@@ -699,7 +699,7 @@ const DEMO_POST_WIN = {
   is_following: true,
   is_verified: true,
   top_comments: [
-    { id: 9001, post_id: 101, parent_id: null, username: 'kareem', first_name: 'Kareem', last_name: 'Adel', avatar: '/Assets/Img/default-avatar.png', content: 'Huge — congrats! 🙌', created_at: new Date(Date.now() - 18e5).toISOString(), upvote_count: 4, upvoted_by_me: false },
+    { id: 9001, post_id: 101, parent_id: null, username: 'kareem', first_name: 'Kareem', last_name: 'Adel', avatar: '/Assets/Img/default-avatar.png', content: 'Huge — congrats!', created_at: new Date(Date.now() - 18e5).toISOString(), upvote_count: 4, upvoted_by_me: false },
   ],
 };
 

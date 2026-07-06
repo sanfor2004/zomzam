@@ -1,5 +1,5 @@
 'use client';
-import { Button, SectionHeader, Skeleton } from '@/components/ui';
+import { Button, SectionHeader, Skeleton, CountUp } from '@/components/ui';
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
@@ -21,6 +21,19 @@ interface Task {
   created_at: string;
   completed_at: string | null;
 }
+
+const MinsCountUp = ({ mins, className }: { mins: number; className?: string }) => {
+  const hours = Math.floor(mins / 60);
+  const rem = mins % 60;
+  if (hours > 0) {
+    return (
+      <span className={className}>
+        <CountUp value={hours} suffix="h" /> <CountUp value={rem} suffix="m" />
+      </span>
+    );
+  }
+  return <CountUp value={rem} suffix="m" className={className} />;
+};
 
 export default function DailyTrackerPage() {
   const { t } = useTranslation();
@@ -90,13 +103,6 @@ export default function DailyTrackerPage() {
     }
   });
 
-  // Time formatting helpers
-  const formatMins = (mins: number) => {
-    const hours = Math.floor(mins / 60);
-    const rem = mins % 60;
-    return hours > 0 ? `${hours}h ${rem}m` : `${rem}m`;
-  };
-
   // Priority pill classes centralised in ../types (priorityPill).
 
   if (isLoading) {
@@ -160,7 +166,7 @@ export default function DailyTrackerPage() {
             </div>
           </div>
           <div className="mt-auto">
-            <span className="text-4xl font-black text-white tracking-tight">{formatMins(totalActual)}</span>
+            <MinsCountUp mins={totalActual} className="text-4xl font-black text-white tracking-tight" />
           </div>
         </div>
 
@@ -177,13 +183,13 @@ export default function DailyTrackerPage() {
           </div>
           <div className="flex items-end justify-between mt-auto">
             <div>
-              <span className="text-4xl font-black text-white tracking-tight">{totalTasks}</span>
+              <CountUp value={totalTasks} className="text-4xl font-black text-white tracking-tight" />
               <span className="text-xs font-semibold text-slate-400 ml-1.5">tasks</span>
             </div>
             {totalSaved > 0 && (
               <div className="text-right">
                 <p className="text-[10px] font-semibold text-emerald-400 leading-none mb-0.5">Time saved</p>
-                <span className="text-lg font-black text-emerald-500">{formatMins(totalSaved)}</span>
+                <MinsCountUp mins={totalSaved} className="text-lg font-black text-emerald-500" />
               </div>
             )}
           </div>
@@ -201,9 +207,10 @@ export default function DailyTrackerPage() {
             </div>
           </div>
           <div className="mt-auto flex items-end justify-between">
-            <span className={cn('text-4xl font-black tracking-tight', totalWasted > 0 ? 'text-rose-500' : 'text-white')}>
-              {totalWasted > 0 ? formatMins(totalWasted) : '0m'}
-            </span>
+            <MinsCountUp 
+              mins={totalWasted} 
+              className={cn('text-4xl font-black tracking-tight', totalWasted > 0 ? 'text-rose-500' : 'text-white')} 
+            />
             {totalWasted === 0 ? (
               <span className="text-[11px] font-semibold text-emerald-500 bg-emerald-500/15 px-2.5 py-1 rounded-xl">
                 On track

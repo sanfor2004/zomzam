@@ -3,7 +3,7 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 
-export type ProgressVariant = 'primary' | 'success' | 'danger' | 'warning' | 'purple';
+export type ProgressVariant = 'primary' | 'success' | 'danger' | 'warning';
 
 export interface ProgressProps {
   value: number;
@@ -20,7 +20,6 @@ const VARIANTS: Record<ProgressVariant, string> = {
   success: 'bg-emerald-500',
   danger: 'bg-rose-500',
   warning: 'bg-amber-500',
-  purple: 'bg-purple-500', // dream-accent fill for the Time · Dream Planning momentum bars
 };
 
 export function Progress({ value, max = 100, label, showValue = false, variant = 'primary', size = 'md', className = '' }: ProgressProps) {

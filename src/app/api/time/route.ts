@@ -222,6 +222,16 @@ export const POST = withAuth(async (request, user) => {
       return NextResponse.json({ success: true });
     }
 
+    case 'set_idea_done': {
+      const id = parseInt(body.id || 0);
+      const status = body.done ? 'done' : 'open';
+      await execute(
+        `UPDATE time_ideas SET status = ? WHERE id = ? AND user_id = ?`,
+        [status, id, user.id]
+      );
+      return NextResponse.json({ success: true });
+    }
+
     case 'update_idea': {
       const id = parseInt(body.id || 0);
       const content = (body.content || '').trim();

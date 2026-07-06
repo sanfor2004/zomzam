@@ -38,6 +38,7 @@ export interface Idea {
   content: string;
   linked_task_id: number | null;
   linked_horizon_id: number | null;
+  status: 'open' | 'done';
   created_at: string;
 }
 
@@ -120,5 +121,12 @@ export async function updateIdeaRequest(id: number, input: IdeaInput): Promise<b
 
 export async function deleteIdeaRequest(id: number): Promise<boolean> {
   const data = await timeAction({ action: 'delete_idea', id });
+  return !!data.success;
+}
+
+// Toggle an idea between 'open' and 'done'. Purely a vault-side status — a done
+// idea is a resolved note, it does NOT complete any linked task.
+export async function setIdeaDoneRequest(id: number, done: boolean): Promise<boolean> {
+  const data = await timeAction({ action: 'set_idea_done', id, done });
   return !!data.success;
 }
