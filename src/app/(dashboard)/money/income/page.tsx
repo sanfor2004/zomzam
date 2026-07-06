@@ -86,10 +86,10 @@ export default function IncomePage() {
   return (
     <div ref={containerRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Back button, title + subtitle, "Add Income" button
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="unstyled"
@@ -119,11 +119,11 @@ export default function IncomePage() {
         </Button>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: INCOME LIST
           Contains: Empty state, per-transaction rows (icon, description,
           account/date, amount, delete action)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple">
         {incomes.length === 0 ? (
           <p className="text-center py-20 text-slate-400 italic text-sm">No income transactions found.</p>
@@ -144,7 +144,7 @@ export default function IncomePage() {
                       {t.description || t.category_name || 'Income'}
                     </p>
                     <span className="block text-[10px] text-slate-455 font-bold uppercase tracking-tight mt-0.5">
-                      {t.account_name} â€¢ {new Date(t.transaction_date).toLocaleDateString()}
+                      {t.account_name} • {new Date(t.transaction_date).toLocaleDateString()}
                     </span>
                   </div>
                 </div>
@@ -167,10 +167,10 @@ export default function IncomePage() {
         )}
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: ADD INCOME MODAL
           Contains: New-income form (amount, account, category, date, description)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}

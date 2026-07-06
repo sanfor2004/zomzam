@@ -243,7 +243,7 @@ export default function SettingsPage() {
     }
   };
 
-  // Handle saving new password â€” on success we force a logout so the
+  // Handle saving new password — on success we force a logout so the
   // session can't outlive the credential change (other devices/tabs are
   // invalidated when the user signs back in with the new password).
   const handleSavePassword = async (e: React.FormEvent) => {
@@ -264,10 +264,10 @@ export default function SettingsPage() {
     try {
       const { success, message } = await changePassword(currentPassword, newPassword);
       if (success) {
-        toast({ variant: 'success', description: 'Password changed â€” signing you outâ€¦' });
+        toast({ variant: 'success', description: 'Password changed — signing you out…' });
         // Tear down the current session, then bounce to sign-in. Keep the
         // form disabled (isSavingPass stays true) through the redirect. Logout
-        // is best-effort â€” even if it fails we still redirect, since the
+        // is best-effort — even if it fails we still redirect, since the
         // password is already changed.
         await logout();
         router.push('/sign');
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                 <Globe className="w-4 h-4 text-slate-400" />
                 <span>{t('settings_pref')}</span>
               </a>
-              {/* CRM & Outreach nav link â€” DISABLED for now (CRM & Lead Generation paused).
+              {/* CRM & Outreach nav link — DISABLED for now (CRM & Lead Generation paused).
                   Kept in code for future re-activation. Restore by uncommenting.
               <a
                 href="#crm"
@@ -384,10 +384,10 @@ export default function SettingsPage() {
 
         {/* Form Container */}
         <div className="md:col-span-2 space-y-8">
-          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: GENERAL PREFERENCES SECTION
               Contains: Language, Timezone, Currencies, and Notification options
-              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              ────────────────────────────────────────────────────────── */}
           <section
             id="preferences"
             data-entrance="card"
@@ -478,13 +478,13 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-              DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION â€” DISABLED
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION — DISABLED
               Status: Temporarily disabled (CRM & Lead Generation feature paused).
-                      Kept in code for future re-activation â€” flip the `false &&`
+                      Kept in code for future re-activation — flip the `false &&`
                       guard below back on to restore the full section.
               Contains: Secure API keys (Claude, Maps) and Outreach tone parameters
-              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              ────────────────────────────────────────────────────────── */}
           {false && (
           <section
             id="crm"
@@ -671,10 +671,10 @@ export default function SettingsPage() {
           </section>
           )}
 
-          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: NOTION INTEGRATION SECTION
               Contains: Notion tokens, database mappings, and manual sync action
-              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              ────────────────────────────────────────────────────────── */}
           <section
             id="notion"
             data-entrance="card"
@@ -801,10 +801,10 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: SECURITY CREDENTIALS SECTION
               Contains: Change password form inputs
-              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              ────────────────────────────────────────────────────────── */}
           <section
             id="security"
             data-entrance="card"
@@ -900,10 +900,10 @@ export default function SettingsPage() {
             </form>
           </section>
 
-          {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+          {/* ──────────────────────────────────────────────────────────
               DEVELOPMENT NAVIGATOR: DANGER ZONE
               Contains: Irreversible account deletion controls
-              â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+              ────────────────────────────────────────────────────────── */}
           <section
             id="danger"
             data-entrance="card"
@@ -937,7 +937,7 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* â”€â”€ Account Deletion Confirmation Modal â”€â”€ */}
+      {/* ── Account Deletion Confirmation Modal ── */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => { setShowDeleteModal(false); setDeletePassword(''); setDeleteError(null); }}
@@ -976,7 +976,7 @@ export default function SettingsPage() {
         }
       >
         <p className="text-sm text-slate-400 mb-6 leading-relaxed">
-          All your data â€” tasks, money records, ideas, plans, and social connections â€” will be permanently removed.
+          All your data — tasks, money records, ideas, plans, and social connections — will be permanently removed.
           Enter your current password to confirm.
         </p>
 

@@ -11,14 +11,14 @@ import { emitSocialUpdate } from '@/lib/social-actions';
 import { displayName } from '@/app/(dashboard)/home/shared';
 import { TypingBadge } from './TypingDots';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: RIGHT SIDEBAR (global)
 // The persistent right navbar for the whole dashboard (rendered by the shell,
 // not by any page). Consolidates what used to be the /home right column +
 // the old presence rail into one place: Active now (connections presence) and
-// Suggested connects. Self-contained â€” reads contacts from MessagesContext and
+// Suggested connects. Self-contained — reads contacts from MessagesContext and
 // fetches its own suggestions. Desktop = sticky column; mobile = FAB + drawer.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 
 type Bucket = 'online' | 'away' | 'offline';
 
@@ -57,7 +57,7 @@ interface SuggestedUser {
 
 const CARD = 'surface-card border border-slate-800/60 rounded-3xl p-5 shadow-apple';
 
-/** The shared content â€” used by the desktop column, the tablet drawer, and the
+/** The shared content — used by the desktop column, the tablet drawer, and the
  *  phone Menu sheet (folded in there instead of a separate FAB).
  *  `onNavigate` lets the host close itself once the user opens a chat/link. */
 export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
@@ -76,7 +76,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   }, []);
 
   // Live: any social-graph change involving a suggested user retires their
-  // card â€” they connected with us (or we with them elsewhere), so they no
+  // card — they connected with us (or we with them elsewhere), so they no
   // longer belong under "Suggested connects".
   useEffect(() => {
     const onSocial = (e: Event) => {
@@ -88,7 +88,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
     return () => window.removeEventListener('zz-social-update', onSocial);
   }, []);
 
-  // All connections, ordered online â†’ away â†’ offline for the "Active now" list.
+  // All connections, ordered online → away → offline for the "Active now" list.
   const friends = useMemo(
     () => [...contacts].sort((a, b) => {
       const r = RANK[bucketOf(a)] - RANK[bucketOf(b)];
@@ -104,8 +104,8 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   // Connect (LinkedIn-style): one action sends the request and follows them
-  // until they connect back â€” see /api/social friend_request. The button flips
-  // to "Sent" as instant feedback, then the card retires from the list â€” a
+  // until they connect back — see /api/social friend_request. The button flips
+  // to "Sent" as instant feedback, then the card retires from the list — a
   // pending person is no longer a suggestion. On failure the card stays.
   const connect = async (userId: number) => {
     setSent((prev) => new Set(prev).add(userId));
@@ -121,7 +121,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         return;
       }
       // Let the "Sent" state register (feedback), then retire the card. The
-      // echo also reloads the contacts roster â€” if they had already requested
+      // echo also reloads the contacts roster — if they had already requested
       // us, the server auto-accepted and they belong in "Active now" NOW.
       setTimeout(() => {
         setSuggestions((prev) => prev.filter((u) => u.id !== userId));
@@ -134,7 +134,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="space-y-4">
-      {/* â”€â”€ Active now (connections presence) â”€â”€ */}
+      {/* ── Active now (connections presence) ── */}
       <div className={CARD}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
@@ -157,7 +157,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
         {friends.length === 0 ? (
           <p className="text-xs text-slate-600 text-center py-4">
-            No connections yet â€” discover people below.
+            No connections yet — discover people below.
           </p>
         ) : (
           <div className="space-y-1 -mx-1.5">
@@ -189,7 +189,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                       {displayName(c)}
                     </p>
                     <p className={`text-[10px] truncate ${isTyping ? 'text-primary-400 font-semibold' : 'text-slate-600'}`}>
-                      {isTyping ? 'typingâ€¦' : bucket === 'online' ? 'Active now' : bucket === 'away' ? 'Away' : c.online_label || 'Offline'}
+                      {isTyping ? 'typing…' : bucket === 'online' ? 'Active now' : bucket === 'away' ? 'Away' : c.online_label || 'Offline'}
                     </p>
                   </div>
                   {c.unread_count > 0 && (
@@ -204,7 +204,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
         )}
       </div>
 
-      {/* â”€â”€ Suggested connects â”€â”€ */}
+      {/* ── Suggested connects ── */}
       {suggestions.length > 0 && (
         <div className={CARD}>
           <div className="flex items-center justify-between mb-4">
@@ -242,7 +242,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
                   variant="unstyled"
                   onClick={() => connect(u.id)}
                   disabled={sent.has(u.id)}
-                  title={sent.has(u.id) ? 'Request sent â€” you follow them until they accept' : 'Connect'}
+                  title={sent.has(u.id) ? 'Request sent — you follow them until they accept' : 'Connect'}
                   className={`flex-shrink-0 flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[10px] font-bold transition-all disabled:cursor-default ${
                     sent.has(u.id)
                       ? 'bg-emerald-500/10 text-emerald-400'
@@ -262,7 +262,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-/** Collapsed mode: a slim strip of avatars â€” people you're chatting with, then
+/** Collapsed mode: a slim strip of avatars — people you're chatting with, then
  *  online friends. Click opens a chat. */
 function CollapsedRail() {
   const { contacts, typingContacts, openChat } = useMessages();
@@ -291,7 +291,7 @@ function CollapsedRail() {
           key={c.other_id}
           type="button"
           onClick={() => openChat(toChatUser(c), c.conversation_id)}
-          title={`${displayName(c)}${isTyping ? ' Â· typingâ€¦' : c.is_online ? (c.is_idle ? ' Â· Away' : ' Â· Active now') : ''}`}
+          title={`${displayName(c)}${isTyping ? ' · typing…' : c.is_online ? (c.is_idle ? ' · Away' : ' · Active now') : ''}`}
           className="relative"
         >
           <Image
@@ -322,7 +322,7 @@ export function RightSidebar() {
   const { unreadTotal, windows } = useMessages();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Collapsible (icon/avatar-only) â€” persisted like the left rail.
+  // Collapsible (icon/avatar-only) — persisted like the left rail.
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     try { setCollapsed(localStorage.getItem('zz-right-collapsed') === '1'); } catch {}
@@ -335,7 +335,7 @@ export function RightSidebar() {
 
   return (
     <>
-      {/* â”€â”€ Desktop column â”€â”€ */}
+      {/* ── Desktop column ── */}
       <aside className={`hidden lg:flex flex-col ${collapsed ? 'w-[76px]' : 'w-72'} h-[calc(100vh-95px)] flex-shrink-0 my-2.5 mr-2.5 ml-3 relative z-10 transition-all duration-300`}>
         <div className="flex-1 overflow-y-auto no-scrollbar">
           {collapsed ? <CollapsedRail /> : <SidebarBody />}
@@ -360,10 +360,10 @@ export function RightSidebar() {
         </button>
       </aside>
 
-      {/* â”€â”€ Tablet toggle (FAB) â€” mdâ†’lg only. On phone (<md) presence is folded
+      {/* ── Tablet toggle (FAB) — md→lg only. On phone (<md) presence is folded
             into the Menu sheet (DashboardShell), so no FAB there; on desktop
             (lg+) the column above replaces it. Hidden while a chat window
-            occupies the corner. â”€â”€ */}
+            occupies the corner. ── */}
       <button
         type="button"
         onClick={() => setDrawerOpen(true)}
@@ -376,7 +376,7 @@ export function RightSidebar() {
         )}
       </button>
 
-      {/* â”€â”€ Mobile drawer â”€â”€ */}
+      {/* ── Mobile drawer ── */}
       {drawerOpen && (
         <div className="lg:hidden fixed inset-0 z-[81] bg-slate-900/50 backdrop-blur-sm" onClick={() => setDrawerOpen(false)}>
           <div

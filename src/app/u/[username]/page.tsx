@@ -16,7 +16,7 @@ interface PageProps {
 }
 
 // Request-scoped dedupe: generateMetadata and the page body both need the
-// profile row Ã¢â‚¬â€ cache() collapses them into ONE query per request.
+// profile row — cache() collapses them into ONE query per request.
 const getProfileUser = cache(getUserByUsername);
 
 // Generate Dynamic SEO Metadata for search engines
@@ -72,12 +72,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
   const profileUserId = profileUser.id as number;
 
-  // Authenticate the current viewer (anonymous viewers are allowed Ã¢â€ â€™ null).
+  // Authenticate the current viewer (anonymous viewers are allowed → null).
   const viewer = await getSessionUser();
   const viewerId = viewer ? viewer.id : null;
 
   // Resolve the connect status if the viewer is authenticated (pending-out
-  // already implies "following" Ã¢â‚¬â€ the follow edge rides the connect request).
+  // already implies "following" — the follow edge rides the connect request).
   let initialStatus = 'none';
 
   if (viewerId && viewerId !== profileUserId) {
@@ -110,8 +110,8 @@ export default async function PublicProfilePage({ params }: PageProps) {
   // or when they're an accepted friend; otherwise just public ones.
   const canSeePrivate = viewerId === profileUserId || initialStatus === 'friends';
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ This user's posts + reposts (visibility-aware) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-  // A PLAIN repost (empty pointer: no text, no image) renders Twitter-style Ã¢â‚¬â€ as
+  // ── This user's posts + reposts (visibility-aware) ──────────
+  // A PLAIN repost (empty pointer: no text, no image) renders Twitter-style — as
   // the ORIGINAL post with a "reposted" label, linking to the original, showing
   // the ORIGINAL's numbers. Quote reposts and normal posts render as themselves.
   type ProfilePost = {
@@ -151,7 +151,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
         .map((p): ProfilePost | null => {
           const isPlainRepost = p.repost_of != null && !(p.content_html || '').trim() && !p.image_path;
           if (isPlainRepost) {
-            // Original gone Ã¢â€¡â€™ drop the dangling pointer (no tombstone on a profile).
+            // Original gone ⇒ drop the dangling pointer (no tombstone on a profile).
             if (!p.orig_id) return null;
             return {
               id: Number(p.orig_id),
@@ -179,11 +179,11 @@ export default async function PublicProfilePage({ params }: PageProps) {
     } catch { /* posts table may not exist yet */ return []; }
   };
 
-  // Ã¢â€â‚¬Ã¢â€â‚¬ Mutual friends (viewer Ã¢Ë†Â© profile) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+  // ── Mutual friends (viewer ∩ profile) ───────────────────────
   type MutualFriend = { id: number; username: string; first_name: string | null; last_name: string | null; avatar: string | null };
   const loadMutuals = async (): Promise<{ count: number; friends: MutualFriend[] }> => {
     if (!viewerId || viewerId === profileUserId) return { count: 0, friends: [] };
-    // Inlined (viewerId/profileUserId are integers from the session/DB Ã¢â‚¬â€ no
+    // Inlined (viewerId/profileUserId are integers from the session/DB — no
     // injection surface) to keep the self-referencing subquery readable.
     const friendsOf = (id: number) =>
       `SELECT IF(requester_id = ${id}, addressee_id, requester_id) FROM user_connections
@@ -202,7 +202,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   };
 
   // Posts and mutuals only depend on the connection status above, not on each
-  // other Ã¢â‚¬â€ run both remote-DB reads concurrently.
+  // other — run both remote-DB reads concurrently.
   const [posts, { count: mutualCount, friends: mutualFriends }] = await Promise.all([
     loadPosts(),
     loadMutuals(),
@@ -225,11 +225,11 @@ export default async function PublicProfilePage({ params }: PageProps) {
       
       <PublicNav />
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PUBLIC PROFILE CARD
           Contains: Avatar + name/role/meta header, biography,
           interest tags, social interaction buttons (friend/follow)
-          Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          ────────────────────────────────────────────────────────── */}
       <main className="flex-grow pt-32 pb-24 px-6 max-w-4xl mx-auto w-full">
         <ProfileAnimationKit>
 
@@ -393,14 +393,14 @@ export default async function PublicProfilePage({ params }: PageProps) {
 
         </div>
 
-        {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+        {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: PROFILE POSTS
             Contains: this user's posts (public always; private only to friends/self)
-            Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+            ────────────────────────────────────────────────────────── */}
         <div data-entrance="card" className="mt-6 surface-card border border-slate-800/60 rounded-3xl p-8 shadow-apple space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Posts{posts.length > 0 ? ` Ã‚Â· ${posts.length}` : ''}
+              Posts{posts.length > 0 ? ` · ${posts.length}` : ''}
             </h3>
           </div>
 
@@ -452,10 +452,10 @@ export default async function PublicProfilePage({ params }: PageProps) {
         </ProfileAnimationKit>
       </main>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: FOOTER
           Contains: Brand logo + name, copyright line
-          Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          ────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-800 bg-surface-dark/50 backdrop-blur-sm py-12 mt-auto">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">

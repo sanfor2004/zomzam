@@ -39,7 +39,7 @@ export default function RequestsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  // `silent` skips the spinner â€” used by live re-syncs so an SSE-driven refresh
+  // `silent` skips the spinner — used by live re-syncs so an SSE-driven refresh
   // never blanks a page the user is already looking at.
   const fetchRequests = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -103,7 +103,7 @@ export default function RequestsPage() {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
         // Echo locally so the rest of the shell (Active-now rail, suggestion
-        // cards) updates without waiting for anything â€” see emitSocialUpdate.
+        // cards) updates without waiting for anything — see emitSocialUpdate.
         emitSocialUpdate(action, targetId);
         fetchRequests(true);
         if (searchQuery.trim().length >= 2) {
@@ -123,10 +123,10 @@ export default function RequestsPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, global user-search autocomplete
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -134,7 +134,7 @@ export default function RequestsPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Invitations â€” respond to people who want to connect.</p>
+            <p className="text-xs text-slate-400">Invitations — respond to people who want to connect.</p>
           </div>
         </div>
 
@@ -200,10 +200,10 @@ export default function RequestsPage() {
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-          DEVELOPMENT NAVIGATOR: CONTENT â€” FRIEND REQUESTS
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: CONTENT — FRIEND REQUESTS
           Contains: Incoming requests (accept/decline) and outgoing requests (cancel)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>

@@ -499,7 +499,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                           <span className="text-[9px] text-slate-400 block truncate font-medium">{shop.formattedAddress}</span>
                           {shop.rating && (
                             <div className="flex items-center gap-0.5 text-[9px] font-bold text-amber-400 pt-0.5">
-                              <span>â˜…</span>
+                              <span>★</span>
                               <span className="text-slate-200">{shop.rating}</span>
                               <span className="text-slate-500 font-normal">({shop.userRatingCount})</span>
                             </div>
@@ -657,7 +657,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                           ? 'bg-[#EE5712] text-white border-[#EE5712]' 
                           : 'bg-slate-800 text-slate-200 border-white/10 shadow-sm'
                       }`}>
-                        {shop.rating} â˜…
+                        {shop.rating} ★
                       </div>
                     )}
                   </div>
@@ -681,7 +681,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                   onClick={() => setInfoCardShop(null)}
                   className="p-1 rounded-lg text-slate-500 hover:text-white transition-all text-xs font-bold leading-none -mt-1 cursor-pointer"
                 >
-                  âœ•
+                  ✕
                 </Button>
               </div>
 
@@ -689,7 +689,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                 <div className="space-y-0.5">
                   <span className="text-[8px] font-bold text-slate-500 uppercase tracking-wider block">Rating</span>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-white">
-                    <span className="text-amber-400 text-xs">â˜…</span>
+                    <span className="text-amber-400 text-xs">★</span>
                     {infoCardShop.rating || 'N/A'} 
                     <span className="text-[9px] text-slate-500 font-normal">({infoCardShop.userRatingCount || 0})</span>
                   </div>

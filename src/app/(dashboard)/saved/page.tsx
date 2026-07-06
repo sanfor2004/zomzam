@@ -6,12 +6,12 @@ import { Button, PostCard } from '@/components/ui';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { type CurrentUser, type MentionUser, type Post } from '../home/shared';
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: SAVED POSTS PAGE
-// Auth-gated by the (dashboard) layout (unauthenticated â†’ /sign). Loads the
+// Auth-gated by the (dashboard) layout (unauthenticated → /sign). Loads the
 // viewer's bookmarked posts newest-saved-first (keyset on bookmark id) and
 // renders the SAME shared PostCard as the feed. Un-bookmarking drops the card.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 export default function SavedPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [friends, setFriends] = useState<MentionUser[]>([]);
@@ -36,7 +36,7 @@ export default function SavedPage() {
   // Un-bookmarking removes the card from the saved list (its place is here).
   const handleUnbookmark = useCallback((id: number) => setPosts((prev) => prev.filter((p) => p.id !== id)), []);
 
-  // â”€â”€ Data bootstrap (viewer + friends for the edit modal's @-autocomplete) â”€â”€
+  // ── Data bootstrap (viewer + friends for the edit modal's @-autocomplete) ──
   useEffect(() => {
     (async () => {
       try {
@@ -95,10 +95,10 @@ export default function SavedPage() {
   }, [posts.length, hasMore, loadMore]);
 
   return (
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /* ──────────────────────────────────────────────────────────
         DEVELOPMENT NAVIGATOR: SAVED FEED (single column)
         Contains: header, saved post cards, infinite-scroll sentinel, empty state
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        ────────────────────────────────────────────────────────── */
     <div ref={containerRef} className="max-w-2xl mx-auto relative animate-in">
       <div className="flex items-center gap-2 mb-4">
         <Bookmark className="w-5 h-5 text-primary-500" />

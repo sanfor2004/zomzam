@@ -65,10 +65,10 @@ export default function ContactsPage() {
   return (
     <div ref={pageRef} className="space-y-6">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Title + subtitle, total-qualified-contacts counter
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-800/60 pb-5">
         <div>
           <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
@@ -83,10 +83,10 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: SEARCH BAR
           Contains: Client search input (filters by name / brand / niche)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div data-entrance="card" className="surface-card border border-slate-800/60 p-4 rounded-3xl flex flex-col md:flex-row gap-4 items-center justify-between shadow-apple">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-500 pointer-events-none" />
@@ -100,11 +100,11 @@ export default function ContactsPage() {
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: CONTACT CARD GRID
           Contains: Empty state, per-contact cards (industry badge, contact
           details, Open Workspace / Send Email actions)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {filteredContacts.length === 0 ? (
         <div className="surface-card border border-slate-800/60 p-16 rounded-3xl text-center text-slate-500 italic font-semibold text-xs shadow-apple">
           No active client profiles found. Qualify leads from your Pipeline to add them to this directory.
@@ -183,10 +183,10 @@ export default function ContactsPage() {
         </div>
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: LEAD DETAILS MODAL
           Contains: <LeadDetailsModal> drawer (rendered when a contact is opened)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {selectedLead && (
         <LeadDetailsModal
           lead={selectedLead}

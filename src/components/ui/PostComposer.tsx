@@ -7,7 +7,7 @@ import {
   AtSign, Hash, Send, Users, X,
   MessageSquare, HelpCircle, Trophy, type LucideIcon,
 } from 'lucide-react';
-// Sibling Kit primitives â€” imported directly (not via the './index' barrel) so
+// Sibling Kit primitives — imported directly (not via the './index' barrel) so
 // this component, which the barrel itself re-exports, never imports the barrel.
 import { Button } from './Button';
 import { AudienceSwitch, type PostVisibility } from './AudienceSwitch';
@@ -20,7 +20,7 @@ import { postImages } from './PostImageGrid';
 import { useComposerImages, type ComposerImage } from './useComposerImages';
 import { MAX_POST_IMAGES, POST_IMAGE_ACCEPT, createPostRequest, quoteRequest, editPostRequest } from './PostComposer.services';
 // Feature-owned domain types still live with the home feed; the composer is a
-// data-coupled Kit member (it talks to /api/posts) by design â€” see README Â§Kit.
+// data-coupled Kit member (it talks to /api/posts) by design — see README §Kit.
 import { displayName, type CurrentUser, type MentionUser, type Post } from '@/app/(dashboard)/home/shared';
 
 type Trigger = '@' | '#';
@@ -31,13 +31,13 @@ type PostType = 'status' | 'ask' | 'win';
 const MAX_POST_CHARS = 500;
 
 // Curated, dependency-free emoji palette grouped by intent. OS emoji input still
-// works for everything else â€” this is a quick-pick affordance, not a full keyboard.
+// works for everything else — this is a quick-pick affordance, not a full keyboard.
 const EMOJI_GROUPS: { label: string; emojis: string[] }[] = [
-  { label: 'Smileys', emojis: ['ðŸ˜€', 'ðŸ˜', 'ðŸ˜‚', 'ðŸ¤£', 'ðŸ˜Š', 'ðŸ˜', 'ðŸ˜˜', 'ðŸ˜Ž', 'ðŸ¤©', 'ðŸ¥³', 'ðŸ˜‡', 'ðŸ™ƒ', 'ðŸ˜‰', 'ðŸ˜Œ', 'ðŸ˜´', 'ðŸ¤”', 'ðŸ«¡', 'ðŸ¤«', 'ðŸ˜¬', 'ðŸ™„', 'ðŸ˜¢', 'ðŸ˜­', 'ðŸ˜¤', 'ðŸ˜¡', 'ðŸ¥º', 'ðŸ˜±', 'ðŸ¤¯', 'ðŸ¤—'] },
-  { label: 'Gestures', emojis: ['ðŸ‘', 'ðŸ‘Ž', 'ðŸ‘', 'ðŸ™Œ', 'ðŸ¤', 'ðŸ‘Œ', 'ðŸ¤™', 'âœŒï¸', 'ðŸ¤ž', 'ðŸ«¶', 'ðŸ’ª', 'ðŸ™', 'ðŸ‘‹', 'ðŸ¤Ÿ', 'ðŸ‘Š', 'âœŠ'] },
-  { label: 'Hearts', emojis: ['â¤ï¸', 'ðŸ§¡', 'ðŸ’›', 'ðŸ’š', 'ðŸ’™', 'ðŸ’œ', 'ðŸ–¤', 'ðŸ¤', 'ðŸ’–', 'ðŸ’—', 'ðŸ’˜', 'ðŸ’', 'ðŸ’¯', 'âœ¨', 'ðŸ”¥', 'â­'] },
-  { label: 'Objects', emojis: ['ðŸŽ‰', 'ðŸŽŠ', 'ðŸš€', 'ðŸ†', 'ðŸŽ¯', 'ðŸ’¡', 'ðŸ“Œ', 'ðŸ“ˆ', 'ðŸ’°', 'â°', 'â˜•', 'ðŸ•', 'ðŸŽ', 'ðŸ“·', 'ðŸŽµ', 'âœ…'] },
-  { label: 'Nature', emojis: ['ðŸŒŸ', 'ðŸŒˆ', 'â˜€ï¸', 'ðŸŒ™', 'âš¡', 'ðŸŒŠ', 'ðŸŒ¸', 'ðŸŒ¹', 'ðŸ€', 'ðŸ¶', 'ðŸ±', 'ðŸ¦„', 'ðŸ', 'ðŸ¦‹', 'ðŸŒ', 'ðŸŒ¿'] },
+  { label: 'Smileys', emojis: ['😀', '😁', '😂', '🤣', '😊', '😍', '😘', '😎', '🤩', '🥳', '😇', '🙃', '😉', '😌', '😴', '🤔', '🫡', '🤫', '😬', '🙄', '😢', '😭', '😤', '😡', '🥺', '😱', '🤯', '🤗'] },
+  { label: 'Gestures', emojis: ['👍', '👎', '👏', '🙌', '🤝', '👌', '🤙', '✌️', '🤞', '🫶', '💪', '🙏', '👋', '🤟', '👊', '✊'] },
+  { label: 'Hearts', emojis: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '💖', '💗', '💘', '💝', '💯', '✨', '🔥', '⭐'] },
+  { label: 'Objects', emojis: ['🎉', '🎊', '🚀', '🏆', '🎯', '💡', '📌', '📈', '💰', '⏰', '☕', '🍕', '🎁', '📷', '🎵', '✅'] },
+  { label: 'Nature', emojis: ['🌟', '🌈', '☀️', '🌙', '⚡', '🌊', '🌸', '🌹', '🍀', '🐶', '🐱', '🦄', '🐝', '🦋', '🌍', '🌿'] },
 ];
 
 interface PostComposerProps {
@@ -46,16 +46,16 @@ interface PostComposerProps {
   friends: MentionUser[];
   /** Called with the freshly-created post so the parent can prepend it to the feed. */
   onPosted: (post: Post) => void;
-  /** Present â‡’ edit mode: seeds the editor/image/visibility from the post, hides
+  /** Present ⇒ edit mode: seeds the editor/image/visibility from the post, hides
    *  the type + skill controls, and submits `post_edit` instead of creating. */
   editing?: { post: Post; onSaved: (post: Post) => void };
-  /** Present â‡’ quote-repost mode: shows a read-only preview of `original` above
+  /** Present ⇒ quote-repost mode: shows a read-only preview of `original` above
    *  the editor, hides type/skill/image + locks visibility to Public, requires
    *  text, and submits `create` with `repost_of = original.id`. Distinct config
-   *  object (not an `isQuoting` flag) â€” mirrors `editing`. */
+   *  object (not an `isQuoting` flag) — mirrors `editing`. */
   quoting?: { original: Post; onPosted: (post: Post) => void };
   /** Showcase mode (the /ui-kit page). Skips the /api/posts network call on
-   *  submit â€” just clears the editor + toasts â€” so the data-free reference page
+   *  submit — just clears the editor + toasts — so the data-free reference page
    *  can render a fully interactive composer without ever writing a real post. */
   demo?: boolean;
   /** Render without the composer's own card chrome (border/bg/blur/shadow/padding)
@@ -63,7 +63,7 @@ interface PostComposerProps {
    *  immediately, shows an author-identity header (create mode), and renders a
    *  labeled primary submit instead of the bare send glyph. */
   bare?: boolean;
-  /** Seed the post type (create mode only) â€” lets a banner quick-action open the
+  /** Seed the post type (create mode only) — lets a banner quick-action open the
    *  composer already on Ask / Win. */
   initialType?: PostType;
   /** Fire the OS file picker on mount (the banner's "Photo" quick-action). */
@@ -73,12 +73,12 @@ interface PostComposerProps {
   onDirtyChange?: (dirty: boolean) => void;
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: POST COMPOSER (self-contained)
 // Owns ALL of its own keystroke-frequency state (char count, mention/tag
 // popover, formatting, emoji, image) so typing re-renders only this component,
 // not the feed or sidebar. Emits onPosted(post) up to the parent on success.
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 // `currentUser` is read again in `bare` (modal) create mode to render the author
 // identity header; the inline/non-bare layout still omits it.
 export function PostComposer({ currentUser, friends, onPosted, editing, quoting, demo, bare, initialType, initialPhoto, onDirtyChange }: PostComposerProps) {
@@ -98,7 +98,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   // The rich-text settings toolbar is revealed only once the user clicks into
   // the editor (kept hidden until then for a clean, distraction-free resting
   // state). In `bare` (modal) mode the user already committed to composing, so
-  // it's shown from the start â€” no focus-to-reveal jump.
+  // it's shown from the start — no focus-to-reveal jump.
   const [showToolbar, setShowToolbar] = useState<boolean>(!!bare);
 
   // Emoji picker + image attachment
@@ -106,7 +106,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const emojiGroupRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Image attachment lifecycle (list, validation, blob cleanup, derived upload
-  // files + kept paths) â€” see useComposerImages.
+  // files + kept paths) — see useComposerImages.
   const { images, handleImageSelect, removeImageAt, clearImages, newImageFiles, keptPaths } = useComposerImages(initialImages, toast);
 
   // Autocomplete dropdown state
@@ -122,11 +122,11 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
 
   // Favor economy: one composer, branch on type. Ask reveals a skill/topic tag
   // for routing/matching; Win posts share milestones (amount stays opt-in, body
-  // text only â€” never a column).
+  // text only — never a column).
   const [postType, setPostType] = useState<PostType>(initialType ?? 'status');
   const [skillTag, setSkillTag] = useState('');
 
-  // â”€â”€ Sync which formats are active at the caret/selection â”€â”€â”€â”€
+  // ── Sync which formats are active at the caret/selection ────
   const FORMAT_COMMANDS = ['bold', 'italic', 'underline', 'insertUnorderedList'];
   const syncFormats = () => {
     if (!editorRef.current) return;
@@ -148,7 +148,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     return () => document.removeEventListener('selectionchange', onSelectionChange);
   }, []);
 
-  // â”€â”€ Hard-cap typing/pasting at MAX_POST_CHARS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Hard-cap typing/pasting at MAX_POST_CHARS ───────────────
   // Counted from innerText so mention/tag pills count toward the limit.
   useEffect(() => {
     const el = editorRef.current;
@@ -162,7 +162,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     const onBeforeInput = (e: InputEvent) => {
       if (!INSERTIONS.includes(e.inputType)) return; // allow deletes & formatting
 
-      // Replacing a selection frees up room â€” let it through.
+      // Replacing a selection frees up room — let it through.
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed) return;
 
@@ -184,7 +184,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     return () => el.removeEventListener('beforeinput', onBeforeInput);
   }, []);
 
-  // â”€â”€ Char count â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Char count ──────────────────────────────────────────────
   const updateCharCount = () => {
     if (!editorRef.current) return;
     const text = (editorRef.current.innerText || '').trim();
@@ -194,7 +194,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     setCharCount(text.length);
   };
 
-  // â”€â”€ Text formatting â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Text formatting ─────────────────────────────────────────
   const applyFormat = (command: string) => {
     document.execCommand(command, false);
     editorRef.current?.focus();
@@ -202,7 +202,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     syncFormats();
   };
 
-  // â”€â”€ Detect @ / # trigger as the user types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Detect @ / # trigger as the user types ──────────────────
   const handleInput = () => {
     updateCharCount();
     const selection = window.getSelection();
@@ -235,7 +235,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     }
 
     // Position the popover relative to the composer card (its positioned
-    // ancestor â€” the card is `relative` and the popover renders inside it).
+    // ancestor — the card is `relative` and the popover renders inside it).
     const rect = range.getBoundingClientRect();
     const cardRect = composerCardRef.current?.getBoundingClientRect();
     if (cardRect) {
@@ -246,7 +246,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     }
   };
 
-  // â”€â”€ Keyboard nav â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Keyboard nav ────────────────────────────────────────────
   const optionsCount = triggerType === '@' ? suggestions.length : (query ? 1 : 0);
 
   const isPill = (node: Node | null): boolean => {
@@ -339,7 +339,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     }
   };
 
-  // â”€â”€ Insert pill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Insert pill ─────────────────────────────────────────────
   const insertPill = (trigger: Trigger, user?: MentionUser) => {
     const selection = window.getSelection();
     if (!selection || !selection.rangeCount || !editorRef.current) return;
@@ -410,11 +410,11 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     onDirtyChange?.(charCount > 0 || images.length > 0);
   }, [charCount, images.length, onDirtyChange]);
 
-  // â”€â”€ Toolbar reveal dismissal (click outside the whole card) â”€â”€
+  // ── Toolbar reveal dismissal (click outside the whole card) ──
   // The settings toolbar appears on editor focus and stays up while the user
   // works anywhere inside the card; a click outside the composer retires it.
   useEffect(() => {
-    // In bare (modal) mode the toolbar is permanent â€” never retire it on an
+    // In bare (modal) mode the toolbar is permanent — never retire it on an
     // outside click (the emoji picker keeps its own separate dismissal below).
     if (bare || !showToolbar) return;
     const onDown = (e: PointerEvent) => {
@@ -427,7 +427,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     return () => document.removeEventListener('pointerdown', onDown);
   }, [showToolbar, bare]);
 
-  // â”€â”€ Emoji picker dismissal (outside-click / Escape) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Emoji picker dismissal (outside-click / Escape) ─────────
   useEffect(() => {
     if (!showEmoji) return;
     const onDown = (e: PointerEvent) => {
@@ -442,11 +442,11 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     };
   }, [showEmoji]);
 
-  // â”€â”€ Post / Save â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // Valid with text, at least one image (new or kept), or both â€” never over the cap.
+  // ── Post / Save ─────────────────────────────────────────────
+  // Valid with text, at least one image (new or kept), or both — never over the cap.
   const hasImageContent = images.length > 0;
   // A quote needs text OR an image (an empty, image-less quote is just a plain
-  // repost, handled by the menu's instant action) â€” same rule as a normal post.
+  // repost, handled by the menu's instant action) — same rule as a normal post.
   const canSubmit = (charCount > 0 || hasImageContent) && charCount <= MAX_POST_CHARS && !postingLoading;
 
   // Reset the editor + popovers + attachments after a successful submit.
@@ -517,7 +517,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
     if (!editorRef.current || !canSubmit) return;
     const content_html = editorRef.current.innerHTML;
 
-    // Showcase mode (/ui-kit): never touch the network or mutate real data â€”
+    // Showcase mode (/ui-kit): never touch the network or mutate real data —
     // just reset the editor and acknowledge, mirroring the success path's UX.
     if (demo) {
       editorRef.current.innerHTML = '';
@@ -527,7 +527,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
       clearImages();
       setPostType('status');
       setSkillTag('');
-      toast({ variant: 'info', title: 'Demo composer', description: 'Showcase only â€” nothing was actually posted.' });
+      toast({ variant: 'info', title: 'Demo composer', description: 'Showcase only — nothing was actually posted.' });
       return;
     }
 
@@ -548,11 +548,11 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   // Placeholder + submit label adapt to the post type so the composer reads like
   // the action it performs (discoverability, HIG).
   const editorPlaceholder = quoting
-    ? 'Add a comment to your repostâ€¦'
+    ? 'Add a comment to your repost…'
     : postType === 'ask'
       ? 'What do you need help with? Be specific so the right people can answer.'
       : postType === 'win'
-      ? 'Share a win worth celebrating â€” what did you just pull off?'
+      ? 'Share a win worth celebrating — what did you just pull off?'
       : "What's on your mind?";
   const submitLabel = quoting ? 'Repost' : editing ? 'Save' : postType === 'ask' ? 'Ask' : postType === 'win' ? 'Share win' : 'Post';
 
@@ -562,7 +562,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   const showIdentityHeader = bare && !editing && !quoting && !!currentUser;
 
   // The formatting / insert controls, factored out so they can sit in the
-  // bottom action bar (bare/modal â€” X-style) OR in the on-focus top toolbar
+  // bottom action bar (bare/modal — X-style) OR in the on-focus top toolbar
   // (inline/non-modal). The hidden file input rides along so it mounts once.
   const toolbarControls = (
     <>
@@ -612,13 +612,13 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   );
 
   return (
-    /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    /* ──────────────────────────────────────────────────────────
         DEVELOPMENT NAVIGATOR: POST COMPOSER
         Contains: Top row (post type switch + audience switch),
                   Editor + settings toolbar (revealed on focus),
                   image preview, action bar (char counter + icon send),
                   @/#-autocomplete popover
-        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+        ────────────────────────────────────────────────────────── */
     <div
       ref={composerCardRef}
       className={cn(
@@ -648,7 +648,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         });
       }}
     >
-      {/* Top-edge highlight â€” a card-chrome detail; the Modal owns the surface in bare mode. */}
+      {/* Top-edge highlight — a card-chrome detail; the Modal owns the surface in bare mode. */}
       {!bare && (
         <div
           aria-hidden
@@ -656,12 +656,12 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         />
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AUTHOR IDENTITY HEADER (bare create mode)
           Contains: author avatar + name + handle on the left, the audience
-          switch on the right. No close (X) â€” the host Modal dismisses on
+          switch on the right. No close (X) — the host Modal dismisses on
           backdrop click / Escape instead.
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {showIdentityHeader && (
         <div className="flex items-center justify-between gap-3 mb-5">
           <div className="flex items-center gap-3 min-w-0">
@@ -683,12 +683,12 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         </div>
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST TYPE + AUDIENCE ROW
           Contains: segmented post-type selector (+ Ask skill/topic field) on
           the left; audience switch on the right unless the identity header
           above already owns it
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
         {/* Type + skill are fixed in edit/quote mode (only the comment changes). */}
         {!editing && !quoting && (
@@ -708,7 +708,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         )}
         {/* A quote is always public (it republishes already-public content), so the
             audience is locked and shown as a static note instead of a switch.
-            Otherwise show the switch here â€” unless the identity header has it. */}
+            Otherwise show the switch here — unless the identity header has it. */}
         {quoting ? (
           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 bg-[#111318] border border-slate-800/60 rounded-xl px-2.5 py-1.5">
             <Users className="w-3.5 h-3.5" /> Public repost
@@ -718,10 +718,10 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         )}
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: QUOTE PREVIEW (quote-repost mode)
           Contains: read-only embedded preview of the original being quoted
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {quoting && (
         <div className="mb-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-3.5">
           <div className="flex items-center gap-2">
@@ -742,12 +742,12 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         </div>
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: EDITOR + SETTINGS TOOLBAR
-          Contains: rich-text settings toolbar (revealed on focus â€”
+          Contains: rich-text settings toolbar (revealed on focus —
           Bold/Italic/Underline/List, @, #, emoji, image), and the
           contenteditable editor ("What's on your mind?")
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="relative">
         {/* Inline (non-modal) only: the boxed settings toolbar, revealed on focus.
             In bare/modal mode the same controls live in the bottom action bar. */}
@@ -795,15 +795,15 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         `}</style>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: COMPOSER IMAGE PREVIEWS (up to 3)
-          Contains: attached image thumbnails + per-image remove (Ã—) control
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          Contains: attached image thumbnails + per-image remove (×) control
+          ────────────────────────────────────────────────────────── */}
       {images.length > 0 && (
         <div className={`mt-3 grid gap-2 ${images.length === 1 ? 'grid-cols-1 max-w-xs' : 'grid-cols-3'}`}>
           {images.map((img, i) => (
             <div key={img.url} className="relative group">
-              {/* Blob object-URL (or kept server path) preview â€” a plain <img>
+              {/* Blob object-URL (or kept server path) preview — a plain <img>
                   since blob URLs aren't server-optimizable. */}
               <img
                 src={img.url}
@@ -826,18 +826,18 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         </div>
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: COMPOSER ACTION BAR
-          Contains: in bare/modal mode â€” the borderless formatting + insert
-          controls (left) and the char counter + labeled Post (right); inline â€”
+          Contains: in bare/modal mode — the borderless formatting + insert
+          controls (left) and the char counter + labeled Post (right); inline —
           just the counter + bare send glyph
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className={cn(
         'flex gap-3 mt-4 pt-3 border-t border-slate-800/60',
         // Phones stack: full-width settings row, then the submit row under it.
         bare ? 'flex-col sm:flex-row sm:items-center sm:justify-between' : 'items-center justify-end',
       )}>
-        {/* Borderless toolbar â€” bare/modal only (inline keeps the on-focus top bar). */}
+        {/* Borderless toolbar — bare/modal only (inline keeps the on-focus top bar). */}
         {bare && (
           <div className="flex flex-wrap items-center justify-between sm:justify-start gap-0.5 sm:gap-1 min-w-0 w-full sm:w-auto">
             {toolbarControls}
@@ -845,7 +845,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         )}
 
         <div className={cn('flex items-center gap-3 shrink-0', bare && 'w-full sm:w-auto')}>
-          {/* Character counter â€” amber near limit, rose when over */}
+          {/* Character counter — amber near limit, rose when over */}
           <span
             aria-live="polite"
             title={`${MAX_POST_CHARS - charCount} characters remaining`}
@@ -891,10 +891,10 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AUTOCOMPLETE POPOVER
           Contains: @-mention friend list, #-tag creator, keyboard nav hints
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {popoverActive && (
         <div
           role="listbox"
@@ -981,12 +981,12 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
                   <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Create tag</span>
                   <span className="block text-xs font-bold text-sky-400 truncate">#{query}</span>
                 </span>
-                <kbd className="flex-shrink-0 text-[9px] font-bold text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded">â†µ</kbd>
+                <kbd className="flex-shrink-0 text-[9px] font-bold text-sky-400/80 bg-sky-500/10 px-1.5 py-0.5 rounded">↵</kbd>
               </Button>
             ) : (
               <div className="flex flex-col items-center gap-1.5 px-3 py-6 text-center">
                 <Hash className="w-5 h-5 text-slate-700" />
-                <p className="text-xs font-semibold text-slate-500">Keep typingâ€¦</p>
+                <p className="text-xs font-semibold text-slate-500">Keep typing…</p>
                 <p className="text-[10px] text-slate-600">Type a word to create a tag.</p>
               </div>
             )}
@@ -997,12 +997,12 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
             <div className="flex items-center gap-3 px-3.5 py-2 border-t border-slate-800/80 bg-slate-900/40 text-[9px] font-semibold text-slate-500">
               {triggerType === '@' && (
                 <span className="flex items-center gap-1">
-                  <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">â†‘â†“</kbd>
+                  <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">↑↓</kbd>
                   navigate
                 </span>
               )}
               <span className="flex items-center gap-1">
-                <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">â†µ</kbd>
+                <kbd className="bg-slate-800 text-slate-400 px-1 py-0.5 rounded">↵</kbd>
                 select
               </span>
               <span className="flex items-center gap-1 ml-auto">
@@ -1017,9 +1017,9 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
   );
 }
 
-// â”€â”€ Emoji picker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Emoji picker ──────────────────────────────────────────────
 // Rendered above the emoji toolbar button. mousedown default is suppressed on
-// each glyph so clicking never blurs the editor â€” insertChar then drops it at
+// each glyph so clicking never blurs the editor — insertChar then drops it at
 // the live caret. Dismissal (outside-click / Escape) is owned by the composer
 // via emojiGroupRef.
 function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
@@ -1054,13 +1054,13 @@ function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
   );
 }
 
-// StatusÂ·AskÂ·Win selector â€” soft ghost pills (active = tinted primary, no heavy
+// Status·Ask·Win selector — soft ghost pills (active = tinted primary, no heavy
 // fill or boxed container), part of the airy composer redesign. Distinct domain
 // from the Kit AudienceSwitch; promote a generic primitive only if a third
 // caller appears (CLAUDE 2.0 one-off rule).
 const POST_TYPE_OPTIONS: { value: PostType; label: string; icon: LucideIcon; hint: string }[] = [
   { value: 'status', label: 'Status', icon: MessageSquare, hint: 'Share an update' },
-  { value: 'ask', label: 'Ask', icon: HelpCircle, hint: 'Ask for help â€” get unblocked' },
+  { value: 'ask', label: 'Ask', icon: HelpCircle, hint: 'Ask for help — get unblocked' },
   { value: 'win', label: 'Win', icon: Trophy, hint: 'Celebrate a milestone' },
 ];
 

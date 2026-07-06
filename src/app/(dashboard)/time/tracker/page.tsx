@@ -121,10 +121,10 @@ export default function DailyTrackerPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, today's date pill
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
@@ -142,13 +142,13 @@ export default function DailyTrackerPage() {
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: METRIC CARDS GRID
           Contains: Hours Focused, Tasks Done, Wasted Time metric cards
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        {/* Metric: Hours Focused â€” the headline number, so it carries the brand accent. */}
+        {/* Metric: Hours Focused — the headline number, so it carries the brand accent. */}
         <div data-entrance="card" className="surface-raised border border-slate-800/60 rounded-3xl p-6 shadow-apple-lg flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-primary-500/10 text-primary-500 flex items-center justify-center">
@@ -164,7 +164,7 @@ export default function DailyTrackerPage() {
           </div>
         </div>
 
-        {/* Metric: Tasks Done â€” emerald = finished/good (data meaning, kept). */}
+        {/* Metric: Tasks Done — emerald = finished/good (data meaning, kept). */}
         <div data-entrance="card" className="surface-raised border border-slate-800/60 rounded-3xl p-6 shadow-apple-lg flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -189,7 +189,7 @@ export default function DailyTrackerPage() {
           </div>
         </div>
 
-        {/* Metric: Wasted Time â€” rose = over/bad (data meaning, kept). */}
+        {/* Metric: Wasted Time — rose = over/bad (data meaning, kept). */}
         <div data-entrance="card" className="surface-raised border border-slate-800/60 rounded-3xl p-6 shadow-apple-lg flex flex-col justify-between min-h-[160px] relative overflow-hidden">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center">
@@ -218,10 +218,10 @@ export default function DailyTrackerPage() {
 
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: ACTIVITY LIST
           Contains: Today's completed-task entries (planned vs actual minutes)
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div data-entrance="card" className="surface-base border border-slate-800/60 rounded-3xl p-6">
         <div className="mb-6 pb-4 border-b border-slate-850">
           <SectionHeader

@@ -105,7 +105,7 @@ export default function PostDetail({
   const [repostCount, setRepostCount] = useState(post.repost_count ?? 0);
   // Public-only repost (F2.4); the permalink hero only ever shows a single post,
   // so the repost target is this post's id (the service collapses any chain).
-  // ponytail: plain repost only here Ã¢â‚¬â€ quote-with-comment lives on the feed card,
+  // ponytail: plain repost only here — quote-with-comment lives on the feed card,
   // one click away, so the public route never loads the heavy composer bundle.
   const canRepost = (post.visibility ?? 'public') === 'public';
 
@@ -118,7 +118,7 @@ export default function PostDetail({
   const isWin = postType === 'win';
   const isResolved = !!resolvedAt;
 
-  // Owner accepts one answer Ã¢â€ â€™ resolves the ask + logs the helpful event server-side.
+  // Owner accepts one answer → resolves the ask + logs the helpful event server-side.
   // Re-markable: accepting a different answer just moves the pointer.
   const acceptAnswer = async (commentId: number) => {
     if (!isOwner || !isAsk) return;
@@ -140,7 +140,7 @@ export default function PostDetail({
     } catch { /* non-blocking */ }
   };
 
-  // Owner reopens a resolved ask Ã¢â€ â€™ back to "Help needed"; drops the accepted
+  // Owner reopens a resolved ask → back to "Help needed"; drops the accepted
   // answer and deletes the helpful-event server-side. The reversible undo, so no
   // confirm step (CLAUDE.md: Undo > Confirm).
   const reopenAsk = async () => {
@@ -159,7 +159,7 @@ export default function PostDetail({
     } catch { /* non-blocking */ }
   };
 
-  // Private bookmark toggle (optimistic). Anonymous Ã¢â€ â€™ polite sign-in prompt.
+  // Private bookmark toggle (optimistic). Anonymous → polite sign-in prompt.
   const toggleBookmark = async () => {
     if (!viewerId) { setSignInOpen(true); return; }
     const next = !bookmarked;
@@ -169,7 +169,7 @@ export default function PostDetail({
     } catch { setBookmarked(!next); }
   };
 
-  // Plain repost toggle (optimistic). Anonymous Ã¢â€ â€™ sign-in prompt.
+  // Plain repost toggle (optimistic). Anonymous → sign-in prompt.
   const togglePlainRepost = async () => {
     if (!viewerId) { setSignInOpen(true); return; }
     const next = !reposted;
@@ -224,10 +224,10 @@ export default function PostDetail({
 
       <SignInPrompt open={signInOpen} onClose={() => setSignInOpen(false)} action="connect with people, save & repost" />
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: BREADCRUMB
           Contains: Back link to home feed
-          Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          ────────────────────────────────────────────────────────── */}
       <Link
         href="/home"
         className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-300 transition-colors"
@@ -236,10 +236,10 @@ export default function PostDetail({
         Home
       </Link>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: POST CARD
           Contains: Author row, post content, like/comment/share actions
-          Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          ────────────────────────────────────────────────────────── */}
       <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-7 shadow-apple">
 
         {/* Author row */}
@@ -343,7 +343,7 @@ export default function PostDetail({
             </span>
           </div>
 
-          {/* Repost Ã¢â‚¬â€ public-only, plain toggle (optimistic). */}
+          {/* Repost — public-only, plain toggle (optimistic). */}
           {canRepost && (
             <Button
               variant="unstyled"
@@ -385,10 +385,10 @@ export default function PostDetail({
         </div>
       </div>
 
-      {/* Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: COMMENTS SECTION
           Contains: Comment count header, comment input, threaded comment tree
-          Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */}
+          ────────────────────────────────────────────────────────── */}
       <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-7 shadow-apple space-y-5">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -424,7 +424,7 @@ export default function PostDetail({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitTopComment(); }
             }}
-            placeholder={viewerId ? 'Write a commentÃ¢â‚¬Â¦' : 'Sign in to commentÃ¢â‚¬Â¦'}
+            placeholder={viewerId ? 'Write a comment…' : 'Sign in to comment…'}
             disabled={!viewerId}
             maxLength={1000}
             className="flex-1 bg-[#111318] rounded-xl px-4 py-2.5 text-sm text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -463,7 +463,7 @@ export default function PostDetail({
   );
 }
 
-// Ã¢â€â‚¬Ã¢â€â‚¬ Comment row (recursive Ã¢â‚¬â€ supports reply threads) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+// ── Comment row (recursive — supports reply threads) ──────────
 function CommentRow({
   comment,
   onReply,
@@ -560,7 +560,7 @@ function CommentRow({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submitReply(); }
             }}
-            placeholder={`Reply to ${name}Ã¢â‚¬Â¦`}
+            placeholder={`Reply to ${name}…`}
             maxLength={1000}
             className="flex-1 bg-[#111318] rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
           />

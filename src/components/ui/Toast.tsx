@@ -4,11 +4,11 @@ import React, { createContext, useCallback, useContext, useRef, useState } from 
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ──────────────────────────────────────────────────────────
     DEVELOPMENT NAVIGATOR: TOAST NOTIFICATION SYSTEM
     Contains: ToastProvider (context + viewport), useToast hook
-    â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    Self-contained â€” mount <ToastProvider> around any subtree
+    ──────────────────────────────────────────────────────────
+    Self-contained — mount <ToastProvider> around any subtree
     that needs to call toast(). Not wired into the app's global
     providers.tsx; opt in where it's actually needed. */
 

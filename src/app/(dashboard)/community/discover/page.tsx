@@ -38,7 +38,7 @@ export default function DiscoverPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  // `silent` skips the spinner â€” live re-syncs must never blank the grid.
+  // `silent` skips the spinner — live re-syncs must never blank the grid.
   const fetchDiscover = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -97,7 +97,7 @@ export default function DiscoverPage() {
       if (data.success) {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
-        // Echo locally â€” updates the Active-now rail and suggestion cards in
+        // Echo locally — updates the Active-now rail and suggestion cards in
         // the shell immediately (see emitSocialUpdate).
         emitSocialUpdate(action, targetId);
         fetchDiscover(true);
@@ -118,10 +118,10 @@ export default function DiscoverPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, global user-search autocomplete
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -129,7 +129,7 @@ export default function DiscoverPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Grow your network â€” connect with people who match your skills.</p>
+            <p className="text-xs text-slate-400">Grow your network — connect with people who match your skills.</p>
           </div>
         </div>
 
@@ -195,10 +195,10 @@ export default function DiscoverPage() {
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-          DEVELOPMENT NAVIGATOR: CONTENT â€” SUGGESTED PEOPLE
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: CONTENT — SUGGESTED PEOPLE
           Contains: Discoverable people grid with the Connect action
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>

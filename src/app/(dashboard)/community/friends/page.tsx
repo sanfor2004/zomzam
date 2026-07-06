@@ -38,7 +38,7 @@ export default function FriendsPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  // `silent` skips the spinner â€” live re-syncs must never blank the grid.
+  // `silent` skips the spinner — live re-syncs must never blank the grid.
   const fetchFriends = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -97,7 +97,7 @@ export default function FriendsPage() {
       if (data.success) {
         const successMsg = socialSuccessToast(action);
         if (successMsg) toast({ variant: 'success', description: successMsg });
-        // Echo locally â€” the Active-now rail drops/adds the person immediately.
+        // Echo locally — the Active-now rail drops/adds the person immediately.
         emitSocialUpdate(action, targetId);
         fetchFriends(true);
         if (searchQuery.trim().length >= 2) {
@@ -117,10 +117,10 @@ export default function FriendsPage() {
   return (
     <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Icon badge, title + subtitle, global user-search autocomplete
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
@@ -128,7 +128,7 @@ export default function FriendsPage() {
           </div>
           <div>
             <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Your connections â€” the people you've linked up with.</p>
+            <p className="text-xs text-slate-400">Your connections — the people you've linked up with.</p>
           </div>
         </div>
 
@@ -194,10 +194,10 @@ export default function FriendsPage() {
         </div>
       </div>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-          DEVELOPMENT NAVIGATOR: CONTENT â€” FRIENDS GRID
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: CONTENT — FRIENDS GRID
           Contains: Accepted-friends grid with status and management actions
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {loading ? (
         <div className="flex items-center justify-center min-h-[300px]">
           <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>

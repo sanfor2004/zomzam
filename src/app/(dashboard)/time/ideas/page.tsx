@@ -52,7 +52,7 @@ export default function IdeaCapturePage() {
   const [mentionList, setMentionList] = useState<MentionItem[]>([]);
   const [mentionIndex, setSelectedIndex] = useState(0);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
-  // Snapshot of the caret at the moment `@â€¦` is typed, so a pill can still be
+  // Snapshot of the caret at the moment `@…` is typed, so a pill can still be
   // inserted after an async create round-trip has blurred the live selection.
   const mentionRangeRef = useRef<Range | null>(null);
 
@@ -183,7 +183,7 @@ export default function IdeaCapturePage() {
       const queryStr = rawQuery.toLowerCase();
       setMentionActive(true);
       setSelectedIndex(0);
-      // Freeze the caret position now â€” a click on a create row will blur the
+      // Freeze the caret position now — a click on a create row will blur the
       // editor before the async task insert completes.
       mentionRangeRef.current = range.cloneRange();
 
@@ -475,10 +475,10 @@ export default function IdeaCapturePage() {
       className="max-w-6xl mx-auto space-y-8 relative"
     >
       
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: FLOATING MENTIONS DROPDOWN MENU
           Rendered absolute using page-relative coordinates for '@' queries
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       {mentionActive && mentionList.length > 0 && (
         <div 
           className="absolute z-50 w-64 max-h-64 overflow-y-auto bg-slate-900/95 backdrop-blur-xl border border-slate-800 rounded-2xl shadow-glass p-2 scale-100 opacity-100 transition-all"
@@ -489,7 +489,7 @@ export default function IdeaCapturePage() {
           }}
         >
           <div className="px-3 pb-2 mb-2 border-b border-slate-800 text-[11px] font-semibold text-slate-400">
-            Link toâ€¦
+            Link to…
           </div>
           <div className="space-y-0.5">
             {mentionList.map((item, idx) => {
@@ -509,7 +509,7 @@ export default function IdeaCapturePage() {
                   >
                     <Sparkles className="w-3.5 h-3.5 shrink-0 text-emerald-500" />
                     <span className="truncate">
-                      Create task <span className="text-emerald-400">â€œ{item.label}â€</span>
+                      Create task <span className="text-emerald-400">“{item.label}”</span>
                     </span>
                   </Button>
                 );
@@ -544,11 +544,11 @@ export default function IdeaCapturePage() {
         </div>
       )}
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: INLINE TASK EDITOR MODAL
-          Opened by clicking a task pill â€” sets title, priority, and the
+          Opened by clicking a task pill — sets title, priority, and the
           focus timer (duration_block) that drives the Pomodoro page
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={!!taskEditor}
         onClose={() => setTaskEditor(null)}
@@ -566,7 +566,7 @@ export default function IdeaCapturePage() {
               className="flex-1"
             >
               <Save className="w-4 h-4 mr-2" />
-              {savingTask ? 'Savingâ€¦' : 'Save task'}
+              {savingTask ? 'Saving…' : 'Save task'}
             </Button>
           </>
         }
@@ -608,9 +608,9 @@ export default function IdeaCapturePage() {
         </div>
       </Modal>
 
-      {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: PAGE HEADER SECTION
-          â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+          ────────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-primary-500/10 text-primary-500 flex items-center justify-center">
@@ -629,10 +629,10 @@ export default function IdeaCapturePage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
         
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: CONTENTEDITABLE EDITOR WRAPPER
             Supports rich pills, key listeners for Arrow/Enter/Esc dropdown control
-            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            ────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-3 space-y-6">
           <div data-entrance="card" className="surface-raised border border-slate-800/60 rounded-3xl p-6">
 
@@ -696,15 +696,15 @@ export default function IdeaCapturePage() {
               How linking works
             </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. Link an existing task or dream horizon â€” or, if none matches, hit <span className="text-emerald-400 font-semibold">Create task</span> to spin up a new one on the spot. Click any <span className="text-primary-400 font-semibold">task pill</span> to set its priority and focus timer.
+              When typing your idea, type <code className="text-emerald-500 font-bold bg-emerald-500/5 px-1 rounded">@</code> to open the reference engine. Link an existing task or dream horizon — or, if none matches, hit <span className="text-emerald-400 font-semibold">Create task</span> to spin up a new one on the spot. Click any <span className="text-primary-400 font-semibold">task pill</span> to set its priority and focus timer.
             </p>
           </div>
         </div>
 
-        {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: IDEA VAULT CARDS GRID
             Renders filtered ideas list with edit/delete control and formatting
-            â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+            ────────────────────────────────────────────────────────── */}
         <div data-entrance="card" className="lg:col-span-2 surface-base border border-slate-800/60 rounded-3xl p-6 flex flex-col min-h-[460px]">
           <div className="mb-5 pb-3 border-b border-slate-850">
             <SectionHeader

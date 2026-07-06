@@ -8,22 +8,22 @@ import { useMessages, useMyId, type ChatWindow } from '@/context/MessagesContext
 import { displayName, relativeTime } from '@/app/(dashboard)/home/shared';
 import { TypingDots, TypingBadge } from './TypingDots';
 
-// A compact, curated emoji set for the quick-insert picker â€” no external lib
-// (none installed; see CLAUDE.md Â§5). Covers the common reactions people reach
+// A compact, curated emoji set for the quick-insert picker — no external lib
+// (none installed; see CLAUDE.md §5). Covers the common reactions people reach
 // for in a chat without the weight of a full emoji-mart dependency.
 const QUICK_EMOJIS = [
-  'ðŸ˜€', 'ðŸ˜‚', 'ðŸ™‚', 'ðŸ˜‰', 'ðŸ˜', 'ðŸ˜Ž', 'ðŸ¤©', 'ðŸ˜˜',
-  'ðŸ¤”', 'ðŸ˜´', 'ðŸ˜…', 'ðŸ˜­', 'ðŸ˜¡', 'ðŸ¥³', 'ðŸ˜±', 'ðŸ¤¯',
-  'ðŸ‘', 'ðŸ‘Ž', 'ðŸ‘', 'ðŸ™', 'ðŸ’ª', 'ðŸ¤', 'ðŸ‘‹', 'ðŸ”¥',
-  'â¤ï¸', 'ðŸ§¡', 'ðŸ’¯', 'âœ¨', 'ðŸŽ‰', 'ðŸš€', 'â˜•', 'âœ…',
+  '😀', '😂', '🙂', '😉', '😍', '😎', '🤩', '😘',
+  '🤔', '😴', '😅', '😭', '😡', '🥳', '😱', '🤯',
+  '👍', '👎', '👏', '🙏', '💪', '🤝', '👋', '🔥',
+  '❤️', '🧡', '💯', '✨', '🎉', '🚀', '☕', '✅',
 ];
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 // DEVELOPMENT NAVIGATOR: GLOBAL CHAT DOCK
 // Facebook-style chat windows docked at the bottom-right, available on every
-// dashboard route. Pure view over MessagesContext â€” open/close/minimize/send all
+// dashboard route. Pure view over MessagesContext — open/close/minimize/send all
 // flow through context methods. Auto-pops when a message arrives (see context).
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ──────────────────────────────────────────────────────────
 export function ChatDock() {
   const { windows } = useMessages();
   if (windows.length === 0) return null;
@@ -60,12 +60,12 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
   const isOnline = live?.is_online ?? win.otherUser.is_online ?? false;
   const isIdle = Boolean(isOnline && (live?.is_idle ?? win.otherUser.is_idle));
   const onlineLabel = live?.online_label ?? win.otherUser.online_label;
-  // online & idle â†’ amber, online & active â†’ emerald, offline â†’ slate.
+  // online & idle → amber, online & active → emerald, offline → slate.
   const dotColor = isOnline ? (isIdle ? 'bg-amber-400' : 'bg-emerald-500') : 'bg-slate-600';
   // Typing wins over every presence state: while the peer composes, their icon
-  // and subtitle both flip to a live "typingâ€¦" signal.
+  // and subtitle both flip to a live "typing…" signal.
   const isTyping = typingContacts.has(otherId);
-  const presence = isTyping ? 'typingâ€¦' : isIdle ? 'Away' : (onlineLabel || (isOnline ? 'Active now' : 'Offline'));
+  const presence = isTyping ? 'typing…' : isIdle ? 'Away' : (onlineLabel || (isOnline ? 'Active now' : 'Offline'));
 
   const insertEmoji = (emoji: string) => {
     setDraft(otherId, win.text + emoji);
@@ -74,13 +74,13 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
 
   // "Seen" marker: show under the thread when my most recent message has been
   // read by the peer (read_at set live via the zz-message-read receipt). If the
-  // peer has since replied, the last message is theirs â€” no marker needed.
+  // peer has since replied, the last message is theirs — no marker needed.
   const lastMsg = win.messages[win.messages.length - 1];
   const showSeen = !win.loading && !!lastMsg && lastMsg.sender_id === myId && !!lastMsg.read_at;
 
   return (
     <div className="pointer-events-auto w-[320px] max-w-[calc(100vw-2rem)] surface-card border border-slate-800/70 rounded-t-2xl shadow-2xl flex flex-col overflow-hidden">
-      {/* â”€â”€ Header (not click-to-minimize: use the explicit control on the right) â”€â”€ */}
+      {/* ── Header (not click-to-minimize: use the explicit control on the right) ── */}
       <div className="flex items-center gap-2.5 px-3 py-2.5 bg-slate-900/60 border-b border-slate-800/60">
         <div className="relative flex-shrink-0">
           <Image
@@ -131,7 +131,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
         </button>
       </div>
 
-      {/* â”€â”€ Body + composer (hidden while minimized) â”€â”€ */}
+      {/* ── Body + composer (hidden while minimized) ── */}
       {!win.minimized && (
         <>
           <div
@@ -143,7 +143,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
                 <Loader2 className="w-5 h-5 text-slate-500 animate-spin" />
               </div>
             ) : win.messages.length === 0 ? (
-              <p className="text-xs text-slate-600 text-center py-10">Say hello to {name} ðŸ‘‹</p>
+              <p className="text-xs text-slate-600 text-center py-10">Say hello to {name} 👋</p>
             ) : (
               win.messages.map((m) => {
                 const isMine = m.sender_id === myId;
@@ -153,10 +153,10 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
                 const menuOpen = menuFor === m.id;
                 return (
                   <div key={m.id} className={`group flex items-center gap-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
-                    {/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+                    {/* ──────────────────────────────────────────────────────────
                         DEVELOPMENT NAVIGATOR: MESSAGE OPTIONS (my messages only)
-                        Contains: hover-revealed 3-dots trigger â†’ Delete (unsend) menu
-                        â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                        Contains: hover-revealed 3-dots trigger → Delete (unsend) menu
+                        ────────────────────────────────────────────────────────── */}
                     {canDelete && (
                       <div className="relative flex-shrink-0">
                         <button
@@ -173,7 +173,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
                         </button>
                         {menuOpen && (
                           <>
-                            {/* Click-away scrim â€” closes the menu on any outside tap. */}
+                            {/* Click-away scrim — closes the menu on any outside tap. */}
                             <button
                               type="button"
                               aria-label="Close menu"
@@ -212,12 +212,12 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
               })
             )}
 
-            {/* â”€â”€ "Seen" receipt â”€â”€ */}
+            {/* ── "Seen" receipt ── */}
             {showSeen && (
               <p className="text-[10px] text-slate-500 text-right pr-1">Seen</p>
             )}
 
-            {/* â”€â”€ Typing indicator (peer is composing) â”€â”€ */}
+            {/* ── Typing indicator (peer is composing) ── */}
             {win.peerTyping && (
               <div className="flex justify-start" aria-label={`${name} is typing`}>
                 <div className="bg-slate-800/70 rounded-2xl rounded-bl-md px-3.5 py-2.5">
@@ -230,10 +230,10 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
           </div>
 
           <div className="relative flex items-center gap-2 p-2.5 border-t border-slate-800/60">
-            {/* â”€â”€ Emoji picker â”€â”€ */}
+            {/* ── Emoji picker ── */}
             {emojiOpen && (
               <>
-                {/* Click-away scrim â€” closes the picker on any outside tap. */}
+                {/* Click-away scrim — closes the picker on any outside tap. */}
                 <button
                   type="button"
                   aria-label="Close emoji picker"
