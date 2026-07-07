@@ -5,10 +5,11 @@ import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, Shield, Heart, PiggyBank, HelpCircle } from 'lucide-react';
-import { Button, Select } from '@/components/ui';
+import { Button, Select, ProLock } from '@/components/ui';
 import { QuickBar } from '@/components/money/QuickBar';
 import { BudgetRings } from '@/components/money/BudgetRings';
 import { AccountCard } from '@/components/money/AccountCard';
+import { ClientProfitabilityTeaser } from '@/components/money/ClientProfitabilityTeaser';
 
 function getCategoryIcon(iconName: string | null) {
   switch (iconName) {
@@ -92,14 +93,24 @@ export default function MoneyDashboardPage() {
       <div className="grid grid-cols-1 @3xl:grid-cols-3 gap-8">
 
         {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: LEFT COLUMN — BUDGET RINGS, PRO TEASER, LENDING
-            Contains: nested activity-ring budget (see BudgetRings.tsx), Phase 6
-            client-profitability teaser placeholder, lending summary card
+            DEVELOPMENT NAVIGATOR: LEFT COLUMN — BUDGET RINGS, PRO TEASERS, LENDING
+            Contains: nested activity-ring budget (see BudgetRings.tsx), advanced-
+            reports lock (spot #4), client-profitability teaser (spot #1),
+            lending summary card
             ────────────────────────────────────────────────────────── */}
         <div className="@3xl:col-span-1 space-y-6">
           <BudgetRings />
 
-          {/* Phase 6: <ClientProfitabilityTeaser/> */}
+          {/* Pro spot #4 — current-month budget above stays free; only
+              trends/month-over-month/runway are gated (spec §7). */}
+          <ProLock
+            variant="strip"
+            label="Advanced reports"
+            sublabel="Trends, month-over-month, runway"
+            blurred={<span>↗ ↘</span>}
+          />
+
+          <ClientProfitabilityTeaser />
 
           <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple">
             <h3 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Lending Summary</h3>
