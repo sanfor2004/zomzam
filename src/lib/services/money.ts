@@ -1,5 +1,6 @@
 import { query, queryOne, execute, transaction } from '@/lib/db';
 import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
+import { HttpError } from '@/lib/http-error';
 
 export const DEFAULT_BUCKETS = [
   { key: 'need', label: 'Needs', percent: 60 },
@@ -42,10 +43,14 @@ export async function addTransaction(userId: number, input: AddTransactionInput)
        input.type === 'income' ? input.lead_id : null],
     );
     insertId = res.insertId;
-    await c.execute(
+    const [balanceRes] = await c.execute<any>(
       `UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`,
       [balanceDelta(input.type, input.amount), input.account_id, userId],
     );
+    // account_id didn't belong to this user — abort so the INSERT above rolls back too.
+    if (balanceRes.affectedRows === 0) {
+      throw new HttpError(400, 'Invalid account');
+    }
   });
   return insertId;
 }

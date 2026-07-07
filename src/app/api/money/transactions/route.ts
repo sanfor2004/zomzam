@@ -13,16 +13,23 @@ export const POST = withAuth(async (req, user) => {
   const b = await req.json().catch(() => ({}));
   const amount = parseFloat(b.amount);
   const type = b.type;
-  if (!['income', 'expense', 'transfer'].includes(type) || !b.account_id || isNaN(amount) || amount <= 0) {
+  const accountId = parseInt(b.account_id);
+  const categoryId = b.category_id ? parseInt(b.category_id) : null;
+  const leadId = b.lead_id ? parseInt(b.lead_id) : null;
+  if (
+    !['income', 'expense', 'transfer'].includes(type) || !accountId || isNaN(accountId) ||
+    isNaN(amount) || amount <= 0 ||
+    (categoryId !== null && isNaN(categoryId)) || (leadId !== null && isNaN(leadId))
+  ) {
     return NextResponse.json({ success: false, message: 'Invalid input' }, { status: 400 });
   }
   const id = await addTransaction(user.id, {
-    account_id: parseInt(b.account_id),
-    category_id: b.category_id ? parseInt(b.category_id) : null,
+    account_id: accountId,
+    category_id: categoryId,
     type, amount, currency: b.currency || 'EGP',
     description: (b.description || '').slice(0, 255),
     date: b.date || new Date().toISOString().substring(0, 10),
-    lead_id: b.lead_id ? parseInt(b.lead_id) : null,
+    lead_id: leadId,
   });
   return NextResponse.json({ success: true, id });
 });
