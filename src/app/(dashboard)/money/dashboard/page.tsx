@@ -1,15 +1,27 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useCallback, useRef } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
-import { useMoney } from '@/context/MoneyContext';
+import { useMoney, type Transaction } from '@/context/MoneyContext';
 import { useRouter } from 'next/navigation';
 import { ChevronRight, Shield, Heart, PiggyBank, HelpCircle } from 'lucide-react';
-import { Button, Select, ProLock } from '@/components/ui';
+import { Button, Select, ProLock, useToast } from '@/components/ui';
 import { QuickBar } from '@/components/money/QuickBar';
 import { BudgetRings } from '@/components/money/BudgetRings';
 import { AccountCard } from '@/components/money/AccountCard';
 import { ClientProfitabilityTeaser } from '@/components/money/ClientProfitabilityTeaser';
+
+// Rank-by-COUNT only — never touches a rate. The top 3 income-tagged clients
+// by transaction count qualify as "top earners" for the post-tag nudge copy
+// (spec §7 — the actual per-client rate stays server-side/Pro-gated).
+function isTopEarnerByCount(transactions: Transaction[], leadId: number): boolean {
+  const counts = new Map<number, number>();
+  for (const t of transactions) {
+    if (t.type === 'income' && t.lead_id != null) counts.set(t.lead_id, (counts.get(t.lead_id) ?? 0) + 1);
+  }
+  const top3 = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id]) => id);
+  return top3.includes(leadId);
+}
 
 function getCategoryIcon(iconName: string | null) {
   switch (iconName) {
@@ -39,7 +51,25 @@ export default function MoneyDashboardPage() {
     updateSettings,
     formatAmount,
   } = useMoney();
+  const { toast } = useToast();
   usePageEntrance(containerRef, [isLoading]);
+
+  // Post-tag Pro upsell nudge (spot #2) — fires after QuickBar logs income
+  // carrying a lead_id. Client name + "top earner" both come from the
+  // already-loaded transactions list; no rate is fetched or shown.
+  const handleIncomeTagged = useCallback(
+    (leadId: number) => {
+      const clientName = transactions.find((t) => t.lead_id === leadId)?.client_name;
+      if (!clientName || !isTopEarnerByCount(transactions, leadId)) return;
+      toast({
+        title: `${clientName} is one of your top earners`,
+        description: 'Unlock per-client hourly rate →',
+        variant: 'info',
+        href: '/pricing',
+      });
+    },
+    [transactions, toast],
+  );
 
   if (isLoading) {
     return (
@@ -76,7 +106,7 @@ export default function MoneyDashboardPage() {
           Contains: Income/Expense/Transfer quick-log bar (see QuickBar.tsx)
           ────────────────────────────────────────────────────────── */}
       <div data-entrance="card">
-        <QuickBar onIncomeTagged={() => { /* Phase 6: wire the post-tag Pro upsell nudge here */ }} />
+        <QuickBar onIncomeTagged={handleIncomeTagged} />
       </div>
 
       {/* ──────────────────────────────────────────────────────────

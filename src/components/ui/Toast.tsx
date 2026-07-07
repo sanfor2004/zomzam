@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useRef, useState } from 'react';
+import Link from 'next/link';
 import { CheckCircle, AlertCircle, AlertTriangle, Info, X, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,6 +21,8 @@ export interface ToastOptions {
   variant?: ToastVariant;
   /** Auto-dismiss delay in ms. Defaults to 4000. */
   duration?: number;
+  /** Optional CTA — wraps title/description in a Link and dismisses on click. Omit for a plain message toast. */
+  href?: string;
 }
 
 interface ToastEntry extends ToastOptions {
@@ -86,10 +89,17 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               )}
             >
               <Icon className="w-5 h-5 mt-0.5 shrink-0" aria-hidden="true" />
-              <div className="flex-1 min-w-0">
-                {t.title && <p className="text-sm font-bold text-white mb-0.5">{t.title}</p>}
-                <p className="text-xs text-slate-400">{t.description}</p>
-              </div>
+              {t.href ? (
+                <Link href={t.href} onClick={() => dismiss(t.id)} className="flex-1 min-w-0 hover:opacity-90 transition-opacity">
+                  {t.title && <p className="text-sm font-bold text-white mb-0.5">{t.title}</p>}
+                  <p className="text-xs text-slate-400">{t.description}</p>
+                </Link>
+              ) : (
+                <div className="flex-1 min-w-0">
+                  {t.title && <p className="text-sm font-bold text-white mb-0.5">{t.title}</p>}
+                  <p className="text-xs text-slate-400">{t.description}</p>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => dismiss(t.id)}
