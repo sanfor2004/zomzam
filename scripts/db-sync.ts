@@ -108,10 +108,13 @@ const schema: Record<string, Record<string, string>> = {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     user_id: 'INT UNSIGNED NOT NULL',
     name: 'VARCHAR(100) NOT NULL',
-    type: "ENUM('bank', 'cash', 'paypal', 'wallet', 'other') NOT NULL DEFAULT 'bank'",
+    type: "ENUM('bank', 'cash', 'paypal', 'wallet', 'other', 'credit_card') NOT NULL DEFAULT 'bank'",
     currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
     balance: 'DECIMAL(15, 2) NOT NULL DEFAULT 0.00',
     last_four: 'VARCHAR(4) NULL',
+    credit_limit: 'DECIMAL(15, 2) NULL',
+    statement_day: 'TINYINT UNSIGNED NULL',
+    due_day: 'TINYINT UNSIGNED NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
     updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
   },
@@ -147,6 +150,13 @@ const schema: Record<string, Record<string, string>> = {
     currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
     status: "ENUM('pending', 'partial', 'settled') NOT NULL DEFAULT 'pending'",
     due_date: 'DATE NULL',
+    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+    updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  },
+  money_budget: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    buckets: 'JSON NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
     updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
   },
@@ -358,6 +368,9 @@ const indexes: Record<string, Record<string, string>> = {
   users: {
     uq_email_canonical: 'UNIQUE INDEX uq_email_canonical (email_canonical)',  // one account per inbox (blocks dot/+tag/case duplicates)
   },
+  money_budget: {
+    uq_user_id: 'UNIQUE INDEX uq_user_id (user_id)',  // one budget row per user (ON DUPLICATE KEY UPDATE target)
+  },
   posts: {
     idx_user_id: 'INDEX idx_user_id (user_id)',
     idx_created_at: 'INDEX idx_created_at (created_at DESC)',
@@ -478,6 +491,23 @@ async function syncDatabase() {
         await connection.query(`ALTER TABLE \`${tableName}\` ADD ${addClause}`);
       }
     }
+  }
+
+  // Custom schema updates (widening money_accounts.type enum to add 'credit_card' —
+  // the generic column loop above only ADDs missing columns, it never MODIFYs an
+  // existing one, so a changed ENUM on a pre-existing install needs this same
+  // pattern as the two blocks below)
+  try {
+    const [columnsInfo] = await connection.query<any[]>(`DESCRIBE \`money_accounts\``);
+    const typeCol = columnsInfo.find((c: any) => c.Field === 'type');
+    if (typeCol && !typeCol.Type.includes('credit_card')) {
+      console.log("Modifying money_accounts.type enum to add 'credit_card'...");
+      await connection.query(
+        "ALTER TABLE `money_accounts` MODIFY COLUMN `type` ENUM('bank', 'cash', 'paypal', 'wallet', 'other', 'credit_card') NOT NULL DEFAULT 'bank'"
+      );
+    }
+  } catch (err) {
+    console.error('Failed to update money_accounts.type enum:', err);
   }
 
   // Custom schema updates (making crm_projects.lead_id nullable)
