@@ -14,7 +14,7 @@ import { ChatDock } from '@/components/chat/ChatDock';
 import { RightSidebar, SidebarBody } from '@/components/chat/RightSidebar';
 import { NotificationToaster } from '@/components/chat/NotificationToaster';
 import { DropdownMenu } from '@/components/ui/Dropdown';
-import { Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Home, MessageCircle, Sparkles, Bookmark, ChevronLeft, ChevronRight, ChevronDown, Zap, Plus, Repeat2, UserPlus, CircleAlert, PartyPopper, HandMetal, Handshake, type LucideIcon } from 'lucide-react';
+import { Clock, DollarSign, Settings, LogOut, Menu, Bell, Users, Home, MessageCircle, Sparkles, Bookmark, ChevronDown, Zap, Plus, Repeat2, UserPlus, CircleAlert, PartyPopper, HandMetal, Handshake, type LucideIcon } from 'lucide-react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { cn } from '@/lib/utils';
 import { describeNotification, notifTimeAgo } from '@/lib/notifications';
@@ -79,32 +79,6 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const [msgDropdownOpen, setMsgDropdownOpen] = useState(false);
   const sidebarNavRef = useRef<HTMLElement>(null);
-
-  // ── Collapsible left sidebar (icon-only) ────────────────────
-  // Persisted so the choice survives reloads. When collapsed the rail narrows to
-  // an icon strip; expandable groups collapse to a single icon that routes to the
-  // group's primary page (full sub-lists only make sense at full width).
-  const [leftCollapsed, setLeftCollapsed] = useState(false);
-  useEffect(() => {
-    try { setLeftCollapsed(localStorage.getItem('zz-left-collapsed') === '1'); } catch {}
-  }, []);
-  const toggleLeft = () => setLeftCollapsed((v) => {
-    const next = !v;
-    try { localStorage.setItem('zz-left-collapsed', next ? '1' : '0'); } catch {}
-    return next;
-  });
-
-  // Flat icon nav used in collapsed mode (groups → their primary page).
-  const collapsedNav: { Icon: LucideIcon; label: string; path: string; badge?: number }[] = [
-    { Icon: Home, label: t('nav_home') || 'Home', path: '/home' },
-    { Icon: Bookmark, label: 'Saved', path: '/saved' },
-    { Icon: MessageCircle, label: 'Messages', path: '/messages', badge: unreadTotal },
-    { Icon: Clock, label: t('nav_time') || 'Time', path: '/time/execution' },
-    { Icon: DollarSign, label: t('nav_money') || 'Money', path: '/money/dashboard' },
-    { Icon: Users, label: t('nav_community') || 'Community', path: '/community/friends' },
-    { Icon: Sparkles, label: 'Upgrade', path: '/pricing' },
-    { Icon: Settings, label: t('nav_settings') || 'Settings', path: '/settings' },
-  ];
 
   // Open a docked chat window for a contact, then close the dropdown.
   const handleOpenContact = (c: ChatContact) => {
@@ -585,27 +559,11 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           Contains: Main Nav and User Mini Profile (Status indicator). The logo
           now lives in the full-width top bar, so this rail starts at its nav card.
           ────────────────────────────────────────────────────────── */}
-      <aside className={`hidden md:flex flex-col ${leftCollapsed ? 'w-[76px]' : 'w-64'} h-[calc(100vh-95px)] m-2.5 flex-shrink-0 transition-all duration-300 relative z-10`}>
+      <aside className="hidden md:flex flex-col w-64 h-[calc(100vh-95px)] m-2.5 flex-shrink-0 relative z-10">
         {/* Sidebar surface — rounded bordered card begins at the nav bar */}
         <div className="flex-1 flex flex-col min-h-0 bg-surface-dark/90 backdrop-blur-xl border border-slate-800 rounded-3xl overflow-hidden">
         {/* Navigation */}
-        <nav ref={sidebarNavRef} className={`flex-1 py-6 space-y-2 overflow-y-auto no-scrollbar ${leftCollapsed ? 'px-2' : 'px-4'}`}>
-          {leftCollapsed ? (
-            collapsedNav.map(({ Icon, label, path, badge }) => (
-              <Button key={path} variant="unstyled"
-                onClick={() => router.push(path)}
-                title={label}
-                aria-label={label}
-                className={`relative w-full flex items-center justify-center h-11 rounded-xl text-slate-400 hover:bg-slate-800/50 hover:text-white transition-colors${isActive(path)}`}
-              >
-                <Icon className="w-5 h-5" />
-                {badge ? (
-                  <span className="absolute top-1 right-2 min-w-[16px] h-4 px-1 rounded-full bg-primary-500 text-white text-[9px] font-bold flex items-center justify-center">{badge}</span>
-                ) : null}
-              </Button>
-            ))
-          ) : (
-          <>
+        <nav ref={sidebarNavRef} className="flex-1 py-6 space-y-2 overflow-y-auto no-scrollbar px-4">
           {/* Home */}
           <Button variant="unstyled"
             onClick={() => router.push('/home')}
@@ -690,27 +648,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
               <span>Upgrade to Pro</span>
             </Button>
           </div>
-          </>
-          )}
         </nav>
-
-        {/* Collapse toggle — narrows the rail to icons only (persisted) */}
-        <button
-          type="button"
-          onClick={toggleLeft}
-          aria-label={leftCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={leftCollapsed ? 'Expand' : 'Collapse'}
-          className={`mx-2 mb-1 flex items-center gap-2 rounded-xl px-3 py-2 text-slate-500 hover:text-white hover:bg-slate-800/50 transition-colors ${leftCollapsed ? 'justify-center' : ''}`}
-        >
-          {leftCollapsed ? (
-            <ChevronRight className="w-5 h-5" />
-          ) : (
-            <>
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-xs font-semibold">Collapse</span>
-            </>
-          )}
-        </button>
 
         {/* User Mini Profile */}
         <div className="relative border-t border-slate-800/50 overflow-hidden">
@@ -721,11 +659,11 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           ></div>
 
           <div className="p-4 relative z-10">
-            <div className={`flex gap-3 ${leftCollapsed ? 'flex-col items-center' : 'items-center justify-between px-3'}`}>
+            <div className="flex gap-3 items-center justify-between px-3">
               <Button variant="unstyled"
                 onClick={() => router.push(`/u/${currentUser.username}`)}
                 title={[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
-                className={`flex items-center gap-3 text-left group min-w-0 ${leftCollapsed ? '' : 'flex-grow'}`}
+                className="flex items-center gap-3 text-left group min-w-0 flex-grow"
               >
                 {/* Avatar with live status dot anchored 2px outside the bottom-right of the frame */}
                 <div className="relative flex-shrink-0">
@@ -743,14 +681,12 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
                     <span className={`relative inline-flex w-3 h-3 rounded-full ${status.dot} ${status.glow}`} />
                   </span>
                 </div>
-                {!leftCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-white truncate group-hover:text-primary-500 transition-colors">
-                      {[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
-                    </p>
-                    <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
-                  </div>
-                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white truncate group-hover:text-primary-500 transition-colors">
+                    {[currentUser.first_name, currentUser.last_name].filter(Boolean).join(' ') || currentUser.username}
+                  </p>
+                  <p className="text-[10px] text-slate-500 truncate">{currentUser.email}</p>
+                </div>
               </Button>
               <Button variant="unstyled"
                 onClick={handleLogout}

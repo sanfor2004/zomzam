@@ -929,8 +929,9 @@ export default function SettingsPage() {
               <Button
                 variant="danger"
                 onClick={() => { setShowDeleteModal(true); setDeleteError(null); setDeletePassword(''); }}
+                className="shrink-0 whitespace-nowrap"
               >
-                Delete My Account
+                Delete Account
               </Button>
             </div>
           </section>
