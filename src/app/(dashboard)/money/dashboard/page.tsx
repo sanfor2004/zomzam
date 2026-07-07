@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
+import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { DollarSign, Settings, Plus, Minus, ArrowRight, X, TrendingUp, Shield, Heart, PiggyBank, Briefcase, ChevronRight, HelpCircle } from 'lucide-react';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
@@ -671,7 +672,6 @@ export default function MoneyDashboardPage() {
 
 // Quick helper to convert EGP to USD
 function convertEGP(amount: number, toCurrency: string) {
-  const exchangeRate = 48.5;
-  if (toCurrency === 'USD') return amount / exchangeRate;
+  if (toCurrency === 'USD') return amount / EXCHANGE_RATES_TO_EGP.USD;
   return amount;
 }

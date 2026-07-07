@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/api-auth';
-import { listAccounts, createAccount, deleteAccount } from '@/lib/services/money';
+import { listAccounts, createAccount, deleteAccount, listCategories } from '@/lib/services/money';
 
 export const GET = withAuth(async (_req, user) => {
-  return NextResponse.json({ success: true, accounts: await listAccounts(user.id) });
+  // ponytail: categories rarely change and every money page needs both — piggyback
+  // them on the accounts fetch instead of adding a 6th route for one small table.
+  const [accounts, categories] = await Promise.all([listAccounts(user.id), listCategories(user.id)]);
+  return NextResponse.json({ success: true, accounts, categories });
 });
 
 export const POST = withAuth(async (req, user) => {
