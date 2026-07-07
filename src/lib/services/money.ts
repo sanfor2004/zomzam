@@ -10,8 +10,9 @@ export const DEFAULT_BUCKETS = [
 
 // Money suite business logic. Route handlers stay thin (parse → call → respond);
 // every SQL/transaction/owner-scoping rule lives here, and the pure math helpers
-// (balanceDelta, computeAllocation, safeToSpend, ratePerHour, utilization,
-// daysUntilDue, monthWindow) are DB-free so they're unit-testable in isolation.
+// (balanceDelta, computeAllocation, safeToSpend, ratePerHour, monthWindow) are
+// DB-free so they're unit-testable in isolation. Card-cycle math that the client
+// also needs (utilization, daysUntilDue) lives in ./money-math (no DB import).
 
 export type TxnType = 'income' | 'expense' | 'transfer';
 
@@ -212,20 +213,9 @@ export async function getClientProfitability(
   return [...acc.values()].sort((a, b) => (b.ratePerHour ?? -1) - (a.ratePerHour ?? -1));
 }
 
-// ── 1.4: Accounts service (+ card cycle derivations) ─────────────────────────
-
-export function utilization(balance: number, limit: number | null): number | null {
-  if (!limit || limit <= 0) return null;
-  return Math.round((Math.abs(balance) / limit) * 100) / 100;
-}
-
-export function daysUntilDue(dueDay: number | null, today = new Date()): number | null {
-  if (!dueDay) return null;
-  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
-  let due = new Date(y, m, dueDay);
-  if (dueDay < d) due = new Date(y, m + 1, dueDay);
-  return Math.round((due.getTime() - new Date(y, m, d).getTime()) / 86400000);
-}
+// ── 1.4: Accounts service ────────────────────────────────────────────────────
+// Card-cycle math (utilization/daysUntilDue) lives in ./money-math — pure and
+// DB-free so the client card component can share it without bundling mysql2.
 
 export interface CreateAccountInput {
   name: string; type: string; currency: string; balance: number;

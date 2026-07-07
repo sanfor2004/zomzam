@@ -1,5 +1,6 @@
 import assert from 'node:assert';
-import { balanceDelta, computeAllocation, safeToSpend, ratePerHour, utilization, daysUntilDue } from './money';
+import { balanceDelta, computeAllocation, safeToSpend, ratePerHour } from './money';
+import { utilization, daysUntilDue } from './money-math';
 
 let checks = 0;
 const check = (name: string, fn: () => void) => { fn(); checks++; };

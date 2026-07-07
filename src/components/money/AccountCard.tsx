@@ -4,6 +4,7 @@ import React from 'react';
 import { Briefcase, DollarSign, Wallet, CreditCard, AlertTriangle } from 'lucide-react';
 import { useMoney, type Account } from '@/context/MoneyContext';
 import { Progress, DeleteButton } from '@/components/ui';
+import { utilization, dueInfo } from '@/lib/services/money-math';
 import { cn } from '@/lib/utils';
 
 /* ──────────────────────────────────────────────────────────
@@ -14,25 +15,6 @@ import { cn } from '@/lib/utils';
     Never renders a PAN/CVV/PIN/expiry input — the schema has no column for
     them (Zenith §5 "we can't leak what we never hold"). `last_four` is the
     only card identifier shown. */
-
-// ponytail: duplicated (not imported) from '@/lib/services/money'. That
-// module's top-level `import { query, ... } from '@/lib/db'` pulls in
-// mysql2/promise, which is Node-only and unsafe to bundle into a 'use
-// client' component. This is the entirety of the pure math — keep it in
-// sync with money.ts if either changes.
-function utilization(balance: number, limit: number | null): number | null {
-  if (!limit || limit <= 0) return null;
-  return Math.round((Math.abs(balance) / limit) * 100) / 100;
-}
-function dueInfo(dueDay: number | null, today = new Date()): { days: number; date: Date } | null {
-  if (!dueDay) return null;
-  const y = today.getFullYear();
-  const m = today.getMonth();
-  const d = today.getDate();
-  const due = dueDay < d ? new Date(y, m + 1, dueDay) : new Date(y, m, dueDay);
-  const days = Math.round((due.getTime() - new Date(y, m, d).getTime()) / 86400000);
-  return { days, date: due };
-}
 
 function getAccountIcon(type: Account['type']) {
   switch (type) {
