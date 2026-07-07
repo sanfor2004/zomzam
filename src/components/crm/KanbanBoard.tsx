@@ -76,11 +76,7 @@ export function KanbanBoard({ initialLeads, onOpenDetails, onRefresh }: KanbanBo
   // Load money accounts for selector
   const fetchAccounts = async () => {
     try {
-      const response = await fetch('/api/money', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'get_initial_data' })
-      });
+      const response = await fetch('/api/money/accounts');
       const data = await response.json();
       if (data.success && data.accounts) {
         setMoneyAccounts(data.accounts);
