@@ -3,15 +3,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { useCurrentUser } from '@/context/CurrentUserContext';
 import { Loader2, MessagesSquare, HelpCircle, ArrowUp } from 'lucide-react';
 import { Button, ComposerBanner, PostComposer, PostCard, Modal } from '@/components/ui';
 import { useFeed } from './useFeed';
-import { fetchCurrentUser, fetchFriends } from './page.services';
-import { type CurrentUser, type MentionUser, type Post } from './shared';
+import { fetchFriends } from './page.services';
+import { type MentionUser, type Post } from './shared';
 
 export default function HomePage() {
-  // Viewer identity — used by the composer (@mentions, edit modal) and cards.
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  // Viewer identity — read synchronously from the server-seeded context
+  // (CurrentUserProvider in the dashboard shell), NOT a client fetch. This lets
+  // the composer avatar/name paint with the first HTML instead of popping in
+  // after an /api/auth round-trip. Used by the composer (@mentions, edit modal)
+  // and cards.
+  const currentUser = useCurrentUser();
   const [friends, setFriends] = useState<MentionUser[]>([]);
 
   // ── Composer modal ──────────────────────────────────────────
@@ -34,8 +39,9 @@ export default function HomePage() {
   usePageEntrance(containerRef, [posts.length]);
 
   // ── Data bootstrap ──────────────────────────────────────────
+  // Only friends need a client fetch (they power @mention autocomplete and
+  // aren't server-seeded); identity comes from the context above.
   useEffect(() => {
-    fetchCurrentUser().then(setCurrentUser);
     fetchFriends().then(setFriends);
   }, []);
 

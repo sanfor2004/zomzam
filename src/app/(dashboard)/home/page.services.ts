@@ -6,7 +6,7 @@
 // they're unit-testable without a render harness. Server-side domain logic
 // stays in src/lib/services/posts/** — this only consumes its JSON.
 // ──────────────────────────────────────────────────────────
-import type { CurrentUser, MentionUser, Post } from './shared';
+import type { MentionUser, Post } from './shared';
 
 export type FeedFilter = 'all' | 'help';
 export type FeedTier = 'unseen' | 'seen';
@@ -15,17 +15,6 @@ export interface FeedPage {
   posts: Post[];
   next_cursor: number | null;
   has_more: boolean;
-}
-
-// Non-blocking: the feed renders for anonymous viewers too, so a failed auth
-// check just yields null rather than throwing.
-export async function fetchCurrentUser(): Promise<CurrentUser | null> {
-  try {
-    const res = await fetch('/api/auth?action=check');
-    const data = await res.json();
-    if (data.success && data.authenticated) return data.user as CurrentUser;
-  } catch { /* non-blocking */ }
-  return null;
 }
 
 // Friends power the composer's @mention autocomplete; absence is non-fatal.
