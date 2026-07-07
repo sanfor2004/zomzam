@@ -1,4 +1,5 @@
 import { query, queryOne, execute, transaction } from '@/lib/db';
+import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 
 export const DEFAULT_BUCKETS = [
   { key: 'need', label: 'Needs', percent: 60 },
@@ -121,4 +122,60 @@ export async function updateBudget(userId: number, buckets: Bucket[]): Promise<v
      ON DUPLICATE KEY UPDATE buckets = VALUES(buckets)`,
     [userId, JSON.stringify(buckets)],
   );
+}
+
+// ── 1.3: Client-profitability join + rate helper (the Pro core) ─────────────
+
+export interface ClientProfit {
+  leadId: number; name: string; income: number; hours: number; ratePerHour: number | null;
+}
+
+/** null when no hours logged — callers render "—", never Infinity. */
+export function ratePerHour(income: number, minutes: number | null): number | null {
+  if (!minutes || minutes <= 0) return null;
+  return income / (minutes / 60);
+}
+
+function toDisplay(amount: number, from: string, display: string): number {
+  const inEgp = amount * (EXCHANGE_RATES_TO_EGP[from] ?? 1);
+  return inEgp / (EXCHANGE_RATES_TO_EGP[display] ?? 1);
+}
+
+export async function getClientProfitability(
+  userId: number, displayCurrency: string,
+): Promise<ClientProfit[]> {
+  // income per client (converted to display currency)
+  const incomeRows = await query<{ lead_id: number; name: string; amount: string; currency: string }>(
+    `SELECT t.lead_id, l.name, t.amount, t.currency
+       FROM money_transactions t
+       JOIN crm_leads l ON t.lead_id = l.id
+      WHERE t.user_id = ? AND t.type = 'income' AND t.lead_id IS NOT NULL`,
+    [userId],
+  );
+  // minutes per client: time_tasks → crm_projects → crm_leads
+  const minuteRows = await query<{ lead_id: number; minutes: string }>(
+    `SELECT p.lead_id, SUM(tt.actual_duration) AS minutes
+       FROM time_tasks tt
+       JOIN crm_projects p ON tt.project_id = p.id
+      WHERE tt.user_id = ? AND tt.status = 'completed'
+            AND tt.actual_duration IS NOT NULL AND p.lead_id IS NOT NULL
+      GROUP BY p.lead_id`,
+    [userId],
+  );
+
+  const minutesByLead = new Map<number, number>();
+  for (const r of minuteRows) minutesByLead.set(r.lead_id, parseFloat(r.minutes || '0'));
+
+  const acc = new Map<number, ClientProfit>();
+  for (const r of incomeRows) {
+    const cur = acc.get(r.lead_id) ?? { leadId: r.lead_id, name: r.name, income: 0, hours: 0, ratePerHour: null };
+    cur.income += toDisplay(parseFloat(r.amount), r.currency, displayCurrency);
+    acc.set(r.lead_id, cur);
+  }
+  for (const c of acc.values()) {
+    const minutes = minutesByLead.get(c.leadId) ?? 0;
+    c.hours = minutes / 60;
+    c.ratePerHour = ratePerHour(c.income, minutes);
+  }
+  return [...acc.values()].sort((a, b) => (b.ratePerHour ?? -1) - (a.ratePerHour ?? -1));
 }
