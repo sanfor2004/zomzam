@@ -139,6 +139,7 @@ const schema: Record<string, Record<string, string>> = {
     description: 'VARCHAR(255) NULL',
     transaction_date: 'DATE NOT NULL',
     lead_id: 'INT UNSIGNED NULL', // CRM client/deal this income/expense is attributed to (per-client profitability)
+    transfer_account_id: 'INT UNSIGNED NULL', // destination account for a transfer's credit leg
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
   money_lend: {

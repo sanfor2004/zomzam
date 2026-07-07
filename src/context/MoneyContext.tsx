@@ -87,6 +87,7 @@ interface AddTransactionData {
   date: string;
   currency: string;
   lead_id?: number | null;
+  transfer_account_id?: number | null;
 }
 
 interface AddAccountData {

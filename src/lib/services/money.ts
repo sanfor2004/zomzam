@@ -24,6 +24,7 @@ export interface AddTransactionInput {
   description: string;
   date: string;          // YYYY-MM-DD
   lead_id: number | null; // client attribution (income only)
+  transfer_account_id?: number | null; // destination account (transfer only)
 }
 
 /** Signed change applied to money_accounts.balance for a transaction. */
@@ -33,14 +34,16 @@ export function balanceDelta(type: TxnType, amount: number): number {
 
 export async function addTransaction(userId: number, input: AddTransactionInput): Promise<number> {
   let insertId = 0;
+  const transferAccountId = input.type === 'transfer' ? (input.transfer_account_id ?? null) : null;
   await transaction(async (c) => {
     const [res] = await c.execute<any>(
       `INSERT INTO money_transactions
-         (user_id, account_id, category_id, type, amount, currency, description, transaction_date, lead_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (user_id, account_id, category_id, type, amount, currency, description, transaction_date, lead_id, transfer_account_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [userId, input.account_id, input.category_id, input.type, input.amount,
        input.currency, input.description, input.date,
-       input.type === 'income' ? input.lead_id : null],
+       input.type === 'income' ? input.lead_id : null,
+       transferAccountId],
     );
     insertId = res.insertId;
     const [balanceRes] = await c.execute<any>(
@@ -51,6 +54,16 @@ export async function addTransaction(userId: number, input: AddTransactionInput)
     if (balanceRes.affectedRows === 0) {
       throw new HttpError(400, 'Invalid account');
     }
+    // Transfer's credit leg: credit the destination account for the same amount.
+    if (transferAccountId != null) {
+      const [destRes] = await c.execute<any>(
+        `UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`,
+        [input.amount, transferAccountId, userId],
+      );
+      if (destRes.affectedRows === 0) {
+        throw new HttpError(400, 'Invalid destination account');
+      }
+    }
   });
   return insertId;
 }
@@ -58,16 +71,23 @@ export async function addTransaction(userId: number, input: AddTransactionInput)
 export async function deleteTransaction(userId: number, id: number): Promise<void> {
   await transaction(async (c) => {
     const [rows] = await c.execute<any[]>(
-      `SELECT account_id, amount, type FROM money_transactions WHERE id = ? AND user_id = ? LIMIT 1`,
+      `SELECT account_id, amount, type, transfer_account_id FROM money_transactions WHERE id = ? AND user_id = ? LIMIT 1`,
       [id, userId],
     );
     const t = rows[0];
     if (!t) return;
-    // reverse the original delta
+    // reverse the original delta (source leg)
     await c.execute(
       `UPDATE money_accounts SET balance = balance - ? WHERE id = ? AND user_id = ?`,
       [balanceDelta(t.type, parseFloat(t.amount)), t.account_id, userId],
     );
+    // reverse the credit leg on the destination account, if any
+    if (t.type === 'transfer' && t.transfer_account_id != null) {
+      await c.execute(
+        `UPDATE money_accounts SET balance = balance - ? WHERE id = ? AND user_id = ?`,
+        [parseFloat(t.amount), t.transfer_account_id, userId],
+      );
+    }
     await c.execute(`DELETE FROM money_transactions WHERE id = ? AND user_id = ?`, [id, userId]);
   });
 }

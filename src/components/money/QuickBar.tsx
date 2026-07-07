@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
-import { SegmentedSwitch, NumberInput, Select, Button } from '@/components/ui';
+import { SegmentedSwitch, NumberInput, Select, Button, useToast } from '@/components/ui';
 import { useMoney } from '@/context/MoneyContext';
 import { cn } from '@/lib/utils';
 
@@ -39,6 +39,7 @@ export interface QuickBarProps {
 
 export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
   const { accounts, categories, addTransaction } = useMoney();
+  const { toast } = useToast();
 
   const [segment, setSegment] = useState<Segment>('expense');
   const [amount, setAmount] = useState('');
@@ -100,26 +101,22 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
     const amt = parseFloat(amount);
     if (!amt || amt <= 0 || !accountId || submitting) return;
 
-    setSubmitting(true);
-    // ponytail: the money service models a transfer as a single debit leg —
-    // there's no second account_id column on money_transactions yet (see
-    // AddTransactionInput in src/lib/services/money.ts). The destination
-    // account name goes into the description so it isn't silently dropped.
-    // Add a real dual-leg transfer to the service if that becomes a need.
-    const description =
-      segment === 'transfer'
-        ? `Transfer to ${accounts.find((a) => String(a.id) === toAccountId)?.name ?? 'another account'}${notes ? ` — ${notes}` : ''}`
-        : notes;
+    if (segment === 'transfer' && toAccountId === accountId) {
+      toast({ variant: 'error', description: 'Pick two different accounts' });
+      return;
+    }
 
+    setSubmitting(true);
     const ok = await addTransaction({
       type: segment,
       amount: amt,
       account_id: parseInt(accountId, 10),
       category_id: segment === 'transfer' || !categoryId ? null : parseInt(categoryId, 10),
-      description,
+      description: notes,
       date,
       currency: selectedAccount?.currency ?? 'EGP',
       lead_id: segment === 'income' && leadId ? parseInt(leadId, 10) : null,
+      transfer_account_id: segment === 'transfer' ? parseInt(toAccountId, 10) : null,
     });
     setSubmitting(false);
 
