@@ -1,8 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { gsap, useGSAP, getScrollParent } from '@/lib/gsap';
-import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { gsap, useGSAP } from '@/lib/gsap';
 import { useCurrentUser } from '@/context/CurrentUserContext';
 import { Loader2, MessagesSquare, HelpCircle, ArrowUp } from 'lucide-react';
 import { Button, ComposerBanner, PostComposer, PostCard, Modal } from '@/components/ui';
@@ -34,9 +33,6 @@ export default function HomePage() {
     newPostsCount, refreshUnseen, loadMore, observe, bottomRef, feedRef,
     handleDeletePost, handlePostCreated, handlePostEdited,
   } = useFeed();
-
-  // pageRef reuses containerRef (same node, usePageEntrance scope).
-  usePageEntrance(containerRef, [posts.length]);
 
   // ── Data bootstrap ──────────────────────────────────────────
   // Only friends need a client fetch (they power @mention autocomplete and
@@ -82,24 +78,27 @@ export default function HomePage() {
     return () => window.removeEventListener('zz:open-composer', open);
   }, [openComposer]);
 
+  // Post entrance — animate ONLY cards not yet revealed, once each. Keyed on
+  // posts.length so newly appended (scroll load) and prepended (compose /
+  // new-posts pill) cards slide in, while cards already on screen stay exactly
+  // where they are. The `data-revealed` flag is set outside GSAP's context so it
+  // survives useGSAP reverting/re-running on each dependency change — that's
+  // what stops the whole feed from flashing out and back on every load-more.
   useGSAP(() => {
-    if (initialLoading || posts.length === 0) return;
+    if (initialLoading) return;
     gsap.matchMedia().add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.post-item', {
+      const fresh = gsap.utils.toArray<HTMLElement>('.post-item:not([data-revealed])', feedRef.current);
+      if (!fresh.length) return;
+      fresh.forEach((el) => el.setAttribute('data-revealed', ''));
+      gsap.from(fresh, {
         y: 20,
         opacity: 0,
-        stagger: 0.07,
+        stagger: 0.06,
         ease: 'power2.out',
         duration: 0.4,
-        scrollTrigger: {
-          trigger: '.post-item',
-          start: 'top 88%',
-          toggleActions: 'play none none none',
-          scroller: getScrollParent(feedRef.current ?? null),
-        },
       });
     });
-  }, { scope: feedRef, dependencies: [initialLoading] });
+  }, { scope: feedRef, dependencies: [posts.length, initialLoading] });
 
   return (
     /* ──────────────────────────────────────────────────────────
