@@ -30,11 +30,12 @@ export default function MoneyDashboardPage() {
     accounts,
     transactions,
     stats,
+    settings,
     displayCurrency,
     isLoading,
     deleteTransaction,
     deleteAccount,
-    setDisplayCurrency,
+    updateSettings,
     formatAmount,
   } = useMoney();
   usePageEntrance(containerRef, [isLoading]);
@@ -61,7 +62,7 @@ export default function MoneyDashboardPage() {
             <span className="font-bold uppercase tracking-wider text-[9px]">Display:</span>
             <Select
               value={displayCurrency}
-              onChange={(val) => setDisplayCurrency(val)}
+              onChange={(val) => updateSettings(val, settings.secondary_currency)}
               options={['EGP', 'USD', 'EUR', 'GBP']}
               className="w-24"
             />
