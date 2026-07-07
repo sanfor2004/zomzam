@@ -3,9 +3,10 @@
 import React, { useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
-import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, Briefcase, DollarSign } from 'lucide-react';
+import { Plus, ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
+import { AccountCard } from '@/components/money/AccountCard';
 
 export default function BankAccountsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -15,23 +16,30 @@ export default function BankAccountsPage() {
     isLoading,
     addAccount,
     deleteAccount,
-    formatAmount,
   } = useMoney();
   usePageEntrance(containerRef, [isLoading]);
 
   const [isOpen, setIsOpen] = useState(false);
   const [nameInput, setNameInput] = useState('');
-  const [typeSelect, setTypeSelect] = useState<'bank' | 'cash' | 'paypal' | 'wallet' | 'other'>('bank');
+  const [typeSelect, setTypeSelect] = useState<'bank' | 'cash' | 'paypal' | 'wallet' | 'other' | 'credit_card'>('bank');
   const [currencySelect, setCurrencySelect] = useState<'EGP' | 'USD' | 'EUR' | 'GBP'>('EGP');
   const [balanceInput, setBalanceInput] = useState('0.00');
   const [lastFourInput, setLastFourInput] = useState('');
+  const [creditLimitInput, setCreditLimitInput] = useState('');
+  const [statementDayInput, setStatementDayInput] = useState('');
+  const [dueDayInput, setDueDayInput] = useState('');
 
-  const getAccountIcon = (type: string) => {
-    switch (type) {
-      case 'bank': return <Briefcase className="w-5 h-5" />;
-      case 'paypal': return <DollarSign className="w-5 h-5" />;
-      default: return <DollarSign className="w-5 h-5" />;
-    }
+  const isCreditCard = typeSelect === 'credit_card';
+
+  const resetForm = () => {
+    setNameInput('');
+    setBalanceInput('0.00');
+    setLastFourInput('');
+    setCreditLimitInput('');
+    setStatementDayInput('');
+    setDueDayInput('');
+    setTypeSelect('bank');
+    setCurrencySelect('EGP');
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -48,7 +56,7 @@ export default function BankAccountsPage() {
     }
 
     const cleanLastFour = lastFourInput.trim();
-    const lastFourVal = cleanLastFour.length === 4 && !isNaN(parseInt(cleanLastFour)) ? cleanLastFour : null;
+    const lastFourVal = /^\d{4}$/.test(cleanLastFour) ? cleanLastFour : null;
 
     const success = await addAccount({
       name: nameInput,
@@ -56,14 +64,13 @@ export default function BankAccountsPage() {
       currency: currencySelect,
       balance: initialBal,
       last_four: lastFourVal,
+      credit_limit: isCreditCard && creditLimitInput ? parseFloat(creditLimitInput) : null,
+      statement_day: isCreditCard && statementDayInput ? parseInt(statementDayInput, 10) : null,
+      due_day: isCreditCard && dueDayInput ? parseInt(dueDayInput, 10) : null,
     });
 
     if (success) {
-      setNameInput('');
-      setBalanceInput('0.00');
-      setLastFourInput('');
-      setTypeSelect('bank');
-      setCurrencySelect('EGP');
+      resetForm();
       setIsOpen(false);
     }
   };
@@ -114,50 +121,20 @@ export default function BankAccountsPage() {
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: ACCOUNTS GRID
-          Contains: Per-account cards (icon, balance, type, last-4, delete action)
+          Contains: Per-account cards (AccountCard — base + credit-card
+          cycle variant with owed/limit, utilization, due-date nudge)
           ────────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3 gap-6">
         {accounts.map((acc) => (
-          <div
-            key={acc.id}
-            data-entrance="card"
-            className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group relative overflow-hidden flex flex-col justify-between min-h-[170px]"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:bg-primary-500/10 transition-colors pointer-events-none"></div>
-            
-            <div className="relative z-10 flex flex-col justify-between h-full w-full">
-              <div className="flex items-start justify-between">
-                <div className="w-10 h-10 rounded-xl bg-primary-950/20 flex items-center justify-center text-primary-500">
-                  {getAccountIcon(acc.type)}
-                </div>
-                <Button variant="unstyled"
-                  onClick={() => handleDelete(acc.id)}
-                  className="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                  title="Delete Account"
-                >
-                  <Trash2 className="w-4.5 h-4.5" />
-                </Button>
-              </div>
-
-              <div className="mt-4">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate mb-0.5">{acc.name}</p>
-                <h3 className="text-xl font-black text-white tracking-tight">
-                  {formatAmount(acc.balance, acc.currency)}
-                </h3>
-              </div>
-
-              <div className="flex items-center justify-between mt-3 text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
-                <span>{acc.type}</span>
-                {acc.last_four && <span className="font-mono">•••• {acc.last_four}</span>}
-              </div>
-            </div>
-          </div>
+          <AccountCard key={acc.id} account={acc} onDelete={handleDelete} />
         ))}
       </div>
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: ADD ACCOUNT MODAL
-          Contains: New-account form (name, type, currency, balance, last-4)
+          Contains: New-account form (name, type, currency, balance, last-4,
+          and — when type is credit card — limit/statement/due-day fields
+          + a card-safety banner)
           ────────────────────────────────────────────────────────── */}
       <Modal
         isOpen={isOpen}
@@ -189,6 +166,7 @@ export default function BankAccountsPage() {
                   { value: 'cash', label: 'Cash / Pocket' },
                   { value: 'paypal', label: 'PayPal' },
                   { value: 'wallet', label: 'Digital Wallet' },
+                  { value: 'credit_card', label: 'Credit Card' },
                   { value: 'other', label: 'Other' },
                 ]}
               />
@@ -231,6 +209,51 @@ export default function BankAccountsPage() {
               />
             </div>
           </div>
+
+          {isCreditCard && (
+            <div className="space-y-4">
+              {/* Card safety is structural (spec §8): only nickname, last-4,
+                  limit, and cycle days are ever collected — never a full
+                  PAN/CVV/PIN/expiry input. */}
+              <p className="flex items-center gap-2 text-[11px] font-semibold text-slate-300 bg-slate-900/40 border border-slate-800/60 rounded-xl px-4 py-3">
+                🔒 We never store your card number — only a nickname, last-4, and limit.
+              </p>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Credit Limit</label>
+                <NumberInput
+                  step={0.01}
+                  min={0}
+                  placeholder="0.00"
+                  value={creditLimitInput}
+                  onChange={setCreditLimitInput}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Statement Day</label>
+                  <NumberInput
+                    min={1}
+                    max={28}
+                    step={1}
+                    placeholder="1–28"
+                    value={statementDayInput}
+                    onChange={setStatementDayInput}
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Due Day</label>
+                  <NumberInput
+                    min={1}
+                    max={28}
+                    step={1}
+                    placeholder="1–28"
+                    value={dueDayInput}
+                    onChange={setDueDayInput}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <Button
             type="submit"
