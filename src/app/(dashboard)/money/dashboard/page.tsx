@@ -164,7 +164,7 @@ export default function MoneyDashboardPage() {
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Title + display-currency selector, Settings / Income / Expense buttons
           ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col @2xl:flex-row @2xl:items-center justify-between gap-4">
         <div>
           <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
           <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
@@ -230,7 +230,7 @@ export default function MoneyDashboardPage() {
           DEVELOPMENT NAVIGATOR: ACCOUNT BALANCES GRID
           Contains: Per-account balance cards (icon, currency, name, last-4)
           ────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 @md:grid-cols-2 @4xl:grid-cols-4 gap-5">
         {accounts.map((acc) => (
           <div
             key={acc.id}
@@ -265,14 +265,14 @@ export default function MoneyDashboardPage() {
       </div>
 
       {/* Main Budget Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 @3xl:grid-cols-3 gap-8">
 
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: LEFT COLUMN — BUDGET, TIP, LENDING
             Contains: 60/20/20 budget allocation donut + legend, financial-mastery
             tip card, lending summary card
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="@3xl:col-span-1 space-y-6">
           <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple flex flex-col justify-between min-h-[340px]">
             <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4">Budget Allocation</h2>
 
@@ -402,7 +402,7 @@ export default function MoneyDashboardPage() {
             Contains: Transaction list (empty state, per-entry rows with delete),
             Expenses / Income footer nav buttons
             ────────────────────────────────────────────────────────── */}
-        <div className="lg:col-span-2">
+        <div className="@3xl:col-span-2">
           <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-850">

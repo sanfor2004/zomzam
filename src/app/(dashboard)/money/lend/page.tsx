@@ -109,7 +109,7 @@ export default function LendingDebtPage() {
           DEVELOPMENT NAVIGATOR: PAGE HEADER
           Contains: Back button, title + subtitle, "Add Entry" button
           ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col @xl:flex-row @xl:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <Button variant="unstyled"
             onClick={() => router.push('/money/dashboard')}
@@ -133,7 +133,7 @@ export default function LendingDebtPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 @3xl:grid-cols-2 gap-8">
         
         {/* ──────────────────────────────────────────────────────────
             DEVELOPMENT NAVIGATOR: "PEOPLE OWE ME" CARD
@@ -289,7 +289,7 @@ export default function LendingDebtPage() {
           <h2 className="text-xs font-black text-slate-450 uppercase tracking-widest mb-4 pb-3 border-b border-slate-850">
             Settle Logs
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 @xl:grid-cols-2 @4xl:grid-cols-3 gap-4">
             {settledList.map((item) => (
               <div
                 key={item.id}
