@@ -48,9 +48,16 @@ check('utilization = |balance| / limit', () => {
 check('utilization null when no limit', () => {
   assert.strictEqual(utilization(12400, null), null);
 });
-check('daysUntilDue wraps to next month', () => {
+check('daysUntilDue counts within the current month', () => {
   // today = 8th, due_day = 11 → 3 days
   assert.strictEqual(daysUntilDue(11, new Date('2026-07-08')), 3);
+});
+check('daysUntilDue rolls to next month when due day already passed', () => {
+  // today = 11th, due_day = 8 → next occurrence is Aug 8 → 28 days
+  assert.strictEqual(daysUntilDue(8, new Date('2026-07-11')), 28);
+});
+check('daysUntilDue null when no due day set', () => {
+  assert.strictEqual(daysUntilDue(null, new Date('2026-07-11')), null);
 });
 
 console.log(`money.test.ts: all ${checks} checks passed`);
