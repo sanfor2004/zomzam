@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { balanceDelta, computeAllocation, safeToSpend, ratePerHour } from './money';
+import { balanceDelta, computeAllocation, safeToSpend, ratePerHour, utilization, daysUntilDue } from './money';
 
 let checks = 0;
 const check = (name: string, fn: () => void) => { fn(); checks++; };
@@ -39,6 +39,17 @@ check('rate = income / hours', () => {
 check('zero hours yields null, never Infinity', () => {
   assert.strictEqual(ratePerHour(3000, 0), null);
   assert.strictEqual(ratePerHour(3000, null as any), null);
+});
+
+check('utilization = |balance| / limit', () => {
+  assert.strictEqual(utilization(12400, 40000), 0.31);
+});
+check('utilization null when no limit', () => {
+  assert.strictEqual(utilization(12400, null), null);
+});
+check('daysUntilDue wraps to next month', () => {
+  // today = 8th, due_day = 11 → 3 days
+  assert.strictEqual(daysUntilDue(11, new Date('2026-07-08')), 3);
 });
 
 console.log(`money.test.ts: all ${checks} checks passed`);

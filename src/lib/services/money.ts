@@ -179,3 +179,40 @@ export async function getClientProfitability(
   }
   return [...acc.values()].sort((a, b) => (b.ratePerHour ?? -1) - (a.ratePerHour ?? -1));
 }
+
+// ── 1.4: Accounts service (+ card cycle derivations) ─────────────────────────
+
+export function utilization(balance: number, limit: number | null): number | null {
+  if (!limit || limit <= 0) return null;
+  return Math.round((Math.abs(balance) / limit) * 100) / 100;
+}
+
+export function daysUntilDue(dueDay: number | null, today = new Date()): number | null {
+  if (!dueDay) return null;
+  const y = today.getFullYear(), m = today.getMonth(), d = today.getDate();
+  let due = new Date(y, m, dueDay);
+  if (dueDay < d) due = new Date(y, m + 1, dueDay);
+  return Math.round((due.getTime() - new Date(y, m, d).getTime()) / 86400000);
+}
+
+export interface CreateAccountInput {
+  name: string; type: string; currency: string; balance: number;
+  last_four: string | null; credit_limit: number | null;
+  statement_day: number | null; due_day: number | null;
+}
+export async function listAccounts(userId: number) {
+  return query(`SELECT * FROM money_accounts WHERE user_id = ?`, [userId]);
+}
+export async function createAccount(userId: number, i: CreateAccountInput): Promise<number> {
+  const res = await execute(
+    `INSERT INTO money_accounts
+       (user_id, name, type, currency, balance, last_four, credit_limit, statement_day, due_day)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [userId, i.name, i.type, i.currency, i.balance, i.last_four,
+     i.credit_limit, i.statement_day, i.due_day],
+  );
+  return res.insertId;
+}
+export async function deleteAccount(userId: number, id: number): Promise<void> {
+  await execute(`DELETE FROM money_accounts WHERE id = ? AND user_id = ?`, [id, userId]);
+}
