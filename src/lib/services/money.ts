@@ -216,3 +216,33 @@ export async function createAccount(userId: number, i: CreateAccountInput): Prom
 export async function deleteAccount(userId: number, id: number): Promise<void> {
   await execute(`DELETE FROM money_accounts WHERE id = ? AND user_id = ?`, [id, userId]);
 }
+
+// ── 1.5: Lend + settings service ─────────────────────────────────────────────
+
+export interface AddLendInput {
+  person_name: string; type: 'owe_me' | 'i_owe'; amount: number; currency: string; due_date: string | null;
+}
+export async function listLend(userId: number) {
+  return query(`SELECT * FROM money_lend WHERE user_id = ? ORDER BY created_at DESC`, [userId]);
+}
+export async function addLend(userId: number, i: AddLendInput): Promise<number> {
+  const res = await execute(
+    `INSERT INTO money_lend (user_id, person_name, type, amount, currency, status, due_date)
+     VALUES (?, ?, ?, ?, ?, 'pending', ?)`,
+    [userId, i.person_name, i.type, i.amount, i.currency, i.due_date],
+  );
+  return res.insertId;
+}
+export async function settleLend(userId: number, id: number): Promise<void> {
+  await execute(`UPDATE money_lend SET status = 'settled' WHERE id = ? AND user_id = ?`, [id, userId]);
+}
+export async function deleteLend(userId: number, id: number): Promise<void> {
+  await execute(`DELETE FROM money_lend WHERE id = ? AND user_id = ?`, [id, userId]);
+}
+export async function getMoneySettings(userId: number) {
+  return queryOne(`SELECT primary_currency, secondary_currency FROM users WHERE id = ? LIMIT 1`, [userId]);
+}
+export async function updateSettings(userId: number, primary: string, secondary: string): Promise<void> {
+  await execute(`UPDATE users SET primary_currency = ?, secondary_currency = ? WHERE id = ?`,
+    [primary, secondary, userId]);
+}
