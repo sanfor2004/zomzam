@@ -7,6 +7,7 @@ import { Plus, X, ArrowLeft, Trash2, CheckCircle2, User, Calendar, DollarSign, A
 import { useRouter } from 'next/navigation';
 import confetti from 'canvas-confetti';
 import { Button, Select, Modal, NumberInput } from '@/components/ui';
+import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 
 export default function LendingDebtPage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,16 +82,15 @@ export default function LendingDebtPage() {
   const activeIOwe = lendList.filter((item) => item.type === 'i_owe' && item.status !== 'settled');
   const settledList = lendList.filter((item) => item.status === 'settled');
 
-  // Sum active totals (using standard formatAmount displayCurrency)
-  // To avoid incorrect currency summing, let's convert everything to EGP or USD. We can use a basic EGP sum and format it
+  // Sum active totals: normalize every entry to EGP via the single shared FX
+  // table (EXCHANGE_RATES_TO_EGP), then hand off to formatAmount for display
+  // conversion — no second, hardcoded exchange rate living in this page.
   const sumTotal = (list: typeof lendList) => {
-    const exchangeRate = 48.5;
-    let sumEGP = 0;
-    list.forEach(item => {
+    const sumEGP = list.reduce((sum, item) => {
       const amt = parseFloat(item.amount);
-      if (item.currency === 'USD') sumEGP += amt * exchangeRate;
-      else sumEGP += amt;
-    });
+      const rate = EXCHANGE_RATES_TO_EGP[item.currency] ?? 1;
+      return sum + amt * rate;
+    }, 0);
     return formatAmount(sumEGP, 'EGP');
   };
 
