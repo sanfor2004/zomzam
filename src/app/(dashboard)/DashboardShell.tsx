@@ -7,7 +7,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslation } from '@/context/TranslationContext';
 import { usePresence, useNotifications, StreamWaiterProvider } from '@/context/StreamWaiterContext';
-import { MoneyProvider } from '@/context/MoneyContext';
 import { CurrentUserProvider } from '@/context/CurrentUserContext';
 import { MessagesProvider, useMessages, type ChatContact } from '@/context/MessagesContext';
 import { ChatDock } from '@/components/chat/ChatDock';
@@ -918,9 +917,7 @@ export function DashboardShell({ children, initialUser }: { children: React.Reac
     <CurrentUserProvider user={initialUser}>
       <StreamWaiterProvider>
         <MessagesProvider>
-          <MoneyProvider>
-            <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
-          </MoneyProvider>
+          <DashboardLayoutContent initialUser={initialUser}>{children}</DashboardLayoutContent>
         </MessagesProvider>
       </StreamWaiterProvider>
     </CurrentUserProvider>
