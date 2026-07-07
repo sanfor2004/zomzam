@@ -68,6 +68,13 @@ export async function deleteTransaction(userId: number, id: number): Promise<voi
 }
 
 export async function listTransactions(userId: number, limit = 50, offset = 0) {
+  // ponytail: mysql2's execute() (binary prepared-statement protocol) rejects
+  // bound LIMIT/OFFSET params on this server version (ER_WRONG_ARGUMENTS).
+  // Every other paginated query in this codebase already inlines the number
+  // instead of binding it — match that convention. Safe: coerced to a bounded
+  // non-negative integer below, never interpolated from a raw request value.
+  const safeLimit = Math.min(Math.max(parseInt(String(limit), 10) || 50, 1), 200);
+  const safeOffset = Math.max(parseInt(String(offset), 10) || 0, 0);
   return query(
     `SELECT t.*, c.name AS category_name, c.icon AS category_icon,
             a.name AS account_name, l.name AS client_name
@@ -77,8 +84,8 @@ export async function listTransactions(userId: number, limit = 50, offset = 0) {
        LEFT JOIN crm_leads l ON t.lead_id = l.id
       WHERE t.user_id = ?
       ORDER BY t.transaction_date DESC, t.created_at DESC
-      LIMIT ? OFFSET ?`,
-    [userId, limit, offset],
+      LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+    [userId],
   );
 }
 
