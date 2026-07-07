@@ -136,6 +136,9 @@ const schema: Record<string, Record<string, string>> = {
     type: "ENUM('income', 'expense', 'transfer', 'lend') NOT NULL",
     amount: 'DECIMAL(15, 2) NOT NULL',
     currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
+    home_amount: 'DECIMAL(15, 2) NULL',        // `amount` converted to the user's home currency, SNAPSHOT at write time (never re-derived on rate refresh)
+    fx_rate: 'DECIMAL(18, 8) NULL',            // audit: 1 unit of `currency` = fx_rate home-currency units, captured when the snapshot was taken
+    fx_rate_date: 'DATE NULL',                 // the day the fx_rate was captured
     description: 'VARCHAR(255) NULL',
     transaction_date: 'DATE NOT NULL',
     lead_id: 'INT UNSIGNED NULL', // CRM client/deal this income/expense is attributed to (per-client profitability)
@@ -159,6 +162,18 @@ const schema: Record<string, Record<string, string>> = {
     user_id: 'INT UNSIGNED NOT NULL',
     buckets: 'JSON NOT NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
+    updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+  },
+  // Per-user FX rate cache (pivot = EGP): 1 unit of `currency` = `rate_to_egp` EGP.
+  // Refreshed on demand from a free API (open.er-api.com) or edited by hand; the
+  // hardcoded FALLBACK_RATES seed keeps the app fully functional offline. See
+  // src/lib/fx.ts.
+  money_fx_rates: {
+    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
+    user_id: 'INT UNSIGNED NOT NULL',
+    currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL",
+    rate_to_egp: 'DECIMAL(18, 8) NOT NULL',
+    source: "VARCHAR(20) NOT NULL DEFAULT 'api'",   // 'api' | 'manual' | 'fallback'
     updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
   },
   user_online_status: {
@@ -371,6 +386,9 @@ const indexes: Record<string, Record<string, string>> = {
   },
   money_budget: {
     uq_user_id: 'UNIQUE INDEX uq_user_id (user_id)',  // one budget row per user (ON DUPLICATE KEY UPDATE target)
+  },
+  money_fx_rates: {
+    uq_user_currency: 'UNIQUE INDEX uq_user_currency (user_id, currency)',  // one row per (user, currency) — upsert target
   },
   posts: {
     idx_user_id: 'INDEX idx_user_id (user_id)',
@@ -622,6 +640,29 @@ async function syncDatabase() {
       await connection.query(
         `INSERT INTO money_accounts (user_id, name, type, currency, balance, last_four) VALUES (1, ?, ?, ?, ?, ?)`,
         [acc[0], acc[1], acc[2], acc[3], acc[4]]
+      );
+    }
+  }
+
+  // Seed FX rates for user_id = 1 (pivot = EGP; 1 unit = N EGP). Mirrors
+  // FALLBACK_RATES in src/lib/fx.ts — the app refreshes these from a live API or
+  // lets the user override them, but a seeded row means conversion works day one.
+  const fxRates: [string, number][] = [
+    ['EGP', 1.0],
+    ['USD', 48.5],
+    ['EUR', 52.0],
+    ['GBP', 61.0],
+  ];
+  for (const [currency, rate] of fxRates) {
+    const [existing] = await connection.query<any[]>(
+      `SELECT id FROM money_fx_rates WHERE user_id = 1 AND currency = ?`,
+      [currency]
+    );
+    if (existing.length === 0) {
+      console.log(`Seeding FX rate: ${currency} = ${rate} EGP`);
+      await connection.query(
+        `INSERT INTO money_fx_rates (user_id, currency, rate_to_egp, source) VALUES (1, ?, ?, 'fallback')`,
+        [currency, rate]
       );
     }
   }

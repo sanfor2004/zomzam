@@ -227,6 +227,7 @@ zomzam.com/
 | `/api/money/budget` | `GET` (buckets + income + allocation + safe-to-spend), `PUT` (percents 0–100, sum ≤100) | Current-month budget rings (free tier). |
 | `/api/money/lend` | `GET`, `POST`, `PATCH` (settle), `DELETE` | Lending & debt tracker (`owe_me` / `i_owe`). |
 | `/api/money/settings` | `GET`, `PUT` (currency ∈ {EGP,USD,EUR,GBP}) | Display-currency preference. |
+| `/api/money/fx` | `GET` (per-user cached rates + sources), `POST` (refresh from a keyless live provider, offline fallback), `PUT` (manual per-currency override) | Per-user FX rate cache (`money_fx_rates`, pivot = EGP). Conversion logic lives in `src/lib/fx.ts`. |
 | `/api/money/insights` | `GET` (`?display`) | **Pro** — per-client realized hourly rate (Time×Money join). Presentation-gated: returns real figures (Stripe-ready) but no client fetches them until a future `isPro`. |
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
 | `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
@@ -426,7 +427,7 @@ Spending is organized into **editable budget buckets** (default **Needs 60% / Wa
 ### Key Systems:
 * **Ledger API**: Records balances, accounts, transactions (income/expense/transfer), and lending records — transfers move balance across two owned accounts atomically.
 * **Credit-card cycle tracking**: Utilization, statement/due-day nudges, and last-4 only — the schema holds no PAN/CVV/expiry column, so card numbers can't leak.
-* **Multi-Currency Converter**: Displays net worth in the user's chosen primary and secondary currencies from a single `EXCHANGE_RATES_TO_EGP` source.
+* **Multi-Currency FX** (`src/lib/fx.ts` + `/api/money/fx`): All conversion pivots through EGP (correct for every pair, including cross-pairs like USD↔EUR), using a **per-user rate cache** (`money_fx_rates`) refreshable from a keyless live provider or overridable by hand, with `EXCHANGE_RATES_TO_EGP` as the hardcoded offline fallback. Each transaction **snapshots** its home-currency value at write time (`money_transactions.home_amount` / `fx_rate` / `fx_rate_date`), so a later rate change never rewrites history; aggregates sum `COALESCE(home_amount, amount)`. Managed from the dashboard's **Rates** modal.
 * **Lending System**: Tracks debts owed to the user (`owe_me`) or by the user (`i_owe`) with status parameters (`pending`, `partial`, `settled`).
 
 ---

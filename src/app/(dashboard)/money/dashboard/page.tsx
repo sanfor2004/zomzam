@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney, type Transaction } from '@/context/MoneyContext';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, Shield, Heart, PiggyBank, HelpCircle } from 'lucide-react';
+import { ChevronRight, Shield, Heart, PiggyBank, HelpCircle, ArrowLeftRight } from 'lucide-react';
 import { Button, Select, ProLock, useToast } from '@/components/ui';
 import { QuickBar } from '@/components/money/QuickBar';
 import { BudgetRings } from '@/components/money/BudgetRings';
 import { AccountCard } from '@/components/money/AccountCard';
 import { ClientProfitabilityTeaser } from '@/components/money/ClientProfitabilityTeaser';
+import { RatesModal } from '@/components/money/RatesModal';
 
 // Rank-by-COUNT only — never touches a rate. The top 3 income-tagged clients
 // by transaction count qualify as "top earners" for the post-tag nudge copy
@@ -52,6 +53,7 @@ export default function MoneyDashboardPage() {
     formatAmount,
   } = useMoney();
   const { toast } = useToast();
+  const [ratesOpen, setRatesOpen] = useState(false);
   usePageEntrance(containerRef, [isLoading]);
 
   // Post-tag Pro upsell nudge (spot #2) — fires after QuickBar logs income
@@ -89,7 +91,7 @@ export default function MoneyDashboardPage() {
       <div className="flex flex-col @2xl:flex-row @2xl:items-center justify-between gap-4">
         <div>
           <h1 data-entrance="title" className="text-2xl font-black text-white tracking-tight">Financial Overview</h1>
-          <div className="flex items-center gap-1.5 mt-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-2 mt-1.5 text-xs text-slate-400">
             <span className="font-bold uppercase tracking-wider text-[9px]">Display:</span>
             <Select
               value={displayCurrency}
@@ -97,9 +99,24 @@ export default function MoneyDashboardPage() {
               options={['EGP', 'USD', 'EUR', 'GBP']}
               className="w-24"
             />
+            <Button
+              variant="ghost"
+              size="xs"
+              shape="pill"
+              onClick={() => setRatesOpen(true)}
+              leftIcon={<ArrowLeftRight className="w-3 h-3" />}
+            >
+              Rates
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: EXCHANGE-RATES MODAL
+          Contains: live-refresh + per-currency manual override (see RatesModal.tsx)
+          ────────────────────────────────────────────────────────── */}
+      <RatesModal isOpen={ratesOpen} onClose={() => setRatesOpen(false)} />
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: QUICK-BAR TRANSACTION ENTRY

@@ -19,6 +19,8 @@ export interface NumberInputProps {
   value: string | number;
   /** Emits the raw string value (drop-in for `setX(e.target.value)`). */
   onChange: (value: string) => void;
+  /** Fires when the field loses focus — for commit-on-blur validation. */
+  onBlur?: () => void;
   min?: number;
   max?: number;
   /** Stepper increment. Defaults to 1. */
@@ -77,6 +79,7 @@ const SIZES = {
 export function NumberInput({
   value,
   onChange,
+  onBlur,
   min,
   max,
   step = 1,
@@ -129,6 +132,7 @@ export function NumberInput({
         inputMode="decimal"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         min={min}
         max={max}
         step={step}

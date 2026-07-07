@@ -8,7 +8,7 @@ import {
   Shield, Heart, PiggyBank, HelpCircle,
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Button, Select, Modal, NumberInput, SegmentedSwitch, Pagination, Skeleton } from '@/components/ui';
+import { Button, Select, Modal, NumberInput, SegmentedSwitch, Pagination, Skeleton, Tooltip } from '@/components/ui';
 import { cn } from '@/lib/utils';
 
 type LedgerType = 'all' | 'income' | 'expense' | 'transfer';
@@ -40,8 +40,11 @@ function TransactionsInner() {
   const {
     accounts, categories, isLoading,
     getTransactions, addTransaction, updateTransaction, deleteTransaction,
-    formatAmount,
+    formatAmount, homeEquivalent, homeCurrency, displayCurrency,
   } = useMoney();
+  // Home-equivalent tooltip only adds information when the visible figure isn't
+  // already shown in the home currency (i.e. display ≠ home).
+  const showHome = displayCurrency !== homeCurrency;
   usePageEntrance(containerRef, [isLoading]);
 
   // ── Filters ──
@@ -310,9 +313,17 @@ function TransactionsInner() {
                 </div>
 
                 <div className="text-right flex items-center gap-3 flex-shrink-0">
-                  <p className={cn('text-sm font-black tabular-nums', amountColor(t))}>
-                    {sign(t)}{formatAmount(t.amount, t.currency)}
-                  </p>
+                  {showHome ? (
+                    <Tooltip content={`≈ ${homeEquivalent(t.amount, t.currency)} in ${homeCurrency}`}>
+                      <p className={cn('text-sm font-black tabular-nums cursor-help', amountColor(t))}>
+                        {sign(t)}{formatAmount(t.amount, t.currency)}
+                      </p>
+                    </Tooltip>
+                  ) : (
+                    <p className={cn('text-sm font-black tabular-nums', amountColor(t))}>
+                      {sign(t)}{formatAmount(t.amount, t.currency)}
+                    </p>
+                  )}
                   <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button variant="unstyled"
                       onClick={() => openEdit(t)}

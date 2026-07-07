@@ -1,6 +1,55 @@
 import { query, queryOne, execute, transaction } from '@/lib/db';
 import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
 import { HttpError } from '@/lib/http-error';
+import { type Currency, type Rates, CURRENCIES, normalizeRates, snapshotHomeAmount, fetchLiveRates } from '@/lib/fx';
+
+// ── FX: per-user rate cache (money_fx_rates, pivot=EGP) + home currency ───────
+
+/** Load the user's rates (filled from fallback) + their home currency. */
+export async function loadFxContext(userId: number): Promise<{ rates: Rates; home: Currency }> {
+  const rateRows = await query<{ currency: string; rate_to_egp: string }>(
+    `SELECT currency, rate_to_egp FROM money_fx_rates WHERE user_id = ?`, [userId],
+  );
+  const partial: Record<string, number> = {};
+  for (const r of rateRows) partial[r.currency] = Number(r.rate_to_egp);
+  const rates = normalizeRates(partial);
+  const u = await queryOne<{ primary_currency: string }>(
+    `SELECT primary_currency FROM users WHERE id = ? LIMIT 1`, [userId],
+  );
+  return { rates, home: ((u?.primary_currency as Currency) || 'EGP') };
+}
+
+export async function getFxRates(userId: number): Promise<{ rates: Rates; sources: Record<string, string> }> {
+  const rows = await query<{ currency: string; rate_to_egp: string; source: string }>(
+    `SELECT currency, rate_to_egp, source FROM money_fx_rates WHERE user_id = ?`, [userId],
+  );
+  const partial: Record<string, number> = {};
+  const sources: Record<string, string> = {};
+  for (const r of rows) { partial[r.currency] = Number(r.rate_to_egp); sources[r.currency] = r.source; }
+  return { rates: normalizeRates(partial), sources };
+}
+
+/** Pull live rates and upsert them for this user. Never throws (fetchLiveRates
+ *  falls back), so refresh always leaves a usable rate table. */
+export async function refreshFxRates(userId: number): Promise<{ rates: Rates; source: 'api' | 'fallback' }> {
+  const { rates, source } = await fetchLiveRates();
+  for (const currency of CURRENCIES) {
+    await execute(
+      `INSERT INTO money_fx_rates (user_id, currency, rate_to_egp, source) VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE rate_to_egp = VALUES(rate_to_egp), source = VALUES(source)`,
+      [userId, currency, rates[currency], source],
+    );
+  }
+  return { rates, source };
+}
+
+export async function setFxRate(userId: number, currency: Currency, rate: number): Promise<void> {
+  await execute(
+    `INSERT INTO money_fx_rates (user_id, currency, rate_to_egp, source) VALUES (?, ?, ?, 'manual')
+     ON DUPLICATE KEY UPDATE rate_to_egp = VALUES(rate_to_egp), source = 'manual'`,
+    [userId, currency, rate],
+  );
+}
 
 export const DEFAULT_BUCKETS = [
   { key: 'need', label: 'Needs', percent: 60 },
@@ -36,13 +85,18 @@ export function balanceDelta(type: TxnType, amount: number): number {
 export async function addTransaction(userId: number, input: AddTransactionInput): Promise<number> {
   let insertId = 0;
   const transferAccountId = input.type === 'transfer' ? (input.transfer_account_id ?? null) : null;
+  // Snapshot the home-currency value at write time so history never re-derives
+  // when rates later move.
+  const { rates, home } = await loadFxContext(userId);
+  const { home_amount, fx_rate } = snapshotHomeAmount(input.amount, input.currency as Currency, home, rates);
+  const fxDate = new Date().toISOString().substring(0, 10);
   await transaction(async (c) => {
     const [res] = await c.execute<any>(
       `INSERT INTO money_transactions
-         (user_id, account_id, category_id, type, amount, currency, description, transaction_date, lead_id, transfer_account_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (user_id, account_id, category_id, type, amount, currency, home_amount, fx_rate, fx_rate_date, description, transaction_date, lead_id, transfer_account_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [userId, input.account_id, input.category_id, input.type, input.amount,
-       input.currency, input.description, input.date,
+       input.currency, home_amount, fx_rate, fxDate, input.description, input.date,
        input.type === 'income' ? input.lead_id : null,
        transferAccountId],
     );
@@ -95,6 +149,10 @@ export async function deleteTransaction(userId: number, id: number): Promise<voi
 
 export async function updateTransaction(userId: number, id: number, input: AddTransactionInput): Promise<void> {
   const transferAccountId = input.type === 'transfer' ? (input.transfer_account_id ?? null) : null;
+  // Re-snapshot FX at edit time; existing rows keep their stored home_amount.
+  const { rates, home } = await loadFxContext(userId);
+  const { home_amount, fx_rate } = snapshotHomeAmount(input.amount, input.currency as Currency, home, rates);
+  const fxDate = new Date().toISOString().substring(0, 10);
   await transaction(async (c) => {
     const [rows] = await c.execute<any[]>(
       `SELECT account_id, amount, type, transfer_account_id FROM money_transactions WHERE id = ? AND user_id = ? LIMIT 1`,
@@ -117,9 +175,11 @@ export async function updateTransaction(userId: number, id: number, input: AddTr
     await c.execute(
       `UPDATE money_transactions SET
          account_id = ?, category_id = ?, type = ?, amount = ?, currency = ?,
+         home_amount = ?, fx_rate = ?, fx_rate_date = ?,
          description = ?, transaction_date = ?, lead_id = ?, transfer_account_id = ?
        WHERE id = ? AND user_id = ?`,
       [input.account_id, input.category_id, input.type, input.amount, input.currency,
+       home_amount, fx_rate, fxDate,
        input.description, input.date, input.type === 'income' ? input.lead_id : null,
        transferAccountId, id, userId],
     );
@@ -382,8 +442,10 @@ export function monthWindow(now = new Date()): { start: string; end: string } {
   return { start: iso(start), end: iso(end) };
 }
 export async function monthlyIncome(userId: number, start: string, end: string): Promise<number> {
+  // Home-currency (snapshotted) sum so mixed-currency income aggregates
+  // correctly; falls back to raw amount for legacy rows written pre-snapshot.
   const row = await queryOne<{ total: string }>(
-    `SELECT SUM(amount) AS total FROM money_transactions
+    `SELECT SUM(COALESCE(home_amount, amount)) AS total FROM money_transactions
       WHERE user_id = ? AND type = 'income' AND transaction_date >= ? AND transaction_date < ?`,
     [userId, start, end],
   );
@@ -391,7 +453,7 @@ export async function monthlyIncome(userId: number, start: string, end: string):
 }
 export async function monthlySpendByBucket(userId: number, start: string, end: string): Promise<Record<string, number>> {
   const rows = await query<{ type: string; total: string }>(
-    `SELECT c.type, SUM(t.amount) AS total
+    `SELECT c.type, SUM(COALESCE(t.home_amount, t.amount)) AS total
        FROM money_transactions t JOIN money_categories c ON t.category_id = c.id
       WHERE t.user_id = ? AND t.type = 'expense' AND t.transaction_date >= ? AND t.transaction_date < ?
       GROUP BY c.type`,

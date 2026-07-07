@@ -3,7 +3,7 @@
 import React from 'react';
 import { Briefcase, DollarSign, Wallet, CreditCard, AlertTriangle } from 'lucide-react';
 import { useMoney, type Account } from '@/context/MoneyContext';
-import { Progress, DeleteButton } from '@/components/ui';
+import { Progress, DeleteButton, Tooltip } from '@/components/ui';
 import { utilization, dueInfo } from '@/lib/services/money-math';
 import { cn } from '@/lib/utils';
 
@@ -36,8 +36,11 @@ export interface AccountCardProps {
 }
 
 export function AccountCard({ account, onDelete, className }: AccountCardProps) {
-  const { formatAmount } = useMoney();
+  const { formatAmount, homeEquivalent, homeCurrency, displayCurrency } = useMoney();
   const isCard = account.type === 'credit_card';
+  // Home-equivalent tooltip only adds information when the visible figure isn't
+  // already shown in the home currency (i.e. display ≠ home).
+  const showHome = displayCurrency !== homeCurrency;
   const balance = parseFloat(account.balance);
   const limit = account.credit_limit != null ? parseFloat(account.credit_limit) : null;
   const util = isCard ? utilization(balance, limit) : null;
@@ -71,9 +74,17 @@ export function AccountCard({ account, onDelete, className }: AccountCardProps) 
           </div>
 
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1 truncate">{account.name}</p>
-          <h3 className="text-2xl font-black text-white tracking-tight tabular-nums">
-            {formatAmount(Math.abs(balance), account.currency)}
-          </h3>
+          {showHome ? (
+            <Tooltip content={`≈ ${homeEquivalent(Math.abs(balance), account.currency)} in ${homeCurrency}`}>
+              <h3 className="text-2xl font-black text-white tracking-tight tabular-nums cursor-help">
+                {formatAmount(Math.abs(balance), account.currency)}
+              </h3>
+            </Tooltip>
+          ) : (
+            <h3 className="text-2xl font-black text-white tracking-tight tabular-nums">
+              {formatAmount(Math.abs(balance), account.currency)}
+            </h3>
+          )}
           {isCard && limit != null && (
             <p className="text-[10px] text-slate-400 font-semibold mt-0.5 tabular-nums">
               owed of {formatAmount(limit, account.currency)} limit

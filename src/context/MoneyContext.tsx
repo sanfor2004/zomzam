@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { EXCHANGE_RATES_TO_EGP } from '@/lib/utils';
+import { type Rates, type Currency, FALLBACK_RATES, convert, normalizeRates } from '@/lib/fx';
 import { useToast } from '@/components/ui';
 
 export interface Account {
@@ -140,7 +141,10 @@ interface MoneyContextType {
   };
   settings: MoneySettings;
   displayCurrency: 'EGP' | 'USD' | 'EUR' | 'GBP';
-  exchangeRate: number; // EGP per USD
+  homeCurrency: 'EGP' | 'USD' | 'EUR' | 'GBP';
+  rates: Rates;
+  rateSources: Record<string, string>;
+  exchangeRate: number; // EGP per USD (deprecated — prefer `rates`)
   isLoading: boolean;
   addTransaction: (data: AddTransactionData) => Promise<boolean>;
   updateTransaction: (id: number, data: AddTransactionData) => Promise<boolean>;
@@ -153,8 +157,15 @@ interface MoneyContextType {
   deleteLend: (id: number) => Promise<boolean>;
   updateBudget: (buckets: Bucket[]) => Promise<boolean>;
   updateSettings: (primary: string, secondary: string) => Promise<boolean>;
+  refreshFxRates: () => Promise<{ ok: boolean; source?: string; rates?: Rates }>;
+  setFxRate: (currency: Currency, rate: number) => Promise<boolean>;
   setDisplayCurrency: (curr: 'EGP' | 'USD' | 'EUR' | 'GBP') => void;
+  /** Convert `amount` (from `fromCurrency`) into the current display currency, formatted. */
   formatAmount: (amount: number | string, fromCurrency?: string) => string;
+  /** Format `amount` in its OWN currency with no conversion (native display). */
+  formatNative: (amount: number | string, currency?: string) => string;
+  /** Convert `amount` (from `fromCurrency`) into the HOME currency, formatted — for tooltips. */
+  homeEquivalent: (amount: number | string, fromCurrency?: string) => string;
 }
 
 const MoneyContext = createContext<MoneyContextType | undefined>(undefined);
@@ -198,9 +209,11 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     secondary_currency: 'USD',
   });
   const [displayCurrency, setDisplayCurrency] = useState<'EGP' | 'USD' | 'EUR' | 'GBP'>('EGP');
+  const [rates, setRates] = useState<Rates>(FALLBACK_RATES);
+  const [rateSources, setRateSources] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
 
-  const exchangeRate = EXCHANGE_RATES_TO_EGP.USD; // 1 USD = X EGP
+  const exchangeRate = EXCHANGE_RATES_TO_EGP.USD; // deprecated — prefer `rates`
 
   // ── Per-resource fetchers ──────────────────────────────────────────────
   const fetchAccounts = useCallback(async () => {
@@ -246,12 +259,21 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const fetchFx = useCallback(async () => {
+    const res = await fetch('/api/money/fx');
+    const data = await res.json();
+    if (data.success) {
+      if (data.rates) setRates(normalizeRates(data.rates));
+      if (data.sources) setRateSources(data.sources);
+    }
+  }, []);
+
   useEffect(() => {
     setIsLoading(true);
-    Promise.all([fetchAccounts(), fetchTransactions(), fetchBudget(), fetchLend(), fetchSettings()])
+    Promise.all([fetchAccounts(), fetchTransactions(), fetchBudget(), fetchLend(), fetchSettings(), fetchFx()])
       .catch((err) => console.error('Failed to load money data:', err))
       .finally(() => setIsLoading(false));
-  }, [fetchAccounts, fetchTransactions, fetchBudget, fetchLend, fetchSettings]);
+  }, [fetchAccounts, fetchTransactions, fetchBudget, fetchLend, fetchSettings, fetchFx]);
 
   // ── Optimistic mutators ─────────────────────────────────────────────────
   const addTransaction = useCallback(async (data: AddTransactionData) => {
@@ -462,6 +484,33 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     });
   }, [settings, displayCurrency, fetchSettings, toast]);
 
+  const refreshFxRates = useCallback(async (): Promise<{ ok: boolean; source?: string; rates?: Rates }> => {
+    try {
+      const res = await fetch('/api/money/fx', { method: 'POST', headers: JSON_HEADERS });
+      const data = await res.json();
+      if (data.success) {
+        const next = normalizeRates(data.rates);
+        setRates(next);
+        await fetchFx();
+        return { ok: true, source: data.source, rates: next };
+      }
+    } catch { /* fall through */ }
+    toast({ variant: 'error', description: 'Could not refresh rates' });
+    return { ok: false };
+  }, [fetchFx, toast]);
+
+  const setFxRate = useCallback(async (currency: Currency, rate: number) => {
+    const prev = rates;
+    return runMutation({
+      apply: () => setRates((cur) => ({ ...cur, [currency]: rate })),
+      rollback: () => setRates(prev),
+      request: () => fetch('/api/money/fx', { method: 'PUT', headers: JSON_HEADERS, body: JSON.stringify({ currency, rate_to_egp: rate }) }),
+      refetch: fetchFx,
+      errorMessage: 'Could not update rate',
+      toast,
+    });
+  }, [rates, fetchFx, toast]);
+
   // Derived lending + monthly-spend summary — the old god-route's `stats` shape,
   // now computed client-side from budget.allocation + lendList instead of a
   // dedicated server aggregate (mirrors the old query: raw amount sum by type,
@@ -477,30 +526,29 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     return { income: budget.income, expenses, lend };
   }, [budget, lendList]);
 
-  // Convert and format amounts dynamically — the ONLY currency-conversion path.
+  // Convert into the current display currency, pivoting through EGP — correct
+  // for EVERY pair (incl. USD↔EUR, which the old EGP-only logic got wrong).
+  // Used for consolidated views (net worth, "see everything in X").
   const formatAmount = useCallback((amount: number | string, fromCurrency = 'EGP') => {
-    const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const n = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const converted = convert(n || 0, (fromCurrency as Currency) || 'EGP', displayCurrency, rates);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: displayCurrency }).format(converted);
+  }, [displayCurrency, rates]);
 
-    // Quick currency conversion: EGP <-> USD (using static exchangeRate)
-    let converted = numericAmount;
-    if (fromCurrency === 'USD' && displayCurrency === 'EGP') {
-      converted = numericAmount * EXCHANGE_RATES_TO_EGP.USD;
-    } else if (fromCurrency === 'EGP' && displayCurrency === 'USD') {
-      converted = numericAmount / EXCHANGE_RATES_TO_EGP.USD;
-    } else if (fromCurrency !== displayCurrency) {
-      // Basic fallback conversion for EUR, GBP using approximate relative rates if needed,
-      // but standard is EGP/USD. We will fall back to original for non-USD/EGP pairs
-      if (fromCurrency === 'EUR' && displayCurrency === 'EGP') converted = numericAmount * EXCHANGE_RATES_TO_EGP.EUR;
-      else if (fromCurrency === 'GBP' && displayCurrency === 'EGP') converted = numericAmount * EXCHANGE_RATES_TO_EGP.GBP;
-      else if (fromCurrency === 'EGP' && displayCurrency === 'EUR') converted = numericAmount / EXCHANGE_RATES_TO_EGP.EUR;
-      else if (fromCurrency === 'EGP' && displayCurrency === 'GBP') converted = numericAmount / EXCHANGE_RATES_TO_EGP.GBP;
-    }
+  // Format in the amount's OWN currency, no conversion — the native display used
+  // for per-account balances and per-transaction rows.
+  const formatNative = useCallback((amount: number | string, currency = 'EGP') => {
+    const n = typeof amount === 'string' ? parseFloat(amount) : amount;
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: (currency as Currency) || 'EGP' }).format(n || 0);
+  }, []);
 
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: displayCurrency,
-    }).format(converted);
-  }, [displayCurrency]);
+  // Convert into the HOME currency (settings.primary_currency) — the tooltip that
+  // shows a foreign amount's worth in the user's main currency.
+  const homeEquivalent = useCallback((amount: number | string, fromCurrency = 'EGP') => {
+    const n = typeof amount === 'string' ? parseFloat(amount) : amount;
+    const converted = convert(n || 0, (fromCurrency as Currency) || 'EGP', settings.primary_currency, rates);
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: settings.primary_currency }).format(converted);
+  }, [rates, settings.primary_currency]);
 
   const value = useMemo<MoneyContextType>(
     () => ({
@@ -512,6 +560,9 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       stats,
       settings,
       displayCurrency,
+      homeCurrency: settings.primary_currency,
+      rates,
+      rateSources,
       exchangeRate,
       isLoading,
       addTransaction,
@@ -525,8 +576,12 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       deleteLend,
       updateBudget,
       updateSettings,
+      refreshFxRates,
+      setFxRate,
       setDisplayCurrency,
       formatAmount,
+      formatNative,
+      homeEquivalent,
     }),
     [
       accounts,
@@ -537,6 +592,8 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       stats,
       settings,
       displayCurrency,
+      rates,
+      rateSources,
       exchangeRate,
       isLoading,
       addTransaction,
@@ -550,7 +607,11 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       deleteLend,
       updateBudget,
       updateSettings,
+      refreshFxRates,
+      setFxRate,
       formatAmount,
+      formatNative,
+      homeEquivalent,
     ],
   );
 
