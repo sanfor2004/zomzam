@@ -29,7 +29,7 @@ The platform is divided into three major suites:
 ### 2. 💰 The Money Suite (Wealth Ledger)
 * **Financial Net Worth Dashboard** (`/money/dashboard`): Aggregate balances across all active cards, banks, and cash accounts, display real-time income/expense distribution, and automatically convert figures between custom Primary and Secondary currencies.
 * **Bank Ledger & Accounts** (`/money/accounts`): Add, modify, and manage financial entities (Cash, Bank accounts, Credit/Debit cards) with initial balances and multi-currency denominations.
-* **Income & Expense logs** (`/money/income` & `/money/expenses`): Categorized transaction ledgers that enforce the **50/30/20 Budgeting Rule** (categorizing transactions as *Needs*, *Wants*, or *Savings*).
+* **Income & Expense logs** (`/money/income` & `/money/expenses`): Categorized transaction ledgers with editable budget buckets (default *Needs 60 / Wants 20 / Savings 20*), plus optional per-client income tagging that feeds the Pro profitability insight.
 * **Lending & Debt tracker** (`/money/lend`): Log outstanding loans and borrowings (`owe_me` or `i_owe`), define payment dates, and track settlement statuses (`pending`, `partial`, `settled`).
 
 ### 3. 💼 The CRM Suite (Client Relations & Lead Generation)
@@ -90,7 +90,7 @@ zomzam.com/
 │   │   │   ├── home/          # /home — social feed (composer + PostCard live in the Kit; shared.ts holds the feed types)
 │   │   │   ├── saved/         # /saved — the viewer's bookmarked posts
 │   │   │   ├── me/            # /me — profile settings
-│   │   │   ├── money/         # /money/accounts, /dashboard, /expenses, /income, /lend
+│   │   │   ├── money/         # /money/accounts, /dashboard, /expenses, /income, /lend (+ layout.tsx scopes MoneyProvider to this segment)
 │   │   │   ├── settings/      # /settings — timezone, language, currency preferences
 │   │   │   ├── time/          # /time/execution, /ideas, /planning, /tasks, /tracker
 │   │   │   └── layout.tsx     # Sidebar nav, topbar, notifications, presence, ambient WebGL background
@@ -100,7 +100,7 @@ zomzam.com/
 │   │   │   │   └── reset-password/   # Consume a reset token, set new password
 │   │   │   ├── crm/            # Leads, scrape jobs, pipeline, contacts, projects, AI outreach, Notion sync settings
 │   │   │   ├── heartbeat/      # AFK-mode live channel (5s poll, same sync payload as /api/stream)
-│   │   │   ├── money/          # Accounts, transactions, lending ledger
+│   │   │   ├── money/          # REST resources: transactions, accounts, budget, lend, settings, insights (Pro)
 │   │   │   ├── notifications/  # Notification list + mark-as-read
 │   │   │   ├── notion/         # Notion integration settings + lead sync
 │   │   │   ├── posts/          # Feed, create/like/delete/comment on posts
@@ -125,11 +125,12 @@ zomzam.com/
 │   │   ├── ui/                  # The Zomzam Kit — 35 primitives (Button, Card, Modal, Toast, ComposerBanner, …) + data-coupled feed members PostComposer & PostCard (both /api/posts-aware, demo-mode for /ui-kit) + index.ts barrel
 │   │   ├── chat/                # Global realtime UI: ChatDock (docked chat windows), RightSidebar (persistent right nav: Messages + Active Now presence + Suggested), NotificationToaster (live toast)
 │   │   ├── crm/                 # CRM-specific: KanbanBoard, LeadCard, LeadDetailsModal, MapAutocomplete, ScraperPanel
+│   │   ├── money/               # Money-specific: QuickBar (segmented entry), BudgetRings, AccountCard (+ card variant), ClientProfitabilityTeaser (Pro)
 │   │   ├── ErrorReporter.tsx    # Global client error listener (uncaught errors + unhandled rejections → /api/report-error)
 │   │   └── Silk.tsx              # React Three Fiber shader background (landing page, desktop-gated)
 │   │
 │   ├── context/                 # Client-side global state
-│   │   ├── MoneyContext.tsx           # Multi-currency balances, cash flows, accounts
+│   │   ├── MoneyContext.tsx           # Scoped to /money: per-resource fetchers + optimistic mutators (rollback + Toast), single FX source
 │   │   ├── MessagesContext.tsx        # Global DM state: contacts model, unread total, docked chat windows, live new_message delivery
 │   │   ├── StreamWaiterContext.tsx    # 2-channel live-sync client: SSE while active, 5s heartbeat while AFK, notification state
 │   │   └── TranslationContext.tsx     # Multi-language dictionary + RTL (Arabic/Hebrew) direction control
@@ -153,6 +154,8 @@ zomzam.com/
 │   │   ├── utils.ts              # cn() class merger, currency conversion rates
 │   │   ├── services/             # Per-suite business logic extracted from the route megaswitches
 │   │   │   ├── crm.ts           # CRM logic + qualify_lead cross-suite bridge (+ crm.test.ts)
+│   │   │   ├── money.ts         # Money logic: transactions/accounts/budget/lend/settings + Time×Money profitability join (+ money.test.ts)
+│   │   │   ├── money-math.ts    # DB-free card-cycle math (utilization/daysUntilDue) shared by the service test + the client AccountCard
 │   │   │   └── posts/           # Social feed service, split by concern (+ posts.test.ts)
 │   │   │       ├── index.ts     #   public API barrel (re-exports the surface)
 │   │   │       ├── shared.ts    #   db-free helpers shared across modules
@@ -193,7 +196,7 @@ zomzam.com/
 | `/time/tracker` | Protected | Historical focus-session analytics (metric cards + activity list). |
 | `/money/dashboard` | Protected | Net-worth aggregation, multi-currency conversion, income/expense split. |
 | `/money/accounts` | Protected | Manage cash, bank, and card entities. |
-| `/money/income` / `/money/expenses` | Protected | Categorized transaction ledgers (50/30/20 rule). |
+| `/money/income` / `/money/expenses` | Protected | Categorized transaction ledgers; income supports optional per-client tagging. |
 | `/money/lend` | Protected | Lending & debt tracker (`owe_me` / `i_owe`), confetti on settlement. |
 | `/crm` | Protected | CRM dashboard + Map Leads Scraper (Google Places proxy). |
 | `/crm/leads` | Protected | Lead Vault directory — search, filter, status, batch delete. |
@@ -218,7 +221,12 @@ zomzam.com/
 | `/api/auth/oauth/google` / `/oauth/google/callback` | — | Google Sign-In: redirects to Google's consent screen, then verifies the returned `id_token` (`jose` remote JWKS) and mints a `ZOMZAM_SESSION` cookie. |
 | `/api/profile` / `/api/profile/change-password` | — | Profile field updates (incl. **username** change — validated `^[a-zA-Z0-9_]{3,50}$` + uniqueness), avatar upload (`sharp` -> Vercel Blob), authenticated password change. Username + avatar changes are recorded in the `user_audit_log` safety trail. |
 | `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
-| `/api/money` | `get_initial_data`, `add/delete_transaction`, `add/delete_account`, `add/settle/delete_lend` | Accounts, transactions, lending ledger. |
+| `/api/money/transactions` | `GET` (list, `?limit&offset`), `POST` (add income/expense/transfer — transfer credits a second account via `transfer_account_id`), `DELETE` | Transaction ledger; balance mutations are owner-scoped and transactional. |
+| `/api/money/accounts` | `GET` (accounts + categories), `POST` (card cycle fields when `type=credit_card`), `DELETE` | Cash/bank/wallet/credit-card entities. Card safety is structural — no PAN/CVV column exists. |
+| `/api/money/budget` | `GET` (buckets + income + allocation + safe-to-spend), `PUT` (percents 0–100, sum ≤100) | Current-month budget rings (free tier). |
+| `/api/money/lend` | `GET`, `POST`, `PATCH` (settle), `DELETE` | Lending & debt tracker (`owe_me` / `i_owe`). |
+| `/api/money/settings` | `GET`, `PUT` (currency ∈ {EGP,USD,EUR,GBP}) | Display-currency preference. |
+| `/api/money/insights` | `GET` (`?display`) | **Pro** — per-client realized hourly rate (Time×Money join). Presentation-gated: returns real figures (Stripe-ready) but no client fetches them until a future `isPro`. |
 | `/api/crm` | `get/add/update/delete_lead(s)`, `qualify_lead`, `create_scrape_job`, `generate_outreach`, `get_dashboard_stats`, `get_contacts`, `get_projects` | Full CRM data layer + AI outreach generation. |
 | `/api/shops` | — | Google Places nearby-search proxy (lat/lng/radius/type), backs the CRM map scraper. |
 | `/api/notion` | `sync`, `update_settings` | Notion integration for CRM lead sync. |
@@ -412,14 +420,12 @@ The Time Management ecosystem consists of three main components:
 
 ## 💰 Money Management Architecture
 
-Financial transactions are governed by the **50/30/20 Budgeting Rule**:
-* **Needs (50%)**: Mandatory living costs (Bills, rent, food).
-* **Wants (30%)**: Lifestyle expenses (Hobbies, eating out).
-* **Savings (20%)**: Financial growth (Investments, debt payoff, emergencies).
+Spending is organized into **editable budget buckets** (default **Needs 60% / Wants 20% / Savings 20%**, persisted as JSON in `money_budget`), rendered as nested activity rings — each ring fills by percent of its *own* limit spent, with a current-month safe-to-spend readout. Buckets and their percentages are user-editable (percents 0–100, sum ≤ 100); historical trends and forecasting stay Pro-gated.
 
 ### Key Systems:
-* **Ledger API**: Records balances, accounts, and lending records.
-* **Multi-Currency Converter**: Displays net worth in the user's chosen primary and secondary currencies.
+* **Ledger API**: Records balances, accounts, transactions (income/expense/transfer), and lending records — transfers move balance across two owned accounts atomically.
+* **Credit-card cycle tracking**: Utilization, statement/due-day nudges, and last-4 only — the schema holds no PAN/CVV/expiry column, so card numbers can't leak.
+* **Multi-Currency Converter**: Displays net worth in the user's chosen primary and secondary currencies from a single `EXCHANGE_RATES_TO_EGP` source.
 * **Lending System**: Tracks debts owed to the user (`owe_me`) or by the user (`i_owe`) with status parameters (`pending`, `partial`, `settled`).
 
 ---
@@ -445,6 +451,13 @@ When a deal is qualified (moved to **Closed Won** / **Qualified** on the Kanban 
 ### The Delivery Completion Bridge
 When the final development task (containing the phrase `Production Delivery & Launch`) is completed on the **Task Board**, the database trigger intercepts the mutation:
 * Automatically updates the associated project delivery status to `delivered`.
+
+### The Time × Money Profitability Bridge (Pro)
+Realized per-client hourly rate joins income against logged hours across three suites:
+* **Income** is attributed per client through `money_transactions.lead_id → crm_leads`.
+* **Hours** roll up per client through `time_tasks → crm_projects.lead_id → crm_leads` (`status = 'completed'`, `actual_duration` in minutes).
+* `getClientProfitability` normalizes currencies via the single `EXCHANGE_RATES_TO_EGP` source, then divides income by hours (guarded to `null`, never `Infinity`, when a client has zero logged minutes).
+* Surfaced only behind the `/api/money/insights` Pro route — presentation-gated by `ProLock` until billing exists, so real rates never reach a free client.
 
 ---
 
