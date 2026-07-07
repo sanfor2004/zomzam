@@ -93,6 +93,107 @@ export async function deleteTransaction(userId: number, id: number): Promise<voi
   });
 }
 
+export async function updateTransaction(userId: number, id: number, input: AddTransactionInput): Promise<void> {
+  const transferAccountId = input.type === 'transfer' ? (input.transfer_account_id ?? null) : null;
+  await transaction(async (c) => {
+    const [rows] = await c.execute<any[]>(
+      `SELECT account_id, amount, type, transfer_account_id FROM money_transactions WHERE id = ? AND user_id = ? LIMIT 1`,
+      [id, userId],
+    );
+    const old = rows[0];
+    if (!old) throw new HttpError(404, 'Transaction not found');
+    // Reverse the old effect (both legs), then apply the new — the safe edit
+    // sequence, mirroring add/deleteTransaction so balances never drift.
+    await c.execute(
+      `UPDATE money_accounts SET balance = balance - ? WHERE id = ? AND user_id = ?`,
+      [balanceDelta(old.type, parseFloat(old.amount)), old.account_id, userId],
+    );
+    if (old.type === 'transfer' && old.transfer_account_id != null) {
+      await c.execute(
+        `UPDATE money_accounts SET balance = balance - ? WHERE id = ? AND user_id = ?`,
+        [parseFloat(old.amount), old.transfer_account_id, userId],
+      );
+    }
+    await c.execute(
+      `UPDATE money_transactions SET
+         account_id = ?, category_id = ?, type = ?, amount = ?, currency = ?,
+         description = ?, transaction_date = ?, lead_id = ?, transfer_account_id = ?
+       WHERE id = ? AND user_id = ?`,
+      [input.account_id, input.category_id, input.type, input.amount, input.currency,
+       input.description, input.date, input.type === 'income' ? input.lead_id : null,
+       transferAccountId, id, userId],
+    );
+    const [balRes] = await c.execute<any>(
+      `UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`,
+      [balanceDelta(input.type, input.amount), input.account_id, userId],
+    );
+    if (balRes.affectedRows === 0) throw new HttpError(400, 'Invalid account');
+    if (transferAccountId != null) {
+      const [destRes] = await c.execute<any>(
+        `UPDATE money_accounts SET balance = balance + ? WHERE id = ? AND user_id = ?`,
+        [input.amount, transferAccountId, userId],
+      );
+      if (destRes.affectedRows === 0) throw new HttpError(400, 'Invalid destination account');
+    }
+  });
+}
+
+export interface TxnFilter {
+  type?: string;
+  accountId?: number | null;
+  categoryId?: number | null;
+  dateFrom?: string | null;
+  dateTo?: string | null;
+  search?: string;
+  limit?: number;
+  offset?: number;
+}
+
+/** Filtered + counted ledger read for the unified /money/transactions page.
+ *  Separate from listTransactions (kept for the dashboard's recent list) so the
+ *  full ledger can filter/search/paginate without disturbing existing callers. */
+export async function listTransactionsFiltered(userId: number, f: TxnFilter): Promise<{ rows: any[]; total: number }> {
+  const where: string[] = ['t.user_id = ?'];
+  const params: any[] = [userId];
+  if (f.type && ['income', 'expense', 'transfer', 'lend'].includes(f.type)) { where.push('t.type = ?'); params.push(f.type); }
+  if (f.accountId) { where.push('(t.account_id = ? OR t.transfer_account_id = ?)'); params.push(f.accountId, f.accountId); }
+  if (f.categoryId) { where.push('t.category_id = ?'); params.push(f.categoryId); }
+  if (f.dateFrom) { where.push('t.transaction_date >= ?'); params.push(f.dateFrom); }
+  if (f.dateTo) { where.push('t.transaction_date <= ?'); params.push(f.dateTo); }
+  if (f.search && f.search.trim()) {
+    const like = `%${f.search.trim()}%`;
+    where.push('(t.description LIKE ? OR c.name LIKE ? OR a.name LIKE ?)');
+    params.push(like, like, like);
+  }
+  const whereSql = where.join(' AND ');
+  // LIMIT/OFFSET inlined as bounded integers (mysql2 rejects bound params here —
+  // same convention as listTransactions).
+  const safeLimit = Math.min(Math.max(parseInt(String(f.limit ?? 25), 10) || 25, 1), 200);
+  const safeOffset = Math.max(parseInt(String(f.offset ?? 0), 10) || 0, 0);
+  const countRow = await queryOne<{ c: number }>(
+    `SELECT COUNT(*) AS c FROM money_transactions t
+       LEFT JOIN money_categories c ON t.category_id = c.id
+       LEFT JOIN money_accounts a ON t.account_id = a.id
+      WHERE ${whereSql}`,
+    params,
+  );
+  const rows = await query(
+    `SELECT t.*, c.name AS category_name, c.icon AS category_icon, c.type AS category_type,
+            a.name AS account_name, a.currency AS account_currency,
+            l.name AS client_name, ta.name AS transfer_account_name
+       FROM money_transactions t
+       LEFT JOIN money_categories c ON t.category_id = c.id
+       LEFT JOIN money_accounts a ON t.account_id = a.id
+       LEFT JOIN crm_leads l ON t.lead_id = l.id
+       LEFT JOIN money_accounts ta ON t.transfer_account_id = ta.id
+      WHERE ${whereSql}
+      ORDER BY t.transaction_date DESC, t.id DESC
+      LIMIT ${safeLimit} OFFSET ${safeOffset}`,
+    params,
+  );
+  return { rows, total: Number(countRow?.c || 0) };
+}
+
 export async function listTransactions(userId: number, limit = 50, offset = 0) {
   // ponytail: mysql2's execute() (binary prepared-statement protocol) rejects
   // bound LIMIT/OFFSET params on this server version (ER_WRONG_ARGUMENTS).

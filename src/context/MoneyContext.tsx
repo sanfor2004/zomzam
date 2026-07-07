@@ -46,6 +46,24 @@ export interface Transaction {
   account_name: string | null;
   client_name: string | null;
   lead_id: number | null;
+  // Present on the filtered ledger read (listTransactionsFiltered); optional so
+  // the optimistic/recent-list rows that omit them still satisfy the type.
+  transfer_account_id?: number | null;
+  transfer_account_name?: string | null;
+  category_type?: string | null;
+  account_currency?: 'EGP' | 'USD' | 'EUR' | 'GBP' | null;
+}
+
+/** Filters for the paginated ledger read (getTransactions → GET with params). */
+export interface TransactionQuery {
+  page?: number;
+  page_size?: number;
+  type?: 'all' | 'income' | 'expense' | 'transfer';
+  account_id?: number | null;
+  category_id?: number | null;
+  date_from?: string | null;
+  date_to?: string | null;
+  search?: string;
 }
 
 export interface Lend {
@@ -125,7 +143,9 @@ interface MoneyContextType {
   exchangeRate: number; // EGP per USD
   isLoading: boolean;
   addTransaction: (data: AddTransactionData) => Promise<boolean>;
+  updateTransaction: (id: number, data: AddTransactionData) => Promise<boolean>;
   deleteTransaction: (id: number) => Promise<boolean>;
+  getTransactions: (params: TransactionQuery) => Promise<{ rows: Transaction[]; total: number }>;
   addAccount: (data: AddAccountData) => Promise<boolean>;
   deleteAccount: (id: number) => Promise<boolean>;
   addLend: (data: AddLendData) => Promise<boolean>;
@@ -263,6 +283,32 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
     });
   }, [accounts, categories, fetchTransactions, fetchAccounts, fetchBudget, toast]);
 
+  const updateTransaction = useCallback(async (id: number, data: AddTransactionData) => {
+    const prev = transactions;
+    return runMutation({
+      apply: () => setTransactions((cur) => cur.map((t) => (t.id === id ? {
+        ...t,
+        account_id: data.account_id,
+        category_id: data.category_id,
+        type: data.type,
+        amount: String(data.amount),
+        currency: data.currency as Transaction['currency'],
+        description: data.description || null,
+        transaction_date: data.date,
+        lead_id: data.lead_id ?? null,
+        transfer_account_id: data.transfer_account_id ?? null,
+        category_name: categories.find((c) => c.id === data.category_id)?.name ?? null,
+        category_icon: categories.find((c) => c.id === data.category_id)?.icon ?? null,
+        account_name: accounts.find((a) => a.id === data.account_id)?.name ?? null,
+      } : t))),
+      rollback: () => setTransactions(prev),
+      request: () => fetch('/api/money/transactions', { method: 'PATCH', headers: JSON_HEADERS, body: JSON.stringify({ id, ...data }) }),
+      refetch: () => Promise.all([fetchTransactions(), fetchAccounts(), fetchBudget()]).then(() => undefined),
+      errorMessage: 'Could not update transaction',
+      toast,
+    });
+  }, [transactions, accounts, categories, fetchTransactions, fetchAccounts, fetchBudget, toast]);
+
   const deleteTransaction = useCallback(async (id: number) => {
     const prev = transactions;
     return runMutation({
@@ -274,6 +320,27 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       toast,
     });
   }, [transactions, fetchTransactions, fetchAccounts, fetchBudget, toast]);
+
+  // Direct filtered/paginated ledger read for the /money/transactions page —
+  // bypasses the global `transactions` state (which the dashboard's recent list
+  // uses). Always sends page params so the route takes its filtered branch.
+  const getTransactions = useCallback(async (params: TransactionQuery) => {
+    const sp = new URLSearchParams();
+    sp.set('page', String(params.page ?? 1));
+    sp.set('page_size', String(params.page_size ?? 25));
+    if (params.type && params.type !== 'all') sp.set('type', params.type);
+    if (params.account_id) sp.set('account_id', String(params.account_id));
+    if (params.category_id) sp.set('category_id', String(params.category_id));
+    if (params.date_from) sp.set('date_from', params.date_from);
+    if (params.date_to) sp.set('date_to', params.date_to);
+    if (params.search && params.search.trim()) sp.set('search', params.search.trim());
+    try {
+      const res = await fetch(`/api/money/transactions?${sp.toString()}`);
+      const data = await res.json();
+      if (data.success) return { rows: (data.transactions || []) as Transaction[], total: Number(data.total || 0) };
+    } catch { /* fall through */ }
+    return { rows: [] as Transaction[], total: 0 };
+  }, []);
 
   const addAccount = useCallback(async (data: AddAccountData) => {
     const tempId = -Date.now();
@@ -448,7 +515,9 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       exchangeRate,
       isLoading,
       addTransaction,
+      updateTransaction,
       deleteTransaction,
+      getTransactions,
       addAccount,
       deleteAccount,
       addLend,
@@ -471,7 +540,9 @@ export function MoneyProvider({ children }: { children: React.ReactNode }) {
       exchangeRate,
       isLoading,
       addTransaction,
+      updateTransaction,
       deleteTransaction,
+      getTransactions,
       addAccount,
       deleteAccount,
       addLend,

@@ -29,7 +29,7 @@ The platform is divided into three major suites:
 ### 2. 💰 The Money Suite (Wealth Ledger)
 * **Financial Net Worth Dashboard** (`/money/dashboard`): Aggregate balances across all active cards, banks, and cash accounts, display real-time income/expense distribution, and automatically convert figures between custom Primary and Secondary currencies.
 * **Bank Ledger & Accounts** (`/money/accounts`): Add, modify, and manage financial entities (Cash, Bank accounts, Credit/Debit cards) with initial balances and multi-currency denominations.
-* **Income & Expense logs** (`/money/income` & `/money/expenses`): Categorized transaction ledgers with editable budget buckets (default *Needs 60 / Wants 20 / Savings 20*), plus optional per-client income tagging that feeds the Pro profitability insight.
+* **Transactions ledger** (`/money/transactions`): One unified, searchable, **paginated** history of income, expense, and transfers — filter tabs (All/Income/Expense/Transfer) + account/category/date filters, full **edit** support, editable budget buckets (default *Needs 60 / Wants 20 / Savings 20*), and optional per-client income tagging that feeds the Pro profitability insight. Merges the former separate Income/Expenses pages (which now redirect here at `?type=income|expense`).
 * **Lending & Debt tracker** (`/money/lend`): Log outstanding loans and borrowings (`owe_me` or `i_owe`), define payment dates, and track settlement statuses (`pending`, `partial`, `settled`).
 
 ### 3. 💼 The CRM Suite (Client Relations & Lead Generation)
@@ -196,7 +196,8 @@ zomzam.com/
 | `/time/tracker` | Protected | Historical focus-session analytics (metric cards + activity list). |
 | `/money/dashboard` | Protected | Net-worth aggregation, multi-currency conversion, income/expense split. |
 | `/money/accounts` | Protected | Manage cash, bank, and card entities. |
-| `/money/income` / `/money/expenses` | Protected | Categorized transaction ledgers; income supports optional per-client tagging. |
+| `/money/transactions` | Protected | Unified income/expense/transfer ledger — filter tabs, search, pagination, add/edit/delete; income supports optional per-client tagging. |
+| `/money/income` / `/money/expenses` | Protected | Redirect shims → `/money/transactions?type=income\|expense` (pages merged). |
 | `/money/lend` | Protected | Lending & debt tracker (`owe_me` / `i_owe`), confetti on settlement. |
 | `/crm` | Protected | CRM dashboard + Map Leads Scraper (Google Places proxy). |
 | `/crm/leads` | Protected | Lead Vault directory — search, filter, status, batch delete. |
@@ -221,7 +222,7 @@ zomzam.com/
 | `/api/auth/oauth/google` / `/oauth/google/callback` | — | Google Sign-In: redirects to Google's consent screen, then verifies the returned `id_token` (`jose` remote JWKS) and mints a `ZOMZAM_SESSION` cookie. |
 | `/api/profile` / `/api/profile/change-password` | — | Profile field updates (incl. **username** change — validated `^[a-zA-Z0-9_]{3,50}$` + uniqueness), avatar upload (`sharp` -> Vercel Blob), authenticated password change. Username + avatar changes are recorded in the `user_audit_log` safety trail. |
 | `/api/time` | `load`, `add/update/complete/delete_task`, `add/move/delete_horizon`, `add/update/delete_idea` | Pomodoro tasks, planning horizons, ideas. |
-| `/api/money/transactions` | `GET` (list, `?limit&offset`), `POST` (add income/expense/transfer — transfer credits a second account via `transfer_account_id`), `DELETE` | Transaction ledger; balance mutations are owner-scoped and transactional. |
+| `/api/money/transactions` | `GET` (list, `?limit&offset`; filtered/paginated with `?type&account_id&category_id&date_from&date_to&search&page&page_size` → returns `total`), `POST` (add), `PATCH` (edit — reverse-then-apply), `DELETE` | Transaction ledger; balance mutations are owner-scoped and transactional. Transfers credit a second account via `transfer_account_id`. |
 | `/api/money/accounts` | `GET` (accounts + categories), `POST` (card cycle fields when `type=credit_card`), `DELETE` | Cash/bank/wallet/credit-card entities. Card safety is structural — no PAN/CVV column exists. |
 | `/api/money/budget` | `GET` (buckets + income + allocation + safe-to-spend), `PUT` (percents 0–100, sum ≤100) | Current-month budget rings (free tier). |
 | `/api/money/lend` | `GET`, `POST`, `PATCH` (settle), `DELETE` | Lending & debt tracker (`owe_me` / `i_owe`). |

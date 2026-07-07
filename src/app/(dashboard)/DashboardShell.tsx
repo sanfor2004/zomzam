@@ -170,8 +170,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     {
       key: 'money', label: t('nav_money') || 'Money', Icon: DollarSign, items: [
         { label: 'Overview', path: '/money/dashboard' },
-        { label: 'Expenses', path: '/money/expenses' },
-        { label: 'Income', path: '/money/income' },
+        { label: 'Transactions', path: '/money/transactions' },
         { label: 'Accounts', path: '/money/accounts' },
         { label: 'Lending', path: '/money/lend' },
       ],
