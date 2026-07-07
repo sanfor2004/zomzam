@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ProLock } from '@/components/ui';
 import { useMoney } from '@/context/MoneyContext';
 
@@ -8,38 +8,31 @@ import { useMoney } from '@/context/MoneyContext';
     DEVELOPMENT NAVIGATOR: CLIENT-PROFITABILITY TEASER — PRO SPOT #1
     Contains: Locked ProLock strip (dashboard), client-count-only sublabel
     ──────────────────────────────────────────────────────────
-    CEILING: presentation-gated only, no server `isPro` yet (see
-    ProLock.tsx). Fetches /api/money/insights ONLY to read `clients.length`
-    for the sublabel copy — the real per-client `ratePerHour` figures the
-    route returns are discarded here, never assigned to state or rendered.
-    UPGRADE PATH: swap this count-only read for a real `isPro` gate once
-    billing exists; the ProLock call site itself doesn't need to change. */
+    CEILING: presentation-gated only, no server `isPro` yet (see ProLock.tsx).
+    The real per-client rate lives behind /api/money/insights — a Pro route we
+    deliberately DO NOT call while locked, so those figures never cross the wire
+    to a free user (spec §7). The "N clients tracked" count is derived locally
+    from the already-loaded tagged transactions — a harmless count, not a rate.
+    UPGRADE PATH: once billing exists, gate the real insights fetch on `isPro`;
+    this locked call site doesn't change. */
 
 export function ClientProfitabilityTeaser({ className }: { className?: string }) {
-  const { displayCurrency } = useMoney();
-  const [clientCount, setClientCount] = useState<number | null>(null);
+  const { transactions } = useMoney();
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/money/insights?display=${displayCurrency}`)
-      .then((res) => res.json())
-      .then((data) => {
-        // Only `.length` is kept. `data.clients[].ratePerHour` is real, Pro-gated
-        // money data — it is intentionally never read past this line.
-        if (!cancelled && data.success) setClientCount(data.clients.length);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [displayCurrency]);
+  const clientCount = useMemo(() => {
+    const tagged = new Set<number>();
+    for (const t of transactions) {
+      if (t.lead_id != null) tagged.add(t.lead_id);
+    }
+    return tagged.size;
+  }, [transactions]);
 
   return (
     <ProLock
       variant="strip"
       label="See which clients pay you best"
       sublabel={
-        clientCount === null
+        clientCount === 0
           ? 'Per-client hourly rate — powered by your logged time'
           : `${clientCount} ${clientCount === 1 ? 'client' : 'clients'} tracked`
       }
