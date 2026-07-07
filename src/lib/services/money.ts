@@ -1,4 +1,10 @@
-import { query, execute, transaction } from '@/lib/db';
+import { query, queryOne, execute, transaction } from '@/lib/db';
+
+export const DEFAULT_BUCKETS = [
+  { key: 'need', label: 'Needs', percent: 60 },
+  { key: 'want', label: 'Wants', percent: 20 },
+  { key: 'saving', label: 'Savings', percent: 20 },
+] as const;
 
 // Money suite business logic. Route handlers stay thin (parse → call → respond);
 // every SQL/transaction/owner-scoping rule lives here, and the pure math helpers
@@ -72,5 +78,47 @@ export async function listTransactions(userId: number, limit = 50, offset = 0) {
       ORDER BY t.transaction_date DESC, t.created_at DESC
       LIMIT ? OFFSET ?`,
     [userId, limit, offset],
+  );
+}
+
+// ── 1.2: Budget allocation + safe-to-spend ───────────────────────────────────
+
+export interface Bucket { key: string; label: string; percent: number }
+export interface AllocationRow extends Bucket { limit: number; spent: number; over: boolean }
+
+export function computeAllocation(
+  income: number, buckets: Bucket[], spentByKey: Record<string, number>,
+): AllocationRow[] {
+  return buckets.map((b) => {
+    const limit = income * (b.percent / 100);
+    const spent = spentByKey[b.key] ?? 0;
+    return { ...b, limit, spent, over: spent > limit };
+  });
+}
+
+export function safeToSpend(
+  income: number, buckets: Bucket[], spentByKey: Record<string, number>,
+): number {
+  const totalSpent = buckets.reduce((s, b) => s + (spentByKey[b.key] ?? 0), 0);
+  return income - totalSpent;
+}
+
+export async function getBudget(userId: number): Promise<Bucket[]> {
+  const row = await queryOne<{ buckets: string | Bucket[] }>(
+    `SELECT buckets FROM money_budget WHERE user_id = ? LIMIT 1`, [userId],
+  );
+  if (!row) {
+    await execute(`INSERT INTO money_budget (user_id, buckets) VALUES (?, ?)`,
+      [userId, JSON.stringify(DEFAULT_BUCKETS)]);
+    return [...DEFAULT_BUCKETS];
+  }
+  return typeof row.buckets === 'string' ? JSON.parse(row.buckets) : row.buckets;
+}
+
+export async function updateBudget(userId: number, buckets: Bucket[]): Promise<void> {
+  await execute(
+    `INSERT INTO money_budget (user_id, buckets) VALUES (?, ?)
+     ON DUPLICATE KEY UPDATE buckets = VALUES(buckets)`,
+    [userId, JSON.stringify(buckets)],
   );
 }

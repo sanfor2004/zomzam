@@ -1,5 +1,5 @@
 import assert from 'node:assert';
-import { balanceDelta } from './money';
+import { balanceDelta, computeAllocation, safeToSpend } from './money';
 
 let checks = 0;
 const check = (name: string, fn: () => void) => { fn(); checks++; };
@@ -12,6 +12,25 @@ check('expense decreases balance', () => {
 });
 check('transfer decreases source balance', () => {
   assert.strictEqual(balanceDelta('transfer', 100), -100);
+});
+
+check('allocation splits by percent and flags overspend', () => {
+  const rows = computeAllocation(10000, [
+    { key: 'need', label: 'Needs', percent: 60 },
+    { key: 'want', label: 'Wants', percent: 20 },
+    { key: 'saving', label: 'Savings', percent: 20 },
+  ], { need: 3000, want: 2500, saving: 0 });
+  const want = rows.find(r => r.key === 'want')!;
+  assert.strictEqual(want.limit, 2000);
+  assert.strictEqual(want.spent, 2500);
+  assert.strictEqual(want.over, true);
+});
+
+check('safeToSpend = income minus total spent', () => {
+  assert.strictEqual(
+    safeToSpend(10000, [{ key: 'need', label: 'Needs', percent: 60 }], { need: 3000 }),
+    7000,
+  );
 });
 
 console.log(`money.test.ts: all ${checks} checks passed`);
