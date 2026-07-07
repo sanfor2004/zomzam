@@ -246,3 +246,35 @@ export async function updateSettings(userId: number, primary: string, secondary:
   await execute(`UPDATE users SET primary_currency = ?, secondary_currency = ? WHERE id = ?`,
     [primary, secondary, userId]);
 }
+
+// ── 1.6: Category + monthly aggregation helpers ──────────────────────────────
+
+export async function listCategories(userId: number) {
+  return query(`SELECT * FROM money_categories WHERE user_id = ?`, [userId]);
+}
+export function monthWindow(now = new Date()): { start: string; end: string } {
+  const start = new Date(now.getFullYear(), now.getMonth(), 1);
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const iso = (d: Date) => d.toISOString().substring(0, 10);
+  return { start: iso(start), end: iso(end) };
+}
+export async function monthlyIncome(userId: number, start: string, end: string): Promise<number> {
+  const row = await queryOne<{ total: string }>(
+    `SELECT SUM(amount) AS total FROM money_transactions
+      WHERE user_id = ? AND type = 'income' AND transaction_date >= ? AND transaction_date < ?`,
+    [userId, start, end],
+  );
+  return parseFloat(row?.total || '0');
+}
+export async function monthlySpendByBucket(userId: number, start: string, end: string): Promise<Record<string, number>> {
+  const rows = await query<{ type: string; total: string }>(
+    `SELECT c.type, SUM(t.amount) AS total
+       FROM money_transactions t JOIN money_categories c ON t.category_id = c.id
+      WHERE t.user_id = ? AND t.type = 'expense' AND t.transaction_date >= ? AND t.transaction_date < ?
+      GROUP BY c.type`,
+    [userId, start, end],
+  );
+  const map: Record<string, number> = {};
+  for (const r of rows) map[r.type] = parseFloat(r.total || '0');
+  return map;
+}
