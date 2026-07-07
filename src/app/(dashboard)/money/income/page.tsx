@@ -1,11 +1,16 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useMoney } from '@/context/MoneyContext';
 import { Plus, X, ArrowLeft, Trash2, Shield, Heart, PiggyBank, HelpCircle, DollarSign } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Button, Select, Modal, NumberInput } from '@/components/ui';
+import { Button, Select, Modal, NumberInput, ProLock } from '@/components/ui';
+
+interface Lead {
+  id: number;
+  name: string;
+}
 
 export default function IncomePage() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -25,8 +30,28 @@ export default function IncomePage() {
   const [amountInput, setAmountInput] = useState('');
   const [accountSelect, setAccountSelect] = useState('');
   const [categorySelect, setCategorySelect] = useState('');
+  const [leadSelect, setLeadSelect] = useState('');
   const [descInput, setDescInput] = useState('');
   const [dateInput, setDateInput] = useState(new Date().toISOString().substring(0, 10));
+  const [leads, setLeads] = useState<Lead[]>([]);
+
+  // Client tag list (same source as QuickBar's income client tag).
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/crm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get_leads' }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.success) setLeads(data.leads || []);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const getCategoryIcon = (iconName: string | null) => {
     switch (iconName) {
@@ -64,11 +89,13 @@ export default function IncomePage() {
       description: descInput,
       date: dateInput,
       currency: curr,
+      lead_id: leadSelect ? parseInt(leadSelect, 10) : null,
     });
 
     if (success) {
       setAmountInput('');
       setDescInput('');
+      setLeadSelect('');
       setIsOpen(false);
     }
   };
@@ -145,6 +172,7 @@ export default function IncomePage() {
                     </p>
                     <span className="block text-[10px] text-slate-455 font-bold uppercase tracking-tight mt-0.5">
                       {t.account_name} • {new Date(t.transaction_date).toLocaleDateString()}
+                      {t.client_name && <> • {t.client_name}</>}
                     </span>
                   </div>
                 </div>
@@ -166,6 +194,18 @@ export default function IncomePage() {
           </div>
         )}
       </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: PRO TEASER — CLIENT PROFITABILITY
+          Contains: Locked ProLock strip routing to /pricing (temptation
+          spot #3 — real per-client rate stays server-side/Pro-gated)
+          ────────────────────────────────────────────────────────── */}
+      <ProLock
+        variant="strip"
+        label="Which clients pay you best?"
+        sublabel="Per-client hourly rate — powered by your logged time"
+        blurred={<span>$•••/hr</span>}
+      />
 
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: ADD INCOME MODAL
@@ -238,6 +278,15 @@ export default function IncomePage() {
                 className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block">Client (Optional)</label>
+            <Select
+              value={leadSelect}
+              onChange={(val) => setLeadSelect(val)}
+              options={[{ value: '', label: 'No client tag' }, ...leads.map(l => ({ value: l.id.toString(), label: l.name }))]}
+            />
           </div>
 
           <Button
