@@ -11,8 +11,9 @@ import { cn } from '@/lib/utils';
               gated control), blurred value mask, lock glyph, Pro CTA
     ──────────────────────────────────────────────────────────
     One primitive, two call sites (money strip + Notion sync button).
-    Colour = meaning: orange appears ONLY on the CTA — it names "this is
-    a Zomzam upgrade", nothing else on the surface competes for it.
+    Styled to match the sidebar's UPGRADE PLAN CARD (DashboardShell):
+    primary-tinted gradient surface, ringed icon chip, solid primary
+    "Pro" CTA — every upsell surface reads as the same invitation.
 
     WARNING: CEILING — presentation only, NOT a gate. There is no `isPro` on the
     session and no billing yet (`/pricing` records intent; Stripe is a later
@@ -58,7 +59,7 @@ export function ProLock({
         href={href}
         aria-label={`${label} — upgrade to Pro`}
         className={cn(
-          'group relative inline-flex h-9 items-center gap-1.5 overflow-hidden rounded-xl border border-slate-800/60 bg-surface-dark px-4 text-xs font-semibold text-slate-300 transition-colors hover:border-primary-500/40',
+          'group relative inline-flex h-9 items-center gap-1.5 overflow-hidden rounded-xl border border-primary-500/20 bg-gradient-to-br from-primary-500/10 via-primary-500/[0.06] to-transparent px-4 text-xs font-semibold text-slate-300 shadow-apple-sm transition-colors hover:border-primary-500/40',
           className,
         )}
       >
@@ -73,19 +74,25 @@ export function ProLock({
     );
   }
 
-  // ── strip: calm neutral panel — clear sublabel + blurred value + Pro CTA.
+  // ── strip: CurrentPlan-style card — ringed lock chip + clear sublabel +
+  //    blurred value + solid primary Pro CTA.
   return (
     <Link
       href={href}
       aria-label={`${label} — upgrade to Pro`}
       className={cn(
-        'group flex min-h-[56px] items-center justify-between gap-4 rounded-2xl border border-slate-800/60 surface-base px-5 py-4 transition-colors hover:border-primary-500/40',
+        'group flex min-h-[56px] items-center justify-between gap-4 rounded-2xl border border-primary-500/20 bg-gradient-to-br from-primary-500/10 via-primary-500/[0.06] to-transparent px-5 py-4 shadow-apple-sm transition-colors hover:border-primary-500/40',
         className,
       )}
     >
-      <div className="min-w-0">
-        <p className="text-sm font-semibold text-slate-200">{label}</p>
-        {sublabel && <p className="mt-0.5 truncate text-xs text-slate-400">{sublabel}</p>}
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary-500/15 text-primary-400 ring-1 ring-inset ring-primary-500/25">
+          <Lock className="h-4 w-4" />
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-200">{label}</p>
+          {sublabel && <p className="mt-0.5 truncate text-xs text-slate-400">{sublabel}</p>}
+        </div>
       </div>
       <div className="flex shrink-0 items-center gap-3">
         {blurred != null && (
@@ -93,7 +100,7 @@ export function ProLock({
             {blurred}
           </span>
         )}
-        <span className="inline-flex items-center gap-1.5 rounded-full bg-primary-500/10 px-3 py-1.5 text-xs font-semibold text-primary-500">
+        <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary-500 px-3 py-1.5 text-xs font-semibold text-white shadow-apple-sm transition-colors group-hover:bg-primary-600">
           <Lock className="h-3.5 w-3.5" />
           Pro
         </span>
