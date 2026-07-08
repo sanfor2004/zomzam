@@ -64,6 +64,11 @@ function TransactionsInner() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loadingRows, setLoadingRows] = useState(true);
+  // Skeleton only before the FIRST fetch resolves; refetches (type/filter/page
+  // switches) keep the stale list rendered, dimmed — no skeleton flash.
+  const [hasLoaded, setHasLoaded] = useState(false);
+  // Monotonic fetch id — a slow older response must not overwrite a newer one.
+  const fetchSeq = useRef(0);
 
   // ── Client (lead) tags — same source as the old income page ──
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -84,6 +89,7 @@ function TransactionsInner() {
   const onFilter = <T,>(setter: (v: T) => void) => (v: T) => { setter(v); setPage(1); };
 
   const fetchRows = useCallback(async () => {
+    const seq = ++fetchSeq.current;
     setLoadingRows(true);
     const res = await getTransactions({
       page, page_size: PAGE_SIZE, type: activeType,
@@ -91,9 +97,11 @@ function TransactionsInner() {
       category_id: filterCategory ? parseInt(filterCategory) : null,
       date_from: dateFrom || null, date_to: dateTo || null, search: debouncedSearch,
     });
+    if (seq !== fetchSeq.current) return; // superseded by a newer fetch
     setRows(res.rows);
     setTotal(res.total);
     setLoadingRows(false);
+    setHasLoaded(true);
   }, [getTransactions, page, activeType, filterAccount, filterCategory, dateFrom, dateTo, debouncedSearch]);
 
   useEffect(() => { fetchRows(); }, [fetchRows]);
@@ -282,7 +290,7 @@ function TransactionsInner() {
           DEVELOPMENT NAVIGATOR: LEDGER LIST
           ────────────────────────────────────────────────────────── */}
       <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple">
-        {loadingRows ? (
+        {!hasLoaded ? (
           <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-2xl" />)}
           </div>
@@ -292,7 +300,7 @@ function TransactionsInner() {
             <p className="text-xs text-slate-500 mt-1">Adjust your filters, or add your first entry above.</p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className={cn('space-y-3 transition-opacity duration-150', loadingRows && 'opacity-50 pointer-events-none')}>
             {rows.map((t) => (
               <div
                 key={t.id}

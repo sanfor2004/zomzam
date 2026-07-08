@@ -57,7 +57,8 @@ const SIZES = {
     input: 'h-11 text-sm rounded-xl',
     /** 6px gap + 28px stepper (w-7) + 6px right inset — same 6px rhythm on every side. */
     pad: 'pr-10',
-    padPrefix: 'pl-9',
+    /** Sized for a 3-letter currency code ("USD") at text-sm bold — pl-9 clipped it. */
+    padPrefix: 'pl-12',
     pad0: 'pl-3.5',
     /** Prefix matches the field's own text size/weight for a cohesive look. */
     prefix: 'left-3.5 text-sm font-bold',
