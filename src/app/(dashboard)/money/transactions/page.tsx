@@ -242,35 +242,39 @@ function TransactionsInner() {
           ]}
         />
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <div className="lg:col-span-2 relative">
+        {/* Container-query breakpoints (@…) not viewport ones — this page lives in
+            the @container main column, which is ~half the viewport once both
+            sidebars are open. min-w-0 stops the date inputs' intrinsic width from
+            pushing the grid past the container (horizontal-scroll bug). */}
+        <div className="grid grid-cols-2 @4xl:grid-cols-6 gap-3">
+          <div className="col-span-2 relative">
             <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search description, category, account…"
-              className="w-full h-11 pl-10 pr-4 bg-slate-900/30 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-primary-500 transition-colors"
+              className="w-full min-w-0 h-11 pl-10 pr-4 bg-slate-900/30 border border-slate-850 rounded-xl text-xs text-white focus:outline-none focus:border-primary-500 transition-colors"
             />
           </div>
           <Select
             value={filterAccount}
             onChange={onFilter(setFilterAccount)}
             placeholder="All accounts"
+            className="min-w-0"
             options={[{ value: '', label: 'All accounts' }, ...accounts.map(a => ({ value: a.id.toString(), label: a.name }))]}
           />
           <Select
             value={filterCategory}
             onChange={onFilter(setFilterCategory)}
             placeholder="All categories"
+            className="min-w-0"
             options={[{ value: '', label: 'All categories' }, ...categories.map(c => ({ value: c.id.toString(), label: c.name }))]}
           />
-          <div className="flex items-center gap-2">
-            <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} aria-label="From date"
-              className="w-full h-11 px-2 bg-slate-900/30 border border-slate-850 rounded-xl text-[11px] text-white focus:outline-none focus:border-primary-500" />
-            <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} aria-label="To date"
-              className="w-full h-11 px-2 bg-slate-900/30 border border-slate-850 rounded-xl text-[11px] text-white focus:outline-none focus:border-primary-500" />
-          </div>
+          <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }} aria-label="From date"
+            className="w-full min-w-0 h-11 px-2 bg-slate-900/30 border border-slate-850 rounded-xl text-[11px] text-white focus:outline-none focus:border-primary-500" />
+          <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }} aria-label="To date"
+            className="w-full min-w-0 h-11 px-2 bg-slate-900/30 border border-slate-850 rounded-xl text-[11px] text-white focus:outline-none focus:border-primary-500" />
         </div>
       </div>
 
