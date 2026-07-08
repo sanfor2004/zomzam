@@ -134,16 +134,24 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
         className,
       )}
     >
-      <div className="flex flex-col @xl:flex-row @xl:items-center gap-4">
+      {/* Row layout only at @5xl — below that the full field set's min-content
+          exceeds the container and the NumberInput's absolute prefix/stepper
+          collapse into each other. */}
+      <div className="flex flex-col @5xl:flex-row @5xl:items-center gap-4">
         <SegmentedSwitch
           ariaLabel="Transaction type"
           options={SEGMENT_OPTIONS}
           value={segment}
           onChange={(v) => setSegment(v as Segment)}
-          className="@xl:w-64 shrink-0"
+          className="@5xl:w-64 shrink-0"
         />
 
-        <div className="flex-1 grid grid-cols-1 @sm:grid-cols-2 @xl:grid-cols-3 gap-3">
+        <div
+          className={cn(
+            'flex-1 min-w-0 grid grid-cols-1 @sm:grid-cols-2 gap-3',
+            segment === 'income' ? '@5xl:grid-cols-4' : '@xl:grid-cols-3',
+          )}
+        >
           <NumberInput
             size="sm"
             step={0.01}
@@ -178,16 +186,15 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
               emptyMessage="No categories yet"
             />
           )}
-        </div>
 
-        {segment === 'income' && (
-          <Select
-            value={leadId}
-            onChange={setLeadId}
-            options={[{ value: '', label: 'No client tag' }, ...leads.map((l) => ({ value: String(l.id), label: l.name }))]}
-            className="@xl:w-48 shrink-0"
-          />
-        )}
+          {segment === 'income' && (
+            <Select
+              value={leadId}
+              onChange={setLeadId}
+              options={[{ value: '', label: 'No client tag' }, ...leads.map((l) => ({ value: String(l.id), label: l.name }))]}
+            />
+          )}
+        </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <Button
