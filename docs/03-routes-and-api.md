@@ -19,7 +19,7 @@ This file maps the visible site and the server endpoints that power it.
 | Route group | Routes |
 | --- | --- |
 | Social | `/home`, `/saved`, `/messages`, `/notifications` |
-| Community | `/community`, `/community/friends`, `/community/discover`, `/community/requests` |
+| Community | `/community`, `/community/connections`, `/community/discover`, `/community/requests` |
 | Time | `/time/execution`, `/time/tasks`, `/time/planning`, `/time/ideas`, `/time/tracker` |
 | Money | `/money/dashboard`, `/money/accounts`, `/money/income`, `/money/expenses`, `/money/lend` |
 | CRM | `/crm`, `/crm/leads`, `/crm/pipeline`, `/crm/contacts`, `/crm/outreach`, `/crm/projects` |

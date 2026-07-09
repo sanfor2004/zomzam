@@ -36,7 +36,7 @@ Capabilities:
 Routes:
 
 - `/community`
-- `/community/friends`
+- `/community/connections`
 - `/community/discover`
 - `/community/requests`
 

@@ -177,7 +177,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
     },
     {
       key: 'community', label: t('nav_community') || 'Community', Icon: Users, items: [
-        { label: 'Connections', path: '/community/friends' },
+        { label: 'Connections', path: '/community/connections' },
         { label: 'Discover People', path: '/community/discover' },
         { label: 'Invitations', path: '/community/requests' },
       ],

@@ -85,7 +85,7 @@ zomzam.com/
 ├── src/
 │   ├── app/                   # Next.js App Router root
 │   │   ├── (dashboard)/       # Authenticated dashboard route group (shares layout.tsx wrapper)
-│   │   │   ├── community/     # /community, /community/discover, /friends (connections), /requests (invitations)
+│   │   │   ├── community/     # /community, /community/discover, /connections, /requests (invitations)
 │   │   │   ├── crm/           # /crm, /crm/contacts, /leads, /outreach, /pipeline, /projects
 │   │   │   ├── home/          # /home — social feed (composer + PostCard live in the Kit; shared.ts holds the feed types)
 │   │   │   ├── saved/         # /saved — the viewer's bookmarked posts
@@ -205,7 +205,7 @@ zomzam.com/
 | `/crm/contacts` | Protected | Standardized client contact directory. |
 | `/crm/outreach` | Protected | AI-assisted cold email writer (Claude Sonnet, template fallback). |
 | `/crm/projects` | Protected | Delivery tracker mapped to milestone stages. |
-| `/community` | Protected | Member directory: `/discover`, `/friends` (connections), `/requests` (invitations). |
+| `/community` | Protected | Member directory: `/connections`, `/discover`, `/requests` (invitations). |
 | `/me` | Protected | Profile settings — avatar upload, bio, tags. |
 | `/settings` | Protected | Timezone, language, primary/secondary currency preferences. |
 | `/u/[username]` | Public | Vanity public profile (posts, bio, mutual friends, connect/block — no presence shown). |

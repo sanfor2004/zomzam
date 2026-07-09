@@ -25,7 +25,7 @@ The primary user is a builder/freelancer who wants fewer tools and more control:
 
 ### Social Core
 
-Routes: `/home`, `/saved`, `/messages`, `/notifications`, `/community`, `/community/friends`, `/community/discover`, `/community/requests`, `/u/[username]`, `/p/[postId]`.
+Routes: `/home`, `/saved`, `/messages`, `/notifications`, `/community`, `/community/connections`, `/community/discover`, `/community/requests`, `/u/[username]`, `/p/[postId]`.
 
 Purpose: make Zomzam feel alive. It includes the feed, post composer, ask/win/status posts, likes, comments, reposts, bookmarks, reports, connection requests, direct messages, notification toasts, and live profile presence.
 
