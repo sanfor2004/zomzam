@@ -4,8 +4,9 @@ import React, { useRef, useState, useEffect } from 'react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
 import { useRouter } from 'next/navigation';
 import { useTranslation, LANGUAGES } from '@/context/TranslationContext';
-import { Settings, Globe, Shield, Bell, Key, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
-import { Button, Switch, Modal, Select, NumberInput, Alert, useToast } from '@/components/ui';
+import { Globe, Shield, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Briefcase, Database, RefreshCw } from 'lucide-react';
+import { Button, Switch, Modal, Select, NumberInput, Alert, Input, useToast } from '@/components/ui';
+import { cn } from '@/lib/utils';
 import {
   fetchUserPrefs, savePreferences, fetchCrmSettings, saveCrmSettings,
   fetchNotionSettings, saveNotionSettings, syncNotion,
@@ -26,6 +27,106 @@ const COMMON_TIMEZONES = [
 ];
 
 const CURRENCIES = ['EGP', 'USD', 'EUR', 'GBP'];
+
+/* ──────────────────────────────────────────────────────────
+    DEVELOPMENT NAVIGATOR: SETTINGS LAYOUT PRIMITIVES (LOCAL)
+    Contains: SettingsGroup (iOS inset-grouped card + gray header),
+              SettingRow (label-left / control-right cell),
+              Field (labelled text field over the Kit Input),
+              PwToggle (show/hide secret button)
+    ──────────────────────────────────────────────────────────
+    Apple "grouped list" scaffolding, local to this page. Hierarchy is
+    carried by spacing + weight, not colour: the group header is a calm
+    gray label ABOVE an inset card, and rows are separated by hairlines
+    (never per-field boxes). If a second surface needs this rhythm,
+    promote these into the Zomzam Kit per the Section 2.0 rule-of-three. */
+
+function SettingsGroup({
+  id, icon, title, danger = false, padded = false, footer, children,
+}: {
+  id?: string;
+  icon?: React.ReactNode;
+  title: string;
+  danger?: boolean;
+  padded?: boolean;
+  footer?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section id={id} data-entrance="card" className="scroll-mt-6">
+      <div className="flex items-center gap-2 px-1 mb-2.5">
+        {icon && (
+          <span className={cn('[&>svg]:w-4 [&>svg]:h-4', danger ? 'text-red-500' : 'text-slate-500')}>
+            {icon}
+          </span>
+        )}
+        <h2 className={cn('text-[13px] font-semibold tracking-tight', danger ? 'text-red-400' : 'text-slate-400')}>
+          {title}
+        </h2>
+      </div>
+
+      <div
+        className={cn(
+          'surface-card rounded-2xl overflow-hidden',
+          danger && 'border-red-900/40',
+          padded ? 'p-4 sm:p-5 space-y-5' : 'divide-y divide-slate-800/60',
+        )}
+      >
+        {children}
+      </div>
+
+      {footer && <div className="mt-4">{footer}</div>}
+    </section>
+  );
+}
+
+function SettingRow({
+  label, sub, children,
+}: {
+  label: React.ReactNode;
+  sub?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div data-entrance="list-item" className="flex items-center justify-between gap-4 px-4 py-3 min-h-[54px]">
+      <div className="min-w-0">
+        <div className="text-[15px] text-slate-100">{label}</div>
+        {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  );
+}
+
+function Field({
+  id, label, hint, mono = false, className = '', ...inputProps
+}: {
+  id: string;
+  label: React.ReactNode;
+  hint?: React.ReactNode;
+  mono?: boolean;
+} & React.ComponentProps<typeof Input>) {
+  return (
+    <div data-entrance="list-item" className="space-y-1.5">
+      <label htmlFor={id} className="block text-[13px] font-medium text-slate-300">{label}</label>
+      <Input id={id} className={cn(mono && 'font-mono', className)} {...inputProps} />
+      {hint && <p className="text-xs text-slate-500 leading-relaxed">{hint}</p>}
+    </div>
+  );
+}
+
+function PwToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-label={show ? 'Hide value' : 'Show value'}
+      className="text-slate-400 hover:text-slate-200 transition-colors"
+    >
+      {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+    </button>
+  );
+}
 
 export default function SettingsPage() {
   const { t, language, setLanguage } = useTranslation();
@@ -316,626 +417,441 @@ export default function SettingsPage() {
   }
 
   return (
-    <div ref={containerRef} className="max-w-4xl mx-auto space-y-8 pb-16">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
-          <Settings className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">
-            {t('settings_title')}
-          </h1>
-          <p className="text-xs text-slate-400">
-            {t('settings_desc')}
-          </p>
-        </div>
-      </div>
+    <div ref={containerRef} className="max-w-2xl mx-auto pb-20">
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: LARGE-TITLE HEADER
+          Contains: page title, one-line description
+          ────────────────────────────────────────────────────────── */}
+      <header className="mb-8">
+        <h1 data-entrance="title" className="text-[28px] sm:text-4xl font-bold tracking-tight text-white leading-tight">
+          {t('settings_title')}
+        </h1>
+        <p className="text-sm text-slate-400 mt-1.5">
+          {t('settings_desc')}
+        </p>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Navigation / Intro card */}
-        <div className="md:col-span-1 space-y-4">
-          <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple space-y-6">
-            <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Sections
-            </h2>
-            <nav className="flex flex-col gap-1">
-              <a
-                href="#preferences"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
-              >
-                <Globe className="w-4 h-4 text-slate-400" />
-                <span>{t('settings_pref')}</span>
-              </a>
-              {/* CRM & Outreach nav link — DISABLED for now (CRM & Lead Generation paused).
-                  Kept in code for future re-activation. Restore by uncommenting.
-              <a
-                href="#crm"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
-              >
-                <Briefcase className="w-4 h-4 text-slate-400" />
-                <span>CRM & Outreach</span>
-              </a>
-              */}
-              <a
-                href="#notion"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
-              >
-                <Database className="w-4 h-4 text-slate-400" />
-                <span>Notion Sync</span>
-              </a>
-              <a
-                href="#security"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-350 hover:bg-slate-850 rounded-xl transition-all"
-              >
-                <Shield className="w-4 h-4 text-slate-400" />
-                <span>{t('settings_security')}</span>
-              </a>
-              <a
-                href="#danger"
-                className="flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-red-500 hover:bg-red-950/20 rounded-xl transition-all"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span>Danger Zone</span>
-              </a>
-            </nav>
-          </div>
-        </div>
-
-        {/* Form Container */}
-        <div className="md:col-span-2 space-y-8">
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: GENERAL PREFERENCES SECTION
-              Contains: Language, Timezone, Currencies, and Notification options
-              ────────────────────────────────────────────────────────── */}
-          <section
+      <div className="space-y-10">
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: GENERAL PREFERENCES SECTION
+            Contains: Language, Timezone (+ live clock), Currencies, Notifications
+            ────────────────────────────────────────────────────────── */}
+        <form onSubmit={handleSavePreferences}>
+          <SettingsGroup
             id="preferences"
-            data-entrance="card"
-            className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            icon={<Globe />}
+            title={t('settings_pref')}
+            footer={
+              <Button type="submit" loading={isSavingPref} className="w-full h-12 rounded-xl">
+                {t('settings_save')}
+              </Button>
+            }
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
-              <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
-                <Globe className="w-4.5 h-4.5" />
-              </div>
-              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
-                {t('settings_pref')}
-              </h2>
-            </div>
-
-            <form onSubmit={handleSavePreferences} className="space-y-6">
-              {/* Language Preference */}
-              <Select
-                label={t('settings_lang')}
-                value={language}
-                onChange={(val) => setLanguage(val)}
-                options={LANGUAGES.map((lang) => ({
-                  value: lang.code,
-                  label: lang.name,
-                }))}
-              />
-
-              {/* Timezone Preference */}
-              <div data-entrance="list-item">
+            <SettingRow label={t('settings_lang')}>
+              <div className="w-40 sm:w-52">
                 <Select
-                  label={t('settings_timezone')}
+                  value={language}
+                  onChange={(val) => setLanguage(val)}
+                  options={LANGUAGES.map((lang) => ({ value: lang.code, label: lang.name }))}
+                />
+              </div>
+            </SettingRow>
+
+            <SettingRow
+              label={t('settings_timezone')}
+              sub={liveClock ? (
+                <span className="inline-flex items-center gap-1.5 tabular-nums">
+                  <Clock className="w-3 h-3 text-primary-500" />
+                  {liveClock}
+                </span>
+              ) : undefined}
+            >
+              <div className="w-40 sm:w-52">
+                <Select
                   value={timezone}
                   onChange={(val) => setTimezone(val)}
                   options={COMMON_TIMEZONES}
                 />
-                {/* Live clock preview */}
-                {liveClock && (
-                  <div className="mt-2 flex items-center gap-2 px-3.5 py-2 bg-slate-900/30 border border-slate-850 rounded-xl">
-                    <Clock className="w-3.5 h-3.5 text-primary-500 flex-shrink-0" />
-                    <span className="text-xs font-bold text-slate-300 tabular-nums">
-                      {liveClock}
-                    </span>
-                  </div>
-                )}
               </div>
+            </SettingRow>
 
-              {/* Currencies preferences */}
-              <div data-entrance="list-item" className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <SettingRow label={t('settings_primary_curr')}>
+              <div className="w-28">
                 <Select
-                  label={t('settings_primary_curr')}
                   value={primaryCurrency}
                   onChange={(val) => setPrimaryCurrency(val)}
                   options={CURRENCIES}
                 />
+              </div>
+            </SettingRow>
 
+            <SettingRow label={t('settings_secondary_curr')}>
+              <div className="w-28">
                 <Select
-                  label={t('settings_secondary_curr')}
                   value={secondaryCurrency}
                   onChange={(val) => setSecondaryCurrency(val)}
                   options={CURRENCIES}
                 />
               </div>
+            </SettingRow>
 
-              {/* Notification Preference Toggle */}
-              <div data-entrance="list-item" className="flex items-start justify-between p-4 bg-slate-900/30 border border-slate-850/50 rounded-2xl">
-                <div className="space-y-0.5 pr-4">
-                  <span className="text-xs font-bold text-slate-200 flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-slate-400" />
-                    {t('settings_notifications')}
-                  </span>
-                  <span className="text-[10px] text-slate-400 block">
-                    {t('settings_notif_desc')}
-                  </span>
+            <SettingRow label={t('settings_notifications')} sub={t('settings_notif_desc')}>
+              <Switch
+                checked={notificationsEnabled}
+                onChange={setNotificationsEnabled}
+                ariaLabel="Toggle notifications"
+              />
+            </SettingRow>
+          </SettingsGroup>
+        </form>
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION — DISABLED
+            Status: Temporarily disabled (CRM & Lead Generation feature paused).
+                    Kept in code for future re-activation — flip the `false &&`
+                    guard below back on to restore the full section.
+            Contains: Secure API keys (Claude, Maps) and Outreach tone parameters
+            ────────────────────────────────────────────────────────── */}
+        {false && (
+        <section
+          id="crm"
+          className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+        >
+          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
+            <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
+              <Briefcase className="w-4.5 h-4.5" />
+            </div>
+            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
+              CRM & Outreach Settings
+            </h2>
+          </div>
+
+          <form onSubmit={handleSaveCrmSettings} className="space-y-6">
+            {/* API Keys */}
+            <div className="space-y-4">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                Secure API Credentials
+              </h3>
+
+              {/* Claude API Key */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Anthropic Claude API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showClaudeKey ? 'text' : 'password'}
+                    value={crmSettings.CLAUDE_API_KEY || ''}
+                    onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
+                    placeholder="sk-ant-..."
+                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
+                  />
+                  <Button variant="unstyled"
+                    type="button"
+                    onClick={() => setShowClaudeKey(!showClaudeKey)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
+                  >
+                    {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
                 </div>
-                <Switch
-                  checked={notificationsEnabled}
-                  onChange={setNotificationsEnabled}
-                  ariaLabel="Toggle notifications"
+                <span className="text-[10px] text-slate-400 block leading-normal">
+                  Used to generate customized cold outreach copy via Claude API. Stored securely on your local database.
+                </span>
+              </div>
+
+              {/* Google Maps API Key */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Google Maps API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showMapsKey ? 'text' : 'password'}
+                    value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
+                    onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
+                    placeholder="AIzaSy..."
+                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
+                  />
+                  <Button variant="unstyled"
+                    type="button"
+                    onClick={() => setShowMapsKey(!showMapsKey)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
+                  >
+                    {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+                <span className="text-[10px] text-slate-400 block leading-normal">
+                  Required for the Live Map Scanner and Place autocomplete. Ensure <strong>Maps JavaScript API</strong> and <strong>Places API (New)</strong> are enabled in Google Cloud Console.
+                </span>
+              </div>
+
+              {/* Google Maps Map ID */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Google Maps Map ID
+                </label>
+                <input
+                  type="text"
+                  value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
+                  onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
+                  placeholder="e.g. CRM_LEADS_MAP"
+                  className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
+                />
+                <span className="text-[10px] text-slate-400 block leading-normal">
+                  Vector Map ID required for drawing administrative search boundary highlights. Defaults to <code className="bg-white/5 px-1 py-0.5 rounded text-[#EE5712]">CRM_LEADS_MAP</code>.
+                </span>
+              </div>
+            </div>
+
+            {/* Claude Settings */}
+            <div className="space-y-4 border-t border-slate-850 pt-5">
+              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
+                Claude Engine Parameters
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Select
+                  label="Claude Model Variant"
+                  value={crmSettings.claude_model || 'claude-3-5-sonnet-latest'}
+                  onChange={(val) => handleCrmFieldChange('claude_model', val)}
+                  options={[
+                    { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet (Best)' },
+                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet v2' },
+                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)' },
+                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Power)' },
+                  ]}
+                />
+
+                <Select
+                  label="Outreach Tone"
+                  value={crmSettings.claude_tone || 'professional'}
+                  onChange={(val) => handleCrmFieldChange('claude_tone', val)}
+                  options={[
+                    { value: 'professional', label: 'Professional & Polished' },
+                    { value: 'empathetic', label: 'Empathetic & Warm' },
+                    { value: 'direct', label: 'Direct & Concise' },
+                    { value: 'creative', label: 'Creative & Bold' },
+                    { value: 'persuasive', label: 'Persuasive & ROI-driven' },
+                  ]}
                 />
               </div>
 
-              <Button
-                type="submit"
-                loading={isSavingPref}
-                className="w-full h-11"
-              >
-                {t('settings_save')}
-              </Button>
-            </form>
-          </section>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                    Max Output Tokens
+                  </label>
+                  <NumberInput
+                    min={100}
+                    max={4000}
+                    step={100}
+                    value={crmSettings.claude_max_tokens || '800'}
+                    onChange={(val) => handleCrmFieldChange('claude_max_tokens', val)}
+                  />
+                </div>
 
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION — DISABLED
-              Status: Temporarily disabled (CRM & Lead Generation feature paused).
-                      Kept in code for future re-activation — flip the `false &&`
-                      guard below back on to restore the full section.
-              Contains: Secure API keys (Claude, Maps) and Outreach tone parameters
-              ────────────────────────────────────────────────────────── */}
-          {false && (
-          <section
-            id="crm"
-            className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
-          >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
-              <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
-                <Briefcase className="w-4.5 h-4.5" />
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    <span>Temperature (Creativity)</span>
+                    <span className="text-primary-500 font-extrabold">{crmSettings.claude_temperature || '0.75'}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.0"
+                    max="1.0"
+                    step="0.05"
+                    value={crmSettings.claude_temperature || '0.75'}
+                    onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
+                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
+                  />
+                </div>
               </div>
-              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
-                CRM & Outreach Settings
-              </h2>
             </div>
 
-            <form onSubmit={handleSaveCrmSettings} className="space-y-6">
-              {/* API Keys */}
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                  Secure API Credentials
-                </h3>
-
-                {/* Claude API Key */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Anthropic Claude API Key
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showClaudeKey ? 'text' : 'password'}
-                      value={crmSettings.CLAUDE_API_KEY || ''}
-                      onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
-                      placeholder="sk-ant-..."
-                      className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                    />
-                    <Button variant="unstyled"
-                      type="button"
-                      onClick={() => setShowClaudeKey(!showClaudeKey)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
-                    >
-                      {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    Used to generate customized cold outreach copy via Claude API. Stored securely on your local database.
-                  </span>
-                </div>
-
-                {/* Google Maps API Key */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Google Maps API Key
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showMapsKey ? 'text' : 'password'}
-                      value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
-                      onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
-                      placeholder="AIzaSy..."
-                      className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                    />
-                    <Button variant="unstyled"
-                      type="button"
-                      onClick={() => setShowMapsKey(!showMapsKey)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
-                    >
-                      {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    Required for the Live Map Scanner and Place autocomplete. Ensure <strong>Maps JavaScript API</strong> and <strong>Places API (New)</strong> are enabled in Google Cloud Console.
-                  </span>
-                </div>
-
-                {/* Google Maps Map ID */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Google Maps Map ID
-                  </label>
-                  <input
-                    type="text"
-                    value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
-                    onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
-                    placeholder="e.g. CRM_LEADS_MAP"
-                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    Vector Map ID required for drawing administrative search boundary highlights. Defaults to <code className="bg-white/5 px-1 py-0.5 rounded text-[#EE5712]">CRM_LEADS_MAP</code>.
-                  </span>
-                </div>
-              </div>
-
-              {/* Claude Settings */}
-              <div className="space-y-4 border-t border-slate-850 pt-5">
-                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                  Claude Engine Parameters
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <Select
-                    label="Claude Model Variant"
-                    value={crmSettings.claude_model || 'claude-3-5-sonnet-latest'}
-                    onChange={(val) => handleCrmFieldChange('claude_model', val)}
-                    options={[
-                      { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet (Best)' },
-                      { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet v2' },
-                      { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)' },
-                      { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Power)' },
-                    ]}
-                  />
-
-                  <Select
-                    label="Outreach Tone"
-                    value={crmSettings.claude_tone || 'professional'}
-                    onChange={(val) => handleCrmFieldChange('claude_tone', val)}
-                    options={[
-                      { value: 'professional', label: 'Professional & Polished' },
-                      { value: 'empathetic', label: 'Empathetic & Warm' },
-                      { value: 'direct', label: 'Direct & Concise' },
-                      { value: 'creative', label: 'Creative & Bold' },
-                      { value: 'persuasive', label: 'Persuasive & ROI-driven' },
-                    ]}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                      Max Output Tokens
-                    </label>
-                    <NumberInput
-                      min={100}
-                      max={4000}
-                      step={100}
-                      value={crmSettings.claude_max_tokens || '800'}
-                      onChange={(val) => handleCrmFieldChange('claude_max_tokens', val)}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                      <span>Temperature (Creativity)</span>
-                      <span className="text-primary-500 font-extrabold">{crmSettings.claude_temperature || '0.75'}</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0.0"
-                      max="1.0"
-                      step="0.05"
-                      value={crmSettings.claude_temperature || '0.75'}
-                      onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
-                      className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Outreach Signature */}
-              <div className="space-y-2 border-t border-slate-850 pt-5">
-                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                  System Signature
-                </h3>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Outbound Email Signature
-                  </label>
-                  <textarea
-                    value={crmSettings.system_signature || ''}
-                    onChange={(e) => handleCrmFieldChange('system_signature', e.target.value)}
-                    placeholder="e.g. Best regards,&#10;[Your Name]&#10;Zomzam Executive"
-                    rows={3}
-                    className="w-full p-3.5 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 transition-all text-white resize-none"
-                  />
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                loading={isSavingCrm}
-                className="w-full h-11"
-              >
-                Save CRM & Outreach Settings
-              </Button>
-            </form>
-          </section>
-          )}
-
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: NOTION INTEGRATION SECTION
-              Contains: Notion tokens, database mappings, and manual sync action
-              ────────────────────────────────────────────────────────── */}
-          <section
-            id="notion"
-            data-entrance="card"
-            className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
-          >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
-              <div className="w-8 h-8 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                <Database className="w-4.5 h-4.5" />
-              </div>
-              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
-                Notion Integration
-              </h2>
-            </div>
-
-            <form onSubmit={handleSaveNotionSettings} className="space-y-6">
-              <div className="space-y-4">
-                <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                  Notion Connection Parameters
-                </h3>
-
-                {/* Notion API Token */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Notion Integration Token
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showNotionKey ? 'text' : 'password'}
-                      value={notionSettings.NOTION_API_KEY || ''}
-                      onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}
-                      placeholder="secret_..."
-                      className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                    />
-                    <Button variant="unstyled"
-                      type="button"
-                      onClick={() => setShowNotionKey(!showNotionKey)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
-                    >
-                      {showNotionKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    Create an internal integration in Notion and paste the secret token here.
-                  </span>
-                </div>
-
-                {/* Tasks Database ID */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Tasks Database ID (Required)
-                  </label>
-                  <input
-                    type="text"
-                    value={notionSettings.NOTION_DATABASE_ID_TASKS || ''}
-                    onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_TASKS', e.target.value)}
-                    placeholder="e.g. 8f4b..."
-                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    The Notion database containing task columns: Name, Priority, status, Estimated Time In Hours, Actual Time in hours, Project, Links.
-                  </span>
-                </div>
-
-                {/* Projects Database ID */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Projects Database ID (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={notionSettings.NOTION_DATABASE_ID_PROJECTS || ''}
-                    onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_PROJECTS', e.target.value)}
-                    placeholder="e.g. 5d1c..."
-                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    If configured, maps task project relations and imports project lists into the Zomzam CRM projects view.
-                  </span>
-                </div>
-
-                {/* Links Database ID */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Links Database ID (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={notionSettings.NOTION_DATABASE_ID_LINKS || ''}
-                    onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_LINKS', e.target.value)}
-                    placeholder="e.g. 1a2b..."
-                    className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 block leading-normal">
-                    If configured, maps task bookmark links bidirectionally to/from Notion.
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                type="submit"
-                loading={isSavingNotion}
-                className="w-full h-11"
-              >
-                Save Notion Settings
-              </Button>
-            </form>
-
-            <div className="border-t border-slate-850 pt-5 mt-5 space-y-3">
+            {/* Outreach Signature */}
+            <div className="space-y-2 border-t border-slate-850 pt-5">
               <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                Manual Synchronization
+                System Signature
               </h3>
-              <p className="text-[10px] text-slate-400 leading-relaxed">
-                Run the bidirectional synchronization engine to push local tasks/projects/links to Notion and pull new items from Notion.
-              </p>
-              <Button
-                type="button"
-                onClick={handleSyncNotion}
-                loading={isSyncing}
-                className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white font-bold"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Sync Notion Databases Now
-              </Button>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                  Outbound Email Signature
+                </label>
+                <textarea
+                  value={crmSettings.system_signature || ''}
+                  onChange={(e) => handleCrmFieldChange('system_signature', e.target.value)}
+                  placeholder="e.g. Best regards,&#10;[Your Name]&#10;Zomzam Executive"
+                  rows={3}
+                  className="w-full p-3.5 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 transition-all text-white resize-none"
+                />
+              </div>
             </div>
-          </section>
 
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: SECURITY CREDENTIALS SECTION
-              Contains: Change password form inputs
-              ────────────────────────────────────────────────────────── */}
-          <section
-            id="security"
-            data-entrance="card"
-            className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            <Button
+              type="submit"
+              loading={isSavingCrm}
+              className="w-full h-11"
+            >
+              Save CRM & Outreach Settings
+            </Button>
+          </form>
+        </section>
+        )}
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: NOTION INTEGRATION SECTION
+            Contains: Notion token, database mappings, and manual sync action
+            ────────────────────────────────────────────────────────── */}
+        <form onSubmit={handleSaveNotionSettings}>
+          <SettingsGroup
+            id="notion"
+            icon={<Database />}
+            title="Notion integration"
+            padded
+            footer={
+              <div className="space-y-4">
+                <Button type="submit" loading={isSavingNotion} className="w-full h-12 rounded-xl">
+                  Save Notion settings
+                </Button>
+
+                <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3">
+                  <p className="text-xs text-slate-500 leading-relaxed">
+                    Run the bidirectional sync engine to push local tasks, projects, and links to Notion and pull new items back.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={handleSyncNotion}
+                    loading={isSyncing}
+                    variant="secondary"
+                    className="w-full h-11 rounded-xl"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Sync Notion now
+                  </Button>
+                </div>
+              </div>
+            }
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
-              <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
-                <Key className="w-4.5 h-4.5" />
-              </div>
-              <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
-                {t('settings_security')}
-              </h2>
-            </div>
+            <Field
+              id="notion-token"
+              label="Integration token"
+              mono
+              type={showNotionKey ? 'text' : 'password'}
+              value={notionSettings.NOTION_API_KEY || ''}
+              onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}
+              placeholder="secret_..."
+              rightIcon={<PwToggle show={showNotionKey} onToggle={() => setShowNotionKey(!showNotionKey)} />}
+              hint="Create an internal integration in Notion and paste its secret token here."
+            />
 
-            <form onSubmit={handleSavePassword} className="space-y-5">
-              {/* Current Password */}
-              <div data-entrance="list-item" className="relative">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  {t('settings_curr_pass')}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showCurrentPass ? 'text' : 'password'}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    required
-                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
-                  />
-                  <Button variant="unstyled"
-                    type="button"
-                    onClick={() => setShowCurrentPass(!showCurrentPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                  >
-                    {showCurrentPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
+            <Field
+              id="notion-tasks"
+              label="Tasks database ID (required)"
+              mono
+              type="text"
+              value={notionSettings.NOTION_DATABASE_ID_TASKS || ''}
+              onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_TASKS', e.target.value)}
+              placeholder="e.g. 8f4b…"
+              hint="The database with task columns: Name, Priority, status, Estimated/Actual hours, Project, Links."
+            />
 
-              {/* New Password */}
-              <div data-entrance="list-item" className="relative">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  {t('settings_new_pass')}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showNewPass ? 'text' : 'password'}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    required
-                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
-                  />
-                  <Button variant="unstyled"
-                    type="button"
-                    onClick={() => setShowNewPass(!showNewPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                  >
-                    {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
+            <Field
+              id="notion-projects"
+              label="Projects database ID (optional)"
+              mono
+              type="text"
+              value={notionSettings.NOTION_DATABASE_ID_PROJECTS || ''}
+              onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_PROJECTS', e.target.value)}
+              placeholder="e.g. 5d1c…"
+              hint="If set, maps task project relations and imports project lists into the Zomzam projects view."
+            />
 
-              {/* Confirm New Password */}
-              <div data-entrance="list-item" className="relative">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-                  {t('settings_confirm_pass')}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showConfirmPass ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    required
-                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white"
-                  />
-                  <Button variant="unstyled"
-                    type="button"
-                    onClick={() => setShowConfirmPass(!showConfirmPass)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 transition-colors"
-                  >
-                    {showConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-              </div>
+            <Field
+              id="notion-links"
+              label="Links database ID (optional)"
+              mono
+              type="text"
+              value={notionSettings.NOTION_DATABASE_ID_LINKS || ''}
+              onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_LINKS', e.target.value)}
+              placeholder="e.g. 1a2b…"
+              hint="If set, maps task bookmark links bidirectionally to and from Notion."
+            />
+          </SettingsGroup>
+        </form>
 
-              <Button
-                type="submit"
-                variant="secondary"
-                loading={isSavingPass}
-                className="w-full h-11"
-              >
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: SECURITY CREDENTIALS SECTION
+            Contains: Change password form inputs
+            ────────────────────────────────────────────────────────── */}
+        <form onSubmit={handleSavePassword}>
+          <SettingsGroup
+            id="security"
+            icon={<Shield />}
+            title={t('settings_security')}
+            padded
+            footer={
+              <Button type="submit" variant="secondary" loading={isSavingPass} className="w-full h-12 rounded-xl">
                 {t('settings_password_change')}
               </Button>
-            </form>
-          </section>
-
-          {/* ──────────────────────────────────────────────────────────
-              DEVELOPMENT NAVIGATOR: DANGER ZONE
-              Contains: Irreversible account deletion controls
-              ────────────────────────────────────────────────────────── */}
-          <section
-            id="danger"
-            data-entrance="card"
-            className="surface-card border border-red-900/40 rounded-3xl p-6 shadow-apple scroll-mt-6"
+            }
           >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-red-900/30">
-              <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
-                <AlertOctagon className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <h2 className="text-sm font-black text-red-400 uppercase tracking-widest">Danger Zone</h2>
-                <p className="text-[10px] text-slate-400 mt-0.5">Irreversible actions. Proceed with caution.</p>
-              </div>
-            </div>
+            <Field
+              id="current-pass"
+              label={t('settings_curr_pass')}
+              required
+              type={showCurrentPass ? 'text' : 'password'}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              rightIcon={<PwToggle show={showCurrentPass} onToggle={() => setShowCurrentPass(!showCurrentPass)} />}
+            />
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 bg-red-950/20 border border-red-900/30 rounded-2xl">
-              <div>
-                <p className="text-sm font-bold text-white">Delete Account</p>
-                <p className="text-[11px] text-slate-400 mt-0.5 max-w-xs">
-                  Permanently delete your account and all associated data. This action cannot be undone.
-                </p>
-              </div>
-              <Button
-                variant="danger"
-                onClick={() => { setShowDeleteModal(true); setDeleteError(null); setDeletePassword(''); }}
-                className="shrink-0 whitespace-nowrap"
-              >
-                Delete Account
-              </Button>
+            <Field
+              id="new-pass"
+              label={t('settings_new_pass')}
+              required
+              hint="At least 8 characters."
+              type={showNewPass ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              rightIcon={<PwToggle show={showNewPass} onToggle={() => setShowNewPass(!showNewPass)} />}
+            />
+
+            <Field
+              id="confirm-pass"
+              label={t('settings_confirm_pass')}
+              required
+              type={showConfirmPass ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              rightIcon={<PwToggle show={showConfirmPass} onToggle={() => setShowConfirmPass(!showConfirmPass)} />}
+            />
+          </SettingsGroup>
+        </form>
+
+        {/* ──────────────────────────────────────────────────────────
+            DEVELOPMENT NAVIGATOR: DANGER ZONE
+            Contains: Irreversible account deletion controls
+            ────────────────────────────────────────────────────────── */}
+        <SettingsGroup id="danger" icon={<AlertOctagon />} title="Danger zone" danger>
+          <div
+            data-entrance="list-item"
+            className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-4 py-4"
+          >
+            <div className="min-w-0">
+              <p className="text-[15px] font-medium text-white">Delete account</p>
+              <p className="text-xs text-slate-500 mt-0.5 max-w-sm leading-relaxed">
+                Permanently delete your account and all associated data. This action cannot be undone.
+              </p>
             </div>
-          </section>
-        </div>
+            <Button
+              variant="danger"
+              onClick={() => { setShowDeleteModal(true); setDeleteError(null); setDeletePassword(''); }}
+              className="shrink-0 whitespace-nowrap"
+            >
+              Delete account
+            </Button>
+          </div>
+        </SettingsGroup>
       </div>
 
       {/* ── Account Deletion Confirmation Modal ── */}
@@ -983,28 +899,17 @@ export default function SettingsPage() {
 
         {deleteError && <Alert variant="error" className="mb-4">{deleteError}</Alert>}
 
-        <div className="mb-2">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">
-            Confirm Password
-          </label>
-          <div className="relative">
-            <input
-              type={showDeletePass ? 'text' : 'password'}
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              placeholder="Enter your current password"
-              className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-red-900/40 rounded-xl text-sm focus:outline-none focus:border-red-500 transition-all text-white"
-              autoFocus
-            />
-            <Button variant="unstyled"
-              type="button"
-              onClick={() => setShowDeletePass(!showDeletePass)}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
-            >
-              {showDeletePass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </Button>
-          </div>
-        </div>
+        <Field
+          id="delete-pass"
+          label="Confirm password"
+          type={showDeletePass ? 'text' : 'password'}
+          value={deletePassword}
+          onChange={(e) => setDeletePassword(e.target.value)}
+          placeholder="Enter your current password"
+          autoFocus
+          className="border-red-900/40 focus:border-red-500"
+          rightIcon={<PwToggle show={showDeletePass} onToggle={() => setShowDeletePass(!showDeletePass)} />}
+        />
       </Modal>
     </div>
   );
