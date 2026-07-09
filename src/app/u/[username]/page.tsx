@@ -3,13 +3,13 @@ import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { getUserByUsername } from '@/lib/models/user';
+import { getUserByUsername, getUserById } from '@/lib/models/user';
 import { getSessionUser } from '@/lib/api-auth';
 import { query } from '@/lib/db';
 import SocialButtons from './SocialButtons';
 import ProfileAnimationKit from './ProfileAnimationKit';
-import PublicNav from '@/components/PublicNav';
-import { Calendar, Clock, Heart, Globe, MessageCircle, Users, Lock, Repeat2 } from 'lucide-react';
+import { PublicPageShell } from '@/components/PublicPageShell';
+import { Calendar, Clock, Heart, Globe, MessageCircle, Users, Lock, Repeat2, Pencil } from 'lucide-react';
 
 interface PageProps {
   params: Promise<{ username: string }>;
@@ -201,11 +201,12 @@ export default async function PublicProfilePage({ params }: PageProps) {
     } catch { /* non-blocking */ return { count: 0, friends: [] }; }
   };
 
-  // Posts and mutuals only depend on the connection status above, not on each
-  // other — run both remote-DB reads concurrently.
-  const [posts, { count: mutualCount, friends: mutualFriends }] = await Promise.all([
+  // Posts, mutuals, and the full authed-viewer (for the app-shell chrome) don't
+  // depend on each other — run the remote reads concurrently.
+  const [posts, { count: mutualCount, friends: mutualFriends }, authedUser] = await Promise.all([
     loadPosts(),
     loadMutuals(),
+    viewer ? getUserById(viewer.id) : Promise.resolve(null),
   ]);
 
   // Parse tags JSON safely
@@ -219,255 +220,217 @@ export default async function PublicProfilePage({ params }: PageProps) {
   }
 
   const fullName = [profileUser.first_name, profileUser.last_name].filter(Boolean).join(' ') || null;
+  const isOwnProfile = viewerId === profileUserId;
+  const isBlocked = initialStatus.startsWith('blocked');
+
+  // Calm, sentence-case section label — the iOS grouped-list rhythm shared with
+  // Settings / Connections (hierarchy via weight + spacing, not shouty caps).
+  const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+    <h2 className="text-[13px] font-semibold tracking-tight text-slate-400 px-1 mb-2">{children}</h2>
+  );
 
   return (
-    <div className="min-h-screen bg-[#111318] text-slate-100 flex flex-col font-sans transition-colors duration-300">
-      
-      <PublicNav />
-
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: PUBLIC PROFILE CARD
-          Contains: Avatar + name/role/meta header, biography,
-          interest tags, social interaction buttons (friend/follow)
-          ────────────────────────────────────────────────────────── */}
-      <main className="flex-grow pt-32 pb-24 px-6 max-w-4xl mx-auto w-full">
+    // Signed-in → full app shell (top nav + side rails); anonymous → public chrome.
+    <PublicPageShell authedUser={authedUser}>
+      <div className="max-w-2xl mx-auto w-full">
         <ProfileAnimationKit>
 
-        {/* Profile Card */}
-        <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-3xl p-8 shadow-apple relative overflow-hidden space-y-8">
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: PROFILE HERO
+              Contains: gradient banner, overlapping circular avatar, name +
+              @handle + role, meta (timezone · joined), primary action
+              ────────────────────────────────────────────────────────── */}
+          <div data-entrance="card" className="relative overflow-hidden rounded-[28px] border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl shadow-apple-lg">
+            {/* Ambient banner — a soft Zomzam-orange wash, not a loud cover photo */}
+            <div aria-hidden className="h-24 sm:h-28 w-full bg-gradient-to-br from-primary-500/25 via-primary-500/[0.08] to-transparent" />
+            <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
 
-          {/* Upper Profile Section */}
-          <div className="flex flex-col md:flex-row items-center md:items-start text-center md:text-left justify-between gap-6 pb-6 border-b border-slate-850/60">
-            
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-5">
-              
-              {/* Avatar Container */}
-              <div className="relative w-28 h-28 rounded-3xl overflow-hidden border-2 border-slate-850 shadow-md bg-slate-900 flex-shrink-0">
+            <div className="px-5 sm:px-8 pb-6">
+              {/* Avatar overlaps the banner (Apple/native profile header) */}
+              <div className="flex items-end gap-4 -mt-12 sm:-mt-14">
                 <Image
                   src={profileUser.avatar || '/Assets/Img/default-avatar.png'}
                   alt={`${fullName || profileUser.username}'s avatar`}
-                  fill
-                  sizes="112px"
+                  width={112}
+                  height={112}
                   priority
-                  className="object-cover"
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-[#15171d] shadow-xl bg-slate-900 flex-shrink-0"
                 />
+                {/* Primary action sits on the banner edge, aligned to the avatar */}
+                <div className="flex-1 flex justify-end pb-1">
+                  {isOwnProfile ? (
+                    <Link
+                      href="/me"
+                      className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.08] text-sm font-semibold text-slate-200 active:scale-95 transition-all"
+                    >
+                      <Pencil className="w-4 h-4" /> Edit profile
+                    </Link>
+                  ) : !isBlocked ? (
+                    <SocialButtons targetUserId={profileUserId} initialStatus={initialStatus} viewerId={viewerId} />
+                  ) : null}
+                </div>
               </div>
 
-              {/* Name Details */}
-              <div className="space-y-1.5">
-                <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                  <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">
+              {/* Identity */}
+              <div className="mt-3.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 data-entrance="title" className="text-2xl sm:text-[28px] font-bold tracking-tight text-white leading-tight">
                     {fullName || profileUser.username}
                   </h1>
-                  <span className="px-2.5 py-0.5 bg-slate-800 text-slate-400 font-bold rounded-full text-[9px] uppercase tracking-wider">
+                  <span className="px-2 py-0.5 rounded-full bg-white/[0.06] text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                     {profileUser.role}
                   </span>
                 </div>
-                <p className="text-sm text-primary-500 font-bold">
-                  @{profileUser.username}
-                </p>
-                
-                {/* Meta details */}
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-4 gap-y-1.5 text-xs text-slate-400 font-semibold pt-1">
-                  <div className="flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>{profileUser.timezone || 'UTC'}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
+                <p className="text-sm text-primary-400 font-semibold mt-0.5">@{profileUser.username}</p>
+
+                {/* Meta */}
+                <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-slate-400">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5" /> {profileUser.timezone || 'UTC'}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
-                    <span>Joined {new Date(profileUser.created_at!).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}</span>
-                  </div>
+                    Joined {new Date(profileUser.created_at!).toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}
+                  </span>
                 </div>
-              </div>
-            </div>
 
-          </div>
-
-          {/* Biography */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Biography
-            </h3>
-            {profileUser.bio ? (
-              <p className="text-sm text-slate-350 leading-relaxed whitespace-pre-wrap">
-                {profileUser.bio}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-400 italic">
-                This developer hasn&apos;t added a biography yet.
-              </p>
-            )}
-          </div>
-
-          {/* Interests Tags */}
-          <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Interests & Focus tags
-            </h3>
-            {tags.length > 0 ? (
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <span
-                    key={tag}
-                    data-entrance="list-item"
-                    className="px-3 py-1 bg-slate-900 border border-slate-800/80 text-slate-350 font-bold text-xs rounded-xl transition-colors hover:border-primary-500/30"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-slate-400 italic">
-                No tags added yet.
-              </p>
-            )}
-          </div>
-
-          {/* Mutual Friends */}
-          {viewerId && viewerId !== profileUserId && mutualCount > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                <Users className="w-3.5 h-3.5" />
-                {mutualCount} mutual friend{mutualCount === 1 ? '' : 's'}
-              </h3>
-              <div className="flex flex-wrap items-center gap-2.5">
-                {mutualFriends.map((f) => (
-                  <Link
-                    key={f.id}
-                    href={`/u/${f.username}`}
-                    data-entrance="list-item"
-                    className="flex items-center gap-2 bg-slate-900 border border-slate-800/80 rounded-xl pl-1.5 pr-3 py-1.5 hover:border-primary-500/30 transition-colors group"
-                  >
-                    <Image
-                      src={f.avatar || '/Assets/Img/default-avatar.png'}
-                      alt=""
-                      width={28}
-                      height={28}
-                      className="w-7 h-7 rounded-lg object-cover border border-slate-800"
-                    />
-                    <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">
-                      {[f.first_name, f.last_name].filter(Boolean).join(' ') || f.username}
-                    </span>
-                  </Link>
-                ))}
-                {mutualCount > mutualFriends.length && (
-                  <span className="text-xs font-semibold text-slate-500">
-                    +{mutualCount - mutualFriends.length} more
-                  </span>
+                {/* Contextual connect hint (anonymous / blocked only) */}
+                {!isOwnProfile && (isBlocked || !viewerId) && (
+                  <p className="mt-3 text-[13px] text-slate-500">
+                    {isBlocked ? 'Connections are unavailable for this profile.' : `Sign in to connect with @${profileUser.username}.`}
+                  </p>
                 )}
               </div>
             </div>
+          </div>
+
+          {/* ── About ── */}
+          {profileUser.bio && (
+            <section data-entrance="card" className="mt-5">
+              <SectionLabel>About</SectionLabel>
+              <div className="surface-card rounded-2xl border border-slate-800/60 shadow-apple p-5">
+                <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">{profileUser.bio}</p>
+              </div>
+            </section>
           )}
 
-          {/* Social Interactions */}
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-850/60">
-            {viewerId === profileUserId ? (
-              <div className="w-full flex items-center justify-between text-xs font-bold text-slate-400">
-                <span>This is your public developer profile.</span>
-                <Link
-                  href="/me"
-                  className="text-primary-500 hover:text-primary-600 uppercase tracking-wider font-black"
-                >
-                  Edit Profile
-                </Link>
+          {/* ── Interests ── */}
+          {tags.length > 0 && (
+            <section data-entrance="card" className="mt-5">
+              <SectionLabel>Interests</SectionLabel>
+              <div className="surface-card rounded-2xl border border-slate-800/60 shadow-apple p-5">
+                <div className="flex flex-wrap gap-2">
+                  {tags.map((tag) => (
+                    <span
+                      key={tag}
+                      data-entrance="list-item"
+                      className="px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/[0.06] text-xs font-medium text-slate-300 hover:border-primary-500/30 transition-colors"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
               </div>
-            ) : (
-              <>
-                <div className="text-xs text-slate-400 font-semibold text-center sm:text-left">
-                  {initialStatus.startsWith('blocked') ? (
-                    <span>Connections are unavailable for this profile.</span>
-                  ) : viewerId ? (
-                    <span>Connect with @{profileUser.username} to collaborate.</span>
-                  ) : (
-                    <span>Sign in to connect with @{profileUser.username}.</span>
+            </section>
+          )}
+
+          {/* ── Mutual friends ── */}
+          {viewerId && !isOwnProfile && mutualCount > 0 && (
+            <section data-entrance="card" className="mt-5">
+              <SectionLabel>{mutualCount} mutual friend{mutualCount === 1 ? '' : 's'}</SectionLabel>
+              <div className="surface-card rounded-2xl border border-slate-800/60 shadow-apple p-5">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {mutualFriends.map((f) => (
+                    <Link
+                      key={f.id}
+                      href={`/u/${f.username}`}
+                      data-entrance="list-item"
+                      className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.06] rounded-full pl-1.5 pr-3 py-1 hover:border-primary-500/30 hover:bg-white/[0.07] transition-colors group"
+                    >
+                      <Image
+                        src={f.avatar || '/Assets/Img/default-avatar.png'}
+                        alt=""
+                        width={26}
+                        height={26}
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                      <span className="text-xs font-semibold text-slate-300 group-hover:text-white transition-colors">
+                        {[f.first_name, f.last_name].filter(Boolean).join(' ') || f.username}
+                      </span>
+                    </Link>
+                  ))}
+                  {mutualCount > mutualFriends.length && (
+                    <span className="text-xs font-semibold text-slate-500">+{mutualCount - mutualFriends.length} more</span>
                   )}
                 </div>
-                <SocialButtons
-                  targetUserId={profileUserId}
-                  initialStatus={initialStatus}
-                  viewerId={viewerId}
-                />
-              </>
-            )}
-          </div>
-
-        </div>
-
-        {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: PROFILE POSTS
-            Contains: this user's posts (public always; private only to friends/self)
-            ────────────────────────────────────────────────────────── */}
-        <div data-entrance="card" className="mt-6 surface-card border border-slate-800/60 rounded-3xl p-8 shadow-apple space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-              Posts{posts.length > 0 ? ` · ${posts.length}` : ''}
-            </h3>
-          </div>
-
-          {posts.length === 0 ? (
-            <p className="text-sm text-slate-400 italic">
-              {canSeePrivate
-                ? `@${profileUser.username} hasn't posted anything yet.`
-                : `No public posts from @${profileUser.username} yet.`}
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {posts.map((p) => {
-                const Aud = p.visibility === 'public' ? Globe : p.visibility === 'exclusive' ? Lock : Users;
-                const audLabel = p.visibility === 'public' ? 'Public' : p.visibility === 'exclusive' ? 'Exclusive' : 'Friends';
-                return (
-                  <Link
-                    key={`${p.reposted ? 'r' : 'p'}${p.id}`}
-                    href={`/p/${p.public_id}`}
-                    data-entrance="list-item"
-                    className="block bg-[#111318] border border-slate-800/60 rounded-2xl p-4 hover:border-primary-500/30 transition-colors"
-                  >
-                    {p.reposted && (
-                      <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-2">
-                        <Repeat2 className="w-3.5 h-3.5" />
-                        <span>{fullName || profileUser.username} reposted</span>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mb-2">
-                      <span>{new Date(p.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                      <span className="inline-flex items-center" title={audLabel} aria-label={`Audience: ${audLabel}`}>
-                        <Aud className="w-3.5 h-3.5" />
-                      </span>
-                    </div>
-                    <div
-                      className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-4"
-                      dangerouslySetInnerHTML={{ __html: p.content_html }}
-                    />
-                    <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
-                      <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {p.like_count}</span>
-                      <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {p.comment_count}</span>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+              </div>
+            </section>
           )}
-        </div>
+
+          {/* ──────────────────────────────────────────────────────────
+              DEVELOPMENT NAVIGATOR: PROFILE POSTS
+              Contains: this user's posts (public always; private only to friends/self)
+              ────────────────────────────────────────────────────────── */}
+          <section data-entrance="card" className="mt-5 pb-4">
+            <div className="flex items-center justify-between px-1 mb-2">
+              <SectionLabel>{isOwnProfile ? 'Your posts' : 'Posts'}</SectionLabel>
+              {posts.length > 0 && (
+                <span className="text-[11px] font-bold tabular-nums text-slate-500">{posts.length}</span>
+              )}
+            </div>
+
+            {posts.length === 0 ? (
+              <div className="surface-card rounded-2xl border border-slate-800/60 shadow-apple p-10 text-center">
+                <MessageCircle className="w-8 h-8 mx-auto mb-2.5 text-slate-700" />
+                <p className="text-sm font-semibold text-slate-300">
+                  {canSeePrivate ? 'No posts yet' : 'No public posts yet'}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {isOwnProfile ? 'Share something from your feed.' : `@${profileUser.username} hasn’t posted here yet.`}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {posts.map((p) => {
+                  const Aud = p.visibility === 'public' ? Globe : p.visibility === 'exclusive' ? Lock : Users;
+                  const audLabel = p.visibility === 'public' ? 'Public' : p.visibility === 'exclusive' ? 'Exclusive' : 'Friends';
+                  return (
+                    <Link
+                      key={`${p.reposted ? 'r' : 'p'}${p.id}`}
+                      href={`/p/${p.public_id}`}
+                      data-entrance="list-item"
+                      className="block rounded-2xl border border-white/[0.06] bg-white/[0.03] hover:bg-white/[0.05] hover:border-white/[0.12] transition-colors p-4 card-lift"
+                    >
+                      {p.reposted && (
+                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 mb-2">
+                          <Repeat2 className="w-3.5 h-3.5" />
+                          <span>{fullName || profileUser.username} reposted</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500 mb-2">
+                        <span>{new Date(p.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span className="inline-flex items-center" title={audLabel} aria-label={`Audience: ${audLabel}`}>
+                          <Aud className="w-3.5 h-3.5" />
+                        </span>
+                      </div>
+                      <div
+                        className="text-sm text-slate-300 leading-relaxed break-words [overflow-wrap:anywhere] line-clamp-4"
+                        dangerouslySetInnerHTML={{ __html: p.content_html }}
+                      />
+                      <div className="flex items-center gap-4 mt-3 text-xs font-semibold text-slate-500">
+                        <span className="flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> {p.like_count}</span>
+                        <span className="flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {p.comment_count}</span>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </section>
 
         </ProfileAnimationKit>
-      </main>
-
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: FOOTER
-          Contains: Brand logo + name, copyright line
-          ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-800 bg-surface-dark/50 backdrop-blur-sm py-12 mt-auto">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Image src="/Assets/Img/Icon-white.svg" alt="Zomzam Icon" width={24} height={24} className="w-6 h-6" />
-            <span className="text-white font-semibold text-sm">zomzam.com</span>
-          </div>
-          <p className="text-slate-400 text-sm">
-            &copy; {new Date().getFullYear()} All rights reserved. Built with precision.
-          </p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PublicPageShell>
   );
 }
 export const dynamic = 'force-dynamic';

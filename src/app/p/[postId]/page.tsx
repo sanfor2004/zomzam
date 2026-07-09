@@ -2,8 +2,9 @@ import React from 'react';
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getSessionUser } from '@/lib/api-auth';
+import { getUserById } from '@/lib/models/user';
 import { query, queryOne } from '@/lib/db';
-import PublicNav from '@/components/PublicNav';
+import { PublicPageShell } from '@/components/PublicPageShell';
 import PostDetail from './PostDetail';
 
 interface PageProps {
@@ -49,17 +50,18 @@ export default async function PostPage({ params }: PageProps) {
 
   const vid = viewer?.id ?? 0;
 
-  // The session token carries only id/username/email/role — fetch the viewer's
-  // display profile (avatar + name) so the sticky comment composer can show
-  // their real avatar and the owner Edit flow has a currentUser to seed.
-  const viewerUser = viewer
-    ? await queryOne<any>(
-        `SELECT id, username, first_name, last_name, avatar FROM users WHERE id = ?`,
-        [viewer.id]
-      )
-    : null;
-  const normalizedViewer = viewerUser
-    ? { ...viewerUser, avatar: viewerUser.avatar || '/Assets/Img/default-avatar.png' }
+  // Full viewer user (or null) — drives BOTH the app-shell chrome for signed-in
+  // visitors (DashboardShell needs the full user) and the sticky composer avatar
+  // / owner-Edit seed. One fetch, reused for both.
+  const authedUser = viewer ? await getUserById(viewer.id) : null;
+  const normalizedViewer = authedUser
+    ? {
+        id: authedUser.id as number,
+        username: authedUser.username as string,
+        first_name: (authedUser.first_name ?? null) as string | null,
+        last_name: (authedUser.last_name ?? null) as string | null,
+        avatar: (authedUser.avatar as string) || '/Assets/Img/default-avatar.png',
+      }
     : null;
   const post = await queryOne<any>(
     `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.image_paths, p.created_at, p.visibility,
@@ -115,39 +117,21 @@ export default async function PostPage({ params }: PageProps) {
   }));
 
   return (
-    <div className="min-h-screen bg-[#111318] text-slate-100 flex flex-col font-sans">
-
-      <PublicNav />
-
+    // Signed-in → full app shell (top nav + side rails); anonymous → public chrome.
+    <PublicPageShell authedUser={authedUser}>
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: SINGLE POST VIEW
           Contains: Post card, author info, like/comment interactions
           ────────────────────────────────────────────────────────── */}
-      <main className="flex-grow pt-32 pb-24 px-4 max-w-3xl mx-auto w-full">
+      <div className="max-w-3xl mx-auto w-full">
         <PostDetail
           post={normalizedPost}
           initialComments={normalizedComments}
           viewerId={viewer?.id ?? null}
           viewerUser={normalizedViewer}
         />
-      </main>
-
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: FOOTER
-          Contains: Brand logo, copyright
-          ────────────────────────────────────────────────────────── */}
-      <footer className="border-t border-slate-800 bg-surface-dark/50 backdrop-blur-sm py-12 mt-auto">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <img src="/Assets/Img/Icon-white.svg" alt="Zomzam Icon" className="w-6 h-6" />
-            <span className="text-white font-semibold text-sm">zomzam.com</span>
-          </div>
-          <p className="text-slate-400 text-sm">
-            &copy; {new Date().getFullYear()} All rights reserved. Built with precision.
-          </p>
-        </div>
-      </footer>
-    </div>
+      </div>
+    </PublicPageShell>
   );
 }
 
