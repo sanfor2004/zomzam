@@ -196,7 +196,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           onClick={() => toggleGroup(group.key)}
           aria-expanded={isOpen}
           className={cn(
-            'w-full flex items-center gap-3 rounded-xl text-slate-200 font-semibold hover:bg-slate-800/50 transition-colors',
+            'w-full flex items-center gap-3 rounded-xl text-slate-200 font-semibold hover:bg-slate-800/50 active:scale-[0.98] transition-all',
             mobile ? 'px-4 min-h-[48px] text-sm' : 'px-3 py-2.5 text-sm',
           )}
         >
@@ -213,7 +213,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
                   <Button key={it.path} variant="unstyled"
                     onClick={() => (mobile ? goToMobile(it.path) : router.push(it.path))}
                     className={cn(
-                      'w-full text-left flex items-center gap-2.5 rounded-lg transition-colors',
+                      'w-full text-left flex items-center gap-2.5 rounded-lg active:scale-[0.98] transition-all',
                       mobile ? 'px-3 min-h-[40px] text-sm' : 'px-3 py-2 text-xs font-medium',
                       active ? 'text-primary-500 font-semibold' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white',
                     )}
@@ -258,28 +258,42 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
 
   // ──────────────────────────────────────────────────────────
   // DEVELOPMENT NAVIGATOR: SIDEBAR STAGGER ENTRANCE (GSAP)
-  // Nav items slide from x:-18 once currentUser resolves.
+  // Nav rows slide in from x:-18 once currentUser resolves.
   // dependencies:[!!currentUser] → fires exactly once on auth resolve,
   // not on mobileMenuOpen, group-toggle, or notification re-renders.
+  //
+  // Robustness note: this reveal animates opacity + x ONLY — never `visibility`
+  // (i.e. no `autoAlpha`). A `from`/`autoAlpha` tween that gets torn down
+  // mid-flight (Fast Refresh, Strict Mode's dev double-invoke) used to strand
+  // the later-staggered rows (Money, Community) at `visibility:hidden` forever.
+  // With opacity-only + an onInterrupt/clearProps that snaps rows back to their
+  // natural visible state, an interrupted run can never leave a nav row hidden.
   // ──────────────────────────────────────────────────────────
   useGSAP(() => {
     const nav = sidebarNavRef.current;
     if (!nav || !currentUser) return;
+    if (typeof window !== 'undefined'
+      && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    const mm = gsap.matchMedia();
+    const items = gsap.utils.toArray<HTMLElement>('button, a[href]', nav);
+    if (!items.length) return;
 
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      const items = gsap.utils.toArray<HTMLElement>('button, a[href]', nav);
-      if (!items.length) return;
+    const ensureVisible = () => gsap.set(items, { clearProps: 'opacity,transform' });
 
-      gsap.from(items, {
-        autoAlpha: 0,
-        x: -18,
+    gsap.fromTo(
+      items,
+      { opacity: 0, x: -18 },
+      {
+        opacity: 1,
+        x: 0,
         duration: 0.42,
         ease: 'power2.out',
         stagger: { amount: 0.45, from: 'start' },
-      });
-    });
+        overwrite: true,
+        clearProps: 'opacity,transform', // completed run → no lingering inline styles
+        onInterrupt: ensureVisible,       // killed run → snap back to visible
+      },
+    );
   }, { scope: sidebarNavRef, dependencies: [!!currentUser] });
 
   // Visual config for the sidebar user-status indicator (dot, pill, glow, shine)
@@ -565,7 +579,10 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           {/* Home */}
           <Button variant="unstyled"
             onClick={() => router.push('/home')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/home')}`}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white active:scale-[0.98] transition-all',
+              isActive('/home'),
+            )}
           >
             <Home className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_home') || 'Home'}</span>
@@ -574,7 +591,10 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           {/* Saved */}
           <Button variant="unstyled"
             onClick={() => router.push('/saved')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/saved')}`}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white active:scale-[0.98] transition-all',
+              isActive('/saved'),
+            )}
           >
             <Bookmark className="w-5 h-5 flex-shrink-0" />
             <span>Saved</span>
@@ -583,7 +603,10 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           {/* Messages */}
           <Button variant="unstyled"
             onClick={() => router.push('/messages')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/messages')}`}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white active:scale-[0.98] transition-all',
+              isActive('/messages'),
+            )}
           >
             <MessageCircle className="w-5 h-5 flex-shrink-0" />
             <span>Messages</span>
@@ -598,19 +621,16 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           {renderNavSection(NAV_GROUPS[0])}
           {renderNavSection(NAV_GROUPS[1])}
 
-          {/* ──────────────────────────────────────────────────────────
-              TEMPORARILY DISABLED: CRM SUITE + DASHBOARD
-              Both features are parked for later work. Re-enable by
-              uncommenting the block below.
-              ────────────────────────────────────────────────────────── */}
-
           {/* Community suite (single-open accordion) */}
           {renderNavSection(NAV_GROUPS[2])}
 
           {/* Settings */}
           <Button variant="unstyled"
             onClick={() => router.push('/settings')}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white transition-colors${isActive('/settings')}`}
+            className={cn(
+              'w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-400 rounded-lg hover:bg-slate-800/50 hover:text-white active:scale-[0.98] transition-all',
+              isActive('/settings'),
+            )}
           >
             <Settings className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_settings')}</span>
@@ -640,7 +660,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             {/* CTA */}
             <Button variant="unstyled"
               onClick={() => router.push('/pricing')}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 shadow-apple-sm transition-colors cursor-pointer"
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 active:scale-[0.98] shadow-apple-sm transition-all cursor-pointer"
             >
               <Zap className="w-4 h-4 flex-shrink-0" />
               <span>Upgrade to Pro</span>
@@ -688,7 +708,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
               </Button>
               <Button variant="unstyled"
                 onClick={handleLogout}
-                className="text-slate-400 hover:text-red-500 transition-colors"
+                className="text-slate-400 hover:text-red-500 active:scale-90 transition-all"
                 title={t('nav_logout')}
               >
                 <LogOut className="w-4 h-4" />
@@ -814,7 +834,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           <Button
             variant="unstyled"
             onClick={() => goToMobile(`/u/${currentUser.username}`)}
-            className="w-full flex items-center gap-3 px-3 py-2 mb-1 rounded-2xl hover:bg-slate-800/50 transition-colors text-left"
+            className="w-full flex items-center gap-3 px-3 py-2 mb-1 rounded-2xl hover:bg-slate-800/50 active:scale-[0.98] transition-all text-left"
           >
             <div className="relative flex-shrink-0">
               <Image
@@ -839,7 +859,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             variant="unstyled"
             onClick={() => goToMobile('/saved')}
             className={cn(
-              'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold transition-colors',
+              'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold active:scale-[0.98] transition-all',
               pathname === '/saved' ? 'bg-primary-500/10 text-primary-500' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white',
             )}
           >
@@ -866,7 +886,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             <Button
               variant="unstyled"
               onClick={() => goToMobile('/pricing')}
-              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 shadow-apple-sm transition-colors"
+              className="mt-3 w-full flex items-center justify-center gap-2 px-3 py-2.5 text-sm font-semibold text-white rounded-xl bg-primary-500 hover:bg-primary-600 active:scale-[0.98] shadow-apple-sm transition-all"
             >
               <Zap className="w-4 h-4 flex-shrink-0" />
               <span>Upgrade to Pro</span>
@@ -878,7 +898,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             variant="unstyled"
             onClick={() => goToMobile('/settings')}
             className={cn(
-              'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold transition-colors',
+              'w-full flex items-center gap-3 px-4 min-h-[48px] rounded-2xl text-sm font-semibold active:scale-[0.98] transition-all',
               pathname === '/settings' ? 'bg-primary-500/10 text-primary-500' : 'text-slate-300 hover:bg-slate-800/50 hover:text-white',
             )}
           >
@@ -900,7 +920,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
           <Button
             variant="unstyled"
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 min-h-[48px] mt-1 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-950/20 transition-colors"
+            className="w-full flex items-center gap-3 px-4 min-h-[48px] mt-1 rounded-2xl text-sm font-semibold text-red-500 hover:bg-red-950/20 active:scale-[0.98] transition-all"
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
             <span>{t('nav_logout') || 'Sign Out'}</span>

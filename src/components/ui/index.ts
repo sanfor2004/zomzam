@@ -15,6 +15,7 @@ export * from './DeleteButton';
 export * from './Divider';
 export * from './Dropdown';
 export * from './Input';
+export * from './ListGroup';
 export * from './Modal';
 export * from './NumberInput';
 export * from './Pagination';

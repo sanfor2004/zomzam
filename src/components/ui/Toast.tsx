@@ -27,7 +27,13 @@ export interface ToastOptions {
 
 interface ToastEntry extends ToastOptions {
   id: string;
+  leaving?: boolean;
 }
+
+// Matches --animate-out: fadeOut 0.3s ease-in (globals.css) — the beat we hold
+// the toast mounted for after dismiss() so the exit actually plays instead of
+// the entry vanishing from the array instantly.
+const EXIT_DURATION = 300;
 
 interface ToastContextValue {
   toast: (options: ToastOptions) => void;
@@ -54,12 +60,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const dismiss = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
     const timer = timers.current.get(id);
     if (timer) {
       clearTimeout(timer);
       timers.current.delete(id);
     }
+    // Mark it leaving so the exit animation plays, then remove after it
+    // settles — skip if it's already leaving (auto-dismiss + a manual click
+    // racing each other shouldn't double-schedule the removal).
+    let alreadyLeaving = false;
+    setToasts((prev) => prev.map((t) => {
+      if (t.id !== id) return t;
+      if (t.leaving) alreadyLeaving = true;
+      return { ...t, leaving: true };
+    }));
+    if (alreadyLeaving) return;
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, EXIT_DURATION);
   }, []);
 
   const toast = useCallback(
@@ -84,7 +102,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               key={t.id}
               role="status"
               className={cn(
-                'pointer-events-auto flex gap-3 items-start p-4 rounded-2xl border surface-card shadow-2xl animate-in slide-in-from-top duration-300',
+                'pointer-events-auto flex gap-3 items-start p-4 rounded-2xl border surface-card shadow-2xl duration-300',
+                t.leaving ? 'animate-out pointer-events-none' : 'animate-in slide-in-from-top',
                 VARIANT_STYLES[t.variant ?? 'info'],
               )}
             >
@@ -104,7 +123,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Dismiss"
-                className="text-slate-500 hover:text-slate-200 transition-colors"
+                className="text-slate-500 hover:text-slate-200 active:scale-90 transition-all"
               >
                 <X className="w-4 h-4" />
               </button>

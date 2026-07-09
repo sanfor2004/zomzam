@@ -52,9 +52,48 @@ export function Modal({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Lock body scroll when modal is open
+  // Exit animation: stay mounted for one more beat after isOpen flips false so
+  // the fade-out (ease-in, matching the entrance's ease-out) can actually play
+  // instead of the dialog vanishing instantly. `wasOpenRef` skips the closing
+  // beat on first mount (nothing to animate out of if it never opened).
+  const EXIT_DURATION = 300; // matches --animate-out: fadeOut 0.3s ease-in
+  const [visible, setVisible] = useState(isOpen);
+  const [closing, setClosing] = useState(false);
+  const wasOpenRef = useRef(isOpen);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
+    const wasOpen = wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+
     if (isOpen) {
+      if (closeTimerRef.current) {
+        clearTimeout(closeTimerRef.current);
+        closeTimerRef.current = null;
+      }
+      setClosing(false);
+      setVisible(true);
+      return;
+    }
+
+    if (!wasOpen) return; // never opened — nothing to animate out of
+
+    setClosing(true);
+    closeTimerRef.current = setTimeout(() => {
+      setVisible(false);
+      setClosing(false);
+      closeTimerRef.current = null;
+    }, EXIT_DURATION);
+
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, [isOpen]);
+
+  // Lock body scroll through the closing animation too, not just while open —
+  // otherwise the page would be scrollable underneath a still-fading dialog.
+  useEffect(() => {
+    if (visible) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
@@ -62,7 +101,7 @@ export function Modal({
     return () => {
       document.body.style.overflow = '';
     };
-  }, [isOpen]);
+  }, [visible]);
 
   // Handle escape key click
   useEffect(() => {
@@ -77,7 +116,7 @@ export function Modal({
     };
   }, [isOpen, onClose]);
 
-  if (!isOpen || !mounted) return null;
+  if (!visible || !mounted) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -112,11 +151,12 @@ export function Modal({
 
   const overlay = (
     <div
-      onClick={handleBackdropClick}
+      onClick={closing ? undefined : handleBackdropClick}
       className={cn(
         'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
         'p-4',
         entrance === 'rise' ? 'backdrop-blur-lg composer-backdrop-enter' : 'backdrop-blur-sm',
+        closing && 'opacity-0 pointer-events-none',
       )}
     >
       <div
@@ -128,7 +168,7 @@ export function Modal({
           surfaceClass,
           widthClass,
           shellClass,
-          entrance === 'rise' ? 'composer-modal-enter' : 'animate-in',
+          closing ? 'animate-out' : entrance === 'rise' ? 'composer-modal-enter' : 'animate-in',
           className,
         )}
       >
@@ -148,7 +188,7 @@ export function Modal({
             {showClose && (
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors focus:outline-none"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 active:scale-95 transition-all focus:outline-none"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />

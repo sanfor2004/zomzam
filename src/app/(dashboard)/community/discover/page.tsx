@@ -1,12 +1,12 @@
 'use client';
-import { Button, useToast } from '@/components/ui';
+import { Button, ListGroup, Spinner, useToast } from '@/components/ui';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import { useTranslation } from '@/context/TranslationContext';
-import { Users, Search, UserPlus, Sparkles } from 'lucide-react';
+import { Search, Sparkles, UserPlus } from 'lucide-react';
 import { usePageEntrance } from '@/hooks/usePageEntrance';
+import { cn } from '@/lib/utils';
 import { socialSuccessToast, emitSocialUpdate } from '@/lib/social-actions';
 
 interface SocialUser {
@@ -25,8 +25,73 @@ interface SocialUser {
   friend_count?: number;
 }
 
+const fullName = (u: SocialUser) =>
+  (u.first_name ? `${u.first_name} ${u.last_name || ''}`.trim() : u.username);
+
+// ──────────────────────────────────────────────────────────
+// DEVELOPMENT NAVIGATOR: SUGGESTION ROW
+// Contacts-app row: circular avatar + live status dot, name + a single
+// contextual line (matching tags, then bio, then mutual count), trailing
+// primary Connect pill. One clear call to action per row (HIG: hierarchy).
+// ──────────────────────────────────────────────────────────
+function SuggestionRow({
+  user, onProfile, onConnect,
+}: {
+  user: SocialUser;
+  onProfile: () => void;
+  onConnect: () => void;
+}) {
+  const secondaryLine = user.matching_tags && user.matching_tags.length > 0
+    ? { icon: true, text: `Matches: ${user.matching_tags.join(', ')}` }
+    : user.bio
+      ? { icon: false, text: `“${user.bio}”` }
+      : { icon: false, text: `${user.friend_count || 0} mutual connections` };
+
+  return (
+    <div
+      data-entrance="list-item"
+      className="flex items-center gap-3 px-2.5 sm:px-3 py-2.5 min-h-[64px] hover:bg-white/[0.03] transition-colors first:rounded-t-2xl last:rounded-b-2xl"
+    >
+      <button onClick={onProfile} className="flex items-center gap-3 min-w-0 flex-1 text-left group">
+        <div className="relative flex-shrink-0">
+          <Image
+            src={user.avatar || '/Assets/Img/default-avatar.png'}
+            alt={fullName(user)}
+            width={44}
+            height={44}
+            className="w-11 h-11 rounded-full object-cover border border-slate-800"
+          />
+          {user.is_online && (
+            <span className={cn(
+              'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#1A1D24]',
+              user.is_idle ? 'bg-amber-400' : 'bg-green-500 dot-pulse',
+            )} />
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="text-[15px] font-medium text-slate-100 truncate group-hover:text-white transition-colors">
+            {fullName(user)}
+          </p>
+          <p className={cn('text-[13px] truncate flex items-center gap-1', secondaryLine.icon ? 'text-emerald-400' : 'text-slate-400')}>
+            {secondaryLine.icon && <Sparkles className="w-3 h-3 flex-shrink-0" />}
+            <span className="truncate">{secondaryLine.text}</span>
+          </p>
+        </div>
+      </button>
+
+      <Button
+        variant="unstyled"
+        onClick={onConnect}
+        className="flex-shrink-0 h-9 px-4 flex items-center gap-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-full text-[13px] font-semibold transition-colors active:scale-95 shadow-apple-sm"
+      >
+        <UserPlus className="w-3.5 h-3.5" />
+        Connect
+      </Button>
+    </div>
+  );
+}
+
 export default function DiscoverPage() {
-  const { t } = useTranslation();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -38,7 +103,7 @@ export default function DiscoverPage() {
   const pageRef = useRef<HTMLDivElement>(null);
   usePageEntrance(pageRef, [loading]);
 
-  // `silent` skips the spinner — live re-syncs must never blank the grid.
+  // `silent` skips the spinner — live re-syncs must never blank the list.
   const fetchDiscover = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -115,158 +180,113 @@ export default function DiscoverPage() {
     }
   };
 
+  const total = discoverUsers.length;
+  const subtitle = total === 0
+    ? 'No new recommendations right now.'
+    : `${total} suggested ${total === 1 ? 'person' : 'people'}`;
+
   return (
-    <div ref={pageRef} className="max-w-6xl mx-auto space-y-8">
-      
-      {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: PAGE HEADER
-          Contains: Icon badge, title + subtitle, global user-search autocomplete
-          ────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-white font-bold shadow-md shadow-primary-500/20">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 data-entrance="title" className="text-2xl font-black tracking-tight text-white">Community Hub</h1>
-            <p className="text-xs text-slate-400">Grow your network — connect with people who match your skills.</p>
-          </div>
-        </div>
-
-        {/* Global Autocomplete Search Input */}
-        <div className="relative w-full sm:w-80">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400">
-            <Search className="w-4 h-4" />
-          </span>
-          <input
-            type="text"
-            placeholder="Search users by username..."
-            value={searchQuery}
-            onChange={handleSearchChange}
-            className="w-full h-11 pl-10 pr-4 surface-card border border-slate-800 rounded-2xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
-          />
-
-          {/* Search Dropdown Panel */}
-          {isSearching && searchQuery.trim().length >= 2 && (
-            <div className="absolute top-full left-0 right-0 mt-2 surface-card border border-slate-800 rounded-2xl shadow-glass py-2.5 z-40 max-h-80 overflow-y-auto">
-              {searchResults.length === 0 ? (
-                <p className="text-center text-xs text-slate-450 py-6 italic">No users found.</p>
-              ) : (
-                searchResults.map((usr) => (
-                  <div
-                    key={usr.id}
-                    className="flex items-center justify-between px-4 py-2.5 hover:bg-slate-850/50 transition-colors"
-                  >
-                    <Button variant="unstyled"
-                      onClick={() => router.push(`/u/${usr.username}`)}
-                      className="flex items-center gap-3 text-left group min-w-0 flex-1"
-                    >
-                      <Image
-                        src={usr.avatar || '/Assets/Img/default-avatar.png'}
-                        alt=""
-                        width={34}
-                        height={34}
-                        className="w-8.5 h-8.5 rounded-full object-cover border border-slate-800 flex-shrink-0"
-                      />
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-white group-hover:text-primary-500 transition-colors truncate">
-                          {usr.username}
-                        </p>
-                        <p className="text-[10px] text-slate-400 truncate">
-                          {usr.first_name ? `${usr.first_name} ${usr.last_name || ''}` : 'View profile'}
-                        </p>
-                      </div>
-                    </Button>
-
-                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-                      <Button variant="unstyled"
-                        onClick={() => executeSocialAction('friend_request', usr.id)}
-                        className="p-1.5 bg-slate-900/40 hover:bg-primary-500/10 text-slate-500 hover:text-primary-500 rounded-xl transition-colors border border-slate-800"
-                        title="Connect"
-                      >
-                        <UserPlus className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+    <div ref={pageRef} className="max-w-2xl mx-auto pb-20">
 
       {/* ──────────────────────────────────────────────────────────
-          DEVELOPMENT NAVIGATOR: CONTENT — SUGGESTED PEOPLE
-          Contains: Discoverable people grid with the Connect action
+          DEVELOPMENT NAVIGATOR: LARGE-TITLE HEADER
+          Contains: page title, live count subtitle
           ────────────────────────────────────────────────────────── */}
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[300px]">
-          <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      ) : (
-        <div className="animate-in duration-300">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {discoverUsers.length === 0 ? (
-              <p className="col-span-full text-center py-16 text-slate-400 italic text-sm">No new recommendations found at this time.</p>
+      <header className="mb-6">
+        <h1 data-entrance="title" className="text-[28px] sm:text-4xl font-bold tracking-tight text-white leading-tight">
+          Discover
+        </h1>
+        <p className="text-sm text-slate-400 mt-1.5">{subtitle}</p>
+      </header>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: SEARCH FIELD
+          Contains: username autocomplete input + results popover (Connect action)
+          ────────────────────────────────────────────────────────── */}
+      <div className="relative mb-8">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+          <Search className="w-4 h-4" />
+        </span>
+        <input
+          type="text"
+          placeholder="Search people by username…"
+          value={searchQuery}
+          onChange={handleSearchChange}
+          aria-label="Search people"
+          className="w-full h-11 pl-10 pr-4 surface-card border border-slate-800 rounded-2xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
+        />
+
+        {/* Results popover — hairline-divided rows, circular Connect button */}
+        {isSearching && searchQuery.trim().length >= 2 && (
+          <div className="absolute top-full left-0 right-0 mt-2 surface-card border border-slate-800 rounded-2xl shadow-glass divide-y divide-slate-800/60 z-40 max-h-80 overflow-y-auto">
+            {searchResults.length === 0 ? (
+              <p className="text-center text-sm text-slate-450 py-6 italic">No people found.</p>
             ) : (
-              discoverUsers.map((usr) => (
+              searchResults.map((usr) => (
                 <div
                   key={usr.id}
-                  data-entrance="card"
-                  className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple hover:shadow-apple-lg transition-all group flex flex-col justify-between card-lift"
+                  className="min-h-[56px] flex items-center justify-between gap-2 px-3 py-2 hover:bg-white/[0.03] transition-colors"
                 >
-                  <div className="flex items-start gap-4">
+                  <button
+                    onClick={() => router.push(`/u/${usr.username}`)}
+                    className="flex items-center gap-3 text-left group min-w-0 flex-1"
+                  >
                     <Image
                       src={usr.avatar || '/Assets/Img/default-avatar.png'}
                       alt=""
-                      width={44}
-                      height={44}
-                      className="w-11 h-11 rounded-xl object-cover border border-slate-850 flex-shrink-0"
+                      width={36}
+                      height={36}
+                      className="w-9 h-9 rounded-full object-cover border border-slate-800 flex-shrink-0"
                     />
-                    <div className="min-w-0 flex-1">
-                      <Button variant="unstyled"
-                        onClick={() => router.push(`/u/${usr.username}`)}
-                        className="font-bold text-sm text-white hover:text-primary-500 transition-colors truncate"
-                      >
-                        {usr.username}
-                      </Button>
-                      <p className="text-[10px] text-slate-400 mt-0.5 truncate">
-                        {usr.friend_count || 0} mutual connections
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-white group-hover:text-primary-500 transition-colors truncate">
+                        {fullName(usr)}
                       </p>
+                      <p className="text-[11px] text-slate-400 truncate">@{usr.username}</p>
                     </div>
-                  </div>
+                  </button>
 
-                  {usr.matching_tags && usr.matching_tags.length > 0 ? (
-                    <div className="mt-4 p-3 bg-emerald-950/10 border border-emerald-900/20 rounded-xl flex items-center gap-2">
-                      <Sparkles className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                      <p className="text-[10px] text-emerald-400 font-semibold truncate">
-                        Matches tags: {usr.matching_tags.join(', ')}
-                      </p>
-                    </div>
-                  ) : (
-                    usr.bio && (
-                      <p className="text-xs text-slate-400 mt-4 line-clamp-2 italic">
-                        &quot;{usr.bio}&quot;
-                      </p>
-                    )
-                  )}
-
-                  {/* One Connect action (LinkedIn-style): sends the request and
-                      follows them until they connect back. */}
-                  <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-850">
-                    <Button variant="unstyled"
-                      onClick={() => executeSocialAction('friend_request', usr.id)}
-                      className="flex-grow h-10 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl text-[10px] uppercase tracking-wider transition-colors flex items-center justify-center gap-1 shadow-sm"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" />
-                      Connect
-                    </Button>
-                  </div>
+                  <Button
+                    variant="unstyled"
+                    onClick={() => executeSocialAction('friend_request', usr.id)}
+                    className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-primary-500/10 hover:bg-primary-500/20 text-primary-500 rounded-full transition-colors active:scale-95"
+                    title="Connect"
+                    aria-label={`Connect with ${usr.username}`}
+                  >
+                    <UserPlus className="w-4 h-4" />
+                  </Button>
                 </div>
               ))
             )}
           </div>
+        )}
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────
+          DEVELOPMENT NAVIGATOR: CONTENT — SUGGESTED PEOPLE
+          Contains: presence-aware suggestion list with the Connect action
+          ────────────────────────────────────────────────────────── */}
+      {loading ? (
+        <div className="flex items-center justify-center min-h-[300px]">
+          <Spinner size="lg" />
         </div>
+      ) : total === 0 ? (
+        <div data-entrance="card" className="surface-card border border-slate-800/60 rounded-2xl p-12 sm:p-16 text-center shadow-apple">
+          <Sparkles className="w-12 h-12 mx-auto mb-4 text-slate-600" />
+          <p className="text-[15px] font-semibold text-slate-200">No recommendations yet</p>
+          <p className="text-sm text-slate-500 mt-1">Check back soon, or search for people by username above.</p>
+        </div>
+      ) : (
+        <ListGroup title="Suggested for you" count={total}>
+          {discoverUsers.map((usr) => (
+            <SuggestionRow
+              key={usr.id}
+              user={usr}
+              onProfile={() => router.push(`/u/${usr.username}`)}
+              onConnect={() => executeSocialAction('friend_request', usr.id)}
+            />
+          ))}
+        </ListGroup>
       )}
     </div>
   );
