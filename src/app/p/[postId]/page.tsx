@@ -48,6 +48,19 @@ export default async function PostPage({ params }: PageProps) {
   const viewer = await getSessionUser();
 
   const vid = viewer?.id ?? 0;
+
+  // The session token carries only id/username/email/role — fetch the viewer's
+  // display profile (avatar + name) so the sticky comment composer can show
+  // their real avatar and the owner Edit flow has a currentUser to seed.
+  const viewerUser = viewer
+    ? await queryOne<any>(
+        `SELECT id, username, first_name, last_name, avatar FROM users WHERE id = ?`,
+        [viewer.id]
+      )
+    : null;
+  const normalizedViewer = viewerUser
+    ? { ...viewerUser, avatar: viewerUser.avatar || '/Assets/Img/default-avatar.png' }
+    : null;
   const post = await queryOne<any>(
     `SELECT p.id, p.public_id, p.user_id, p.content_html, p.image_path, p.image_paths, p.created_at, p.visibility,
             p.type, p.skill_tag, p.accepted_answer_id, p.resolved_at, p.repost_of,
@@ -69,14 +82,16 @@ export default async function PostPage({ params }: PageProps) {
   if (!post) return notFound();
 
   const comments = await query<any>(
-    `SELECT c.id, c.post_id, c.parent_id, c.content, c.created_at,
-            u.username, u.first_name, u.last_name, u.avatar
+    `SELECT c.id, c.post_id, c.parent_id, c.user_id, c.content, c.created_at,
+            u.username, u.first_name, u.last_name, u.avatar,
+            (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id) AS upvote_count,
+            (SELECT COUNT(*) FROM comment_votes WHERE comment_id = c.id AND user_id = ?) AS upvoted_by_me
      FROM post_comments c
      JOIN users u ON u.id = c.user_id
      WHERE c.post_id = ?
      ORDER BY c.created_at ASC
      LIMIT 200`,
-    [post.id]
+    [vid, post.id]
   );
 
   const normalizedPost = {
@@ -95,6 +110,8 @@ export default async function PostPage({ params }: PageProps) {
   const normalizedComments = comments.map((c: any) => ({
     ...c,
     avatar: c.avatar || '/Assets/Img/default-avatar.png',
+    upvote_count: parseInt(c.upvote_count ?? 0),
+    upvoted_by_me: parseInt(c.upvoted_by_me ?? 0) > 0,
   }));
 
   return (
@@ -111,6 +128,7 @@ export default async function PostPage({ params }: PageProps) {
           post={normalizedPost}
           initialComments={normalizedComments}
           viewerId={viewer?.id ?? null}
+          viewerUser={normalizedViewer}
         />
       </main>
 

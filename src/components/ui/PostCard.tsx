@@ -179,15 +179,29 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
   // else this post). Tombstoned reposts (no original) can't be quoted.
   const quoteOriginal = isRepost ? original : post;
 
+  // Whole-card click → open the permalink (Twitter/Reddit style). One guard,
+  // not per-child stopPropagation: bail if the click landed on any real control
+  // (links, action buttons, the ••• menu, a portalled modal) or on a text
+  // selection, so those keep their own behaviour. Disabled in demo mode — the
+  // /ui-kit showcase card has no real permalink to open.
+  const handleCardClick = (e: React.MouseEvent<HTMLElement>) => {
+    if (demo) return;
+    const target = e.target as HTMLElement;
+    if (target.closest('a, button, input, textarea, [role="menu"], [role="dialog"], [contenteditable="true"]')) return;
+    if (window.getSelection()?.toString()) return;
+    router.push(`/p/${post.public_id}`);
+  };
+
   return (
     <div
       ref={seenRef}
       id={`post-${post.id}`}
       data-entrance="card"
+      onClick={handleCardClick}
       // Lift above sibling cards while the repost or 3-dot menu is open so its
       // dropdown panel (which overflows the card's edge) isn't painted over by
       // the next post in the feed.
-      className={`post-item relative ${repostMenuOpen || menuOpen ? 'z-30' : ''}`}
+      className={`post-item relative ${demo ? '' : 'cursor-pointer'} ${repostMenuOpen || menuOpen ? 'z-30' : ''}`}
     >
       {/* ─── Twitter-style boost label: this original was plain-reposted by one or
           more users (the plain repost itself never renders as a card). ─── */}

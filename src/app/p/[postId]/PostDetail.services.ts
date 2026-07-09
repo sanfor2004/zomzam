@@ -53,3 +53,36 @@ export async function commentRequest(postId: number, content: string, parentId?:
   const data = await postsAction({ action: 'comment', post_id: postId, content, parent_id: parentId ?? null });
   return data.success ? data.comment : null;
 }
+
+// Comment upvote toggle (optimistic) — reports server acceptance so the caller
+// can roll a rejected flip back.
+export async function commentVoteRequest(commentId: number): Promise<boolean> {
+  const data = await postsAction({ action: 'comment_vote', comment_id: commentId });
+  return !!data.success;
+}
+
+// Edit a comment's text (owner-only, enforced server-side). Returns the saved
+// content, or null when rejected.
+export async function editCommentRequest(commentId: number, content: string): Promise<string | null> {
+  const data = await postsAction({ action: 'comment_edit', comment_id: commentId, content });
+  return data.success ? (data.content as string) : null;
+}
+
+// Delete a comment (owner-only). Returns the ids removed (the comment + its
+// whole reply subtree) so the caller can prune them from local state.
+export async function deleteCommentRequest(commentId: number): Promise<number[] | null> {
+  const data = await postsAction({ action: 'comment_delete', comment_id: commentId });
+  return data.success ? (data.deleted_ids as number[]) : null;
+}
+
+// Report someone else's post. Fire-and-acknowledge; the server dedupes repeats.
+export async function reportPostRequest(postId: number): Promise<boolean> {
+  const data = await postsAction({ action: 'report', post_id: postId });
+  return !!data.success;
+}
+
+// Delete the viewer's own post (owner-only, enforced server-side).
+export async function deletePostRequest(postId: number): Promise<boolean> {
+  const data = await postsAction({ action: 'delete', post_id: postId });
+  return !!data.success;
+}
