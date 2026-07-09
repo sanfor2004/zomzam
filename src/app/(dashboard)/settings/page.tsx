@@ -67,7 +67,10 @@ function SettingsGroup({
 
       <div
         className={cn(
-          'surface-card rounded-2xl overflow-hidden',
+          // No overflow-hidden: it would clip the Select dropdown popover
+          // (absolutely-positioned inside a row). Rows are transparent, so the
+          // card's rounded corners need no clipping anyway.
+          'surface-card rounded-2xl',
           danger && 'border-red-900/40',
           padded ? 'p-4 sm:p-5 space-y-5' : 'divide-y divide-slate-800/60',
         )}
