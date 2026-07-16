@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 // Real error class from its runtime-free leaf module — no Next/JWT pulled in, so
 // the test asserts against exactly what the service throws (no stub drift).
 import { HttpError } from '@/lib/http-error';
+import { FALLBACK_RATES } from '@/lib/fx';
 
 // Shared connection.execute so transaction-internal SQL is inspectable after run.
 const connExecute = mock.fn(async (_sql: string, _params?: any[]) => [{ insertId: 1 }] as any);
@@ -77,6 +78,20 @@ test('qualifyLead stamps the new project id on every seeded task (profitability 
     assert.match(call.arguments[0] as string, /project_id/, 'task INSERT names the project_id column');
     assert.ok((call.arguments[1] as any[]).includes(1), 'task INSERT carries the project insertId');
   }
+});
+
+test('qualifyLead snapshots the FX home value on the auto-captured income', async () => {
+  db.queryOne.mock.mockImplementationOnce(async () => ({ name: 'Acme', company: 'Acme Co' }));
+  // loadFxContext: db.query → [] (fallback rates), second queryOne → null (home defaults EGP).
+
+  await crm.qualifyLead(USER_ID, { leadId: 7, accountId: 3, amount: 1000, currency: 'USD', dueDate: null });
+
+  const incomeCall = connExecute.mock.calls.find((c) => /INSERT INTO money_transactions/.test(c.arguments[0] as string))!;
+  assert.match(incomeCall.arguments[0] as string, /home_amount, fx_rate, fx_rate_date/, 'income INSERT names the snapshot columns');
+  const params = incomeCall.arguments[1] as any[];
+  assert.ok(params.includes(1000 * FALLBACK_RATES.USD), 'home_amount = amount × fallback USD→EGP rate');
+  assert.ok(params.includes(FALLBACK_RATES.USD), 'fx_rate stored');
+  assert.ok(params.includes(new Date().toISOString().substring(0, 10)), 'fx_rate_date stored');
 });
 
 test('qualifyLead seeds a Lending settlement only when a due date is given', async () => {

@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { query, queryOne, execute, transaction } from '@/lib/db';
 import { HttpError } from '@/lib/http-error';
+import { loadFxContext } from './money';
+import { snapshotHomeAmount, type Currency } from '@/lib/fx';
 
 // CRM suite business logic. Route handlers stay thin (parse → call → respond);
 // every SQL/transaction/owner-scoping rule lives here so it is unit-testable in
@@ -169,6 +171,12 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
   const clientName = lead.company || lead.name;
   const projectName = `${clientName} Project`;
 
+  // Snapshot the home-currency value at capture time — same contract as manual
+  // addTransaction — so foreign-currency deals aggregate at their true home value.
+  const { rates, home } = await loadFxContext(userId);
+  const { home_amount, fx_rate } = snapshotHomeAmount(amount, currency as Currency, home, rates);
+  const fxDate = new Date().toISOString().substring(0, 10);
+
   await transaction(async (connection) => {
     await connection.execute(
       `UPDATE crm_leads SET status = 'qualified' WHERE id = ? AND user_id = ?`,
@@ -212,9 +220,9 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
     }
 
     await connection.execute(
-      `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, description, transaction_date, lead_id)
-       VALUES (?, ?, ?, 'income', ?, ?, ?, CURRENT_DATE, ?)`,
-      [userId, accountId, categoryId, amount, currency, `Deal qualification: ${projectName}`, leadId]
+      `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, home_amount, fx_rate, fx_rate_date, description, transaction_date, lead_id)
+       VALUES (?, ?, ?, 'income', ?, ?, ?, ?, ?, ?, CURRENT_DATE, ?)`,
+      [userId, accountId, categoryId, amount, currency, home_amount, fx_rate, fxDate, `Deal qualification: ${projectName}`, leadId]
     );
 
     await connection.execute(
