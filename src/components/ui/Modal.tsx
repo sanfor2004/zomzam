@@ -48,9 +48,53 @@ export function Modal({
   surface = 'solid',
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const titleId = React.useId();
   // Portals need the DOM — gate on mount so SSR/first render stays clean.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Focus management: on open, remember the opener and move focus into the
+  // dialog; on close, hand focus back so keyboard users aren't stranded.
+  const returnFocusRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (isOpen) {
+      returnFocusRef.current = document.activeElement as HTMLElement | null;
+      // rAF: the portal content must be in the DOM before it can take focus.
+      requestAnimationFrame(() => modalRef.current?.focus());
+      return;
+    }
+    returnFocusRef.current?.focus?.();
+    returnFocusRef.current = null;
+  }, [isOpen]);
+
+  // Hand-rolled focus trap (no dependency): cycle Tab/Shift+Tab across the
+  // dialog's visible focusable elements, wrapping at both ends; absorb Tab
+  // entirely when nothing inside is focusable so focus can't escape to the
+  // obscured page behind the overlay.
+  const FOCUSABLE =
+    'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+  const handleTrapKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key !== 'Tab' || !modalRef.current) return;
+    const focusables = Array.from(
+      modalRef.current.querySelectorAll<HTMLElement>(FOCUSABLE),
+    ).filter((el) => el.offsetParent !== null);
+    if (focusables.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey) {
+      if (active === first || active === modalRef.current) {
+        event.preventDefault();
+        last.focus();
+      }
+    } else if (active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   // Exit animation: stay mounted for one more beat after isOpen flips false so
   // the fade-out (ease-in, matching the entrance's ease-out) can actually play
@@ -143,7 +187,7 @@ export function Modal({
   // overflow-y-auto set, the CSS spec computes overflow-x up to `auto` too, so
   // any element brushing the edge would raise a spurious horizontal scrollbar.
   const shellClass = fullWidthMobile
-    ? 'rounded-3xl p-5 sm:p-8 max-sm:max-h-[calc(100dvh-2rem)] max-sm:overflow-y-auto max-sm:overflow-x-hidden'
+    ? 'rounded-3xl p-5 sm:p-8 max-sm:max-h-[calc(100dvh-2rem)] max-sm:overflow-y-auto max-sm:overflow-x-hidden max-sm:overscroll-contain'
     : 'rounded-3xl p-8';
   const surfaceClass = surface === 'glass'
     ? 'bg-white/[0.04] backdrop-blur-xl border border-white/[0.07]'
@@ -152,8 +196,9 @@ export function Modal({
   const overlay = (
     <div
       onClick={closing ? undefined : handleBackdropClick}
+      onKeyDown={handleTrapKeyDown}
       className={cn(
-        'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+        'fixed inset-0 bg-black/60 z-[100] flex items-center justify-center overscroll-contain transition-[opacity,backdrop-filter] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
         'p-4',
         entrance === 'rise' ? 'backdrop-blur-lg composer-backdrop-enter' : 'backdrop-blur-sm',
         closing && 'opacity-0 pointer-events-none',
@@ -163,8 +208,10 @@ export function Modal({
         ref={modalRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={title ? titleId : undefined}
+        tabIndex={-1}
         className={cn(
-          'w-full shadow-2xl scale-100 opacity-100 transition-all duration-300',
+          'w-full shadow-2xl scale-100 opacity-100 transition-[opacity,transform] duration-300 outline-none',
           surfaceClass,
           widthClass,
           shellClass,
@@ -177,7 +224,7 @@ export function Modal({
           <div className="flex items-start justify-between gap-4 mb-6">
             <div className="flex-1 min-w-0">
               {title && (
-                <h3 className="text-lg font-black text-white tracking-tight leading-snug">
+                <h3 id={titleId} className="text-lg font-black text-white tracking-tight leading-snug">
                   {title}
                 </h3>
               )}
@@ -188,7 +235,7 @@ export function Modal({
             {showClose && (
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 active:scale-95 transition-all focus:outline-none"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 active:scale-95 transition-[color,background-color,transform] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />
