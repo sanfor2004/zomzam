@@ -34,15 +34,7 @@ export const POST = withError(async (request) => {
     if (res.success && res.user) {
       const response = NextResponse.json(res, { status: 201 });
       // Fresh accounts start at token_version 0 (the column default).
-      const token = await signSession(
-        {
-          id: res.user.id,
-          username: res.user.username,
-          email: res.user.email,
-          role: 'user',
-        },
-        0
-      );
+      const token = await signSession(res.user.id, 0);
 
       response.cookies.set('ZOMZAM_SESSION', token, {
         httpOnly: true,
@@ -62,15 +54,7 @@ export const POST = withError(async (request) => {
 
     if (res.success && res.user) {
       const response = NextResponse.json(res, { status: 200 });
-      const token = await signSession(
-        {
-          id: res.user.id!,
-          username: res.user.username!,
-          email: res.user.email!,
-          role: res.user.role!,
-        },
-        res.user.token_version ?? 0
-      );
+      const token = await signSession(res.user.id!, res.user.token_version ?? 0);
 
       // Always persist for the full session lifetime (~2 months) so closing the
       // browser no longer logs the user out. `remember` is accepted for

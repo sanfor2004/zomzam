@@ -20,11 +20,15 @@ type PublicHandler = (req: NextRequest, ctx: RouteCtx) => Promise<Response> | Re
 
 /**
  * Soft read of the verified session user, or null. Two layers:
- *   1. verifySession() — signature + expiry (stateless).
+ *   1. verifySession() — decryption + expiry (stateless; token carries only
+ *      the user id and token version, no identity claims).
  *   2. live DB check — the session is revoked if the user row is gone,
  *      deactivated (is_active = 0), or its token_version has moved past the
  *      token's claim. Bumping users.token_version therefore force-logs-out every
  *      device on its next request; flipping is_active bans on next request.
+ * Identity (username/email/role) rides the same per-request row, so handler
+ * identity is always live — a username/role change takes effect on the very
+ * next request, never frozen for the token's 60-day life.
  * Reads the cookie via next/headers, so it works in route handlers AND server
  * components. Propagates (does not swallow) DB errors — the caller's error
  * boundary turns those into a 500.
@@ -34,15 +38,15 @@ export async function getSessionUser(): Promise<SessionUser | null> {
   const session = await verifySession(token);
   if (!session) return null;
 
-  const row = await queryOne<{ token_version: number; is_active: number }>(
-    'SELECT token_version, is_active FROM users WHERE id = ? LIMIT 1',
+  const row = await queryOne<{ username: string; email: string; role: string; token_version: number; is_active: number }>(
+    'SELECT username, email, role, token_version, is_active FROM users WHERE id = ? LIMIT 1',
     [session.id]
   );
   if (!row || row.is_active === 0 || row.token_version !== session.tokenVersion) {
     return null;
   }
 
-  return { id: session.id, username: session.username, email: session.email, role: session.role };
+  return { id: session.id, username: row.username, email: row.email, role: row.role };
 }
 
 const unauthorized = () =>

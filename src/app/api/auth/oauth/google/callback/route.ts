@@ -59,15 +59,7 @@ export const GET = withError(async (request: NextRequest) => {
       return failure(request, 'account_unavailable');
     }
 
-    const token = await signSession(
-      {
-        id: res.user.id!,
-        username: res.user.username!,
-        email: res.user.email!,
-        role: res.user.role || 'user',
-      },
-      res.user.token_version ?? 0
-    );
+    const token = await signSession(res.user.id!, res.user.token_version ?? 0);
 
     const response = NextResponse.redirect(new URL(redirectTo, request.url));
     response.cookies.set('ZOMZAM_SESSION', token, sessionCookieOpts);
