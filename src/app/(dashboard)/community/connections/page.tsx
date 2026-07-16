@@ -282,6 +282,7 @@ export default function ConnectionsPage() {
         <input
           type="text"
           placeholder="Search people by username…"
+          aria-label="Search your connections"
           value={searchQuery}
           onChange={handleSearchChange}
           aria-label="Search people"

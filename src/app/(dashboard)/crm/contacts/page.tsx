@@ -95,6 +95,7 @@ export default function ContactsPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search clients by name, brand, or niche…"
+            aria-label="Search clients"
             className="w-full text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white/[0.04]"
           />
         </div>

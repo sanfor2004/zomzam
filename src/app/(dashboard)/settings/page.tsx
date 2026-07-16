@@ -676,7 +676,7 @@ export default function SettingsPage() {
                     step="0.05"
                     value={crmSettings.claude_temperature || '0.75'}
                     onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
-                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
+                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 mt-2"
                   />
                 </div>
               </div>

@@ -235,6 +235,7 @@ export default function RequestsPage() {
         <input
           type="text"
           placeholder="Search people by username…"
+          aria-label="Search connection requests"
           value={searchQuery}
           onChange={handleSearchChange}
           aria-label="Search people"

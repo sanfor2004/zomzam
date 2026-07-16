@@ -210,6 +210,7 @@ export default function DiscoverPage() {
         <input
           type="text"
           placeholder="Search people by username…"
+          aria-label="Search people to connect with"
           value={searchQuery}
           onChange={handleSearchChange}
           aria-label="Search people"
