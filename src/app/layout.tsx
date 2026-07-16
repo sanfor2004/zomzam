@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
@@ -34,6 +34,12 @@ export const metadata: Metadata = {
     shortcut: '/Assets/Img/favicon.ico',
     apple: '/Assets/Img/Icon-orange.svg',
   },
+};
+
+// Browser chrome (mobile address bar, Windows title bar) matches the app's
+// dark surface — value = --color-surface-dark token, never an invented hex.
+export const viewport: Viewport = {
+  themeColor: '#111318',
 };
 
 export default function RootLayout({

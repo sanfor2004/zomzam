@@ -473,6 +473,12 @@ html[dir="rtl"] .nav-link-active::before {
 
 /* Interactive cursor affordance — buttons & links feel clickable (HIG affordance) */
 @layer base {
+  /* Dark-only UI: tell the browser so scrollbars, native form widgets, and
+     autofill surfaces render in dark scheme (Windows polish). */
+  html {
+    color-scheme: dark;
+  }
+
   button,
   [role="button"],
   a[href],
