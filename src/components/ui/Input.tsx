@@ -46,6 +46,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
 ) {
   const reactId = useId();
   const inputId = id ?? reactId;
+  // Screen readers announce the error/hint footer as the input's description.
+  const describedById = `${inputId}-desc`;
+  const hasFooter = Boolean(error || hint);
 
   return (
     <div className={cn('w-full', containerClassName)}>
@@ -66,8 +69,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
           ref={ref}
           id={inputId}
           aria-invalid={!!error || undefined}
+          aria-describedby={hasFooter ? describedById : undefined}
           className={cn(
-            'w-full bg-slate-900/30 border text-white outline-none transition-all placeholder-slate-500',
+            'w-full bg-slate-900/30 border text-white outline-none transition-colors placeholder-slate-500',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             error ? 'border-red-500/60 focus:border-red-500' : 'border-slate-850 focus:border-primary-500',
             SIZES[size],
@@ -86,9 +90,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(function Inp
       </div>
 
       {error ? (
-        <p className="mt-1.5 text-[11px] font-semibold text-red-400">{error}</p>
+        <p id={describedById} className="mt-1.5 text-[11px] font-semibold text-red-400">{error}</p>
       ) : hint ? (
-        <p className="mt-1.5 text-[11px] text-slate-500">{hint}</p>
+        <p id={describedById} className="mt-1.5 text-[11px] text-slate-500">{hint}</p>
       ) : null}
     </div>
   );

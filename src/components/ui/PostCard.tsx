@@ -425,7 +425,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
               />
             )}
-            <CardMedia images={postImages(post)} />
+            <CardMedia images={postImages(post)} alt={`Photo by @${post.username}`} />
             <div className="px-4 sm:px-5 pt-3 pb-4">
               {original ? <NestedOriginal original={original} /> : <RepostTombstone />}
             </div>
@@ -438,7 +438,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                 dangerouslySetInnerHTML={{ __html: post.content_html }}
               />
             )}
-            <CardMedia images={postImages(post)} />
+            <CardMedia images={postImages(post)} alt={`Photo by @${post.username}`} />
           </>
         )}
 
@@ -595,12 +595,12 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
 // lone image stays full-bleed edge-to-edge (Instagram-style); two or three sit
 // in a padded, rounded strip (so the gallery reads as a deliberate group, not a
 // broken full-bleed crop). Renders nothing for an image-less post.
-function CardMedia({ images }: { images: string[] }) {
+function CardMedia({ images, alt }: { images: string[]; alt?: string }) {
   if (images.length === 0) return null;
-  if (images.length === 1) return <PostImageGrid images={images} single="bleed" />;
+  if (images.length === 1) return <PostImageGrid images={images} single="bleed" alt={alt} />;
   return (
     <div className="px-4 sm:px-5 pb-1">
-      <PostImageGrid images={images} />
+      <PostImageGrid images={images} alt={alt} />
     </div>
   );
 }

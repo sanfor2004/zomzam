@@ -10,6 +10,9 @@ export interface SliderProps {
   max?: number;
   step?: number;
   label?: React.ReactNode;
+  /** Accessible name when no visible `label` is rendered — screen readers
+   *  need one of the two; the visible label wins when both are present. */
+  ariaLabel?: string;
   /** Custom formatter for the value badge (e.g. `(v) => \`${v}%\``). */
   formatValue?: (value: number) => React.ReactNode;
   disabled?: boolean;
@@ -23,22 +26,26 @@ export function Slider({
   max = 100,
   step = 1,
   label,
+  ariaLabel,
   formatValue,
   disabled = false,
   className = '',
 }: SliderProps) {
+  const sliderId = React.useId();
   const percent = ((value - min) / (max - min)) * 100;
 
   return (
     <div className={cn('w-full', className)}>
       {(label || formatValue) && (
         <div className="flex justify-between items-center mb-2">
-          {label && <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>}
+          {label && <label htmlFor={sliderId} className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</label>}
           <span className="text-xs font-black text-primary-500">{formatValue ? formatValue(value) : value}</span>
         </div>
       )}
 
       <input
+        id={sliderId}
+        aria-label={label ? undefined : ariaLabel}
         type="range"
         min={min}
         max={max}

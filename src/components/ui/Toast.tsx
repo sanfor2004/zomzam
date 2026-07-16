@@ -80,27 +80,54 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     }, EXIT_DURATION);
   }, []);
 
+  // Hover/focus pauses auto-dismiss (a toast must not vanish mid-read).
+  const schedule = useCallback(
+    (id: string, duration: number) => {
+      const existing = timers.current.get(id);
+      if (existing) clearTimeout(existing);
+      // ponytail: unpause restarts the full duration; remaining-time bookkeeping when someone complains
+      timers.current.set(id, setTimeout(() => dismiss(id), duration));
+    },
+    [dismiss],
+  );
+
+  const pause = useCallback((id: string) => {
+    const timer = timers.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timers.current.delete(id);
+    }
+  }, []);
+
   const toast = useCallback(
     (options: ToastOptions) => {
       const id = Math.random().toString(36).slice(2);
       setToasts((prev) => [...prev, { id, variant: 'info', duration: 4000, ...options }]);
-      const timer = setTimeout(() => dismiss(id), options.duration ?? 4000);
-      timers.current.set(id, timer);
+      schedule(id, options.duration ?? 4000);
     },
-    [dismiss],
+    [schedule],
   );
 
   return (
     <ToastContext.Provider value={{ toast }}>
       {children}
 
-      <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2.5 w-full max-w-sm pointer-events-none">
+      {/* Persistent polite live region (announcements are reliable only when
+          the region exists before content lands) + device safe-area offsets. */}
+      <div
+        aria-live="polite"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] right-[calc(1.5rem+env(safe-area-inset-right))] z-[100] flex flex-col gap-2.5 w-full max-w-sm pointer-events-none"
+      >
         {toasts.map((t) => {
           const Icon = ICONS[t.variant ?? 'info'];
           return (
             <div
               key={t.id}
               role="status"
+              onMouseEnter={() => pause(t.id)}
+              onMouseLeave={() => schedule(t.id, t.duration ?? 4000)}
+              onFocus={() => pause(t.id)}
+              onBlur={() => schedule(t.id, t.duration ?? 4000)}
               className={cn(
                 'pointer-events-auto flex gap-3 items-start p-4 rounded-2xl border surface-card shadow-2xl duration-300',
                 t.leaving ? 'animate-out pointer-events-none' : 'animate-in slide-in-from-top',
@@ -123,7 +150,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                 type="button"
                 onClick={() => dismiss(t.id)}
                 aria-label="Dismiss"
-                className="text-slate-500 hover:text-slate-200 active:scale-90 transition-all"
+                className="text-slate-500 hover:text-slate-200 active:scale-90 transition-[color,transform]"
               >
                 <X className="w-4 h-4" />
               </button>
