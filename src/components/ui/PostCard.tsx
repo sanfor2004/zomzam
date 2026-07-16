@@ -348,7 +348,7 @@ export const PostCard = memo(function PostCard({ post, isOwn, onDelete, onEdited
                   aria-label="Post options"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
-                  className="flex-shrink-0 p-2 -mr-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 active:scale-90 transition-all"
+                  className="flex-shrink-0 p-2 -mr-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/50 active:scale-90 transition-[color,background-color,transform]"
                 >
                   <MoreHorizontal className="w-5 h-5" />
                 </Button>

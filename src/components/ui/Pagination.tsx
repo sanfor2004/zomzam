@@ -29,7 +29,7 @@ function getPageRange(page: number, totalPages: number, siblingCount: number): (
 export function Pagination({ page, totalPages, onChange, siblingCount = 1, className = '' }: PaginationProps) {
   if (totalPages <= 1) return null;
   const pages = getPageRange(page, totalPages, siblingCount);
-  const baseBtn = 'w-9 h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-all disabled:opacity-40 disabled:cursor-not-allowed';
+  const baseBtn = 'w-9 h-9 flex items-center justify-center rounded-lg text-xs font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
     <nav aria-label="Pagination" className={cn('flex items-center gap-1.5', className)}>

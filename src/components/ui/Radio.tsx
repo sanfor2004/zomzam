@@ -50,7 +50,7 @@ export function RadioGroup<T extends string | number = string>({
           >
             <span
               className={cn(
-                'mt-0.5 w-[18px] h-[18px] shrink-0 rounded-full border flex items-center justify-center transition-all duration-200',
+                'mt-0.5 w-[18px] h-[18px] shrink-0 rounded-full border flex items-center justify-center transition-colors duration-200',
                 isActive ? 'border-primary-500' : 'border-slate-700 group-hover:border-primary-500/50',
               )}
             >

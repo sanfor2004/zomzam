@@ -142,7 +142,7 @@ export function NumberInput({
         required={required}
         aria-label={ariaLabel}
         className={cn(
-          'w-full bg-slate-900/30 border border-slate-850 text-white outline-none transition-all placeholder-slate-500',
+          'w-full bg-slate-900/30 border border-slate-850 text-white outline-none transition-colors placeholder-slate-500',
           'disabled:opacity-50 disabled:cursor-not-allowed',
           // Hide the native number spinners — we render our own.
           '[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-inner-spin-button]:m-0',

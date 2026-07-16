@@ -168,7 +168,7 @@ const SHAPES: Record<ButtonShape, string> = {
 };
 
 const BASE =
-  'inline-flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
+  'inline-flex items-center justify-center transition-[color,background-color,border-color,box-shadow,transform,opacity] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[#111318] disabled:opacity-50 disabled:cursor-not-allowed disabled:pointer-events-none active:scale-[0.98]';
 
 export const Button = React.forwardRef<HTMLButtonElement & HTMLAnchorElement, ButtonProps>(
   (

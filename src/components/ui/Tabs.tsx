@@ -89,7 +89,7 @@ export function Tabs({ items, value, onChange, defaultValue, variant = 'underlin
               disabled={item.disabled}
               onClick={() => setActive(item.value)}
               className={cn(
-                'flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed',
+                'flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
                 variant === 'underline'
                   ? cn(
                       'border-b-2 -mb-px',

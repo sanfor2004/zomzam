@@ -127,7 +127,7 @@ export function Calendar({ value, onChange, minDate, maxDate, defaultMonth, clas
               disabled={disabled}
               onClick={() => onChange(date)}
               className={cn(
-                'h-8 w-8 mx-auto flex items-center justify-center rounded-lg text-xs font-semibold transition-all duration-150',
+                'h-8 w-8 mx-auto flex items-center justify-center rounded-lg text-xs font-semibold transition-colors duration-150',
                 'disabled:opacity-30 disabled:pointer-events-none',
                 !inMonth && 'text-slate-600',
                 inMonth && !selected && 'text-slate-300 hover:bg-slate-800/60',
