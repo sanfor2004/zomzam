@@ -238,7 +238,6 @@ export default function RequestsPage() {
           aria-label="Search connection requests"
           value={searchQuery}
           onChange={handleSearchChange}
-          aria-label="Search people"
           className="w-full h-11 pl-10 pr-4 surface-card border border-slate-800 rounded-2xl text-sm text-white placeholder-slate-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all shadow-apple-sm"
         />
 
