@@ -130,6 +130,27 @@ test('updateLeadStatus scopes the UPDATE to the owner', async () => {
   assert.deepEqual(params, ['contacted', 9, USER_ID]);
 });
 
+test('updateLeadStatus rejects "qualified" — deals must close through qualify_lead', async () => {
+  await assert.rejects(
+    () => crm.updateLeadStatus(USER_ID, 9, 'qualified'),
+    (err: any) => err instanceof HttpError && err.status === 400 && err.message === 'Use qualify_lead to close a deal'
+  );
+  assert.equal(db.execute.mock.calls.length, 0, 'no write happened');
+});
+
+test('updateLeadStatus rejects unknown status values', async () => {
+  await assert.rejects(
+    () => crm.updateLeadStatus(USER_ID, 9, 'banana'),
+    (err: any) => err instanceof HttpError && err.status === 400
+  );
+  assert.equal(db.execute.mock.calls.length, 0, 'no write happened');
+});
+
+test('updateLead no longer accepts status as an updatable column', async () => {
+  await crm.updateLead(USER_ID, 9, { status: 'qualified' });
+  assert.equal(db.execute.mock.calls.length, 0, 'status-only payload writes nothing');
+});
+
 test('updateLead scopes the dynamic UPDATE to the owner', async () => {
   await crm.updateLead(USER_ID, 9, { name: 'New', status: 'qualified' });
   const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];

@@ -67,7 +67,11 @@ const industryData: Record<string, {
   }
 };
 
-const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'status', 'source', 'industry', 'notes', 'rating', 'review_count']);
+// 'status' is deliberately absent: status changes go through updateLeadStatus
+// (validated) or the qualify_lead bridge — never the generic column update.
+const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'source', 'industry', 'notes', 'rating', 'review_count']);
+
+const LEAD_STATUSES = new Set(['new', 'contacted', 'qualified', 'lost']);
 
 export function getLeads(userId: number) {
   return query('SELECT * FROM crm_leads WHERE user_id = ? ORDER BY created_at DESC', [userId]);
@@ -137,6 +141,14 @@ export async function updateLead(userId: number, id: number, data: any): Promise
 }
 
 export async function updateLeadStatus(userId: number, id: number, status: string): Promise<void> {
+  if (!LEAD_STATUSES.has(status)) {
+    throw new HttpError(400, 'Invalid lead status');
+  }
+  // Winning a deal must run the full qualify_lead bridge (income + project +
+  // tasks); transitions OUT of 'qualified' stay allowed (Kanban drag-back).
+  if (status === 'qualified') {
+    throw new HttpError(400, 'Use qualify_lead to close a deal');
+  }
   await execute('UPDATE crm_leads SET status = ? WHERE id = ? AND user_id = ?', [status, id, userId]);
 }
 
