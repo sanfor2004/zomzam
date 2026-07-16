@@ -356,7 +356,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                 <input 
                   type="text"
                   disabled
-                  placeholder="e.g. coffee shops, web design..."
+                  placeholder="e.g. coffee shops, web design…"
                   className="w-full text-xs bg-slate-900/30 border border-slate-850 rounded-xl px-4 py-2.5 text-slate-450 placeholder-slate-400 outline-none cursor-not-allowed"
                 />
               </div>
@@ -448,7 +448,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                 </label>
                 <input 
                   type="text"
-                  placeholder="e.g. coffee, dentists..."
+                  placeholder="e.g. coffee, dentists…"
                   value={serviceType}
                   onChange={(e) => setServiceType(e.target.value)}
                   className="w-full h-10 text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl px-4 py-2 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white/[0.04]"
@@ -568,7 +568,7 @@ export function ScraperPanel({ onScrapeFinished }: ScraperPanelProps) {
                 {isScraping ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Scanning Map Area...
+                    Scanning Map Area…
                   </>
                 ) : (
                   <>

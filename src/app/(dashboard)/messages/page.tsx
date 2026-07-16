@@ -71,7 +71,7 @@ export default function MessagesPage() {
           size="md"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search people..."
+          placeholder="Search people…"
           leftIcon={<Search className="w-4 h-4" />}
           containerClassName="mb-4"
         />

@@ -201,7 +201,7 @@ export default function LeadsPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search name, company, address or industry..."
+            placeholder="Search name, company, address or industry…"
             className="w-full text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white/[0.04]"
           />
         </div>
@@ -324,7 +324,7 @@ export default function LeadsPage() {
       {loading ? (
         <div className="h-[40vh] flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-          <span className="text-xs text-slate-400 font-semibold">Retrieving secure records...</span>
+          <span className="text-xs text-slate-400 font-semibold">Retrieving secure records…</span>
         </div>
       ) : filteredLeads.length === 0 ? (
         <div className="surface-card border border-slate-800/60 p-16 rounded-3xl text-center text-slate-600 italic font-semibold text-xs">
@@ -558,7 +558,7 @@ export default function LeadsPage() {
                 <textarea
                   value={newLeadData.notes}
                   onChange={(e) => setNewLeadData({...newLeadData, notes: e.target.value})}
-                  placeholder="Add brief details about the client intake..."
+                  placeholder="Add brief details about the client intake…"
                   rows={3}
                   className="w-full text-xs bg-slate-900/35 border border-slate-800 rounded-xl p-3 text-white outline-none resize-none focus:border-[#EE5712]/40"
                 />

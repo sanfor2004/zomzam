@@ -57,7 +57,7 @@ export default function ContactsPage() {
     return (
       <div className="h-[70vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-        <span className="text-xs font-semibold text-slate-400">Opening Client Directory...</span>
+        <span className="text-xs font-semibold text-slate-400">Opening Client Directory…</span>
       </div>
     );
   }
@@ -94,7 +94,7 @@ export default function ContactsPage() {
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search clients by name, brand, or niche..."
+            placeholder="Search clients by name, brand, or niche…"
             className="w-full text-xs bg-slate-900/35 border border-slate-850 focus:border-[#EE5712]/40 rounded-xl pl-10 pr-4 py-2.5 text-slate-200 placeholder-slate-400 outline-none transition-all focus:bg-white/[0.04]"
           />
         </div>

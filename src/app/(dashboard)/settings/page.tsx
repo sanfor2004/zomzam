@@ -549,7 +549,7 @@ export default function SettingsPage() {
                     spellCheck={false}
                     value={crmSettings.CLAUDE_API_KEY || ''}
                     onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
-                    placeholder="sk-ant-..."
+                    placeholder="sk-ant-…"
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <Button variant="unstyled"
@@ -579,7 +579,7 @@ export default function SettingsPage() {
                     spellCheck={false}
                     value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
                     onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
-                    placeholder="AIzaSy..."
+                    placeholder="AIzaSy…"
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <Button variant="unstyled"
@@ -755,7 +755,7 @@ export default function SettingsPage() {
               type={showNotionKey ? 'text' : 'password'}
               value={notionSettings.NOTION_API_KEY || ''}
               onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}
-              placeholder="secret_..."
+              placeholder="secret_…"
               rightIcon={<PwToggle show={showNotionKey} onToggle={() => setShowNotionKey(!showNotionKey)} />}
               hint="Create an internal integration in Notion and paste its secret token here."
             />

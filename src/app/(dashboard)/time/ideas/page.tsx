@@ -505,7 +505,7 @@ export default function IdeaCapturePage() {
           }}
         >
           <div className="px-3 pb-2 mb-2 border-b border-slate-800 text-[11px] font-semibold text-slate-400">
-            Link to...
+            Link to…
           </div>
           <div className="space-y-0.5">
             {mentionList.map((item, idx) => {
@@ -758,7 +758,7 @@ export default function IdeaCapturePage() {
                 // Truncation check
                 const isTruncated = contentText.length > displayLimit;
                 const visibleText = isTruncated && !isExpanded 
-                  ? contentText.substring(0, displayLimit) + '...'
+                  ? contentText.substring(0, displayLimit) + '…'
                   : contentText;
 
                 const isDone = idea.status === 'done';
@@ -798,7 +798,9 @@ export default function IdeaCapturePage() {
 
                     {/* Metadata Footer — date on the left, actions on the right.
                         Actions live in this row (not an absolute overlay) so they
-                        never cover the body text; hover/focus reveals them. */}
+                        never cover the body text. Hover/focus reveals them only on
+                        hover-capable pointers; touch devices (hover: none) always
+                        see them — group-hover never fires on tap. */}
                     <div className="flex items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-850/30">
                       <span className="text-[10px] font-semibold text-slate-400">
                         {new Date(idea.created_at).toLocaleDateString(undefined, {
@@ -809,7 +811,7 @@ export default function IdeaCapturePage() {
                         })}
                       </span>
 
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                         <Button variant="unstyled"
                           onClick={() => handleToggleIdeaDone(idea)}
                           title={isDone ? 'Reopen idea' : 'Mark idea done'}

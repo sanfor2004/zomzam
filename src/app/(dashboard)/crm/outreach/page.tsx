@@ -65,7 +65,7 @@ export default function OutreachSettingsPage() {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-        <span className="text-xs font-semibold text-slate-400">Loading Outreach Console...</span>
+        <span className="text-xs font-semibold text-slate-400">Loading Outreach Console…</span>
       </div>
     );
   }

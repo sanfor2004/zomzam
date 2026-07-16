@@ -445,7 +445,7 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Add client intake details, scrap results, callback notes, etc..."
+            placeholder="Add client intake details, scrap results, callback notes, etc…"
             rows={3}
             className="w-full text-xs bg-slate-900/35 border border-slate-800/60 focus:border-[#EE5712]/40 rounded-xl p-3 text-slate-200 placeholder-slate-400 outline-none resize-none transition-all"
           />
@@ -505,7 +505,7 @@ export function LeadDetailsModal({ lead, onClose, onUpdate }: LeadDetailsModalPr
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Generating bespoke outreach draft...
+                Generating bespoke outreach draft…
               </>
             ) : (
               <>
