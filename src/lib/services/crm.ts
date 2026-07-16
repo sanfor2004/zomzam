@@ -175,11 +175,12 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
       [leadId, userId]
     );
 
-    await connection.execute(
+    const [projRes] = await connection.execute<any>(
       `INSERT INTO crm_projects (user_id, lead_id, name, status, amount, currency)
        VALUES (?, ?, ?, 'planning', ?, ?)`,
       [userId, leadId, projectName, amount, currency]
     );
+    const projectId = projRes.insertId;
 
     const tasksToSeed = [
       { title: `${projectName}: Client Kickoff Consultation`, duration: 30, priority: 'urgent' },
@@ -188,10 +189,12 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
       { title: `${projectName}: Production Delivery & Launch`, duration: 60, priority: 'urgent' },
     ];
     for (const t of tasksToSeed) {
+      // project_id makes the profitability minutes join (time_tasks → crm_projects
+      // → crm_leads) match, so tracked hours count toward the client's hourly rate.
       await connection.execute(
-        `INSERT INTO time_tasks (user_id, title, priority, duration_block, status)
-         VALUES (?, ?, ?, ?, 'pending')`,
-        [userId, t.title, t.priority, t.duration]
+        `INSERT INTO time_tasks (user_id, project_id, title, priority, duration_block, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')`,
+        [userId, projectId, t.title, t.priority, t.duration]
       );
     }
 

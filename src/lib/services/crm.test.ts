@@ -65,6 +65,20 @@ test('qualifyLead runs the whole bridge in one transaction, all scoped to the us
   assert.ok(incomeParams.includes(7), 'income attributed to the lead (per-client profitability)'); // lead_id
 });
 
+test('qualifyLead stamps the new project id on every seeded task (profitability minutes join)', async () => {
+  db.queryOne.mock.mockImplementationOnce(async () => ({ name: 'Acme', company: 'Acme Co' }));
+
+  await crm.qualifyLead(USER_ID, { leadId: 7, accountId: 3, amount: 1000, currency: 'USD', dueDate: null });
+
+  // The crm_projects INSERT (mock) returns insertId = 1 — every task must carry it.
+  const taskCalls = connExecute.mock.calls.filter((c) => /INSERT INTO time_tasks/.test(c.arguments[0] as string));
+  assert.equal(taskCalls.length, 4, '4 tasks seeded');
+  for (const call of taskCalls) {
+    assert.match(call.arguments[0] as string, /project_id/, 'task INSERT names the project_id column');
+    assert.ok((call.arguments[1] as any[]).includes(1), 'task INSERT carries the project insertId');
+  }
+});
+
 test('qualifyLead seeds a Lending settlement only when a due date is given', async () => {
   db.queryOne.mock.mockImplementationOnce(async () => ({ name: 'Acme', company: null }));
 
