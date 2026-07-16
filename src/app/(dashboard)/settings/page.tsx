@@ -538,12 +538,15 @@ export default function SettingsPage() {
 
               {/* Claude API Key */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <label htmlFor="crm-claude-key" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Anthropic Claude API Key
                 </label>
                 <div className="relative">
                   <input
+                    id="crm-claude-key"
                     type={showClaudeKey ? 'text' : 'password'}
+                    autoComplete="off"
+                    spellCheck={false}
                     value={crmSettings.CLAUDE_API_KEY || ''}
                     onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
                     placeholder="sk-ant-..."
@@ -552,6 +555,7 @@ export default function SettingsPage() {
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowClaudeKey(!showClaudeKey)}
+                    aria-label={showClaudeKey ? 'Hide key' : 'Show key'}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                   >
                     {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -564,12 +568,15 @@ export default function SettingsPage() {
 
               {/* Google Maps API Key */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <label htmlFor="crm-maps-key" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Google Maps API Key
                 </label>
                 <div className="relative">
                   <input
+                    id="crm-maps-key"
                     type={showMapsKey ? 'text' : 'password'}
+                    autoComplete="off"
+                    spellCheck={false}
                     value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
                     onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
                     placeholder="AIzaSy..."
@@ -578,6 +585,7 @@ export default function SettingsPage() {
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowMapsKey(!showMapsKey)}
+                    aria-label={showMapsKey ? 'Hide key' : 'Show key'}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                   >
                     {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -590,11 +598,14 @@ export default function SettingsPage() {
 
               {/* Google Maps Map ID */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <label htmlFor="crm-maps-map-id" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Google Maps Map ID
                 </label>
                 <input
+                  id="crm-maps-map-id"
                   type="text"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
                   onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
                   placeholder="e.g. CRM_LEADS_MAP"
@@ -739,6 +750,8 @@ export default function SettingsPage() {
               id="notion-token"
               label="Integration token"
               mono
+              autoComplete="off"
+              spellCheck={false}
               type={showNotionKey ? 'text' : 'password'}
               value={notionSettings.NOTION_API_KEY || ''}
               onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}

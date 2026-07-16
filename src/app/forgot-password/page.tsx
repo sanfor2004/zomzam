@@ -171,11 +171,15 @@ function ForgotPasswordContent() {
           {!isResetStep && !requestSent && (
             <form onSubmit={handleRequestReset} className="space-y-5">
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">
+                <label htmlFor="fp-email" className="block text-sm font-bold text-slate-300 mb-2">
                   Email Address
                 </label>
                 <input
+                  id="fp-email"
                   type="email"
+                  name="email"
+                  autoComplete="email"
+                  spellCheck={false}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -218,12 +222,15 @@ function ForgotPasswordContent() {
             <form onSubmit={handleResetPassword} className="space-y-5">
               {/* New password */}
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">
+                <label htmlFor="fp-new-password" className="block text-sm font-bold text-slate-300 mb-2">
                   New Password
                 </label>
                 <div className="relative">
                   <input
+                    id="fp-new-password"
                     type={showNew ? 'text' : 'password'}
+                    name="new-password"
+                    autoComplete="new-password"
                     required
                     minLength={8}
                     value={newPassword}
@@ -234,6 +241,7 @@ function ForgotPasswordContent() {
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowNew(!showNew)}
+                    aria-label={showNew ? 'Hide password' : 'Show password'}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -244,12 +252,15 @@ function ForgotPasswordContent() {
 
               {/* Confirm password */}
               <div>
-                <label className="block text-sm font-bold text-slate-300 mb-2">
+                <label htmlFor="fp-confirm-password" className="block text-sm font-bold text-slate-300 mb-2">
                   Confirm New Password
                 </label>
                 <div className="relative">
                   <input
+                    id="fp-confirm-password"
                     type={showConfirm ? 'text' : 'password'}
+                    name="confirm-password"
+                    autoComplete="new-password"
                     required
                     minLength={8}
                     value={confirmPassword}
@@ -260,6 +271,7 @@ function ForgotPasswordContent() {
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
+                    aria-label={showConfirm ? 'Hide password' : 'Show password'}
                     className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
                   >
                     {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
