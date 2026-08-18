@@ -339,6 +339,15 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-[var(--shell-mid)] relative">
 
+      {/* Skip link — first Tab stop; jumps past the sidebar straight into main
+          content (WCAG bypass-blocks). Visible only while keyboard-focused. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[200] focus:px-4 focus:py-2.5 focus:rounded-xl focus:bg-primary-500 focus:text-white focus:text-sm focus:font-bold"
+      >
+        Skip to content
+      </a>
+
       {/* ──────────────────────────────────────────────────────────
           DEVELOPMENT NAVIGATOR: AMBIENT BACKGROUND
           One cohesive, full-bleed linear gradient shared by EVERY dashboard
@@ -727,7 +736,7 @@ function DashboardLayoutContent({ children, initialUser }: { children: React.Rea
             Viewport-locked, scrollable area where dashboard pages render
             ────────────────────────────────────────────────────────── */}
         {/* pb on phone clears the fixed bottom nav bar (+ safe area). */}
-        <main onScroll={handleMainScroll} className="@container flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8">
+        <main id="main-content" tabIndex={-1} onScroll={handleMainScroll} className="@container flex-grow overflow-y-auto relative p-6 md:p-8 pb-[calc(6rem+env(safe-area-inset-bottom))] md:pb-8 outline-none">
           {children}
         </main>
       </div>

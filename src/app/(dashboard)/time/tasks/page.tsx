@@ -420,7 +420,7 @@ export default function TaskBoardPage() {
                           .filter(h => h.status === 'active')
                           .map(h => ({
                             value: h.id.toString(),
-                            label: `[${h.type.toUpperCase()}] ${h.content.substring(0, 30)}...`,
+                            label: `[${h.type.toUpperCase()}] ${h.content.substring(0, 30)}…`,
                           })),
                       ]}
                     />
@@ -483,7 +483,7 @@ export default function TaskBoardPage() {
                   .filter(h => h.status === 'active')
                   .map(h => ({
                     value: h.id.toString(),
-                    label: `[${h.type.toUpperCase()}] ${h.content.substring(0, 30)}...`,
+                    label: `[${h.type.toUpperCase()}] ${h.content.substring(0, 30)}…`,
                   })),
               ]}
             />

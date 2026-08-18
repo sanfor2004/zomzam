@@ -43,7 +43,7 @@ export function Checkbox({
     >
       <span
         className={cn(
-          'mt-0.5 w-[18px] h-[18px] shrink-0 rounded-md border flex items-center justify-center transition-all duration-200',
+          'mt-0.5 w-[18px] h-[18px] shrink-0 rounded-md border flex items-center justify-center transition-colors duration-200',
           isFilled ? 'bg-primary-500 border-primary-500' : 'bg-slate-900/30 border-slate-700 group-hover:border-primary-500/50',
         )}
       >

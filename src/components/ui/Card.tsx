@@ -24,7 +24,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple relative ${allowOverflow ? 'overflow-visible' : 'overflow-hidden'} transition-all duration-300 ${className}`}
+      className={`surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple relative ${allowOverflow ? 'overflow-visible' : 'overflow-hidden'} transition-[color,background-color,border-color,box-shadow,transform] duration-300 ${className}`}
     >
       {/* Header */}
       {(title || headerExtra) && (

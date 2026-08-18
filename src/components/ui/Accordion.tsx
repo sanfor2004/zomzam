@@ -49,7 +49,7 @@ export function Accordion({ items, type = 'single', defaultValue = [], className
 
             <div
               className={cn(
-                'grid transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
+                'grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]',
                 isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
               )}
             >

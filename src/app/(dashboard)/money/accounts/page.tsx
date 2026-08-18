@@ -151,7 +151,7 @@ export default function BankAccountsPage() {
               value={nameInput}
               onChange={(e) => setNameInput(e.target.value)}
               required
-              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
+              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 text-white font-bold"
             />
           </div>
 
@@ -205,7 +205,7 @@ export default function BankAccountsPage() {
                 placeholder="e.g. 4193"
                 value={lastFourInput}
                 onChange={(e) => setLastFourInput(e.target.value)}
-                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-mono"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 text-white font-mono"
               />
             </div>
           </div>

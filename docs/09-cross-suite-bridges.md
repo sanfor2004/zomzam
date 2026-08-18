@@ -6,7 +6,7 @@ The product value comes from features talking to each other. This file lists the
 
 Primary file: `src/lib/services/crm.ts`
 
-Trigger: lead moves into a qualified/won state through `qualify_lead`.
+Trigger: lead moves into `qualified` — the sole money-writing lead state — reachable only through the `qualify_lead` action (the status enum has no won/closed value; "Closed Won" is UI wording). Direct status updates to `qualified` are rejected by the service.
 
 Effects:
 

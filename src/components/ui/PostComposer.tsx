@@ -885,7 +885,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
               aria-label={submitLabel}
               title={submitLabel}
               leftIcon={!postingLoading && <Send className="w-5 h-5" fill="currentColor" strokeWidth={0} />}
-              className="flex items-center justify-center w-10 h-10 rounded-xl text-primary-500 transition-all duration-150 hover:bg-primary-500/10 hover:text-primary-600 hover:-translate-y-px active:scale-95 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
+              className="flex items-center justify-center w-10 h-10 rounded-xl text-primary-500 transition-[color,background-color,transform,opacity] duration-150 hover:bg-primary-500/10 hover:text-primary-600 hover:-translate-y-px active:scale-95 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:bg-transparent"
             />
           )}
         </div>
@@ -931,7 +931,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
                     aria-selected={idx === selectedIndex}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     onClick={() => insertPill('@', u)}
-                    className={`group w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-all duration-150 ${
+                    className={`group w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-[color,background-color,box-shadow] duration-150 ${
                       idx === selectedIndex
                         ? 'bg-primary-500/15 ring-1 ring-primary-500/30'
                         : 'hover:bg-slate-800/60'
@@ -972,7 +972,7 @@ export function PostComposer({ currentUser, friends, onPosted, editing, quoting,
                 role="option"
                 aria-selected
                 onClick={() => insertPill('#')}
-                className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left bg-sky-500/10 ring-1 ring-sky-500/25 transition-all"
+                className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left bg-sky-500/10 ring-1 ring-sky-500/25 transition-[color,background-color,box-shadow]"
               >
                 <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-sky-500/15 flex-shrink-0">
                   <Hash className="w-4 h-4 text-sky-400" />
@@ -1082,7 +1082,7 @@ function PostTypeSwitch({ value, onChange }: { value: PostType; onChange: (v: Po
             title={hint}
             onClick={() => onChange(optionValue)}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all active:scale-[0.97]',
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-[color,background-color,border-color,transform] active:scale-[0.97]',
               isActive
                 ? 'bg-primary-500/10 text-primary-500 ring-1 ring-primary-500/25'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/50',

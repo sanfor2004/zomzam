@@ -27,8 +27,10 @@ export async function POST(request: NextRequest) {
 
     const newHash = await hashPassword(new_password);
 
+    // token_version bump in the same statement revokes every outstanding
+    // session — the compromised-account recovery path must kill stolen sessions.
     await execute(
-      `UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW() WHERE id = ?`,
+      `UPDATE users SET password = ?, token_version = token_version + 1, reset_token = NULL, reset_token_expires = NULL, updated_at = NOW() WHERE id = ?`,
       [newHash, user.id]
     );
 

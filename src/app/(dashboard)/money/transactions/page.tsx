@@ -453,7 +453,7 @@ function TransactionsInner() {
                 value={dateInput}
                 onChange={(e) => setDateInput(e.target.value)}
                 required
-                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 text-white"
               />
             </div>
             <div>
@@ -463,7 +463,7 @@ function TransactionsInner() {
                 placeholder={formType === 'income' ? 'e.g. Client invoice' : formType === 'transfer' ? 'e.g. Move to savings' : 'e.g. Groceries'}
                 value={descInput}
                 onChange={(e) => setDescInput(e.target.value)}
-                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 text-white"
               />
             </div>
           </div>

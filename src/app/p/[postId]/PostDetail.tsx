@@ -555,9 +555,9 @@ function PostDetailInner({
 
         {/* Media — full-bleed single, padded strip for multi (feed language) */}
         {imagePaths.length === 1 ? (
-          <PostImageGrid images={imagePaths} single="bleed" />
+          <PostImageGrid images={imagePaths} single="bleed" alt={`Photo by ${authorName}`} />
         ) : imagePaths.length > 1 ? (
-          <div className="px-4 sm:px-6 pb-1"><PostImageGrid images={imagePaths} /></div>
+          <div className="px-4 sm:px-6 pb-1"><PostImageGrid images={imagePaths} alt={`Photo by ${authorName}`} /></div>
         ) : null}
 
         {/* Action bar */}
@@ -893,7 +893,7 @@ function CommentRow({
                 maxLength={1000}
                 className="flex-1 bg-surface-dark rounded-xl px-3 py-2 text-xs text-slate-200 border border-slate-800/60 outline-none focus:border-primary-500/40 transition-colors placeholder:text-slate-600"
               />
-              <Button variant="unstyled" onClick={submitReply} disabled={!replyText.trim() || submitting} className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-primary-500 hover:bg-primary-600 disabled:opacity-40 rounded-lg text-white active:scale-90 transition-all">
+              <Button variant="unstyled" onClick={submitReply} disabled={!replyText.trim() || submitting} aria-label="Post reply" className="flex-shrink-0 w-9 h-9 flex items-center justify-center bg-primary-500 hover:bg-primary-600 disabled:opacity-40 rounded-lg text-white active:scale-90 transition-all">
                 {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
               </Button>
             </div>

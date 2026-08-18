@@ -62,7 +62,7 @@ Zomzam is designed to bridge the gap between day-to-day productivity (Time Suite
 | **Component Kit** | **Zomzam Kit** (`src/components/ui`, homegrown — 35 primitives) | A self-owned design system instead of shadcn/ui or Radix UI — zero external UI dependency, full control over every interaction. Browseable live at `/ui-kit`. |
 | **Styling** | **Tailwind CSS v4** (`@theme` CSS-first tokens) | Modern CSS variables, Tailwind engine for atomic utility styling, custom HSL/Zomzam-Orange palettes defined directly in `globals.css`. |
 | **Database** | **MySQL (via `mysql2/promise`)** | High performance, transaction safety, and sub-millisecond query execution on structured schemas. |
-| **Security** | **Jose JWT, BcryptJS & DOMPurify** | A single `jose`-based session module (`src/lib/session.ts`) signs/verifies the `ZOMZAM_SESSION` JWT for both the Edge proxy and Node API routes (`jsonwebtoken` removed). The same `jose` dependency also verifies Google's `id_token` via remote JWKS for "Sign in with Google" (`src/lib/google-oauth.ts`) — no separate OAuth library installed. API routes are gated by a `withAuth()` wrapper (`src/lib/api-auth.ts`), not the proxy; high-rounds bcrypt salt for password protection; post HTML is sanitized server-side with `isomorphic-dompurify` (tag allowlist) before storage; login/register are IP rate-limited (`src/lib/rate-limit.ts`). |
+| **Security** | **Jose JWE, BcryptJS & DOMPurify** | A single `jose`-based session module (`src/lib/session.ts`) encrypts/decrypts the `ZOMZAM_SESSION` token as a JWE (`dir` + `A256GCM`, minimal `sub`+`tv` payload — no PII readable from the cookie) for both the Edge proxy and Node API routes (`jsonwebtoken` removed). The same `jose` dependency also verifies Google's `id_token` via remote JWKS for "Sign in with Google" (`src/lib/google-oauth.ts`) — no separate OAuth library installed. API routes are gated by a `withAuth()` wrapper (`src/lib/api-auth.ts`), not the proxy; high-rounds bcrypt salt for password protection; post HTML is sanitized server-side with `isomorphic-dompurify` (tag allowlist) before storage; login/register are IP rate-limited (`src/lib/rate-limit.ts`). |
 | **Streaming** | **Server-Sent Events (SSE)** | Low-overhead server-push pipe for real-time presence sync without the overhead of WebSockets. |
 | **Animation** | **GSAP + `@gsap/react`** (centralized in `src/lib/gsap.ts`) | `ScrollTrigger`, `SplitText`, `Observer`, `Flip`, and `ScrambleTextPlugin` registered once; powers the shared `usePageEntrance` reveal hook. `canvas-confetti` handles reward bursts. No Framer Motion. |
 | **3D / Ambient Visuals** | **three.js + React Three Fiber** | Shader background (`Silk.tsx`) on the landing page only, lazy-loaded client-side and gated by `useDesktopWebGL` (`(min-width:1024px) and (pointer:fine)` + idle) so the three.js chunk never downloads on phones/tablets — they get a static CSS-gradient fallback. The dashboard shell uses a zero-cost static CSS gradient (the former `LiquidEther` WebGL fluid sim was removed in the P3 perf pass — its non-stop rAF loop cost ~11s TBT on every authenticated route). |
@@ -139,7 +139,7 @@ zomzam.com/
 │   │   └── usePageEntrance.ts   # Shared GSAP page-entrance reveal (title/card/list-item stagger)
 │   │
 │   ├── lib/
-│   │   ├── session.ts           # jose JWT sign/verify (Edge + Node) — single secret, fail-fast on boot
+│   │   ├── session.ts           # jose JWE encrypt/decrypt (Edge + Node) — single secret (≥32 chars), fail-fast on boot
 │   │   ├── api-auth.ts          # withAuth/withError route gates + getSessionUser (is_active + token_version revocation)
 │   │   ├── http-error.ts        # HttpError — runtime-free status-bearing error (services throw it; api-auth maps it)
 │   │   ├── rate-limit.ts        # DB-backed sliding-window limiter (login/register, heartbeat, bug-report throttles)
@@ -345,7 +345,7 @@ sequenceDiagram
     participant DB as MySQL DB
 
     User->>MW: Request to /home (protected) with ZOMZAM_SESSION cookie
-    Note over MW: Reads cookie value & verifies via jose JWT
+    Note over MW: Reads cookie value & decrypts via jose JWE
     alt Token Invalid / Expired
         MW->>User: 302 Redirect to /sign
     else Token Valid
@@ -357,7 +357,7 @@ sequenceDiagram
 ```
 
 ### Authentication Core Code:
-* **Session Tokens**: [session.ts](file:///c:/www/zomzam.com/src/lib/session.ts) is the single place a `jose` JWT is signed/verified (Edge proxy + Node routes). [api-auth.ts](file:///c:/www/zomzam.com/src/lib/api-auth.ts) exposes the `withAuth()`/`withError()` route gates and `getSessionUser()`, which also enforces `is_active` + `token_version` revocation. [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) is now bcrypt-only.
+* **Session Tokens**: [session.ts](file:///c:/www/zomzam.com/src/lib/session.ts) is the single place the `ZOMZAM_SESSION` JWE is encrypted/decrypted (`dir` + `A256GCM`, Edge proxy + Node routes); the payload carries only the user id + token version — identity is loaded live from the DB per request. [api-auth.ts](file:///c:/www/zomzam.com/src/lib/api-auth.ts) exposes the `withAuth()`/`withError()` route gates and `getSessionUser()`, which also enforces `is_active` + `token_version` revocation (bumped on every password change/reset). [auth.ts](file:///c:/www/zomzam.com/src/lib/auth.ts) is now bcrypt-only.
 * **Google Sign-In**: [google-oauth.ts](file:///c:/www/zomzam.com/src/lib/google-oauth.ts) builds the consent-screen URL and exchanges the returned code for an `id_token`, verified against Google's live JWKS via `jose`'s `createRemoteJWKSet` — no extra OAuth dependency needed. `/api/auth/oauth/google` sets a short-lived `state` + `redirect` cookie pair (CSRF check) before redirecting to Google; `/api/auth/oauth/google/callback` verifies `state`, then calls `findOrCreateGoogleUser()` ([user.ts](file:///c:/www/zomzam.com/src/lib/models/user.ts)) to link-by-verified-email or create a password-less account before minting the same `ZOMZAM_SESSION` cookie as credential login.
 * **Routing Guard**: [proxy.ts](file:///c:/www/zomzam.com/src/proxy.ts) protects every page by **default-deny** — only an explicit public allowlist (`/`, `/sign`, `/forgot-password`, `/u`, `/p`, `/ui-kit`, `/pricing`) is reachable without a session; everything else redirects to `/sign`. So a newly added page can never be accidentally left unguarded. It verifies tokens via the shared edge-safe `verifySession` (`jose`) without triggering Node-only environment crashes; API authorization itself lives in `withAuth()` at the route layer, not the proxy.
 

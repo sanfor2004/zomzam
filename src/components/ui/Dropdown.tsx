@@ -26,7 +26,7 @@ export type DropdownAlign = 'left' | 'right';
     DEVELOPMENT NAVIGATOR: SHARED ITEM ROW
     Contains: leading/trailing slots, active (selected) variant
     ────────────────────────────────────────────────────────── */
-export interface DropdownItemProps {
+export interface DropdownItemProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   onClick?: () => void;
   /** Renders the selected/active styling (used by select mode). */
@@ -48,13 +48,17 @@ export function DropdownItem({
   leading,
   trailing,
   className = '',
+  ...rest
 }: DropdownItemProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      aria-current={active || undefined}
+      // aria-current marks the active row in menu mode; select mode passes
+      // role="option" + aria-selected instead, so skip it when a role is given.
+      aria-current={rest.role ? undefined : active || undefined}
+      {...rest}
       className={cn(
         'w-full flex items-center gap-2 text-left px-3.5 py-2.5 rounded-sm text-sm transition-colors',
         'disabled:opacity-50 disabled:cursor-not-allowed',
@@ -109,9 +113,17 @@ export function DropdownShell({
       if (containerRef.current?.contains(event.target as Node)) return;
       onClose();
     };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (!open) return;
+      if (event.key === 'Escape') onClose();
+    };
 
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleEscape);
+    };
   }, [open, onClose]);
 
   const hasWidthOrDisplay =
@@ -123,7 +135,7 @@ export function DropdownShell({
 
       <div
         className={cn(
-          'absolute z-50 top-full mt-2 rounded-lg border border-slate-700/75 bg-slate-950 shadow-2xl shadow-slate-950/10 ring-1 ring-slate-900/5 transition-all duration-200',
+          'absolute z-50 top-full mt-2 rounded-lg border border-slate-700/75 bg-surface-dark shadow-2xl shadow-black/20 ring-1 ring-slate-900/5 transition-[opacity,transform,visibility] duration-200',
           open
             ? 'visible opacity-100 scale-100'
             : 'invisible opacity-0 scale-95 pointer-events-none',
@@ -174,6 +186,8 @@ export function DropdownSelect({
   emptyMessage = 'No options available',
 }: Omit<DropdownSelectProps, 'mode'>) {
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // Normalize options array to always be SelectOption objects
   const normalizedOptions: SelectOption[] = options.map((opt) =>
@@ -189,6 +203,68 @@ export function DropdownSelect({
     if (disabled) return;
     onChange(optValue);
     setIsOpen(false);
+    // Keyboard selection must not strand focus in the removed panel.
+    triggerRef.current?.focus();
+  };
+
+  // ── Listbox keyboard model (hand-rolled, no dependency) ──────────────────
+  const focusItem = (index: number) => {
+    const items = panelRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]');
+    if (!items || items.length === 0) return;
+    const clamped = Math.max(0, Math.min(index, items.length - 1));
+    items[clamped].focus();
+  };
+
+  const openAndFocus = () => {
+    setIsOpen(true);
+    // rAF: the panel must be visible before an option can take focus. Falls
+    // back to the first option when the current value matches nothing.
+    requestAnimationFrame(() => {
+      const selectedIndex = normalizedOptions.findIndex((opt) => opt.value === value);
+      focusItem(selectedIndex === -1 ? 0 : selectedIndex);
+    });
+  };
+
+  const handleTriggerKeyDown = (event: React.KeyboardEvent) => {
+    if (disabled) return;
+    if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (isOpen) {
+        setIsOpen(false);
+      } else {
+        openAndFocus();
+      }
+    }
+  };
+
+  const handlePanelKeyDown = (event: React.KeyboardEvent) => {
+    const items = Array.from(
+      panelRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]') ?? [],
+    );
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        focusItem(currentIndex + 1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        focusItem(currentIndex - 1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        focusItem(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        focusItem(items.length - 1);
+        break;
+      case 'Escape':
+        event.preventDefault();
+        setIsOpen(false);
+        triggerRef.current?.focus();
+        break;
+    }
   };
 
   return (
@@ -207,12 +283,14 @@ export function DropdownSelect({
         dropdownClassName={dropdownClassName}
         trigger={
           <button
+            ref={triggerRef}
             type="button"
             disabled={disabled}
             onClick={() => setIsOpen((prev) => !prev)}
+            onKeyDown={handleTriggerKeyDown}
             aria-haspopup="listbox"
             aria-expanded={isOpen}
-            className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-900/30 border border-slate-850 rounded-sm text-sm text-white focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed text-left"
+            className="w-full h-11 flex items-center justify-between px-3.5 bg-slate-900/30 border border-slate-850 rounded-sm text-sm text-white focus:outline-none focus-visible:border-primary-500 focus-visible:ring-1 focus-visible:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed text-left"
           >
             <span className="truncate">{selectedOption?.label ?? placeholder}</span>
             <ChevronDown
@@ -224,21 +302,27 @@ export function DropdownSelect({
           </button>
         }
       >
-        {normalizedOptions.length > 0 ? (
-          normalizedOptions.map((opt) => (
-            <DropdownItem
-              key={opt.value}
-              active={opt.value === value}
-              onClick={() => handleSelect(opt.value)}
-            >
-              {opt.label}
-            </DropdownItem>
-          ))
-        ) : (
-          <div className="px-3.5 py-6 text-center text-sm text-slate-500 select-none">
-            {emptyMessage}
-          </div>
-        )}
+        {/* space-y rides the listbox wrapper now that items are one level deeper
+            than the shell panel (no select caller overrides the default). */}
+        <div ref={panelRef} role="listbox" onKeyDown={handlePanelKeyDown} className="space-y-0.5">
+          {normalizedOptions.length > 0 ? (
+            normalizedOptions.map((opt) => (
+              <DropdownItem
+                key={opt.value}
+                role="option"
+                aria-selected={opt.value === value}
+                active={opt.value === value}
+                onClick={() => handleSelect(opt.value)}
+              >
+                {opt.label}
+              </DropdownItem>
+            ))
+          ) : (
+            <div className="px-3.5 py-6 text-center text-sm text-slate-500 select-none">
+              {emptyMessage}
+            </div>
+          )}
+        </div>
       </DropdownShell>
     </div>
   );

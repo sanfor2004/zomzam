@@ -538,20 +538,24 @@ export default function SettingsPage() {
 
               {/* Claude API Key */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <label htmlFor="crm-claude-key" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Anthropic Claude API Key
                 </label>
                 <div className="relative">
                   <input
+                    id="crm-claude-key"
                     type={showClaudeKey ? 'text' : 'password'}
+                    autoComplete="off"
+                    spellCheck={false}
                     value={crmSettings.CLAUDE_API_KEY || ''}
                     onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
-                    placeholder="sk-ant-..."
+                    placeholder="sk-ant-…"
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowClaudeKey(!showClaudeKey)}
+                    aria-label={showClaudeKey ? 'Hide key' : 'Show key'}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                   >
                     {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -564,20 +568,24 @@ export default function SettingsPage() {
 
               {/* Google Maps API Key */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <label htmlFor="crm-maps-key" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Google Maps API Key
                 </label>
                 <div className="relative">
                   <input
+                    id="crm-maps-key"
                     type={showMapsKey ? 'text' : 'password'}
+                    autoComplete="off"
+                    spellCheck={false}
                     value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
                     onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
-                    placeholder="AIzaSy..."
+                    placeholder="AIzaSy…"
                     className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
                   />
                   <Button variant="unstyled"
                     type="button"
                     onClick={() => setShowMapsKey(!showMapsKey)}
+                    aria-label={showMapsKey ? 'Hide key' : 'Show key'}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
                   >
                     {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -590,11 +598,14 @@ export default function SettingsPage() {
 
               {/* Google Maps Map ID */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                <label htmlFor="crm-maps-map-id" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Google Maps Map ID
                 </label>
                 <input
+                  id="crm-maps-map-id"
                   type="text"
+                  autoComplete="off"
+                  spellCheck={false}
                   value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
                   onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
                   placeholder="e.g. CRM_LEADS_MAP"
@@ -665,7 +676,7 @@ export default function SettingsPage() {
                     step="0.05"
                     value={crmSettings.claude_temperature || '0.75'}
                     onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
-                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none mt-2"
+                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 mt-2"
                   />
                 </div>
               </div>
@@ -739,10 +750,12 @@ export default function SettingsPage() {
               id="notion-token"
               label="Integration token"
               mono
+              autoComplete="off"
+              spellCheck={false}
               type={showNotionKey ? 'text' : 'password'}
               value={notionSettings.NOTION_API_KEY || ''}
               onChange={(e) => handleNotionFieldChange('NOTION_API_KEY', e.target.value)}
-              placeholder="secret_..."
+              placeholder="secret_…"
               rightIcon={<PwToggle show={showNotionKey} onToggle={() => setShowNotionKey(!showNotionKey)} />}
               hint="Create an internal integration in Notion and paste its secret token here."
             />

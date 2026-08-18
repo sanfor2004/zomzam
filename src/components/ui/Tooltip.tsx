@@ -31,7 +31,7 @@ export function Tooltip({ content, position = 'top', children, className = '' }:
         role="tooltip"
         className={cn(
           'absolute z-50 px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-semibold text-slate-200 whitespace-nowrap shadow-lg',
-          'opacity-0 scale-95 pointer-events-none transition-all duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]',
+          'opacity-0 scale-95 pointer-events-none transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.4,0,0.2,1)]',
           // Reveal on hover or keyboard focus only. `:focus-visible` (not plain
           // focus-within) means a mouse *click* never pins the tooltip open — the
           // browser withholds focus-visible for pointer interactions — while Tab

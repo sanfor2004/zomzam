@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { query, queryOne, execute, transaction } from '@/lib/db';
 import { HttpError } from '@/lib/http-error';
+import { loadFxContext } from './money';
+import { snapshotHomeAmount, type Currency } from '@/lib/fx';
 
 // CRM suite business logic. Route handlers stay thin (parse → call → respond);
 // every SQL/transaction/owner-scoping rule lives here so it is unit-testable in
@@ -65,7 +67,11 @@ const industryData: Record<string, {
   }
 };
 
-const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'status', 'source', 'industry', 'notes', 'rating', 'review_count']);
+// 'status' is deliberately absent: status changes go through updateLeadStatus
+// (validated) or the qualify_lead bridge — never the generic column update.
+const ALLOWED_LEAD_COLUMNS = new Set(['name', 'email', 'phone', 'website', 'address', 'company', 'source', 'industry', 'notes', 'rating', 'review_count']);
+
+const LEAD_STATUSES = new Set(['new', 'contacted', 'qualified', 'lost']);
 
 export function getLeads(userId: number) {
   return query('SELECT * FROM crm_leads WHERE user_id = ? ORDER BY created_at DESC', [userId]);
@@ -135,6 +141,14 @@ export async function updateLead(userId: number, id: number, data: any): Promise
 }
 
 export async function updateLeadStatus(userId: number, id: number, status: string): Promise<void> {
+  if (!LEAD_STATUSES.has(status)) {
+    throw new HttpError(400, 'Invalid lead status');
+  }
+  // Winning a deal must run the full qualify_lead bridge (income + project +
+  // tasks); transitions OUT of 'qualified' stay allowed (Kanban drag-back).
+  if (status === 'qualified') {
+    throw new HttpError(400, 'Use qualify_lead to close a deal');
+  }
   await execute('UPDATE crm_leads SET status = ? WHERE id = ? AND user_id = ?', [status, id, userId]);
 }
 
@@ -169,17 +183,24 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
   const clientName = lead.company || lead.name;
   const projectName = `${clientName} Project`;
 
+  // Snapshot the home-currency value at capture time — same contract as manual
+  // addTransaction — so foreign-currency deals aggregate at their true home value.
+  const { rates, home } = await loadFxContext(userId);
+  const { home_amount, fx_rate } = snapshotHomeAmount(amount, currency as Currency, home, rates);
+  const fxDate = new Date().toISOString().substring(0, 10);
+
   await transaction(async (connection) => {
     await connection.execute(
       `UPDATE crm_leads SET status = 'qualified' WHERE id = ? AND user_id = ?`,
       [leadId, userId]
     );
 
-    await connection.execute(
+    const [projRes] = await connection.execute<any>(
       `INSERT INTO crm_projects (user_id, lead_id, name, status, amount, currency)
        VALUES (?, ?, ?, 'planning', ?, ?)`,
       [userId, leadId, projectName, amount, currency]
     );
+    const projectId = projRes.insertId;
 
     const tasksToSeed = [
       { title: `${projectName}: Client Kickoff Consultation`, duration: 30, priority: 'urgent' },
@@ -188,10 +209,12 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
       { title: `${projectName}: Production Delivery & Launch`, duration: 60, priority: 'urgent' },
     ];
     for (const t of tasksToSeed) {
+      // project_id makes the profitability minutes join (time_tasks → crm_projects
+      // → crm_leads) match, so tracked hours count toward the client's hourly rate.
       await connection.execute(
-        `INSERT INTO time_tasks (user_id, title, priority, duration_block, status)
-         VALUES (?, ?, ?, ?, 'pending')`,
-        [userId, t.title, t.priority, t.duration]
+        `INSERT INTO time_tasks (user_id, project_id, title, priority, duration_block, status)
+         VALUES (?, ?, ?, ?, ?, 'pending')`,
+        [userId, projectId, t.title, t.priority, t.duration]
       );
     }
 
@@ -209,9 +232,9 @@ export async function qualifyLead(userId: number, input: QualifyLeadInput): Prom
     }
 
     await connection.execute(
-      `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, description, transaction_date, lead_id)
-       VALUES (?, ?, ?, 'income', ?, ?, ?, CURRENT_DATE, ?)`,
-      [userId, accountId, categoryId, amount, currency, `Deal qualification: ${projectName}`, leadId]
+      `INSERT INTO money_transactions (user_id, account_id, category_id, type, amount, currency, home_amount, fx_rate, fx_rate_date, description, transaction_date, lead_id)
+       VALUES (?, ?, ?, 'income', ?, ?, ?, ?, ?, ?, CURRENT_DATE, ?)`,
+      [userId, accountId, categoryId, amount, currency, home_amount, fx_rate, fxDate, `Deal qualification: ${projectName}`, leadId]
     );
 
     await connection.execute(

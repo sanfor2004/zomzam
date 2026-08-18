@@ -41,7 +41,7 @@ export function Progress({ value, max = 100, label, showValue = false, variant =
         className={cn('w-full bg-slate-850 rounded-full overflow-hidden', size === 'sm' ? 'h-1.5' : 'h-2.5')}
       >
         <div
-          className={cn('h-full rounded-full transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]', VARIANTS[variant])}
+          className={cn('h-full rounded-full transition-[width] duration-500 ease-[cubic-bezier(0.4,0,0.2,1)]', VARIANTS[variant])}
           style={{ width: `${percent}%` }}
         />
       </div>

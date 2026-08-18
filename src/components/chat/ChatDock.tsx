@@ -278,7 +278,7 @@ function ChatWindowCard({ win }: { win: ChatWindow }) {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(otherId); }
               }}
-              placeholder="Write a message..."
+              placeholder="Write a message…"
               disabled={win.sending}
               className="flex-1 min-w-0 bg-slate-800/60 border border-slate-700/60 rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-primary-500/60 transition-colors disabled:opacity-50"
             />

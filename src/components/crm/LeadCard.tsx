@@ -38,10 +38,12 @@ interface LeadCardProps {
   onSelectChange?: (selected: boolean) => void;
 }
 
+// 'qualified' is intentionally not selectable here: winning a deal must go
+// through the Kanban qualify flow (Deal Setup modal → qualify_lead bridge).
+// The Qualified badge still renders on already-qualified leads via statusConfigs.
 const statusOptions = [
   { value: "new", label: "NEW", indicatorColor: "bg-[#EE5712]" },
   { value: "contacted", label: "CONTACTED", indicatorColor: "bg-amber-400" },
-  { value: "qualified", label: "QUALIFIED", indicatorColor: "bg-emerald-450" },
   { value: "lost", label: "LOST", indicatorColor: "bg-rose-500" },
 ];
 

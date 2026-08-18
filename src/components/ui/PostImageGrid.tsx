@@ -27,10 +27,13 @@ interface PostImageGridProps {
    *  feed-card look) or 'rounded' (radius + hairline border — the detail look).
    *  Multi-image grids are always rounded + clipped regardless. */
   single?: 'bleed' | 'rounded';
+  /** Alternative text base, author-derived by the caller (e.g. "Photo by
+   *  @user"). Multi-image grids append "(n of total)" per cell. */
+  alt?: string;
   className?: string;
 }
 
-export function PostImageGrid({ images, single = 'bleed', className }: PostImageGridProps) {
+export function PostImageGrid({ images, single = 'bleed', alt, className }: PostImageGridProps) {
   if (images.length === 0) return null;
 
   // Single image — honor the caller's bleed/rounded preference.
@@ -38,7 +41,7 @@ export function PostImageGrid({ images, single = 'bleed', className }: PostImage
     return (
       <Image
         src={images[0]}
-        alt=""
+        alt={alt ?? ''}
         width={1200}
         height={1200}
         sizes="(max-width: 1024px) 100vw, 600px"
@@ -61,7 +64,7 @@ export function PostImageGrid({ images, single = 'bleed', className }: PostImage
         <div key={i} className="relative aspect-square">
           <Image
             src={src}
-            alt=""
+            alt={alt ? `${alt} (${i + 1} of ${images.length})` : ''}
             fill
             sizes="(max-width: 1024px) 50vw, 200px"
             className="object-cover"

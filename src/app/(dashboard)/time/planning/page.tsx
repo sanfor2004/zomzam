@@ -491,7 +491,7 @@ export default function DreamPlanningPage() {
               <div className="mt-auto space-y-2">
                 <input
                   type="text"
-                  placeholder={`Add a ${type} goal...`}
+                  placeholder={`Add a ${type} goal…`}
                   value={inputs[type]}
                   onChange={(e) => setInputs(prev => ({ ...prev, [type]: e.target.value }))}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddGoal(type)}

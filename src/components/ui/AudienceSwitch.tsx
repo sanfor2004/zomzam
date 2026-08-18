@@ -86,7 +86,7 @@ export function AudienceSwitch({
           aria-label={ariaLabel}
           onClick={() => setOpen((p) => !p)}
           className={cn(
-            'group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-all active:scale-[0.97]',
+            'group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1.5 text-xs font-bold transition-[color,background-color,border-color,transform] active:scale-[0.97]',
             'disabled:opacity-50 disabled:cursor-not-allowed',
             open
               ? 'border-primary-500/40 bg-primary-500/10 text-primary-400'

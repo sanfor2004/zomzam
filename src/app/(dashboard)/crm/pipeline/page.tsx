@@ -67,7 +67,7 @@ export default function PipelinesPage() {
         {header}
         <div className="h-[50vh] flex flex-col items-center justify-center gap-3">
           <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-          <span className="text-xs font-semibold text-slate-400">Opening Pipeline Workspace...</span>
+          <span className="text-xs font-semibold text-slate-400">Opening Pipeline Workspace…</span>
         </div>
       </div>
     );

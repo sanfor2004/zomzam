@@ -341,7 +341,7 @@ export default function LendingDebtPage() {
               value={personInput}
               onChange={(e) => setPersonInput(e.target.value)}
               required
-              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white font-bold"
+              className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 text-white font-bold"
             />
           </div>
 
@@ -389,7 +389,7 @@ export default function LendingDebtPage() {
                 type="date"
                 value={dueDateInput}
                 onChange={(e) => setDueDateInput(e.target.value)}
-                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none text-white"
+                className="w-full px-4 h-11 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 text-white"
               />
             </div>
           </div>

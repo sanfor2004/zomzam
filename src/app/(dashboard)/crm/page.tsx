@@ -80,7 +80,7 @@ export default function CrmDashboardPage() {
     return (
       <div className="h-[70vh] flex flex-col items-center justify-center gap-3">
         <Loader2 className="h-8 w-8 text-[#EE5712] animate-spin" />
-        <span className="text-xs font-semibold text-slate-400">Loading Zomzam Dashboard...</span>
+        <span className="text-xs font-semibold text-slate-400">Loading Zomzam Dashboard…</span>
       </div>
     );
   }

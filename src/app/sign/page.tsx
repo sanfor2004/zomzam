@@ -354,6 +354,9 @@ function SignPageContent() {
                   <Input
                     label={t('auth_fullname')}
                     type="text"
+                    name="username"
+                    autoComplete="username"
+                    spellCheck={false}
                     required
                     minLength={3}
                     value={username}
@@ -369,6 +372,9 @@ function SignPageContent() {
                 <Input
                   label={t('auth_email')}
                   type={activeTab === 'signin' ? 'text' : 'email'}
+                  name={activeTab === 'signin' ? 'identifier' : 'email'}
+                  autoComplete={activeTab === 'signin' ? 'username' : 'email'}
+                  spellCheck={false}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -382,6 +388,8 @@ function SignPageContent() {
                 <Input
                   label={t('auth_password')}
                   type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete={activeTab === 'signin' ? 'current-password' : 'new-password'}
                   required
                   minLength={8}
                   value={password}

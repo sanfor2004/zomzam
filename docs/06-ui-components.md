@@ -89,6 +89,19 @@ File: `src/components/ui/Button.tsx`
 
 Use `variant="unstyled"` for bespoke controls that still need consistent button behavior.
 
+## Accessibility Behaviors (built into the primitives)
+
+These behaviors ship inside the Kit — composing pages inherit them and must not re-implement them:
+
+- **Modal**: moves focus into the dialog on open, traps Tab/Shift+Tab with wrapping (absorbs Tab when nothing inside is focusable), closes on Escape, returns focus to the opener, names itself from `title` via `aria-labelledby`, contains overscroll on its mobile scroll surface, and shows a focus-visible ring on the close button. `ModalProps` is unchanged — no call-site work needed.
+- **Dropdown (select mode)**: full listbox keyboard model — Enter/Space/ArrowDown open with focus on the selected option; ArrowUp/ArrowDown/Home/End navigate; Enter selects; Escape closes without selection; both selection and Escape return focus to the trigger, which shows a focus-visible ring. Options are exposed as `role="listbox"`/`role="option"` with `aria-selected`. Menu mode closes on Escape.
+- **Toast**: auto-dismiss pauses while hovered or focused and restarts (full duration) on leave; the viewport is a persistent `aria-live="polite"` region and respects device safe-area insets.
+- **Input**: `error`/`hint` footer text is auto-wired to the input via `aria-describedby`.
+- **Slider**: the visible `label` is bound via `htmlFor`; when rendering without one, pass `ariaLabel` for the accessible name.
+- **PostImageGrid**: accepts an `alt` base string (author-derived by the caller, e.g. "Photo by @user"); multi-image grids number each cell ("… (2 of 3)").
+
+Also: no Kit primitive uses `transition-all` — every transition lists its animated properties explicitly. Keep it that way in new primitives.
+
 ## Data-Aware UI Exceptions
 
 Most UI primitives are pure. Two are intentionally feature-aware:

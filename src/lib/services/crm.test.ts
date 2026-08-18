@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 // Real error class from its runtime-free leaf module — no Next/JWT pulled in, so
 // the test asserts against exactly what the service throws (no stub drift).
 import { HttpError } from '@/lib/http-error';
+import { FALLBACK_RATES } from '@/lib/fx';
 
 // Shared connection.execute so transaction-internal SQL is inspectable after run.
 const connExecute = mock.fn(async (_sql: string, _params?: any[]) => [{ insertId: 1 }] as any);
@@ -65,6 +66,34 @@ test('qualifyLead runs the whole bridge in one transaction, all scoped to the us
   assert.ok(incomeParams.includes(7), 'income attributed to the lead (per-client profitability)'); // lead_id
 });
 
+test('qualifyLead stamps the new project id on every seeded task (profitability minutes join)', async () => {
+  db.queryOne.mock.mockImplementationOnce(async () => ({ name: 'Acme', company: 'Acme Co' }));
+
+  await crm.qualifyLead(USER_ID, { leadId: 7, accountId: 3, amount: 1000, currency: 'USD', dueDate: null });
+
+  // The crm_projects INSERT (mock) returns insertId = 1 — every task must carry it.
+  const taskCalls = connExecute.mock.calls.filter((c) => /INSERT INTO time_tasks/.test(c.arguments[0] as string));
+  assert.equal(taskCalls.length, 4, '4 tasks seeded');
+  for (const call of taskCalls) {
+    assert.match(call.arguments[0] as string, /project_id/, 'task INSERT names the project_id column');
+    assert.ok((call.arguments[1] as any[]).includes(1), 'task INSERT carries the project insertId');
+  }
+});
+
+test('qualifyLead snapshots the FX home value on the auto-captured income', async () => {
+  db.queryOne.mock.mockImplementationOnce(async () => ({ name: 'Acme', company: 'Acme Co' }));
+  // loadFxContext: db.query → [] (fallback rates), second queryOne → null (home defaults EGP).
+
+  await crm.qualifyLead(USER_ID, { leadId: 7, accountId: 3, amount: 1000, currency: 'USD', dueDate: null });
+
+  const incomeCall = connExecute.mock.calls.find((c) => /INSERT INTO money_transactions/.test(c.arguments[0] as string))!;
+  assert.match(incomeCall.arguments[0] as string, /home_amount, fx_rate, fx_rate_date/, 'income INSERT names the snapshot columns');
+  const params = incomeCall.arguments[1] as any[];
+  assert.ok(params.includes(1000 * FALLBACK_RATES.USD), 'home_amount = amount × fallback USD→EGP rate');
+  assert.ok(params.includes(FALLBACK_RATES.USD), 'fx_rate stored');
+  assert.ok(params.includes(new Date().toISOString().substring(0, 10)), 'fx_rate_date stored');
+});
+
 test('qualifyLead seeds a Lending settlement only when a due date is given', async () => {
   db.queryOne.mock.mockImplementationOnce(async () => ({ name: 'Acme', company: null }));
 
@@ -99,6 +128,27 @@ test('updateLeadStatus scopes the UPDATE to the owner', async () => {
   const [sql, params] = db.execute.mock.calls[0].arguments as [string, any[]];
   assert.match(sql, /UPDATE crm_leads SET status = \? WHERE id = \? AND user_id = \?/);
   assert.deepEqual(params, ['contacted', 9, USER_ID]);
+});
+
+test('updateLeadStatus rejects "qualified" — deals must close through qualify_lead', async () => {
+  await assert.rejects(
+    () => crm.updateLeadStatus(USER_ID, 9, 'qualified'),
+    (err: any) => err instanceof HttpError && err.status === 400 && err.message === 'Use qualify_lead to close a deal'
+  );
+  assert.equal(db.execute.mock.calls.length, 0, 'no write happened');
+});
+
+test('updateLeadStatus rejects unknown status values', async () => {
+  await assert.rejects(
+    () => crm.updateLeadStatus(USER_ID, 9, 'banana'),
+    (err: any) => err instanceof HttpError && err.status === 400
+  );
+  assert.equal(db.execute.mock.calls.length, 0, 'no write happened');
+});
+
+test('updateLead no longer accepts status as an updatable column', async () => {
+  await crm.updateLead(USER_ID, 9, { status: 'qualified' });
+  assert.equal(db.execute.mock.calls.length, 0, 'status-only payload writes nothing');
 });
 
 test('updateLead scopes the dynamic UPDATE to the owner', async () => {

@@ -29,7 +29,7 @@ const EN_TRANSLATIONS: Record<string, string> = {
   nav_security: 'Security',
   nav_logout: 'Logout',
   nav_overview: 'Overview',
-  nav_search: 'Search...',
+  nav_search: 'Search…',
   auth_back: 'Back',
   auth_signin: 'Sign In',
   auth_signup: 'Create Account',

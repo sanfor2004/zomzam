@@ -435,7 +435,7 @@ export default function MyProfilePage() {
                   onChange={(e) => setBio(e.target.value)}
                   maxLength={500}
                   rows={4}
-                  placeholder="Tell us about yourself, your skills, or current projects..."
+                  placeholder="Tell us about yourself, your skills, or current projects…"
                   className="w-full p-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white resize-none"
                 />
                 <div className="flex justify-end mt-1.5">
