@@ -71,7 +71,6 @@ const schema: Record<string, Record<string, string>> = {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     user_id: 'INT UNSIGNED NOT NULL',
     horizon_id: 'INT UNSIGNED NULL',
-    project_id: 'INT UNSIGNED NULL',
     title: 'VARCHAR(255) NOT NULL',
     priority: "ENUM('urgent', 'medium', 'maybe', 'free') NOT NULL DEFAULT 'medium'",
     duration_block: 'INT UNSIGNED NOT NULL',
@@ -141,7 +140,6 @@ const schema: Record<string, Record<string, string>> = {
     fx_rate_date: 'DATE NULL',                 // the day the fx_rate was captured
     description: 'VARCHAR(255) NULL',
     transaction_date: 'DATE NOT NULL',
-    lead_id: 'INT UNSIGNED NULL', // CRM client/deal this income/expense is attributed to (per-client profitability)
     transfer_account_id: 'INT UNSIGNED NULL', // destination account for a transfer's credit leg
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
@@ -217,50 +215,12 @@ const schema: Record<string, Record<string, string>> = {
     read_at: 'DATETIME NULL',
     created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
   },
-  crm_leads: {
-    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
-    user_id: 'INT UNSIGNED NOT NULL',
-    name: 'VARCHAR(255) NOT NULL',
-    email: 'VARCHAR(255) NULL',
-    phone: 'VARCHAR(100) NULL',
-    website: 'TEXT NULL',
-    address: 'TEXT NULL',
-    company: 'VARCHAR(255) NULL',
-    status: "ENUM('new', 'contacted', 'qualified', 'lost') NOT NULL DEFAULT 'new'",
-    source: "VARCHAR(100) NOT NULL DEFAULT 'Google Maps Scanner'",
-    industry: 'VARCHAR(255) NULL',
-    notes: 'TEXT NULL',
-    rating: 'FLOAT NULL',
-    review_count: 'INT UNSIGNED NULL',
-    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
-    updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-  },
-  crm_scrape_jobs: {
-    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
-    user_id: 'INT UNSIGNED NOT NULL',
-    query: 'VARCHAR(255) NOT NULL',
-    area: 'VARCHAR(255) NOT NULL',
-    status: "ENUM('pending', 'scraping', 'completed', 'failed') NOT NULL DEFAULT 'completed'",
-    leads_found: 'INT UNSIGNED NOT NULL DEFAULT 0',
-    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
-  },
-  crm_settings: {
+  user_settings: {
     id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
     user_id: 'INT UNSIGNED NOT NULL',
     key: 'VARCHAR(255) NOT NULL',
     value: 'TEXT NULL',
-  },
-  crm_projects: {
-    id: 'INT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
-    user_id: 'INT UNSIGNED NOT NULL',
-    lead_id: 'INT UNSIGNED NULL',
-    name: 'VARCHAR(255) NOT NULL',
-    status: "ENUM('planning', 'in_design', 'review', 'delivered') NOT NULL DEFAULT 'planning'",
-    amount: 'DECIMAL(15, 2) NOT NULL DEFAULT 0.00',
-    currency: "ENUM('EGP', 'USD', 'EUR', 'GBP') NOT NULL DEFAULT 'EGP'",
-    created_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP',
-    updated_at: 'DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-    notion_page_id: 'VARCHAR(255) NULL UNIQUE',
+    // UNIQUE KEY uq_user_setting (user_id, key)
   },
   posts: {
     id: 'BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY',
@@ -529,17 +489,6 @@ async function syncDatabase() {
     console.error('Failed to update money_accounts.type enum:', err);
   }
 
-  // Custom schema updates (making crm_projects.lead_id nullable)
-  try {
-    const [columnsInfo] = await connection.query<any[]>(`DESCRIBE \`crm_projects\``);
-    const leadIdCol = columnsInfo.find((c: any) => c.Field === 'lead_id');
-    if (leadIdCol && leadIdCol.Null === 'NO') {
-      console.log('Modifying crm_projects.lead_id to be nullable...');
-      await connection.query('ALTER TABLE `crm_projects` MODIFY COLUMN `lead_id` INT UNSIGNED NULL');
-    }
-  } catch (err) {
-    console.error('Failed to update crm_projects.lead_id column:', err);
-  }
 
   // Backfill opaque public_id for any pre-existing posts (rows created before the
   // column existed). MD5 of the id + RAND() + UUID() so the value is unique and
@@ -588,6 +537,20 @@ async function syncDatabase() {
     }
   } catch (err) {
     console.error('Failed to update users.password column:', err);
+  }
+
+  // Ensure user_settings has the unique constraint (user_id, key)
+  try {
+    const [idxRows] = await connection.query<any[]>(
+      `SELECT INDEX_NAME FROM INFORMATION_SCHEMA.STATISTICS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'user_settings' AND INDEX_NAME = 'uq_user_setting'`
+    );
+    if (idxRows.length === 0) {
+      console.log('Adding unique index to user_settings...');
+      await connection.query('ALTER TABLE `user_settings` ADD UNIQUE KEY `uq_user_setting` (`user_id`, `key`(191))');
+    }
+  } catch (err) {
+    console.error('Failed to add user_settings unique index:', err);
   }
 
   console.log('Database synchronization complete.');
@@ -667,32 +630,6 @@ async function syncDatabase() {
     }
   }
 
-  // Seed default crm settings for user_id = 1
-  const crmSettings = [
-    ['CLAUDE_API_KEY', 'sk-ant-sid-placeholder-zomzam-crm-api-key'],
-    ['claude_model', 'claude-3-5-sonnet-latest'],
-    ['claude_tone', 'professional'],
-    ['claude_temperature', '0.75'],
-    ['claude_max_tokens', '800'],
-    ['system_signature', '[Your Name]\nLead Outreach Strategist\nZomzam CRM Executive Suite'],
-    ['system_theme', 'dark'],
-    ['GOOGLE_MAPS_API_KEY', ''],
-    ['GOOGLE_MAPS_MAP_ID', 'CRM_LEADS_MAP']
-  ];
-
-  for (const [key, value] of crmSettings) {
-    const [existing] = await connection.query<any[]>(
-      `SELECT id FROM crm_settings WHERE user_id = 1 AND \`key\` = ?`,
-      [key]
-    );
-    if (existing.length === 0) {
-      console.log(`Seeding CRM setting: ${key}`);
-      await connection.query(
-        `INSERT INTO crm_settings (user_id, \`key\`, value) VALUES (1, ?, ?)`,
-        [key, value]
-      );
-    }
-  }
 
   console.log('Seeding complete.');
   await connection.end();

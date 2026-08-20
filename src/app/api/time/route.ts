@@ -3,36 +3,6 @@ import { withAuth } from '@/lib/api-auth';
 import { query, queryOne, execute } from '@/lib/db';
 
 export const POST = withAuth(async (request, user) => {
-  // Syncs a completed delivery-milestone task's project to 'delivered'. Matches by
-  // the task's project_id (rename-proof, duplicate-name-proof); the title name-parse
-  // survives only as a fallback for legacy tasks seeded before project_id existed.
-  async function syncProjectDeliveryIfApplicable(taskId: number) {
-    const task = await queryOne(
-      `SELECT project_id, title FROM time_tasks WHERE id = ? AND user_id = ?`,
-      [taskId, user.id]
-    );
-    if (!task || !task.title.includes('Production Delivery & Launch')) return;
-
-    if (task.project_id) {
-      await execute(
-        `UPDATE crm_projects SET status = 'delivered' WHERE id = ? AND user_id = ? AND status != 'delivered'`,
-        [task.project_id, user.id]
-      );
-      return;
-    }
-
-    // Legacy fallback: pre-project_id tasks match by the "ProjectName: …" title
-    // convention (known limitation: breaks on rename, can hit same-named siblings).
-    const parts = task.title.split(':');
-    if (parts.length > 1) {
-      const projectName = parts[0].trim();
-      await execute(
-        `UPDATE crm_projects SET status = 'delivered' WHERE user_id = ? AND name = ? AND status != 'delivered'`,
-        [user.id, projectName]
-      );
-    }
-  }
-
   const body = await request.json().catch(() => ({}));
   const action = body.action || '';
 
@@ -125,8 +95,6 @@ export const POST = withAuth(async (request, user) => {
         [actual, id, user.id]
       );
 
-      await syncProjectDeliveryIfApplicable(id);
-
       return NextResponse.json({ success: true });
     }
 
@@ -161,7 +129,7 @@ export const POST = withAuth(async (request, user) => {
       );
 
       if (status === 'completed') {
-        await syncProjectDeliveryIfApplicable(id);
+        // no-op: project delivery sync removed with CRM
       }
 
       return NextResponse.json({ success: true });

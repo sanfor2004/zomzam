@@ -23,7 +23,6 @@ export interface PreferencesInput {
 
 export interface NotionSyncStats {
   tasks: number;
-  projects: number;
   links: number;
 }
 
@@ -62,29 +61,6 @@ export async function savePreferences(input: PreferencesInput): Promise<{ succes
   return { success: !!data.success, message: data.message };
 }
 
-// ── CRM settings ─────────────────────────────────────────────
-
-// Returns the stored CRM settings, or null when none/failed (the page keeps
-// its defaults). Throws on network error (the page logs).
-export async function fetchCrmSettings(): Promise<Settings | null> {
-  const res = await fetch('/api/crm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'get_crm_settings' }),
-  });
-  const data = await res.json();
-  return data.success && data.settings ? data.settings : null;
-}
-
-export async function saveCrmSettings(settings: Settings): Promise<{ success: boolean; error?: string }> {
-  const res = await fetch('/api/crm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ action: 'update_crm_settings', settings }),
-  });
-  const data = await res.json();
-  return { success: !!data.success, error: data.error };
-}
 
 // ── Notion settings + sync ───────────────────────────────────
 

@@ -73,7 +73,6 @@ export interface AddTransactionInput {
   currency: string;
   description: string;
   date: string;          // YYYY-MM-DD
-  lead_id: number | null; // client attribution (income only)
   transfer_account_id?: number | null; // destination account (transfer only)
 }
 
@@ -93,11 +92,10 @@ export async function addTransaction(userId: number, input: AddTransactionInput)
   await transaction(async (c) => {
     const [res] = await c.execute<any>(
       `INSERT INTO money_transactions
-         (user_id, account_id, category_id, type, amount, currency, home_amount, fx_rate, fx_rate_date, description, transaction_date, lead_id, transfer_account_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (user_id, account_id, category_id, type, amount, currency, home_amount, fx_rate, fx_rate_date, description, transaction_date, transfer_account_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [userId, input.account_id, input.category_id, input.type, input.amount,
        input.currency, home_amount, fx_rate, fxDate, input.description, input.date,
-       input.type === 'income' ? input.lead_id : null,
        transferAccountId],
     );
     insertId = res.insertId;
@@ -176,11 +174,11 @@ export async function updateTransaction(userId: number, id: number, input: AddTr
       `UPDATE money_transactions SET
          account_id = ?, category_id = ?, type = ?, amount = ?, currency = ?,
          home_amount = ?, fx_rate = ?, fx_rate_date = ?,
-         description = ?, transaction_date = ?, lead_id = ?, transfer_account_id = ?
+         description = ?, transaction_date = ?, transfer_account_id = ?
        WHERE id = ? AND user_id = ?`,
       [input.account_id, input.category_id, input.type, input.amount, input.currency,
        home_amount, fx_rate, fxDate,
-       input.description, input.date, input.type === 'income' ? input.lead_id : null,
+       input.description, input.date,
        transferAccountId, id, userId],
     );
     const [balRes] = await c.execute<any>(
@@ -240,11 +238,10 @@ export async function listTransactionsFiltered(userId: number, f: TxnFilter): Pr
   const rows = await query(
     `SELECT t.*, c.name AS category_name, c.icon AS category_icon, c.type AS category_type,
             a.name AS account_name, a.currency AS account_currency,
-            l.name AS client_name, ta.name AS transfer_account_name
+            ta.name AS transfer_account_name
        FROM money_transactions t
        LEFT JOIN money_categories c ON t.category_id = c.id
        LEFT JOIN money_accounts a ON t.account_id = a.id
-       LEFT JOIN crm_leads l ON t.lead_id = l.id
        LEFT JOIN money_accounts ta ON t.transfer_account_id = ta.id
       WHERE ${whereSql}
       ORDER BY t.transaction_date DESC, t.id DESC
@@ -264,11 +261,10 @@ export async function listTransactions(userId: number, limit = 50, offset = 0) {
   const safeOffset = Math.max(parseInt(String(offset), 10) || 0, 0);
   return query(
     `SELECT t.*, c.name AS category_name, c.icon AS category_icon,
-            a.name AS account_name, l.name AS client_name
+            a.name AS account_name
        FROM money_transactions t
        LEFT JOIN money_categories c ON t.category_id = c.id
        LEFT JOIN money_accounts a ON t.account_id = a.id
-       LEFT JOIN crm_leads l ON t.lead_id = l.id
       WHERE t.user_id = ?
       ORDER BY t.transaction_date DESC, t.created_at DESC
       LIMIT ${safeLimit} OFFSET ${safeOffset}`,
@@ -318,61 +314,6 @@ export async function updateBudget(userId: number, buckets: Bucket[]): Promise<v
   );
 }
 
-// ── 1.3: Client-profitability join + rate helper (the Pro core) ─────────────
-
-export interface ClientProfit {
-  leadId: number; name: string; income: number; hours: number; ratePerHour: number | null;
-}
-
-/** null when no hours logged — callers render "—", never Infinity. */
-export function ratePerHour(income: number, minutes: number | null): number | null {
-  if (!minutes || minutes <= 0) return null;
-  return income / (minutes / 60);
-}
-
-function toDisplay(amount: number, from: string, display: string): number {
-  const inEgp = amount * (EXCHANGE_RATES_TO_EGP[from] ?? 1);
-  return inEgp / (EXCHANGE_RATES_TO_EGP[display] ?? 1);
-}
-
-export async function getClientProfitability(
-  userId: number, displayCurrency: string,
-): Promise<ClientProfit[]> {
-  // income per client (converted to display currency)
-  const incomeRows = await query<{ lead_id: number; name: string; amount: string; currency: string }>(
-    `SELECT t.lead_id, l.name, t.amount, t.currency
-       FROM money_transactions t
-       JOIN crm_leads l ON t.lead_id = l.id
-      WHERE t.user_id = ? AND t.type = 'income' AND t.lead_id IS NOT NULL`,
-    [userId],
-  );
-  // minutes per client: time_tasks → crm_projects → crm_leads
-  const minuteRows = await query<{ lead_id: number; minutes: string }>(
-    `SELECT p.lead_id, SUM(tt.actual_duration) AS minutes
-       FROM time_tasks tt
-       JOIN crm_projects p ON tt.project_id = p.id
-      WHERE tt.user_id = ? AND tt.status = 'completed'
-            AND tt.actual_duration IS NOT NULL AND p.lead_id IS NOT NULL
-      GROUP BY p.lead_id`,
-    [userId],
-  );
-
-  const minutesByLead = new Map<number, number>();
-  for (const r of minuteRows) minutesByLead.set(r.lead_id, parseFloat(r.minutes || '0'));
-
-  const acc = new Map<number, ClientProfit>();
-  for (const r of incomeRows) {
-    const cur = acc.get(r.lead_id) ?? { leadId: r.lead_id, name: r.name, income: 0, hours: 0, ratePerHour: null };
-    cur.income += toDisplay(parseFloat(r.amount), r.currency, displayCurrency);
-    acc.set(r.lead_id, cur);
-  }
-  for (const c of acc.values()) {
-    const minutes = minutesByLead.get(c.leadId) ?? 0;
-    c.hours = minutes / 60;
-    c.ratePerHour = ratePerHour(c.income, minutes);
-  }
-  return [...acc.values()].sort((a, b) => (b.ratePerHour ?? -1) - (a.ratePerHour ?? -1));
-}
 
 // ── 1.4: Accounts service ────────────────────────────────────────────────────
 // Card-cycle math (utilization/daysUntilDue) lives in ./money-math — pure and

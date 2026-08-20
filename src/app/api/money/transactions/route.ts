@@ -35,12 +35,11 @@ function parseTxnBody(b: any): { ok: false } | { ok: true; input: Parameters<typ
   const type = b.type;
   const accountId = parseInt(b.account_id);
   const categoryId = b.category_id ? parseInt(b.category_id) : null;
-  const leadId = b.lead_id ? parseInt(b.lead_id) : null;
   const transferAccountId = type === 'transfer' ? parseInt(b.transfer_account_id) : null;
   if (
     !['income', 'expense', 'transfer'].includes(type) || !accountId || isNaN(accountId) ||
     isNaN(amount) || amount <= 0 ||
-    (categoryId !== null && isNaN(categoryId)) || (leadId !== null && isNaN(leadId)) ||
+    (categoryId !== null && isNaN(categoryId)) ||
     (type === 'transfer' && (!transferAccountId || isNaN(transferAccountId) || transferAccountId === accountId))
   ) {
     return { ok: false };
@@ -53,7 +52,6 @@ function parseTxnBody(b: any): { ok: false } | { ok: true; input: Parameters<typ
       type, amount, currency: b.currency || 'EGP',
       description: (b.description || '').slice(0, 255),
       date: b.date || new Date().toISOString().substring(0, 10),
-      lead_id: leadId,
       transfer_account_id: transferAccountId,
     },
   };

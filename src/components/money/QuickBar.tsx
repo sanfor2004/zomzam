@@ -16,11 +16,6 @@ import { cn } from '@/lib/utils';
     insert via useMoney().addTransaction; fields swap per segment instead
     of two divergent Income/Expense modals (spec §6.1). */
 
-interface Lead {
-  id: number;
-  name: string;
-}
-
 type Segment = 'income' | 'expense' | 'transfer';
 
 const SEGMENT_OPTIONS = [
@@ -30,14 +25,10 @@ const SEGMENT_OPTIONS = [
 ];
 
 export interface QuickBarProps {
-  /** Phase 6 nudge hook: called after a successful income insert that carries a
-   *  lead_id. The parent wires the actual "unlock per-client rate" upsell later —
-   *  this component only needs to fire the callback. */
-  onIncomeTagged?: (leadId: number) => void;
   className?: string;
 }
 
-export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
+export function QuickBar({ className }: QuickBarProps) {
   const { accounts, categories, addTransaction } = useMoney();
   const { toast } = useToast();
 
@@ -46,11 +37,9 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
   const [accountId, setAccountId] = useState('');
   const [toAccountId, setToAccountId] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [leadId, setLeadId] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [date, setDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [notes, setNotes] = useState('');
-  const [leads, setLeads] = useState<Lead[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   // Smart-defaulted account: first account once accounts load.
@@ -77,24 +66,6 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
     if (!stillValid && relevantCategories[0]) setCategoryId(String(relevantCategories[0].id));
   }, [segment, relevantCategories, categoryId]);
 
-  // Client tag list (income only) — fetched once, reused across segment switches.
-  useEffect(() => {
-    let cancelled = false;
-    fetch('/api/crm', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'get_leads' }),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!cancelled && data.success) setLeads(data.leads || []);
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
   const selectedAccount = accounts.find((a) => String(a.id) === accountId);
 
   const handleLog = async () => {
@@ -115,7 +86,6 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
       description: notes,
       date,
       currency: selectedAccount?.currency ?? 'EGP',
-      lead_id: segment === 'income' && leadId ? parseInt(leadId, 10) : null,
       transfer_account_id: segment === 'transfer' ? parseInt(toAccountId, 10) : null,
     });
     setSubmitting(false);
@@ -123,7 +93,6 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
     if (ok) {
       setAmount('');
       setNotes('');
-      if (segment === 'income' && leadId) onIncomeTagged?.(parseInt(leadId, 10));
     }
   };
 
@@ -149,7 +118,7 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
         <div
           className={cn(
             'flex-1 min-w-0 grid grid-cols-1 @sm:grid-cols-2 gap-3',
-            segment === 'income' ? '@5xl:grid-cols-4' : '@xl:grid-cols-3',
+            segment === 'income' ? '@5xl:grid-cols-3' : '@xl:grid-cols-3',
           )}
         >
           <NumberInput
@@ -187,13 +156,6 @@ export function QuickBar({ onIncomeTagged, className }: QuickBarProps) {
             />
           )}
 
-          {segment === 'income' && (
-            <Select
-              value={leadId}
-              onChange={setLeadId}
-              options={[{ value: '', label: 'No client tag' }, ...leads.map((l) => ({ value: String(l.id), label: l.name }))]}
-            />
-          )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

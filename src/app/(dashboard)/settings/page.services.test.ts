@@ -1,7 +1,7 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  fetchUserPrefs, savePreferences, fetchCrmSettings, fetchNotionSettings,
+  fetchUserPrefs, savePreferences, fetchNotionSettings,
   saveNotionSettings, syncNotion, changePassword, deleteAccount, formatLiveClock,
 } from './page.services';
 
@@ -43,13 +43,6 @@ test('savePreferences maps camelCase input to the snake_case API body', async ()
   });
 });
 
-test('fetchCrmSettings returns settings or null', async () => {
-  payload = { success: true, settings: { CLAUDE_API_KEY: 'k' } };
-  assert.deepEqual(await fetchCrmSettings(), { CLAUDE_API_KEY: 'k' });
-  assert.equal(body().action, 'get_crm_settings');
-  payload = { success: false };
-  assert.equal(await fetchCrmSettings(), null);
-});
 
 test('fetchNotionSettings returns settings or null', async () => {
   payload = { success: true, settings: { NOTION_API_KEY: 'secret' } };
@@ -65,10 +58,10 @@ test('saveNotionSettings posts the update_settings action with the settings', as
 });
 
 test('syncNotion surfaces stats on success and error on failure', async () => {
-  payload = { success: true, stats: { tasks: 3, projects: 1, links: 2 } };
+  payload = { success: true, stats: { tasks: 3, links: 2 } };
   const ok = await syncNotion();
   assert.equal(ok.success, true);
-  assert.deepEqual(ok.stats, { tasks: 3, projects: 1, links: 2 });
+  assert.deepEqual(ok.stats, { tasks: 3, links: 2 });
   payload = { success: false, error: 'no token' };
   assert.equal((await syncNotion()).error, 'no token');
 });

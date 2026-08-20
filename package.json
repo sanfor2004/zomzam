@@ -4,10 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "desktop:dev": "npm run electron:build && electron dist-electron/main.js",
+    "electron:build": "tsc -p tsconfig.electron.json",
     "dev:clean": "npx kill-port 3000 && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.electron.json --noEmit",
     "db:sync": "npx tsx scripts/db-sync.ts",
     "db:seed": "npx tsx scripts/seed-test-data.ts",
     "test": "npx tsx --test --experimental-test-module-mocks \"src/**/*.test.ts\""
@@ -46,6 +49,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.184.1",
+    "electron": "^38.8.6",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
     "playwright": "^1.61.1",

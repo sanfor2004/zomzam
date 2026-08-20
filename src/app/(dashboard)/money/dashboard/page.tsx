@@ -123,7 +123,7 @@ export default function MoneyDashboardPage() {
           Contains: Income/Expense/Transfer quick-log bar (see QuickBar.tsx)
           ────────────────────────────────────────────────────────── */}
       <div data-entrance="card">
-        <QuickBar onIncomeTagged={handleIncomeTagged} />
+        <QuickBar />
       </div>
 
       {/* ──────────────────────────────────────────────────────────

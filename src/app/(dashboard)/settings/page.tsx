@@ -8,7 +8,7 @@ import { Globe, Shield, Eye, EyeOff, Loader2, Clock, Trash2, AlertOctagon, Brief
 import { Button, Switch, Modal, Select, NumberInput, Alert, Input, useToast } from '@/components/ui';
 import { cn } from '@/lib/utils';
 import {
-  fetchUserPrefs, savePreferences, fetchCrmSettings, saveCrmSettings,
+  fetchUserPrefs, savePreferences,
   fetchNotionSettings, saveNotionSettings, syncNotion,
   changePassword, logout, deleteAccount, formatLiveClock,
 } from './page.services';
@@ -169,26 +169,10 @@ export default function SettingsPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   usePageEntrance(containerRef, [isPageLoading]);
 
-  // CRM settings states
-  const [crmSettings, setCrmSettings] = useState<Record<string, string>>({
-    CLAUDE_API_KEY: "",
-    GOOGLE_MAPS_API_KEY: "",
-    GOOGLE_MAPS_MAP_ID: "",
-    claude_model: "claude-3-5-sonnet-latest",
-    claude_tone: "professional",
-    claude_temperature: "0.75",
-    claude_max_tokens: "800",
-    system_signature: "",
-  });
-  const [showClaudeKey, setShowClaudeKey] = useState(false);
-  const [showMapsKey, setShowMapsKey] = useState(false);
-  const [isSavingCrm, setIsSavingCrm] = useState(false);
-
   // Notion Settings States
   const [notionSettings, setNotionSettings] = useState<Record<string, string>>({
     NOTION_API_KEY: "",
     NOTION_DATABASE_ID_TASKS: "",
-    NOTION_DATABASE_ID_PROJECTS: "",
     NOTION_DATABASE_ID_LINKS: "",
   });
   const [showNotionKey, setShowNotionKey] = useState(false);
@@ -210,18 +194,6 @@ export default function SettingsPage() {
         console.error('Failed to load user settings:', err);
       } finally {
         setIsPageLoading(false);
-      }
-    })();
-  }, []);
-
-  // Fetch CRM Settings
-  useEffect(() => {
-    (async () => {
-      try {
-        const settings = await fetchCrmSettings();
-        if (settings) setCrmSettings(prev => ({ ...prev, ...settings }));
-      } catch (err) {
-        console.error("Failed to load CRM settings:", err);
       }
     })();
   }, []);
@@ -273,7 +245,7 @@ export default function SettingsPage() {
         toast({
           variant: 'success',
           title: 'Notion sync complete',
-          description: `Synced ${stats.tasks} tasks, ${stats.projects} projects, ${stats.links} links.`,
+          description: `Synced ${stats.tasks} tasks, ${stats.links} links.`,
         });
       } else {
         toast({ variant: 'error', description: error || 'Failed to synchronize with Notion' });
@@ -284,32 +256,6 @@ export default function SettingsPage() {
     } finally {
       setIsSyncing(false);
     }
-  };
-
-  const handleSaveCrmSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSavingCrm(true);
-
-    try {
-      const { success, error } = await saveCrmSettings(crmSettings);
-      if (success) {
-        toast({ variant: 'success', description: 'CRM settings updated successfully!' });
-      } else {
-        toast({ variant: 'error', description: error || 'Failed to save CRM settings' });
-      }
-    } catch (err) {
-      console.error(err);
-      toast({ variant: 'error', description: 'An error occurred while saving CRM settings' });
-    } finally {
-      setIsSavingCrm(false);
-    }
-  };
-
-  const handleCrmFieldChange = (key: string, value: string) => {
-    setCrmSettings(prev => ({
-      ...prev,
-      [key]: value
-    }));
   };
 
   // Live clock that updates every second in the selected timezone
@@ -509,191 +455,6 @@ export default function SettingsPage() {
         </form>
 
         {/* ──────────────────────────────────────────────────────────
-            DEVELOPMENT NAVIGATOR: CRM & OUTREACH SECTION — DISABLED
-            Status: Temporarily disabled (CRM & Lead Generation feature paused).
-                    Kept in code for future re-activation — flip the `false &&`
-                    guard below back on to restore the full section.
-            Contains: Secure API keys (Claude, Maps) and Outreach tone parameters
-            ────────────────────────────────────────────────────────── */}
-        {false && (
-        <section
-          id="crm"
-          className="surface-card border border-slate-800/60 rounded-3xl p-6 shadow-apple scroll-mt-6"
-        >
-          <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-850">
-            <div className="w-8 h-8 rounded-xl bg-primary-500/10 flex items-center justify-center text-primary-500">
-              <Briefcase className="w-4.5 h-4.5" />
-            </div>
-            <h2 className="text-sm font-black text-slate-300 uppercase tracking-widest">
-              CRM & Outreach Settings
-            </h2>
-          </div>
-
-          <form onSubmit={handleSaveCrmSettings} className="space-y-6">
-            {/* API Keys */}
-            <div className="space-y-4">
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                Secure API Credentials
-              </h3>
-
-              {/* Claude API Key */}
-              <div className="space-y-1.5">
-                <label htmlFor="crm-claude-key" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Anthropic Claude API Key
-                </label>
-                <div className="relative">
-                  <input
-                    id="crm-claude-key"
-                    type={showClaudeKey ? 'text' : 'password'}
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={crmSettings.CLAUDE_API_KEY || ''}
-                    onChange={(e) => handleCrmFieldChange('CLAUDE_API_KEY', e.target.value)}
-                    placeholder="sk-ant-…"
-                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                  />
-                  <Button variant="unstyled"
-                    type="button"
-                    onClick={() => setShowClaudeKey(!showClaudeKey)}
-                    aria-label={showClaudeKey ? 'Hide key' : 'Show key'}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
-                  >
-                    {showClaudeKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <span className="text-[10px] text-slate-400 block leading-normal">
-                  Used to generate customized cold outreach copy via Claude API. Stored securely on your local database.
-                </span>
-              </div>
-
-              {/* Google Maps API Key */}
-              <div className="space-y-1.5">
-                <label htmlFor="crm-maps-key" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Google Maps API Key
-                </label>
-                <div className="relative">
-                  <input
-                    id="crm-maps-key"
-                    type={showMapsKey ? 'text' : 'password'}
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={crmSettings.GOOGLE_MAPS_API_KEY || ''}
-                    onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_API_KEY', e.target.value)}
-                    placeholder="AIzaSy…"
-                    className="w-full h-11 pl-4 pr-11 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                  />
-                  <Button variant="unstyled"
-                    type="button"
-                    onClick={() => setShowMapsKey(!showMapsKey)}
-                    aria-label={showMapsKey ? 'Hide key' : 'Show key'}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-350 transition-colors"
-                  >
-                    {showMapsKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </Button>
-                </div>
-                <span className="text-[10px] text-slate-400 block leading-normal">
-                  Required for the Live Map Scanner and Place autocomplete. Ensure <strong>Maps JavaScript API</strong> and <strong>Places API (New)</strong> are enabled in Google Cloud Console.
-                </span>
-              </div>
-
-              {/* Google Maps Map ID */}
-              <div className="space-y-1.5">
-                <label htmlFor="crm-maps-map-id" className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Google Maps Map ID
-                </label>
-                <input
-                  id="crm-maps-map-id"
-                  type="text"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={crmSettings.GOOGLE_MAPS_MAP_ID || ''}
-                  onChange={(e) => handleCrmFieldChange('GOOGLE_MAPS_MAP_ID', e.target.value)}
-                  placeholder="e.g. CRM_LEADS_MAP"
-                  className="w-full h-11 px-4 bg-slate-900/30 border border-slate-850 rounded-xl text-sm focus:outline-none focus:border-primary-500 transition-all text-white font-mono"
-                />
-                <span className="text-[10px] text-slate-400 block leading-normal">
-                  Vector Map ID required for drawing administrative search boundary highlights. Defaults to <code className="bg-white/5 px-1 py-0.5 rounded text-[#EE5712]">CRM_LEADS_MAP</code>.
-                </span>
-              </div>
-            </div>
-
-            {/* Claude Settings */}
-            <div className="space-y-4 border-t border-slate-850 pt-5">
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                Claude Engine Parameters
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Select
-                  label="Claude Model Variant"
-                  value={crmSettings.claude_model || 'claude-3-5-sonnet-latest'}
-                  onChange={(val) => handleCrmFieldChange('claude_model', val)}
-                  options={[
-                    { value: 'claude-3-5-sonnet-latest', label: 'Claude 3.5 Sonnet (Best)' },
-                    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet v2' },
-                    { value: 'claude-3-5-haiku-20241022', label: 'Claude 3.5 Haiku (Fast)' },
-                    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus (Power)' },
-                  ]}
-                />
-
-                <Select
-                  label="Outreach Tone"
-                  value={crmSettings.claude_tone || 'professional'}
-                  onChange={(val) => handleCrmFieldChange('claude_tone', val)}
-                  options={[
-                    { value: 'professional', label: 'Professional & Polished' },
-                    { value: 'empathetic', label: 'Empathetic & Warm' },
-                    { value: 'direct', label: 'Direct & Concise' },
-                    { value: 'creative', label: 'Creative & Bold' },
-                    { value: 'persuasive', label: 'Persuasive & ROI-driven' },
-                  ]}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                    Max Output Tokens
-                  </label>
-                  <NumberInput
-                    min={100}
-                    max={4000}
-                    step={100}
-                    value={crmSettings.claude_max_tokens || '800'}
-                    onChange={(val) => handleCrmFieldChange('claude_max_tokens', val)}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    <span>Temperature (Creativity)</span>
-                    <span className="text-primary-500 font-extrabold">{crmSettings.claude_temperature || '0.75'}</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0.0"
-                    max="1.0"
-                    step="0.05"
-                    value={crmSettings.claude_temperature || '0.75'}
-                    onChange={(e) => handleCrmFieldChange('claude_temperature', e.target.value)}
-                    className="w-full h-1.5 bg-white/5 rounded-lg appearance-none cursor-pointer accent-[#EE5712] outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50 mt-2"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Outreach Signature */}
-            <div className="space-y-2 border-t border-slate-850 pt-5">
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider">
-                System Signature
-              </h3>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Outbound Email Signature
-                </label>
-                <textarea
-                  value={crmSettings.system_signature || ''}
-                  onChange={(e) => handleCrmFieldChange('system_signature', e.target.value)}
                   placeholder="e.g. Best regards,&#10;[Your Name]&#10;Zomzam Executive"
                   rows={3}
                   className="w-full p-3.5 bg-slate-900/30 border border-slate-850 rounded-xl text-xs focus:outline-none focus:border-primary-500 transition-all text-white resize-none"
@@ -730,7 +491,7 @@ export default function SettingsPage() {
 
                 <div className="surface-card rounded-2xl p-4 sm:p-5 space-y-3">
                   <p className="text-xs text-slate-500 leading-relaxed">
-                    Run the bidirectional sync engine to push local tasks, projects, and links to Notion and pull new items back.
+                    Run the bidirectional sync engine to push local tasks and links to Notion and pull new items back.
                   </p>
                   <Button
                     type="button"
@@ -769,17 +530,6 @@ export default function SettingsPage() {
               onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_TASKS', e.target.value)}
               placeholder="e.g. 8f4b…"
               hint="The database with task columns: Name, Priority, status, Estimated/Actual hours, Project, Links."
-            />
-
-            <Field
-              id="notion-projects"
-              label="Projects database ID (optional)"
-              mono
-              type="text"
-              value={notionSettings.NOTION_DATABASE_ID_PROJECTS || ''}
-              onChange={(e) => handleNotionFieldChange('NOTION_DATABASE_ID_PROJECTS', e.target.value)}
-              placeholder="e.g. 5d1c…"
-              hint="If set, maps task project relations and imports project lists into the Zomzam projects view."
             />
 
             <Field

@@ -6,13 +6,7 @@ export interface NotionTaskProperties {
   duration_block: number;
   actual_duration: number | null;
   status: 'pending' | 'in_progress' | 'completed' | 'deleted';
-  projectNotionPageId: string | null;
   linksNotionPageIds: string[];
-}
-
-export interface NotionProjectProperties {
-  name: string;
-  status: 'planning' | 'in_design' | 'review' | 'delivered';
 }
 
 export interface NotionLinkProperties {
@@ -143,9 +137,6 @@ export class NotionService {
     const actHours = props['Actual Time in hours']?.number || null;
     const actual_duration = actHours !== null && actHours > 0 ? Math.round(actHours * 60) : null;
 
-    // Project Relation
-    const projectNotionPageId = props.Project?.relation?.[0]?.id || null;
-
     // Links Relation
     const linksNotionPageIds = props.Links?.relation?.map((r: any) => r.id) || [];
 
@@ -155,25 +146,8 @@ export class NotionService {
       duration_block,
       actual_duration,
       status,
-      projectNotionPageId,
       linksNotionPageIds,
     };
-  }
-
-  /**
-   * Parses a Notion page into Zomzam Project properties
-   */
-  parseProject(page: any): NotionProjectProperties {
-    const props = page.properties;
-    const name = props.Name?.title?.[0]?.plain_text || 'Unnamed Notion Project';
-    
-    const notionStatus = props.status?.status?.name || props.status?.select?.name || 'Planning';
-    let status: 'planning' | 'in_design' | 'review' | 'delivered' = 'planning';
-    if (notionStatus === 'In Design') status = 'in_design';
-    else if (notionStatus === 'Review') status = 'review';
-    else if (notionStatus === 'Delivered') status = 'delivered';
-
-    return { name, status };
   }
 
   /**
@@ -219,16 +193,6 @@ export class NotionService {
       }
     };
 
-    if (task.projectNotionPageId) {
-      props.Project = {
-        relation: [{ id: task.projectNotionPageId }]
-      };
-    } else {
-      props.Project = {
-        relation: []
-      };
-    }
-
     if (task.linksNotionPageIds && task.linksNotionPageIds.length > 0) {
       props.Links = {
         relation: task.linksNotionPageIds.map(id => ({ id }))
@@ -240,26 +204,6 @@ export class NotionService {
     }
 
     return props;
-  }
-
-  /**
-   * Builds the properties payload to send to Notion for a Project
-   */
-  buildProjectProperties(project: NotionProjectProperties) {
-    let notionStatus = 'Planning';
-    if (project.status === 'planning') notionStatus = 'Planning';
-    else if (project.status === 'in_design') notionStatus = 'In Design';
-    else if (project.status === 'review') notionStatus = 'Review';
-    else if (project.status === 'delivered') notionStatus = 'Delivered';
-
-    return {
-      Name: {
-        title: [{ text: { content: project.name } }]
-      },
-      status: {
-        status: { name: notionStatus }
-      }
-    };
   }
 
   /**
